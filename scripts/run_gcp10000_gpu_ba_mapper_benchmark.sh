@@ -48,7 +48,8 @@ MONITOR_PID=$!
 trap 'kill "$MONITOR_PID" 2>/dev/null || true' EXIT
 
 set +e
-/usr/bin/time -v env CUDA_VISIBLE_DEVICES="$GPU_ID" "$COLMAP" mapper \
+START_EPOCH=$(date +%s)
+env CUDA_VISIBLE_DEVICES="$GPU_ID" "$COLMAP" mapper \
   --database_path "$RGB/distorted/database.db" \
   --image_path "$RGB/input" \
   --output_path "$OUT" \
@@ -58,9 +59,17 @@ set +e
   --Mapper.abs_pose_min_num_inliers 30 \
   --Mapper.ba_use_gpu 1 \
   --Mapper.ba_gpu_index "$GPU_ID" \
-  > "$LOGS/mapper.log" 2> "$LOGS/time.txt"
+  > "$LOGS/mapper.log" 2>&1
 RC=$?
+END_EPOCH=$(date +%s)
 set -e
+
+{
+  echo "start_epoch=$START_EPOCH"
+  echo "end_epoch=$END_EPOCH"
+  echo "elapsed_seconds=$((END_EPOCH - START_EPOCH))"
+  echo "mapper_rc=$RC"
+} > "$LOGS/time.txt"
 
 kill "$MONITOR_PID" 2>/dev/null || true
 wait "$MONITOR_PID" 2>/dev/null || true
