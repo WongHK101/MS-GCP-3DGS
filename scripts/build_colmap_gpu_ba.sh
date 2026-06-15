@@ -33,6 +33,12 @@ git -C "$CERES_SRC" fetch --depth 1 origin "$CERES_COMMIT"
 git -C "$CERES_SRC" checkout --detach "$CERES_COMMIT"
 git -C "$CERES_SRC" submodule update --init --recursive --depth 1
 
+# Ceres tries to download a Gerrit commit hook during CMake configure. That
+# development-only network access can stall on restricted server networks.
+mkdir -p "$CERES_SRC/.git/hooks"
+touch "$CERES_SRC/.git/hooks/commit-msg"
+chmod +x "$CERES_SRC/.git/hooks/commit-msg"
+
 CERES_ARCH_PATCH="$REPO_ROOT/patches/ceres_respect_explicit_cuda_architectures.patch"
 if git -C "$CERES_SRC" apply --check "$CERES_ARCH_PATCH" 2>/dev/null; then
   git -C "$CERES_SRC" apply "$CERES_ARCH_PATCH"
