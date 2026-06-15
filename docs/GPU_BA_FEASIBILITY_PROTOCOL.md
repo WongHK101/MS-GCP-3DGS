@@ -48,3 +48,12 @@ Candidate:
 
 The test is a feasibility comparison. It does not automatically replace the
 current benchmark protocol.
+
+## Completed Result
+
+The test completed on 2026-06-15. The candidate registered 976/976 images and
+reduced mapper time from 421.676 to 357.700 minutes while preserving sparse
+model and WGS84-derived ENU alignment quality. Because the comparison changes
+both COLMAP version and solver backend, the toolchain remains a feasibility
+candidate rather than an automatic protocol replacement. See
+`docs/GPU_BA_FEASIBILITY_RESULT_20260615.md`.

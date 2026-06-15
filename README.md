@@ -23,10 +23,12 @@ review.
 
 ## Current Feasibility Work
 
-The current engineering task evaluates COLMAP 4.0.4 with a CUDA/cuDSS-enabled
-Ceres build on a completed 976-image scene. The candidate is isolated from the
-existing reconstruction stack and does not replace the benchmark protocol
-unless registration and quality gates pass.
+The isolated COLMAP 4.0.4 CUDA/cuDSS feasibility test completed on a
+976-image scene. It preserved registration and reconstruction quality while
+reducing mapper time by about 15%. The result does not automatically replace
+the established protocol because the comparison changes both COLMAP version
+and solver backend. See
+[`docs/GPU_BA_FEASIBILITY_RESULT_20260615.md`](docs/GPU_BA_FEASIBILITY_RESULT_20260615.md).
 
 ## Project Boundary
 
