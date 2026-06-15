@@ -32,7 +32,7 @@ scene=gcp_10000_20260610
 baseline=$BASELINE
 colmap=$COLMAP
 started_at=$(date --iso-8601=seconds)
-mapper_args=ba_use_gpu=1,min_num_images_gpu_solver=50,direct_sparse_gpu_limit=2000
+mapper_args=Mapper.ba_use_gpu=1,Mapper.ba_gpu_index=$GPU_ID
 EOF
 
 (
@@ -57,8 +57,7 @@ set +e
   --Mapper.init_min_num_inliers 100 \
   --Mapper.abs_pose_min_num_inliers 30 \
   --Mapper.ba_use_gpu 1 \
-  --BundleAdjustmentCeres.min_num_images_gpu_solver 50 \
-  --BundleAdjustmentCeres.max_num_images_direct_sparse_gpu_solver 2000 \
+  --Mapper.ba_gpu_index "$GPU_ID" \
   > "$LOGS/mapper.log" 2> "$LOGS/time.txt"
 RC=$?
 set -e
