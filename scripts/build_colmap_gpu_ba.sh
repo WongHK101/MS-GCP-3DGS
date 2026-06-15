@@ -29,9 +29,13 @@ if [[ ! -d "$CERES_SRC/.git" ]]; then
   git clone --depth 1 --recursive --shallow-submodules \
     https://github.com/ceres-solver/ceres-solver.git "$CERES_SRC"
 fi
-git -C "$CERES_SRC" fetch --depth 1 origin "$CERES_COMMIT"
+if ! git -C "$CERES_SRC" cat-file -e "${CERES_COMMIT}^{commit}" 2>/dev/null; then
+  git -C "$CERES_SRC" fetch --depth 1 origin "$CERES_COMMIT"
+fi
 git -C "$CERES_SRC" checkout --detach "$CERES_COMMIT"
-git -C "$CERES_SRC" submodule update --init --recursive --depth 1
+if git -C "$CERES_SRC" submodule status --recursive | grep -q '^-'; then
+  git -C "$CERES_SRC" submodule update --init --recursive --depth 1
+fi
 
 # Ceres tries to download a Gerrit commit hook during CMake configure. That
 # development-only network access can stall on restricted server networks.
