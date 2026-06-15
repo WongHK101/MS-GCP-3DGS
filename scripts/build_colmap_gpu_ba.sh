@@ -44,9 +44,11 @@ touch "$CERES_SRC/.git/hooks/commit-msg"
 chmod +x "$CERES_SRC/.git/hooks/commit-msg"
 
 CERES_ARCH_PATCH="$REPO_ROOT/patches/ceres_respect_explicit_cuda_architectures.patch"
-if git -C "$CERES_SRC" apply --check "$CERES_ARCH_PATCH" 2>/dev/null; then
+if grep -q "NOT CMAKE_CUDA_ARCHITECTURES" "$CERES_SRC/CMakeLists.txt"; then
+  :
+elif git -C "$CERES_SRC" apply --check "$CERES_ARCH_PATCH" 2>/dev/null; then
   git -C "$CERES_SRC" apply "$CERES_ARCH_PATCH"
-elif ! git -C "$CERES_SRC" apply --reverse --check "$CERES_ARCH_PATCH" 2>/dev/null; then
+else
   echo "Ceres CUDA architecture patch neither applies nor appears applied." >&2
   exit 2
 fi
