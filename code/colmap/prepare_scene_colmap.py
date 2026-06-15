@@ -221,6 +221,36 @@ def run_colmap_gpu_cmd(
     run_cmd(cmd_prefix + [gpu_flag_name, "0"], cwd=cwd)
 
 
+def colmap_command_options(colmap_exe: str, command: str) -> set[str]:
+    """Return command-line option names exposed by a COLMAP subcommand."""
+    result = subprocess.run(
+        [colmap_exe, command, "-h"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Could not inspect COLMAP options for {command}: rc={result.returncode}"
+        )
+    return set(re.findall(r"--[A-Za-z0-9_.]+", result.stdout))
+
+
+def select_colmap_option(
+    available: set[str],
+    *candidates: str,
+) -> str:
+    """Select the first supported option name across COLMAP versions."""
+    for candidate in candidates:
+        if candidate in available:
+            return candidate
+    raise RuntimeError(
+        "None of the expected COLMAP options are available: "
+        + ", ".join(candidates)
+    )
+
+
 
 def replace_alignment_max_error(arg_list, value):
     """Replace/insert --alignment_max_error in a tokenized arg list."""
@@ -1191,6 +1221,36 @@ def main():
     colmap_exe = args.colmap_executable
     sift_use_gpu = normalize_colmap_gpu_mode(args.sift_use_gpu)
     sift_matching_use_gpu = normalize_colmap_gpu_mode(args.sift_matching_use_gpu)
+    feature_options = colmap_command_options(colmap_exe, "feature_extractor")
+    matcher_options = colmap_command_options(
+        colmap_exe,
+        f"{args.matching}_matcher" if args.matching != "vocab_tree" else "vocab_tree_matcher",
+    )
+    feature_num_threads_option = select_colmap_option(
+        feature_options,
+        "--FeatureExtraction.num_threads",
+        "--SiftExtraction.num_threads",
+    )
+    feature_max_image_size_option = select_colmap_option(
+        feature_options,
+        "--FeatureExtraction.max_image_size",
+        "--SiftExtraction.max_image_size",
+    )
+    feature_use_gpu_option = select_colmap_option(
+        feature_options,
+        "--FeatureExtraction.use_gpu",
+        "--SiftExtraction.use_gpu",
+    )
+    matching_max_num_matches_option = select_colmap_option(
+        matcher_options,
+        "--FeatureMatching.max_num_matches",
+        "--SiftMatching.max_num_matches",
+    )
+    matching_use_gpu_option = select_colmap_option(
+        matcher_options,
+        "--FeatureMatching.use_gpu",
+        "--SiftMatching.use_gpu",
+    )
 
     feature_cmd = [
         colmap_exe, "feature_extractor",
@@ -1198,40 +1258,45 @@ def main():
         "--image_path", str(input_dir),
         "--ImageReader.camera_model", str(args.camera),
         "--ImageReader.single_camera", "1",
-        "--SiftExtraction.num_threads", str(args.sift_num_threads),
-        "--SiftExtraction.max_image_size", str(args.sift_max_image_size),
+        feature_num_threads_option, str(args.sift_num_threads),
+        feature_max_image_size_option, str(args.sift_max_image_size),
         "--SiftExtraction.max_num_features", str(args.sift_max_num_features),
     ]
     if feature_image_list:
         feature_cmd += ["--image_list_path", str(feature_image_list)]
-    run_colmap_gpu_cmd(feature_cmd, "--SiftExtraction.use_gpu", sift_use_gpu, retry_cleanup_paths=[db_path])
+    run_colmap_gpu_cmd(
+        feature_cmd,
+        feature_use_gpu_option,
+        sift_use_gpu,
+        retry_cleanup_paths=[db_path],
+    )
 
     matcher_common_args = [
-        "--SiftMatching.max_num_matches", str(args.sift_matching_max_num_matches),
+        matching_max_num_matches_option, str(args.sift_matching_max_num_matches),
     ] + split_args(args.matcher_args)
 
     if args.matching == "spatial":
         run_colmap_gpu_cmd(
             [colmap_exe, "spatial_matcher", "--database_path", str(db_path)] + matcher_common_args,
-            "--SiftMatching.use_gpu",
+            matching_use_gpu_option,
             sift_matching_use_gpu,
         )
     elif args.matching == "exhaustive":
         run_colmap_gpu_cmd(
             [colmap_exe, "exhaustive_matcher", "--database_path", str(db_path)] + matcher_common_args,
-            "--SiftMatching.use_gpu",
+            matching_use_gpu_option,
             sift_matching_use_gpu,
         )
     elif args.matching == "sequential":
         run_colmap_gpu_cmd(
             [colmap_exe, "sequential_matcher", "--database_path", str(db_path)] + matcher_common_args,
-            "--SiftMatching.use_gpu",
+            matching_use_gpu_option,
             sift_matching_use_gpu,
         )
     else:
         run_colmap_gpu_cmd(
             [colmap_exe, "vocab_tree_matcher", "--database_path", str(db_path)] + matcher_common_args,
-            "--SiftMatching.use_gpu",
+            matching_use_gpu_option,
             sift_matching_use_gpu,
         )
 
