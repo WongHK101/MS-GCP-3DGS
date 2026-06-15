@@ -1,0 +1,14 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ef1f9e49..f68d4b0c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -323,7 +323,8 @@ if (USE_CUDA)
+       set(CUDAToolkit_DEPENDENCY
+         "find_dependency(CUDAToolkit ${CUDAToolkit_VERSION})")
+       enable_language(CUDA)
+-      if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
++      if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18" AND
++          NOT CMAKE_CUDA_ARCHITECTURES)
+         set(CMAKE_CUDA_ARCHITECTURES "")
+         if (CUDAToolkit_VERSION VERSION_LESS "13.0")
+           # Support Maxwell GPUs.
