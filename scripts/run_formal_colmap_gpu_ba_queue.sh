@@ -2,15 +2,23 @@
 set -euo pipefail
 
 REPO=${REPO:-/root/autodl-tmp/MS-GCP-3DGS}
-RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-gpu-ba-formal-20260615}
+RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-global-formal-20260616}
 DATA=${DATA:-/root/autodl-tmp/datasets/M3M-GCP/scenes_rgb_20260615}
 GPU_ID=${GPU_ID:-0}
 MIN_FREE_GB=${MIN_FREE_GB:-30}
 
-SCENES=(
-  gcp_50000_20260610
-  gcp_100000_20260610
-)
+if (( $# > 0 )); then
+  SCENES=("$@")
+else
+  SCENES=(
+    gcp_3000_20260602
+    gcp_5000_20260602
+    gcp_10000_20260610
+    gcp_20000_20260602
+    gcp_50000_20260610
+    gcp_100000_20260610
+  )
+fi
 
 mkdir -p "$RUN_ROOT/status" "$RUN_ROOT/logs"
 exec > >(tee -a "$RUN_ROOT/logs/queue.log") 2>&1
@@ -18,6 +26,9 @@ exec > >(tee -a "$RUN_ROOT/logs/queue.log") 2>&1
 echo "queue_started_at=$(date --iso-8601=seconds)"
 echo "repo_head=$(git -C "$REPO" rev-parse HEAD)"
 echo "scenes=${SCENES[*]}"
+echo "protocol=COLMAP 4.0.4 spatial matcher database + global_mapper GPU graph partitioning and GPU Ceres BA"
+echo "run_root=$RUN_ROOT"
+echo "data_root=$DATA"
 
 overall_rc=0
 for scene in "${SCENES[@]}"; do
@@ -36,7 +47,7 @@ for scene in "${SCENES[@]}"; do
   echo "[$(date --iso-8601=seconds)] QUEUE_START scene=$scene free_gb=$free_gb"
   set +e
   REPO="$REPO" RUN_ROOT="$RUN_ROOT" DATA="$DATA" GPU_ID="$GPU_ID" \
-    bash "$REPO/code/launchers/run_m3m_gcp_colmap_scene.sh" "$scene"
+    bash "$REPO/scripts/run_large_scene_global_colmap_scene.sh" "$scene"
   rc=$?
   set -e
   echo "[$(date --iso-8601=seconds)] QUEUE_END scene=$scene rc=$rc"
