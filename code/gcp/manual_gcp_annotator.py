@@ -12,16 +12,21 @@ from PIL import Image, ImageDraw, ImageTk
 
 
 ANNOTATION_FIELDS = [
+    "schema",
     "scene",
     "point_name",
     "image_name",
     "image_path",
+    "rank_for_gcp",
+    "candidate_score",
     "projected_x",
     "projected_y",
     "manual_x",
     "manual_y",
     "visible",
     "quality",
+    "confidence",
+    "annotator",
     "note",
     "updated_at",
 ]
@@ -42,12 +47,21 @@ def write_csv(path: Path, rows: List[Dict[str, str]], fieldnames: List[str]) -> 
 
 
 class Annotator:
-    def __init__(self, root: tk.Tk, candidates: List[Dict[str, str]], out_csv: Path, crop_size: int, display_size: int):
+    def __init__(
+        self,
+        root: tk.Tk,
+        candidates: List[Dict[str, str]],
+        out_csv: Path,
+        crop_size: int,
+        display_size: int,
+        annotator: str,
+    ):
         self.root = root
         self.candidates = candidates
         self.out_csv = out_csv
         self.crop_size = int(crop_size)
         self.display_size = int(display_size)
+        self.annotator = annotator
         self.idx = 0
         self.annotations: Dict[tuple[str, str, str], Dict[str, str]] = {}
         if out_csv.exists():
@@ -63,9 +77,9 @@ class Annotator:
         btns = ttk.Frame(root)
         btns.pack(fill=tk.X, padx=8, pady=4)
         for text, cmd in [
-            ("Visible good (v)", lambda: self.mark("1", "good")),
-            ("Ambiguous (a)", lambda: self.mark("1", "ambiguous")),
-            ("Not visible (x)", lambda: self.mark("0", "not_visible")),
+            ("Visible good (v)", lambda: self.mark("1", "good", "1.0")),
+            ("Ambiguous (a)", lambda: self.mark("1", "ambiguous", "0.5")),
+            ("Not visible (x)", lambda: self.mark("0", "not_visible", "0.0")),
             ("Prev (p)", self.prev_item),
             ("Next (n)", self.next_item),
             ("Save (s)", self.save),
@@ -74,9 +88,9 @@ class Annotator:
         self.note_var = tk.StringVar()
         ttk.Entry(root, textvariable=self.note_var).pack(fill=tk.X, padx=8, pady=4)
         self.canvas.bind("<Button-1>", self.on_click)
-        root.bind("v", lambda e: self.mark("1", "good"))
-        root.bind("a", lambda e: self.mark("1", "ambiguous"))
-        root.bind("x", lambda e: self.mark("0", "not_visible"))
+        root.bind("v", lambda e: self.mark("1", "good", "1.0"))
+        root.bind("a", lambda e: self.mark("1", "ambiguous", "0.5"))
+        root.bind("x", lambda e: self.mark("0", "not_visible", "0.0"))
         root.bind("n", lambda e: self.next_item())
         root.bind("p", lambda e: self.prev_item())
         root.bind("s", lambda e: self.save())
@@ -155,6 +169,8 @@ class Annotator:
         row["manual_y"] = f"{y:.3f}"
         row["visible"] = "1"
         row["quality"] = row.get("quality") or "good"
+        row["confidence"] = row.get("confidence") or "1.0"
+        row["annotator"] = self.annotator
         row["note"] = self.note_var.get()
         row["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
         self.annotations[self.key(cand)] = row
@@ -162,25 +178,32 @@ class Annotator:
 
     def base_annotation(self, cand: Dict[str, str]) -> Dict[str, str]:
         return {
+            "schema": "m3m_gcp_manual_image_observation_v1",
             "scene": cand["scene"],
             "point_name": cand["point_name"],
             "image_name": cand["image_name"],
             "image_path": cand["image_path"],
+            "rank_for_gcp": cand.get("rank_for_gcp", ""),
+            "candidate_score": cand.get("center_score", ""),
             "projected_x": f"{float(cand['pixel_x']):.3f}",
             "projected_y": f"{float(cand['pixel_y']):.3f}",
             "manual_x": "",
             "manual_y": "",
             "visible": "",
             "quality": "",
+            "confidence": "",
+            "annotator": self.annotator,
             "note": "",
             "updated_at": "",
         }
 
-    def mark(self, visible: str, quality: str) -> None:
+    def mark(self, visible: str, quality: str, confidence: str) -> None:
         cand = self.candidates[self.idx]
         row = self.annotations.get(self.key(cand), self.base_annotation(cand))
         row["visible"] = visible
         row["quality"] = quality
+        row["confidence"] = confidence
+        row["annotator"] = self.annotator
         row["note"] = self.note_var.get()
         row["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
         self.annotations[self.key(cand)] = row
@@ -213,6 +236,7 @@ def main() -> None:
     parser.add_argument("--max_rows", type=int, default=0, help="Optional limit for quick sessions.")
     parser.add_argument("--crop_size", type=int, default=720)
     parser.add_argument("--display_size", type=int, default=860)
+    parser.add_argument("--annotator", default="user", help="Annotator id written to the output CSV.")
     args = parser.parse_args()
     candidates = read_csv(Path(args.candidates_csv))
     if args.point_name:
@@ -221,10 +245,16 @@ def main() -> None:
     if args.max_rows and args.max_rows > 0:
         candidates = candidates[: args.max_rows]
     root = tk.Tk()
-    Annotator(root, candidates, Path(args.out_csv), crop_size=args.crop_size, display_size=args.display_size)
+    Annotator(
+        root,
+        candidates,
+        Path(args.out_csv),
+        crop_size=args.crop_size,
+        display_size=args.display_size,
+        annotator=args.annotator,
+    )
     root.mainloop()
 
 
 if __name__ == "__main__":
     main()
-

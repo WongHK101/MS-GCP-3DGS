@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CGCS2000_A = 6378137.0
 CGCS2000_F = 1.0 / 298.257222101
 CGCS2000_E2 = CGCS2000_F * (2.0 - CGCS2000_F)
@@ -310,10 +311,16 @@ def main() -> None:
     parser.add_argument("--scenes_root", default=r"E:\datasets\M3M-GCP\scenes")
     parser.add_argument(
         "--gcp_csv",
-        default=r"E:\datasets\M3M-GCP\gcp_points_primary_usable_cgcs2000_cm108_20260615.csv",
+        default=str(REPO_ROOT / "evidence" / "gcp_coordinates" / "gcp_points_primary_usable_cgcs2000_cm108_20260615.csv"),
     )
-    parser.add_argument("--out_root", default=r"E:\M3M-GCP-3DGS\outputs\gcp_diagnostics")
+    parser.add_argument("--out_root", default=str(REPO_ROOT / "outputs" / "gcp_annotation_candidates_20260616"))
     parser.add_argument("--exiftool", default="exiftool")
+    parser.add_argument(
+        "--scene",
+        action="append",
+        default=[],
+        help="Optional scene id to process. Repeat for multiple scenes. Defaults to all scene directories.",
+    )
     parser.add_argument("--max_candidates_per_gcp", type=int, default=12)
     parser.add_argument(
         "--max_off_nadir_deg",
@@ -334,11 +341,22 @@ def main() -> None:
     scenes_root = Path(args.scenes_root)
     out_root = Path(args.out_root)
     gcps = load_gcps(Path(args.gcp_csv))
-    scene_dirs = sorted([p for p in scenes_root.iterdir() if p.is_dir()], key=lambda p: p.name)
+    if args.scene:
+        scene_dirs = [scenes_root / s for s in args.scene]
+        missing = [str(p) for p in scene_dirs if not p.is_dir()]
+        if missing:
+            raise FileNotFoundError(f"Missing scene directories: {missing}")
+    else:
+        scene_dirs = sorted([p for p in scenes_root.iterdir() if p.is_dir()], key=lambda p: p.name)
     global_manifest: Dict[str, Any] = {
-        "schema": "m3m_gcp_projection_candidates_v2",
+        "schema": "m3m_gcp_projection_candidates_v3",
         "scenes_root": str(scenes_root),
         "gcp_csv": str(Path(args.gcp_csv)),
+        "candidate_projection_backend": "coarse DJI EXIF/Gimbal projection for manual annotation candidate discovery",
+        "candidate_projection_warning": (
+            "These candidates are not visibility proof and are not final GCP observations. "
+            "Use contact sheets and manual annotation before quantitative GCP evaluation."
+        ),
         "horizontal_crs": "CGCS2000 / 3-degree Gauss-Kruger CM 108E",
         "horizontal_crs_epsg": 4545,
         "vertical_frame_for_projection": (
