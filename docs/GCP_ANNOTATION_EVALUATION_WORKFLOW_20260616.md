@@ -81,15 +81,48 @@ Only rows with `visible=1`, manual coordinates, and quality not equal to
 
 ## Stage 4: Future Geometry Evaluation
 
-After formal COLMAP models are available for all six scenes, the next tool
-should consume:
+After formal COLMAP models are available for all six scenes, triangulate manual
+2D observations into model-space GCP points:
+
+```powershell
+python code\gcp\triangulate_gcp_points.py `
+  --colmap_model <COLMAP_SPARSE_MODEL_DIR> `
+  --observations_csv outputs\gcp_annotations\summary_20260616\gcp_image_observations_for_evaluation.csv `
+  --out_dir outputs\gcp_evaluation\<scene_id>\triangulated `
+  --scene <scene_id>
+```
+
+This exports `triangulated_gcp_model_points.csv`, which can be paired with the
+surveyed GCP table.
+
+Fit a global Sim(3) transform with explicit control points and evaluate held-out
+checkpoints:
+
+```powershell
+python code\gcp\fit_gcp_sim3.py `
+  --model_points_csv outputs\gcp_evaluation\<scene_id>\triangulated\triangulated_gcp_model_points.csv `
+  --gcp_csv evidence\gcp_coordinates\gcp_points_primary_usable_cgcs2000_cm108_20260615.csv `
+  --control_points G01,G02,G03,NC94 `
+  --out_dir outputs\gcp_evaluation\<scene_id>\sim3_eval
+```
+
+The evaluator uses a single global similarity transform:
+
+```text
+target_xyz = scale * rotation @ model_xyz + translation
+```
+
+It intentionally does not perform local stretching, TPS warping, or non-rigid
+deformation. Control residuals describe transform fit quality; checkpoint
+residuals are the independent accuracy evidence when checkpoints are not used in
+fitting.
+
+Future rendered-depth or surface diagnostics should consume:
 
 - `gcp_image_observations_for_evaluation.csv`;
 - canonical 3D GCP coordinates;
 - COLMAP cameras/images from `RGB/sparse_aligned/0`;
 - optional rendered-depth or surface diagnostics.
 
-It should then report image reprojection residuals, scene-level residual
-statistics, and, where appropriate, rendered-depth or surface-distance
-diagnostics. This stage is intentionally not implemented inside the annotation
-tool, because it depends on the accepted COLMAP model for each scene.
+They should report image reprojection residuals, scene-level residual statistics,
+and, where appropriate, rendered-depth or surface-distance diagnostics.
