@@ -21,6 +21,7 @@ import struct
 import subprocess
 import sys
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 
@@ -1159,6 +1160,15 @@ def main():
             "the run manifest and command log."
         ),
     )
+    parser.add_argument(
+        "--stop_after_matching",
+        action="store_true",
+        help=(
+            "Stop after feature extraction and matching. This prepares the COLMAP "
+            "database for an external mapper, e.g. the large-scene global_mapper "
+            "protocol, without running incremental mapper or writing undistorted assets."
+        ),
+    )
 
     parser.add_argument(
         "--georegistration_mode",
@@ -1299,6 +1309,34 @@ def main():
             matching_use_gpu_option,
             sift_matching_use_gpu,
         )
+
+    if args.stop_after_matching:
+        gps_map = populate_pose_priors_from_exif(
+            db_path,
+            input_dir,
+            exiftool_exe=args.exiftool_executable,
+            wgs84_code=args.wgs84_code,
+            prior_position_std_m=args.prior_position_std_m,
+            swap_latlon=args.swap_latlon,
+        )
+        manifest = {
+            "schema": "ms_gcp_colmap_matching_complete_v1",
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "source_path": str(root),
+            "input_dir": str(input_dir),
+            "database_path": str(db_path),
+            "matching": str(args.matching),
+            "matcher_args": str(args.matcher_args),
+            "camera_model": str(args.camera),
+            "image_count": len(list(input_dir.glob("*_D.JPG"))),
+            "pose_priors_from_exif_count": len(gps_map),
+            "intended_external_mapper": "COLMAP global_mapper",
+        }
+        out_manifest = distorted_dir / "matching_complete_manifest.json"
+        out_manifest.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        log_info(f"Stop-after-matching requested; database is ready at {db_path}")
+        log_info(f"Matching manifest written to {out_manifest}")
+        return
 
     mapper_cmd = [
         colmap_exe, "mapper",
