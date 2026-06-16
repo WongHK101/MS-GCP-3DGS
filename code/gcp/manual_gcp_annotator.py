@@ -60,7 +60,18 @@ class Annotator:
         self.candidates = candidates
         self.out_csv = out_csv
         self.crop_size = int(crop_size)
-        self.display_size = int(display_size)
+        self.canvas_size = int(display_size)
+        self.display_size = self.canvas_size
+        self.view_zoom = 1.0
+        self.min_view_zoom = 1.0
+        self.max_view_zoom = 12.0
+        self.pan_x = 0.0
+        self.pan_y = 0.0
+        self.drag_last = None
+        self.current_crop = None
+        self.current_candidate_xy = None
+        self.current_manual_crop_xy = None
+        self.render_scale = self.canvas_size / self.crop_size
         self.annotator = annotator
         self.idx = 0
         self.annotations: Dict[tuple[str, str, str], Dict[str, str]] = {}
@@ -70,7 +81,7 @@ class Annotator:
         self.root.title("GCP manual annotator")
         self.info = ttk.Label(root, text="", font=("Arial", 11))
         self.info.pack(fill=tk.X, padx=8, pady=4)
-        self.canvas = tk.Canvas(root, width=self.display_size, height=self.display_size, bg="black")
+        self.canvas = tk.Canvas(root, width=self.canvas_size, height=self.canvas_size, bg="black")
         self.canvas.pack(padx=8, pady=4)
         self.status = ttk.Label(root, text="", font=("Arial", 10))
         self.status.pack(fill=tk.X, padx=8, pady=4)
@@ -88,6 +99,10 @@ class Annotator:
         self.note_var = tk.StringVar()
         ttk.Entry(root, textvariable=self.note_var).pack(fill=tk.X, padx=8, pady=4)
         self.canvas.bind("<Button-1>", self.on_click)
+        self.canvas.bind("<ButtonPress-3>", self.on_right_press)
+        self.canvas.bind("<B3-Motion>", self.on_right_drag)
+        self.canvas.bind("<ButtonRelease-3>", self.on_right_release)
+        self.canvas.bind("<MouseWheel>", self.on_mousewheel)
         root.bind("v", lambda e: self.mark("1", "good", "1.0"))
         root.bind("a", lambda e: self.mark("1", "ambiguous", "0.5"))
         root.bind("x", lambda e: self.mark("0", "not_visible", "0.0"))
@@ -95,6 +110,10 @@ class Annotator:
         root.bind("p", lambda e: self.prev_item())
         root.bind("s", lambda e: self.save())
         root.bind("q", lambda e: self.quit())
+        root.bind("+", lambda e: self.zoom_in())
+        root.bind("=", lambda e: self.zoom_in())
+        root.bind("-", lambda e: self.zoom_out())
+        root.bind("0", lambda e: self.zoom_reset())
         self.photo = None
         self.crop_origin = (0, 0)
         self.scale = 1.0
@@ -127,25 +146,19 @@ class Annotator:
         if src_box[2] > src_box[0] and src_box[3] > src_box[1]:
             crop.paste(img.crop(src_box), paste_xy)
         self.crop_origin = (left, top)
-        overlay = crop.copy()
-        draw = ImageDraw.Draw(overlay)
-        cx, cy = px - left, py - top
-        draw.line([(cx - 24, cy), (cx + 24, cy)], fill=(255, 230, 0), width=3)
-        draw.line([(cx, cy - 24), (cx, cy + 24)], fill=(255, 230, 0), width=3)
+        self.current_crop = crop
+        self.current_candidate_xy = (px - left, py - top)
         ann = self.annotations.get(self.key(cand))
         self.current_manual = None
+        self.current_manual_crop_xy = None
         self.note_var.set("")
         if ann and ann.get("manual_x") and ann.get("manual_y"):
             mx = float(ann["manual_x"]) - left
             my = float(ann["manual_y"]) - top
             self.current_manual = (float(ann["manual_x"]), float(ann["manual_y"]))
-            draw.ellipse((mx - 8, my - 8, mx + 8, my + 8), outline=(0, 255, 255), width=4)
+            self.current_manual_crop_xy = (mx, my)
             self.note_var.set(ann.get("note", ""))
-        overlay.thumbnail((self.display_size, self.display_size), Image.Resampling.LANCZOS)
-        self.scale = overlay.width / self.crop_size
-        self.photo = ImageTk.PhotoImage(overlay)
-        self.canvas.configure(width=overlay.width, height=overlay.height)
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+        self.render_current_view()
         self.info.configure(
             text=(
                 f"{self.idx+1}/{len(self.candidates)}  {cand['scene']}  {cand['point_name']}  "
@@ -154,15 +167,83 @@ class Annotator:
         )
         old = self.annotations.get(self.key(cand))
         if old:
-            self.status.configure(text=f"Saved: visible={old.get('visible')} quality={old.get('quality')}")
+            self.status.configure(
+                text=(
+                    f"Saved: visible={old.get('visible')} quality={old.get('quality')}  "
+                    f"zoom={self.view_zoom:.2f}x  (mouse wheel/+/- zoom image, right-drag pan, 0 reset)"
+                )
+            )
         else:
-            self.status.configure(text="Yellow cross = coarse projection. Click true GCP center, then press v/a/x/n.")
+            self.status.configure(
+                text=(
+                    "Yellow cross = coarse projection. Cyan cross = manual mark. "
+                    "Click true GCP center, then press v/a/x/n. Mouse wheel/+/- zoom image, right-drag pan, 0 reset."
+                )
+            )
+
+    def draw_cross(
+        self,
+        draw: ImageDraw.ImageDraw,
+        x: float,
+        y: float,
+        color: tuple[int, int, int],
+        arm: int = 11,
+        width: int = 3,
+    ) -> None:
+        draw.line([(x - arm, y), (x + arm, y)], fill=color, width=width)
+        draw.line([(x, y - arm), (x, y + arm)], fill=color, width=width)
+
+    def render_current_view(self) -> None:
+        if self.current_crop is None:
+            return
+        render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
+        self.render_scale = render_size / self.crop_size
+        rendered = self.current_crop.resize((render_size, render_size), Image.Resampling.LANCZOS)
+        draw = ImageDraw.Draw(rendered)
+        if self.current_candidate_xy is not None:
+            cx, cy = self.current_candidate_xy
+            self.draw_cross(draw, cx * self.render_scale, cy * self.render_scale, (255, 230, 0))
+        if self.current_manual_crop_xy is not None:
+            mx, my = self.current_manual_crop_xy
+            self.draw_cross(draw, mx * self.render_scale, my * self.render_scale, (0, 255, 255))
+        self.clamp_pan(render_size)
+        viewport = Image.new("RGB", (self.canvas_size, self.canvas_size), "black")
+        pan_x = int(round(self.pan_x))
+        pan_y = int(round(self.pan_y))
+        src_x = max(0, -pan_x)
+        src_y = max(0, -pan_y)
+        dst_x = max(0, pan_x)
+        dst_y = max(0, pan_y)
+        visible_w = min(self.canvas_size - dst_x, render_size - src_x)
+        visible_h = min(self.canvas_size - dst_y, render_size - src_y)
+        if visible_w > 0 and visible_h > 0:
+            viewport.paste(rendered.crop((src_x, src_y, src_x + visible_w, src_y + visible_h)), (dst_x, dst_y))
+        self.photo = ImageTk.PhotoImage(viewport)
+        self.canvas.configure(width=self.canvas_size, height=self.canvas_size)
+        self.canvas.delete("all")
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+
+    def clamp_pan(self, render_size: int | None = None) -> None:
+        if render_size is None:
+            render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
+        if render_size <= self.canvas_size:
+            self.pan_x = (self.canvas_size - render_size) / 2
+            self.pan_y = (self.canvas_size - render_size) / 2
+            return
+        min_pan = self.canvas_size - render_size
+        self.pan_x = min(0.0, max(float(min_pan), self.pan_x))
+        self.pan_y = min(0.0, max(float(min_pan), self.pan_y))
 
     def on_click(self, event) -> None:
         cand = self.candidates[self.idx]
         left, top = self.crop_origin
-        x = left + event.x / self.scale
-        y = top + event.y / self.scale
+        crop_x = (event.x - self.pan_x) / self.render_scale
+        crop_y = (event.y - self.pan_y) / self.render_scale
+        if crop_x < 0 or crop_y < 0 or crop_x >= self.crop_size or crop_y >= self.crop_size:
+            self.status.configure(text="Click is outside the image crop; right-drag or zoom to reposition the crop.")
+            return
+        x = left + crop_x
+        y = top + crop_y
         self.current_manual = (x, y)
         row = self.annotations.get(self.key(cand), self.base_annotation(cand))
         row["manual_x"] = f"{x:.3f}"
@@ -217,11 +298,78 @@ class Annotator:
 
     def next_item(self) -> None:
         self.idx = min(len(self.candidates) - 1, self.idx + 1)
+        self.reset_view()
         self.show_item()
 
     def prev_item(self) -> None:
         self.idx = max(0, self.idx - 1)
+        self.reset_view()
         self.show_item()
+
+    def reset_view(self) -> None:
+        self.view_zoom = 1.0
+        self.pan_x = 0.0
+        self.pan_y = 0.0
+        self.drag_last = None
+
+    def zoom_at(self, factor: float, anchor_x: float | None = None, anchor_y: float | None = None) -> None:
+        if self.current_crop is None:
+            return
+        if anchor_x is None or anchor_y is None:
+            anchor_x = self.canvas_size / 2
+            anchor_y = self.canvas_size / 2
+        crop_x = (anchor_x - self.pan_x) / self.render_scale
+        crop_y = (anchor_y - self.pan_y) / self.render_scale
+        old_zoom = self.view_zoom
+        self.view_zoom = min(self.max_view_zoom, max(self.min_view_zoom, self.view_zoom * factor))
+        if abs(self.view_zoom - old_zoom) < 1e-9:
+            return
+        render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
+        new_scale = render_size / self.crop_size
+        self.pan_x = anchor_x - crop_x * new_scale
+        self.pan_y = anchor_y - crop_y * new_scale
+        self.render_current_view()
+        self.status.configure(
+            text=(
+                f"Image zoom={self.view_zoom:.2f}x. Mouse wheel/+/- zoom image, right-drag pan, 0 reset."
+            )
+        )
+
+    def zoom_in(self) -> None:
+        self.zoom_at(1.25)
+
+    def zoom_out(self) -> None:
+        self.zoom_at(1 / 1.25)
+
+    def zoom_reset(self) -> None:
+        self.reset_view()
+        self.render_current_view()
+        self.status.configure(text="Image zoom reset. Mouse wheel/+/- zoom image, right-drag pan, 0 reset.")
+
+    def on_mousewheel(self, event) -> None:
+        anchor_x = event.x if event.widget is self.canvas else None
+        anchor_y = event.y if event.widget is self.canvas else None
+        if event.delta > 0:
+            self.zoom_at(1.25, anchor_x, anchor_y)
+        elif event.delta < 0:
+            self.zoom_at(1 / 1.25, anchor_x, anchor_y)
+        return "break"
+
+    def on_right_press(self, event) -> None:
+        self.drag_last = (event.x, event.y)
+
+    def on_right_drag(self, event) -> None:
+        if self.drag_last is None:
+            return
+        last_x, last_y = self.drag_last
+        self.pan_x += event.x - last_x
+        self.pan_y += event.y - last_y
+        self.drag_last = (event.x, event.y)
+        self.clamp_pan()
+        self.render_current_view()
+
+    def on_right_release(self, event) -> None:
+        self.drag_last = None
 
     def quit(self) -> None:
         self.save()
