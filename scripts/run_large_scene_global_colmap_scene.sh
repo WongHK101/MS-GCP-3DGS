@@ -7,6 +7,7 @@ COLMAP=${COLMAP:-/root/autodl-tmp/opt/ms-gcp-3dgs/colmap-4.0.4-gpu-ba/bin/colmap
 DATA=${DATA:-/root/autodl-tmp/datasets/M3M-GCP/scenes_rgb_20260615}
 RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-global-formal-20260616}
 GPU_ID=${GPU_ID:-0}
+RESUME_EXISTING_MATCHING=${RESUME_EXISTING_MATCHING:-0}
 SCENE=${1:?scene id required}
 
 SCENE_ROOT="$RUN_ROOT/$SCENE"
@@ -67,6 +68,10 @@ materialize_rgb_input() {
     echo "Missing scene data: $raw" >&2
     exit 2
   fi
+  if [[ "$RESUME_EXISTING_MATCHING" == "1" && -d "$INPUT" && -f "$RGB/distorted/database.db" ]]; then
+    event "RESUME_INPUT_AND_DATABASE $SCENE"
+    return 0
+  fi
   rm -rf "$RGB"
   mkdir -p "$INPUT"
   find "$raw" -maxdepth 1 -type f -name '*_D.JPG' -print0 | sort -z |
@@ -79,6 +84,7 @@ materialize_rgb_input() {
 write_manifest() {
   "$PY" - "$SCENE_ROOT/run_manifest.json" "$REPO" "$COLMAP" "$DATA/$SCENE" "$SCENE_ROOT" "$GPU_ID" <<'PY'
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -112,6 +118,7 @@ payload = {
         "mapper": "COLMAP 4.0.4 global_mapper with GPU graph partitioning and GPU Ceres BA",
         "fov_aware_matching": False,
         "incremental_mapper": False,
+        "resume_existing_matching": bool(int(os.environ.get("RESUME_EXISTING_MATCHING", "0"))),
     },
 }
 Path(manifest).write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -237,22 +244,26 @@ mkdir -p "$SCENE_ROOT"
 materialize_rgb_input
 write_manifest
 
-run_stage prepare_spatial_database "$PY" "$REPO/code/colmap/prepare_scene_colmap.py" \
-  -s "$RGB" \
-  --colmap_executable "$COLMAP" \
-  --exiftool_executable exiftool \
-  --camera SIMPLE_RADIAL \
-  --matching spatial \
-  --matcher_args "--SpatialMatching.max_num_neighbors=80 --SpatialMatching.max_distance=500" \
-  --sift_num_threads -1 \
-  --sift_max_image_size 3200 \
-  --sift_max_num_features 8192 \
-  --sift_matching_max_num_matches 32768 \
-  --sift_use_gpu 1 \
-  --sift_matching_use_gpu 1 \
-  --prior_position_std_m 1.0 \
-  --georegistration_mode off \
-  --stop_after_matching
+if [[ "$RESUME_EXISTING_MATCHING" == "1" && -f "$RGB/distorted/database.db" ]]; then
+  event "SKIP_PREPARE_SPATIAL_DATABASE_REUSE_EXISTING_DB $SCENE"
+else
+  run_stage prepare_spatial_database "$PY" "$REPO/code/colmap/prepare_scene_colmap.py" \
+    -s "$RGB" \
+    --colmap_executable "$COLMAP" \
+    --exiftool_executable exiftool \
+    --camera SIMPLE_RADIAL \
+    --matching spatial \
+    --matcher_args "--SpatialMatching.max_num_neighbors=80 --SpatialMatching.max_distance=500" \
+    --sift_num_threads -1 \
+    --sift_max_image_size 3200 \
+    --sift_max_num_features 8192 \
+    --sift_matching_max_num_matches 32768 \
+    --sift_use_gpu 1 \
+    --sift_matching_use_gpu 1 \
+    --prior_position_std_m 1.0 \
+    --georegistration_mode off \
+    --stop_after_matching
+fi
 
 run_global_mapper
 summarize_and_align

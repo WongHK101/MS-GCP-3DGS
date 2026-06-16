@@ -583,6 +583,32 @@ def populate_pose_priors_from_exif(
         cols = get_pose_priors_schema(con)
         expected = ["image_id", "position", "coordinate_system", "position_covariance"]
         if cols != expected:
+            colmap4_cols = {
+                "pose_prior_id",
+                "corr_data_id",
+                "corr_sensor_id",
+                "corr_sensor_type",
+                "position",
+                "position_covariance",
+                "gravity",
+                "coordinate_system",
+            }
+            if set(cols) == colmap4_cols:
+                cur = con.cursor()
+                cur.execute("SELECT COUNT(*) FROM pose_priors")
+                cnt = cur.fetchone()[0]
+                cur.execute("SELECT name FROM images")
+                image_names = [os.path.basename(row[0]) for row in cur.fetchall()]
+                matched = sum(1 for name in image_names if name in gps)
+                log_info(
+                    "Detected COLMAP 4 pose_priors correspondence schema; "
+                    "leaving existing pose_priors unchanged."
+                )
+                log_info(
+                    f"EXIF GPS entries found: {len(gps)}; DB images with EXIF GPS by basename: "
+                    f"{matched}/{len(image_names)}; existing pose_priors rows: {cnt}"
+                )
+                return gps
             raise RuntimeError(f"pose_priors columns unexpected: {cols}")
 
         cur = con.cursor()
