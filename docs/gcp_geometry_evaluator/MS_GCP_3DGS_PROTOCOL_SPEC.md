@@ -1,0 +1,73 @@
+# MS-GCP-3DGS Protocol Spec
+
+## Purpose
+
+MS-GCP-3DGS evaluates georeferenced geometry for UAV Gaussian reconstruction
+models. The benchmark estimates method-derived surface/support positions at
+manually annotated GCP image locations, registers those positions to surveyed
+GCP coordinates with a global Sim(3), and reports held-out checkpoint residuals.
+
+The protocol evaluates the trained Gaussian geometry. COLMAP provides the
+shared camera frame and image rays; COLMAP triangulation is not a method result.
+
+## Evaluation Tracks
+
+### Annotation and camera smoke
+
+This track validates that manual GCP image observations, the surveyed GCP table,
+camera intrinsics/extrinsics, and Sim(3) residual scripts are internally
+consistent. It may use COLMAP-camera triangulation, but it must be reported as a
+sanity check only.
+
+### Gaussian geometry evaluation
+
+This is the method-comparison track. For each method, a canonical Gaussian
+geometry output is rendered or otherwise converted to metric depth at annotated
+views. The evaluator extracts 3D positions at GCP pixels, aggregates
+multi-view observations per GCP, fits a global Sim(3) on control points, and
+reports held-out checkpoint residuals.
+
+## Required Inputs
+
+- A COLMAP sparse model defining the camera frame used by the method.
+- A surveyed GCP table in CGCS2000 / 3-degree Gauss-Kruger CM 108E
+  (EPSG:4545) with normal height in the 1985 National Height Datum.
+- Manual GCP image observations with image name, pixel coordinates, visibility,
+  quality, and confidence.
+- A method output compatible with the canonical Gaussian geometry contract, or
+  a depth map set rendered from that output by the benchmark renderer.
+- A fixed control/checkpoint split for the scene.
+- A CRS, pixel-domain, and depth-semantics manifest.
+
+## Main Metrics
+
+Per scene:
+
+- valid observation count and ratio;
+- valid GCP count and ratio;
+- per-GCP multi-view scatter median, p90, and max;
+- control residual RMSE-H, RMSE-Z, and RMSE-3D;
+- checkpoint residual RMSE-H, RMSE-Z, and RMSE-3D;
+- checkpoint median, p90/p95, and max 3D error;
+- failure counts by reason.
+
+Aggregate reporting should include scene-weighted and GCP-weighted summaries and
+area-grouped summaries for 3k, 5k, 10k, 20k, 50k, and 100k scenes when those
+tracks are available.
+
+## Prohibited Operations
+
+- GCP-supervised training.
+- Using checkpoint points in the Sim(3) fit.
+- Affine shear, local stretching, TPS, or non-rigid warps.
+- Silent invalid filtering.
+- Selecting the best MS-Splatting branch after seeing the residuals.
+- Reporting COLMAP-camera triangulation as Gaussian method accuracy.
+
+## Scene Scale Policy
+
+Small scenes such as 3k and 5k are valid for smoke tests and small-area
+diagnostics, but formal georeferenced accuracy claims should emphasize scenes
+with stronger spatial GCP coverage, especially 50k and 100k. Each scene still
+uses its own fixed split, and all methods use the same split.
+

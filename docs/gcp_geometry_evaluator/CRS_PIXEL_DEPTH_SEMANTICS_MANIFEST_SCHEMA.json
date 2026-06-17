@@ -1,0 +1,28 @@
+{
+  "schema": "ms_gcp_3dgs_crs_pixel_depth_manifest_schema_v1",
+  "required_fields": {
+    "scene_id": "Scene identifier.",
+    "method_id": "Method or baseline identifier.",
+    "colmap_model": "Path or package-relative reference to the COLMAP model used by the evaluator.",
+    "gaussian_frame": "Coordinate frame of the Gaussian geometry or rendered depth.",
+    "survey_crs": "Survey horizontal CRS, e.g. CGCS2000 / 3-degree Gauss-Kruger CM 108E, EPSG:4545.",
+    "height_datum": "Vertical datum, e.g. 1985 National Height Datum for normal height.",
+    "image_domain": "distorted or undistorted.",
+    "camera_model": "COLMAP camera model and parameter convention.",
+    "pixel_coordinate_convention": "Pixel coordinate convention, e.g. zero-indexed pixel centers.",
+    "depth_semantics": "camera_z, ray_distance, inverse_camera_z, or inverse_ray_distance.",
+    "depth_units": "Depth unit after scale/offset conversion, normally meters in the camera/model frame.",
+    "depth_invalid_rule": "How invalid depth is encoded.",
+    "sim3_convention": "target_xyz = scale * rotation @ source_xyz + translation."
+  },
+  "optional_fields": {
+    "wgs84_companion_fields": "WGS84 latitude/longitude/ellipsoid-height fields if included for provenance.",
+    "depth_scale": "Scale applied to stored depth values.",
+    "depth_offset": "Offset applied after scaling stored depth values.",
+    "alpha_map_available": "Whether a per-pixel alpha/accumulation map is available.",
+    "depth_second_moment_available": "Whether a depth second-moment or variance map is available.",
+    "renderer_version": "Renderer identifier used to produce depth maps.",
+    "method_output_contract": "Reference to the method output contract file."
+  }
+}
+
