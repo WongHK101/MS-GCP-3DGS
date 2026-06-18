@@ -49,11 +49,11 @@ python code\gcp\manual_gcp_annotator.py `
 The yellow cross is the coarse projection. Click the actual GCP center, then
 mark:
 
-- `v`: visible and good;
-- `a`: visible but ambiguous;
-- `x`: not visible;
-- `n` / `p`: next / previous;
-- `s`: save;
+- `1`: visible and good;
+- `2`: visible but ambiguous;
+- `3`: not visible;
+- `4` / `5`: previous / next;
+- `6`: save;
 - `q`: save and quit.
 
 The annotator also provides scene/file switching controls:
@@ -68,13 +68,22 @@ The display overlays are:
 
 - yellow cross: coarse projected candidate;
 - magenta cross: correction-assisted hint, estimated only from already saved
-  2D residuals in the same image, same GCP, or same scene;
+  2D residuals in the same image or a weighted all-history scene residual model;
 - cyan cross: the manual click that will be saved.
 
 The correction hint is never saved as an observation by itself. It is only a
 navigation aid; the evaluation CSV continues to use the manually clicked pixel.
 The status bar reports the manual-to-coarse residual in pixels and, when
 available, the residual relative to the correction-assisted hint.
+
+Additional interaction aids:
+
+- arrow keys nudge the manual cyan cross by one original-image pixel;
+- the zoom entry sets the image zoom and updates when the mouse wheel is used;
+- next/previous/list switching preserves the current zoom level;
+- the candidate list on the right can be clicked to jump to any candidate row;
+- when a correction hint is available, newly opened candidates are centered on
+  the magenta hint rather than on the yellow coarse projection.
 
 The manual CSV stores scene, point name, image name, projected pixel, manual
 pixel, visibility, quality, confidence, annotator, note, and timestamp.

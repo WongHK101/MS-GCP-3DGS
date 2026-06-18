@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import math
+import re
 import statistics
 from pathlib import Path
 import tkinter as tk
@@ -104,6 +106,8 @@ class Annotator:
         self.candidates_var = tk.StringVar(value=str(candidates_csv or ""))
         self.out_csv_var = tk.StringVar(value=str(out_csv))
         self.image_root_var = tk.StringVar(value=str(image_root or ""))
+        self.zoom_var = tk.StringVar(value=f"{self.view_zoom:.2f}")
+        self.updating_listbox = False
         self.build_path_controls(root)
         self.load_annotations()
         self.info = ttk.Label(root, text="", font=("Arial", 11))
@@ -111,31 +115,53 @@ class Annotator:
         btns = ttk.Frame(root)
         btns.pack(fill=tk.X, padx=8, pady=4)
         for text, cmd in [
-            ("Visible good (v)", lambda: self.mark("1", "good", "1.0")),
-            ("Ambiguous (a)", lambda: self.mark("1", "ambiguous", "0.5")),
-            ("Not visible (x)", lambda: self.mark("0", "not_visible", "0.0")),
-            ("Prev (p)", self.prev_item),
-            ("Next (n)", self.next_item),
-            ("Save (s)", self.save),
+            ("1 Good", lambda: self.mark("1", "good", "1.0")),
+            ("2 Ambiguous", lambda: self.mark("1", "ambiguous", "0.5")),
+            ("3 Not visible", lambda: self.mark("0", "not_visible", "0.0")),
+            ("4 Prev", self.prev_item),
+            ("5 Next", self.next_item),
+            ("6 Save", self.save),
         ]:
             ttk.Button(btns, text=text, command=cmd).pack(side=tk.LEFT, padx=3)
+        ttk.Label(btns, text="Zoom").pack(side=tk.LEFT, padx=(12, 3))
+        zoom_entry = ttk.Entry(btns, textvariable=self.zoom_var, width=7)
+        zoom_entry.pack(side=tk.LEFT, padx=3)
+        zoom_entry.bind("<Return>", lambda e: self.apply_zoom_entry())
+        zoom_entry.bind("<FocusOut>", lambda e: self.apply_zoom_entry())
         self.note_var = tk.StringVar()
         ttk.Entry(root, textvariable=self.note_var).pack(fill=tk.X, padx=8, pady=4)
         self.status = ttk.Label(root, text="", font=("Arial", 10))
         self.status.pack(fill=tk.X, padx=8, pady=4)
-        self.canvas = tk.Canvas(root, width=self.canvas_size, height=self.canvas_size, bg="black")
-        self.canvas.pack(padx=8, pady=4)
+        body = ttk.Frame(root)
+        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+        self.canvas = tk.Canvas(body, width=self.canvas_size, height=self.canvas_size, bg="black")
+        self.canvas.pack(side=tk.LEFT, padx=(0, 8), pady=4)
+        list_frame = ttk.Frame(body)
+        list_frame.pack(side=tk.LEFT, fill=tk.Y, pady=4)
+        ttk.Label(list_frame, text="Candidate list").pack(anchor=tk.W)
+        list_container = ttk.Frame(list_frame)
+        list_container.pack(fill=tk.Y, expand=True)
+        self.listbox = tk.Listbox(list_container, width=48, height=34, exportselection=False)
+        self.listbox.pack(side=tk.LEFT, fill=tk.Y, expand=True)
+        list_scroll = ttk.Scrollbar(list_container, orient=tk.VERTICAL, command=self.listbox.yview)
+        list_scroll.pack(side=tk.LEFT, fill=tk.Y)
+        self.listbox.configure(yscrollcommand=list_scroll.set)
+        self.listbox.bind("<<ListboxSelect>>", self.on_listbox_select)
         self.canvas.bind("<Button-1>", self.on_click)
         self.canvas.bind("<ButtonPress-3>", self.on_right_press)
         self.canvas.bind("<B3-Motion>", self.on_right_drag)
         self.canvas.bind("<ButtonRelease-3>", self.on_right_release)
         self.canvas.bind("<MouseWheel>", self.on_mousewheel)
-        root.bind("v", lambda e: self.mark("1", "good", "1.0"))
-        root.bind("a", lambda e: self.mark("1", "ambiguous", "0.5"))
-        root.bind("x", lambda e: self.mark("0", "not_visible", "0.0"))
-        root.bind("n", lambda e: self.next_item())
-        root.bind("p", lambda e: self.prev_item())
-        root.bind("s", lambda e: self.save())
+        root.bind("1", lambda e: self.run_shortcut(e, lambda: self.mark("1", "good", "1.0")))
+        root.bind("2", lambda e: self.run_shortcut(e, lambda: self.mark("1", "ambiguous", "0.5")))
+        root.bind("3", lambda e: self.run_shortcut(e, lambda: self.mark("0", "not_visible", "0.0")))
+        root.bind("4", lambda e: self.run_shortcut(e, self.prev_item))
+        root.bind("5", lambda e: self.run_shortcut(e, self.next_item))
+        root.bind("6", lambda e: self.run_shortcut(e, self.save))
+        root.bind("<Left>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(-1, 0)))
+        root.bind("<Right>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(1, 0)))
+        root.bind("<Up>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0, -1)))
+        root.bind("<Down>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0, 1)))
         root.bind("q", lambda e: self.quit())
         root.bind("+", lambda e: self.zoom_in())
         root.bind("=", lambda e: self.zoom_in())
@@ -146,6 +172,13 @@ class Annotator:
         self.scale = 1.0
         self.current_manual = None
         self.show_item()
+
+    def run_shortcut(self, event, action):
+        widget_class = event.widget.winfo_class()
+        if widget_class in {"Entry", "TEntry", "Text"}:
+            return None
+        action()
+        return "break"
 
     def build_path_controls(self, root: tk.Tk) -> None:
         frame = ttk.LabelFrame(root, text="Scene / file switching")
@@ -306,25 +339,109 @@ class Annotator:
             residuals.append((mx - px, my - py))
         return residuals
 
+    def image_sequence(self, image_name: str) -> Optional[int]:
+        match = re.search(r"_(\d{4})_D\.JPG$", image_name, re.IGNORECASE)
+        if not match:
+            return None
+        return int(match.group(1))
+
+    def saved_residual_records(
+        self,
+        scene: str,
+        exclude_key: Optional[tuple[str, str, str]] = None,
+    ) -> List[Dict[str, float | str | int | None]]:
+        records: List[Dict[str, float | str | int | None]] = []
+        for key, row in self.annotations.items():
+            if exclude_key and key == exclude_key:
+                continue
+            if row.get("scene") != scene:
+                continue
+            try:
+                mx = float(row.get("manual_x") or "nan")
+                my = float(row.get("manual_y") or "nan")
+                px = float(row.get("projected_x") or "nan")
+                py = float(row.get("projected_y") or "nan")
+            except ValueError:
+                continue
+            if row.get("visible") != "1" or not all(v == v for v in [mx, my, px, py]):
+                continue
+            dx = mx - px
+            dy = my - py
+            records.append(
+                {
+                    "dx": dx,
+                    "dy": dy,
+                    "projected_x": px,
+                    "projected_y": py,
+                    "image_name": row.get("image_name", ""),
+                    "point_name": row.get("point_name", ""),
+                    "seq": self.image_sequence(row.get("image_name", "")),
+                    "norm": math.hypot(dx, dy),
+                }
+            )
+        return records
+
     def median_residual(self, residuals: List[Tuple[float, float]]) -> Optional[Tuple[float, float]]:
         if not residuals:
             return None
         return (statistics.median([r[0] for r in residuals]), statistics.median([r[1] for r in residuals]))
+
+    def robust_filter_records(self, records: List[Dict[str, float | str | int | None]]) -> List[Dict[str, float | str | int | None]]:
+        if len(records) < 6:
+            return records
+        norms = [float(r["norm"]) for r in records]
+        med = statistics.median(norms)
+        mad = statistics.median([abs(v - med) for v in norms])
+        if mad < 1e-6:
+            return records
+        threshold = med + 3.5 * 1.4826 * mad
+        kept = [r for r in records if float(r["norm"]) <= threshold]
+        return kept if len(kept) >= 4 else records
+
+    def weighted_scene_correction(self, cand: Dict[str, str]) -> tuple[Optional[Tuple[float, float]], str]:
+        records = self.robust_filter_records(self.saved_residual_records(cand["scene"], exclude_key=self.key(cand)))
+        if len(records) < 4:
+            return None, f"weighted scene model needs >=4 residuals, has n={len(records)}"
+        px = float(cand["pixel_x"])
+        py = float(cand["pixel_y"])
+        seq = self.image_sequence(cand["image_name"])
+        scored = []
+        for r in records:
+            spatial = math.hypot(float(r["projected_x"]) - px, float(r["projected_y"]) - py)
+            rseq = r.get("seq")
+            seq_dist = abs(int(rseq) - seq) if seq is not None and rseq is not None else 0
+            score = spatial / 900.0 + seq_dist / 30.0
+            scored.append((score, r))
+        scored.sort(key=lambda x: x[0])
+        nearest = scored[: min(30, len(scored))]
+        weights = [1.0 / ((1.0 + score) ** 2) for score, _ in nearest]
+        total_w = sum(weights)
+        if total_w <= 0:
+            return None, "weighted scene model has zero weight"
+        dx = sum(w * float(r["dx"]) for w, (_, r) in zip(weights, nearest)) / total_w
+        dy = sum(w * float(r["dy"]) for w, (_, r) in zip(weights, nearest)) / total_w
+        return (dx, dy), f"weighted all-history residual model k={len(nearest)}/n={len(records)}"
 
     def correction_for_candidate(self, cand: Dict[str, str]) -> tuple[Optional[Tuple[float, float]], str]:
         scene = cand["scene"]
         image_name = cand["image_name"]
         point_name = cand["point_name"]
         exclude = self.key(cand)
-        tiers = [
-            ("same-image", self.saved_residuals(scene, image_name=image_name, exclude_key=exclude)),
-            ("same-point", self.saved_residuals(scene, point_name=point_name, exclude_key=exclude)),
-            ("same-scene", self.saved_residuals(scene, exclude_key=exclude)),
-        ]
-        for name, residuals in tiers:
-            med = self.median_residual(residuals)
-            if med is not None:
-                return med, f"{name} median residual from n={len(residuals)}"
+        same_image = self.saved_residuals(scene, image_name=image_name, exclude_key=exclude)
+        med = self.median_residual(same_image)
+        if med is not None:
+            return med, f"same-image median residual from n={len(same_image)}"
+        weighted, info = self.weighted_scene_correction(cand)
+        if weighted is not None:
+            return weighted, info
+        same_point = self.saved_residuals(scene, point_name=point_name, exclude_key=exclude)
+        med = self.median_residual(same_point)
+        if med is not None:
+            return med, f"same-point median residual from n={len(same_point)}"
+        same_scene = self.saved_residuals(scene, exclude_key=exclude)
+        med = self.median_residual(same_scene)
+        if med is not None:
+            return med, f"same-scene median residual from n={len(same_scene)}"
         return None, "no correction history"
 
     def show_item(self) -> None:
@@ -340,9 +457,18 @@ class Annotator:
             img = Image.open(image_path).convert("RGB")
         px = float(cand["pixel_x"])
         py = float(cand["pixel_y"])
+        correction, correction_info = self.correction_for_candidate(cand)
+        ann = self.annotations.get(self.key(cand))
+        center_x, center_y = px, py
+        if ann and ann.get("manual_x") and ann.get("manual_y"):
+            center_x = float(ann["manual_x"])
+            center_y = float(ann["manual_y"])
+        elif correction is not None:
+            center_x = px + correction[0]
+            center_y = py + correction[1]
         half = self.crop_size // 2
-        left = int(round(px - half))
-        top = int(round(py - half))
+        left = int(round(center_x - half))
+        top = int(round(center_y - half))
         crop = Image.new("RGB", (self.crop_size, self.crop_size), "black")
         src_box = (
             max(0, left),
@@ -356,13 +482,11 @@ class Annotator:
         self.crop_origin = (left, top)
         self.current_crop = crop
         self.current_candidate_xy = (px - left, py - top)
-        correction, correction_info = self.correction_for_candidate(cand)
         self.current_corrected_xy = None
         self.current_correction_info = correction_info
         if correction is not None:
             dx, dy = correction
             self.current_corrected_xy = (px + dx - left, py + dy - top)
-        ann = self.annotations.get(self.key(cand))
         self.current_manual = None
         self.current_manual_crop_xy = None
         self.note_var.set("")
@@ -372,7 +496,8 @@ class Annotator:
             self.current_manual = (float(ann["manual_x"]), float(ann["manual_y"]))
             self.current_manual_crop_xy = (mx, my)
             self.note_var.set(ann.get("note", ""))
-        self.render_current_view()
+        self.render_current_view(center_active=True)
+        self.update_listbox()
         self.info.configure(
             text=(
                 f"{self.idx+1}/{len(self.candidates)}  {cand['scene']}  {cand['point_name']}  "
@@ -392,7 +517,7 @@ class Annotator:
             self.status.configure(
                 text=(
                     "Yellow = coarse projection. Magenta = corrected hint. Cyan = manual mark. "
-                    "Click true GCP center, then press v/a/x/n. Mouse wheel/+/- zoom image, right-drag pan, 0 reset."
+                    "Click true GCP center, then press 1/2/3/4/5/6. Arrow keys nudge manual mark by 1 px."
                 )
             )
 
@@ -408,7 +533,26 @@ class Annotator:
         draw.line([(x - arm, y), (x + arm, y)], fill=color, width=width)
         draw.line([(x, y - arm), (x, y + arm)], fill=color, width=width)
 
-    def render_current_view(self) -> None:
+    def active_crop_xy(self) -> Optional[Tuple[float, float]]:
+        if self.current_manual_crop_xy is not None:
+            return self.current_manual_crop_xy
+        if self.current_corrected_xy is not None:
+            return self.current_corrected_xy
+        if self.current_candidate_xy is not None:
+            return self.current_candidate_xy
+        return None
+
+    def center_pan_on_active(self, render_size: int) -> None:
+        active = self.active_crop_xy()
+        if active is None:
+            self.clamp_pan(render_size)
+            return
+        ax, ay = active
+        self.pan_x = self.canvas_size / 2 - ax * self.render_scale
+        self.pan_y = self.canvas_size / 2 - ay * self.render_scale
+        self.clamp_pan(render_size)
+
+    def render_current_view(self, center_active: bool = False) -> None:
         if self.current_crop is None:
             return
         render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
@@ -424,7 +568,10 @@ class Annotator:
         if self.current_manual_crop_xy is not None:
             mx, my = self.current_manual_crop_xy
             self.draw_cross(draw, mx * self.render_scale, my * self.render_scale, (0, 255, 255))
-        self.clamp_pan(render_size)
+        if center_active:
+            self.center_pan_on_active(render_size)
+        else:
+            self.clamp_pan(render_size)
         viewport = Image.new("RGB", (self.canvas_size, self.canvas_size), "black")
         pan_x = int(round(self.pan_x))
         pan_y = int(round(self.pan_y))
@@ -453,7 +600,6 @@ class Annotator:
         self.pan_y = min(0.0, max(float(min_pan), self.pan_y))
 
     def on_click(self, event) -> None:
-        cand = self.candidates[self.idx]
         left, top = self.crop_origin
         crop_x = (event.x - self.pan_x) / self.render_scale
         crop_y = (event.y - self.pan_y) / self.render_scale
@@ -462,6 +608,11 @@ class Annotator:
             return
         x = left + crop_x
         y = top + crop_y
+        self.set_manual_point(x, y)
+
+    def set_manual_point(self, x: float, y: float) -> None:
+        cand = self.candidates[self.idx]
+        left, top = self.crop_origin
         self.current_manual = (x, y)
         row = self.annotations.get(self.key(cand), self.base_annotation(cand))
         row["manual_x"] = f"{x:.3f}"
@@ -473,8 +624,22 @@ class Annotator:
         row["note"] = self.note_var.get()
         row["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
         self.annotations[self.key(cand)] = row
-        self.show_item()
+        self.current_manual_crop_xy = (x - left, y - top)
+        self.render_current_view(center_active=False)
+        self.update_listbox()
         self.status.configure(text=self.residual_status_text(cand))
+
+    def nudge_manual(self, dx: int, dy: int) -> None:
+        cand = self.candidates[self.idx]
+        if self.current_manual is not None:
+            x, y = self.current_manual
+        else:
+            active = self.active_crop_xy() or self.current_candidate_xy
+            if active is None:
+                return
+            x = self.crop_origin[0] + active[0]
+            y = self.crop_origin[1] + active[1]
+        self.set_manual_point(x + dx, y + dy)
 
     def residual_status_text(self, cand: Dict[str, str]) -> str:
         row = self.annotations.get(self.key(cand))
@@ -539,18 +704,60 @@ class Annotator:
         write_csv(self.out_csv, rows, ANNOTATION_FIELDS)
         self.status.configure(text=f"Saved {len(rows)} annotations to {self.out_csv}")
 
+    def update_listbox(self) -> None:
+        if not hasattr(self, "listbox"):
+            return
+        self.updating_listbox = True
+        self.listbox.delete(0, tk.END)
+        for i, cand in enumerate(self.candidates):
+            key = self.key(cand)
+            ann = self.annotations.get(key)
+            marker = " "
+            if ann:
+                if ann.get("visible") == "1":
+                    marker = "✓"
+                elif ann.get("visible") == "0":
+                    marker = "×"
+                else:
+                    marker = "?"
+            label = (
+                f"{i+1:03d} {marker} {cand.get('point_name','')} "
+                f"r{cand.get('rank_for_gcp','')} {cand.get('image_name','')}"
+            )
+            self.listbox.insert(tk.END, label)
+        self.listbox.selection_clear(0, tk.END)
+        if self.candidates:
+            self.listbox.selection_set(self.idx)
+            self.listbox.activate(self.idx)
+            self.listbox.see(self.idx)
+        self.updating_listbox = False
+
+    def on_listbox_select(self, event) -> None:
+        if self.updating_listbox:
+            return
+        selection = self.listbox.curselection()
+        if not selection:
+            return
+        idx = int(selection[0])
+        if idx == self.idx:
+            return
+        self.idx = max(0, min(len(self.candidates) - 1, idx))
+        self.drag_last = None
+        self.show_item()
+
     def next_item(self) -> None:
         self.idx = min(len(self.candidates) - 1, self.idx + 1)
-        self.reset_view()
+        self.drag_last = None
         self.show_item()
 
     def prev_item(self) -> None:
         self.idx = max(0, self.idx - 1)
-        self.reset_view()
+        self.drag_last = None
         self.show_item()
 
     def reset_view(self) -> None:
         self.view_zoom = 1.0
+        self.zoom_var.set(f"{self.view_zoom:.2f}")
         self.pan_x = 0.0
         self.pan_y = 0.0
         self.drag_last = None
@@ -567,6 +774,7 @@ class Annotator:
         self.view_zoom = min(self.max_view_zoom, max(self.min_view_zoom, self.view_zoom * factor))
         if abs(self.view_zoom - old_zoom) < 1e-9:
             return
+        self.zoom_var.set(f"{self.view_zoom:.2f}")
         render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
         new_scale = render_size / self.crop_size
         self.pan_x = anchor_x - crop_x * new_scale
@@ -586,8 +794,18 @@ class Annotator:
 
     def zoom_reset(self) -> None:
         self.reset_view()
-        self.render_current_view()
+        self.render_current_view(center_active=True)
         self.status.configure(text="Image zoom reset. Mouse wheel/+/- zoom image, right-drag pan, 0 reset.")
+
+    def apply_zoom_entry(self) -> None:
+        try:
+            zoom = float(self.zoom_var.get())
+        except ValueError:
+            self.zoom_var.set(f"{self.view_zoom:.2f}")
+            return
+        self.view_zoom = min(self.max_view_zoom, max(self.min_view_zoom, zoom))
+        self.zoom_var.set(f"{self.view_zoom:.2f}")
+        self.render_current_view(center_active=True)
 
     def on_mousewheel(self, event) -> None:
         anchor_x = event.x if event.widget is self.canvas else None
