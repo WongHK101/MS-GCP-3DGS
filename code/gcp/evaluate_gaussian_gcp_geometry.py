@@ -142,6 +142,8 @@ def robust_depth_patch(
     camera: Any,
     u: float,
     v: float,
+    depth_u: float,
+    depth_v: float,
     patch_size: int,
     min_valid_ratio: float,
     min_depth: float,
@@ -150,10 +152,10 @@ def robust_depth_patch(
     if patch_size % 2 != 1 or patch_size < 1:
         raise ValueError("patch_size must be a positive odd integer")
     height, width = depth.shape[:2]
-    if u < 0 or v < 0 or u >= width or v >= height:
+    if depth_u < 0 or depth_v < 0 or depth_u >= width or depth_v >= height:
         return False, {"failure_reason": "pixel_out_of_bounds", "image_width": width, "image_height": height}
-    cx = int(round(float(u)))
-    cy = int(round(float(v)))
+    cx = int(round(float(depth_u)))
+    cy = int(round(float(depth_v)))
     half = patch_size // 2
     x0 = max(0, cx - half)
     x1 = min(width, cx + half + 1)
@@ -362,6 +364,8 @@ def main() -> None:
     parser.add_argument("--pixel_coordinate_convention", default="zero_indexed_pixel_centers")
     parser.add_argument("--depth_scale", type=float, default=1.0)
     parser.add_argument("--depth_offset", type=float, default=0.0)
+    parser.add_argument("--depth_pixel_scale_x", type=float, default=1.0)
+    parser.add_argument("--depth_pixel_scale_y", type=float, default=1.0)
     parser.add_argument("--npz_key", default="depth")
     parser.add_argument("--patch_size", type=int, default=7)
     parser.add_argument("--min_patch_valid_ratio", type=float, default=0.60)
@@ -453,11 +457,19 @@ def main() -> None:
         camera = cameras[image.camera_id]
         u = float(base_out["u_px"])
         v = float(base_out["v_px"])
+        depth_u = u * float(args.depth_pixel_scale_x)
+        depth_v = v * float(args.depth_pixel_scale_y)
+        base_out["geometry_u_px"] = u
+        base_out["geometry_v_px"] = v
+        base_out["depth_u_px"] = depth_u
+        base_out["depth_v_px"] = depth_v
         valid, patch_stats = robust_depth_patch(
             depth=depth,
             camera=camera,
             u=u,
             v=v,
+            depth_u=depth_u,
+            depth_v=depth_v,
             patch_size=int(args.patch_size),
             min_valid_ratio=float(args.min_patch_valid_ratio),
             min_depth=float(args.min_depth),
@@ -607,6 +619,8 @@ def main() -> None:
         "image_domain": args.image_domain,
         "pixel_coordinate_convention": args.pixel_coordinate_convention,
         "depth_semantics": args.depth_semantics,
+        "depth_pixel_scale_x": float(args.depth_pixel_scale_x),
+        "depth_pixel_scale_y": float(args.depth_pixel_scale_y),
         "alpha_map_used": False,
         "depth_second_moment_used": False,
         "patch_size": int(args.patch_size),
@@ -636,6 +650,10 @@ def main() -> None:
             "image_name",
             "u_px",
             "v_px",
+            "geometry_u_px",
+            "geometry_v_px",
+            "depth_u_px",
+            "depth_v_px",
             "valid",
             "failure_reason",
             "depth_path",
@@ -744,4 +762,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
