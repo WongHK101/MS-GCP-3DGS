@@ -212,8 +212,8 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "depth_semantics": args.depth_semantics,
         "depth_semantics_note": (
             "The first-paper Gaussian renderer returns the rasterizer depth image. "
-            "For the P1 evaluator this export is interpreted as camera-z depth; "
-            "downstream evaluator manifests must record this assumption."
+            "For the current rasterizer output this is interpreted as inverse camera-z depth; "
+            "downstream evaluator manifests must record and verify this assumption."
         ),
         "depth_scale_for_evaluator": 1.0,
         "depth_offset_for_evaluator": 0.0,
@@ -247,7 +247,11 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--depth_output_dir", required=True)
     parser.add_argument("--manifest_path", default="")
     parser.add_argument("--mapping_csv", default="")
-    parser.add_argument("--depth_semantics", default="camera_z", choices=["camera_z"])
+    parser.add_argument(
+        "--depth_semantics",
+        default="inverse_camera_z",
+        choices=["camera_z", "ray_distance", "inverse_camera_z", "inverse_ray_distance"],
+    )
     parser.add_argument("--image_list_csv", default="", help="Optional CSV that restricts export to listed image names.")
     parser.add_argument("--image_name_column", default="image_name")
     parser.add_argument("--image_list_status_column", default="")
