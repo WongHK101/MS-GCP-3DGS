@@ -64,6 +64,30 @@ def write_csv(path: Path, rows: Iterable[Dict[str, Any]], fieldnames: Sequence[s
             writer.writerow(row)
 
 
+def read_allowlist(args: argparse.Namespace) -> set[str] | None:
+    if not args.image_list_csv:
+        return None
+    path = Path(args.image_list_csv).expanduser().resolve()
+    names: set[str] = set()
+    accepted_values = {
+        value.strip()
+        for value in str(args.image_list_status_values).split(",")
+        if value.strip()
+    }
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if args.image_list_status_column:
+                value = str(row.get(args.image_list_status_column, "")).strip()
+                if accepted_values and value not in accepted_values:
+                    continue
+            name = str(row.get(args.image_name_column, "")).strip()
+            if name:
+                names.add(name)
+                names.add(Path(name).name)
+    return names
+
+
 def camera_name(view: Any) -> str:
     name = str(getattr(view, "image_name", "")).strip()
     if not name:
@@ -78,7 +102,7 @@ def depth_filename(image_name: str) -> str:
     return f"{stem}.npy"
 
 
-def collect_views(scene: Any, camera_sets: str) -> List[tuple[str, Any]]:
+def collect_views(scene: Any, camera_sets: str, allowlist: set[str] | None = None) -> List[tuple[str, Any]]:
     views: List[tuple[str, Any]] = []
     if camera_sets in {"train", "all"}:
         views.extend(("train", view) for view in scene.getTrainCameras())
@@ -89,6 +113,8 @@ def collect_views(scene: Any, camera_sets: str) -> List[tuple[str, Any]]:
     unique: List[tuple[str, Any]] = []
     for split, view in views:
         name = camera_name(view)
+        if allowlist is not None and name not in allowlist and Path(name).name not in allowlist:
+            continue
         if name in seen:
             continue
         seen.add(name)
@@ -119,7 +145,8 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
             rows: List[Dict[str, Any]] = []
-            views = collect_views(scene, args.camera_sets)
+            allowlist = read_allowlist(args)
+            views = collect_views(scene, args.camera_sets, allowlist=allowlist)
             for index, (split, view) in enumerate(tqdm(views, desc="Exporting Gaussian depth")):
                 payload = render(
                     view,
@@ -191,6 +218,10 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "depth_scale_for_evaluator": 1.0,
         "depth_offset_for_evaluator": 0.0,
         "rendered_view_count": len(rows),
+        "image_list_csv": str(Path(args.image_list_csv).expanduser().resolve()) if args.image_list_csv else "",
+        "image_name_column": args.image_name_column,
+        "image_list_status_column": args.image_list_status_column,
+        "image_list_status_values": args.image_list_status_values,
         "sparse_adam_available": bool(sparse_adam_available),
         "uses_alpha_map": False,
         "uses_depth_second_moment": False,
@@ -217,6 +248,10 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--manifest_path", default="")
     parser.add_argument("--mapping_csv", default="")
     parser.add_argument("--depth_semantics", default="camera_z", choices=["camera_z"])
+    parser.add_argument("--image_list_csv", default="", help="Optional CSV that restricts export to listed image names.")
+    parser.add_argument("--image_name_column", default="image_name")
+    parser.add_argument("--image_list_status_column", default="")
+    parser.add_argument("--image_list_status_values", default="")
     parser.add_argument("--quiet", action="store_true")
     return parser, model, pipeline
 
