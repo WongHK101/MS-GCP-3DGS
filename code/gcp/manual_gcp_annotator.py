@@ -730,14 +730,15 @@ class Annotator:
         for i, cand in enumerate(self.candidates):
             key = self.key(cand)
             ann = self.annotations.get(key)
-            marker = " "
+            marker = "blank"
             if ann:
                 if ann.get("visible") == "1":
-                    marker = "OK"
+                    quality = ann.get("quality") or "unselected"
+                    marker = quality if quality in {"good", "ambiguous"} else "unselected"
                 elif ann.get("visible") == "0":
-                    marker = "NO"
+                    marker = "not_visible"
                 else:
-                    marker = "?"
+                    marker = "unselected"
             label = (
                 f"{i+1:03d} {marker} {cand.get('point_name','')} "
                 f"r{cand.get('rank_for_gcp','')} {cand.get('image_name','')}"
