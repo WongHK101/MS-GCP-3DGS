@@ -149,6 +149,10 @@ class Annotator:
         list_scroll.pack(side=tk.LEFT, fill=tk.Y)
         self.listbox.configure(yscrollcommand=list_scroll.set)
         self.listbox.bind("<<ListboxSelect>>", self.on_listbox_select)
+        self.listbox.bind("<Left>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(-0.1, 0.0)))
+        self.listbox.bind("<Right>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.1, 0.0)))
+        self.listbox.bind("<Up>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.0, -0.1)))
+        self.listbox.bind("<Down>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.0, 0.1)))
         self.canvas.bind("<Button-1>", self.on_click)
         self.canvas.bind("<ButtonPress-3>", self.on_right_press)
         self.canvas.bind("<B3-Motion>", self.on_right_drag)
@@ -166,6 +170,7 @@ class Annotator:
         root.bind("<Up>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.0, -0.1)))
         root.bind("<Down>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.0, 0.1)))
         root.bind("q", lambda e: self.quit())
+        root.bind("u", lambda e: self.run_shortcut(e, self.clear_current_status))
         root.bind("+", lambda e: self.zoom_in())
         root.bind("=", lambda e: self.zoom_in())
         root.bind("-", lambda e: self.zoom_out())
@@ -632,12 +637,14 @@ class Annotator:
         cand = self.candidates[self.idx]
         left, top = self.crop_origin
         self.current_manual = (x, y)
-        row = self.annotations.get(self.key(cand), self.base_annotation(cand))
+        existing = self.annotations.get(self.key(cand))
+        row = existing or self.base_annotation(cand)
         row["manual_x"] = f"{x:.3f}"
         row["manual_y"] = f"{y:.3f}"
-        row["visible"] = "1"
-        row["quality"] = row.get("quality") or "good"
-        row["confidence"] = row.get("confidence") or "1.0"
+        if existing is None or row.get("visible") == "0":
+            row["visible"] = ""
+            row["quality"] = ""
+            row["confidence"] = ""
         row["annotator"] = self.annotator
         row["note"] = self.note_var.get()
         row["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
@@ -717,10 +724,40 @@ class Annotator:
         self.save()
         self.next_item()
 
+    def clear_current_status(self) -> None:
+        if not self.candidates:
+            return
+        cand = self.candidates[self.idx]
+        row = self.annotations.get(self.key(cand), self.base_annotation(cand))
+        row["visible"] = ""
+        row["quality"] = ""
+        row["confidence"] = ""
+        row["annotator"] = self.annotator
+        row["note"] = self.note_var.get()
+        row["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
+        self.annotations[self.key(cand)] = row
+        self.update_listbox()
+        self.status.configure(text="Cleared current status to U/unselected; manual point is preserved if present.")
+
     def save(self) -> None:
         rows = [self.annotations[k] for k in sorted(self.annotations)]
         write_csv(self.out_csv, rows, ANNOTATION_FIELDS)
         self.status.configure(text=f"Saved {len(rows)} annotations to {self.out_csv}")
+
+    def candidate_status(self, cand: Dict[str, str]) -> tuple[str, str, str]:
+        ann = self.annotations.get(self.key(cand))
+        if not ann:
+            return "B", "blank", "#f4f4f4"
+        if ann.get("visible") == "1":
+            quality = ann.get("quality")
+            if quality == "good":
+                return "G", "good", "#dff2df"
+            if quality == "ambiguous":
+                return "A", "ambiguous", "#fff2bf"
+            return "U", "unselected", "#e5ecff"
+        if ann.get("visible") == "0":
+            return "NV", "not_visible", "#eeeeee"
+        return "U", "unselected", "#e5ecff"
 
     def update_listbox(self) -> None:
         if not hasattr(self, "listbox"):
@@ -728,22 +765,13 @@ class Annotator:
         self.updating_listbox = True
         self.listbox.delete(0, tk.END)
         for i, cand in enumerate(self.candidates):
-            key = self.key(cand)
-            ann = self.annotations.get(key)
-            marker = "blank"
-            if ann:
-                if ann.get("visible") == "1":
-                    quality = ann.get("quality") or "unselected"
-                    marker = quality if quality in {"good", "ambiguous"} else "unselected"
-                elif ann.get("visible") == "0":
-                    marker = "not_visible"
-                else:
-                    marker = "unselected"
+            marker, status, bg = self.candidate_status(cand)
             label = (
-                f"{i+1:03d} {marker} {cand.get('point_name','')} "
+                f"{i+1:03d} {marker:<2} {cand.get('point_name','')} "
                 f"r{cand.get('rank_for_gcp','')} {cand.get('image_name','')}"
             )
             self.listbox.insert(tk.END, label)
+            self.listbox.itemconfig(i, background=bg)
         self.listbox.selection_clear(0, tk.END)
         if self.candidates:
             self.listbox.selection_set(self.idx)

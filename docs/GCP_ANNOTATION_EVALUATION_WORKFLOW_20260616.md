@@ -54,6 +54,8 @@ mark:
 - `3`: not visible;
 - `4` / `5`: previous / next;
 - `6`: save;
+- `u`: clear the current row back to unselected while preserving the manual
+  point coordinate, useful when a classification was chosen accidentally;
 - `q`: save and quit.
 
 The annotator also provides scene/file switching controls:
@@ -82,6 +84,9 @@ Additional interaction aids:
 - the zoom entry sets the image zoom and updates when the mouse wheel is used;
 - next/previous/list switching preserves the current zoom level;
 - the candidate list on the right can be clicked to jump to any candidate row;
+- candidate-list status codes are `G` (good), `A` (ambiguous), `NV`
+  (not visible), `U` (manual point exists but not classified), and `B` (blank);
+  rows are background-colored by status for quick scanning;
 - when a correction hint is available, newly opened candidates are centered on
   the magenta hint rather than on the yellow coarse projection.
 
