@@ -56,6 +56,26 @@ mark:
 - `s`: save;
 - `q`: save and quit.
 
+The annotator also provides scene/file switching controls:
+
+- `Candidates`: load another candidate CSV without restarting the program;
+- `Output CSV`: choose where the current scene's manual observations are saved;
+- `Image root`: override stale image paths by resolving `image_name` under a
+  selected scene folder;
+- `Reload current`: reload the paths currently typed in the controls.
+
+The display overlays are:
+
+- yellow cross: coarse projected candidate;
+- magenta cross: correction-assisted hint, estimated only from already saved
+  2D residuals in the same image, same GCP, or same scene;
+- cyan cross: the manual click that will be saved.
+
+The correction hint is never saved as an observation by itself. It is only a
+navigation aid; the evaluation CSV continues to use the manually clicked pixel.
+The status bar reports the manual-to-coarse residual in pixels and, when
+available, the residual relative to the correction-assisted hint.
+
 The manual CSV stores scene, point name, image name, projected pixel, manual
 pixel, visibility, quality, confidence, annotator, note, and timestamp.
 

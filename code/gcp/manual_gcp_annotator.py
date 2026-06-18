@@ -3,12 +3,15 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import statistics
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk
-from typing import Dict, List
+from tkinter import filedialog, messagebox, ttk
+from typing import Dict, List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageTk
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 ANNOTATION_FIELDS = [
@@ -46,6 +49,17 @@ def write_csv(path: Path, rows: List[Dict[str, str]], fieldnames: List[str]) -> 
             w.writerow(row)
 
 
+def sort_candidates(candidates: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def key(row: Dict[str, str]) -> tuple[str, str, int, str]:
+        try:
+            rank = int(float(row.get("rank_for_gcp") or 9999))
+        except ValueError:
+            rank = 9999
+        return (row.get("scene", ""), row.get("point_name", ""), rank, row.get("image_name", ""))
+
+    return sorted(candidates, key=key)
+
+
 class Annotator:
     def __init__(
         self,
@@ -55,10 +69,19 @@ class Annotator:
         crop_size: int,
         display_size: int,
         annotator: str,
+        candidates_csv: Optional[Path] = None,
+        image_root: Optional[Path] = None,
+        point_name_filter: Optional[str] = None,
+        max_rows: int = 0,
     ):
         self.root = root
         self.candidates = candidates
+        self.candidates_csv = candidates_csv
         self.out_csv = out_csv
+        self.default_out_dir = out_csv.parent
+        self.image_root = image_root
+        self.point_name_filter = point_name_filter
+        self.max_rows = int(max_rows)
         self.crop_size = int(crop_size)
         self.canvas_size = int(display_size)
         self.display_size = self.canvas_size
@@ -70,15 +93,19 @@ class Annotator:
         self.drag_last = None
         self.current_crop = None
         self.current_candidate_xy = None
+        self.current_corrected_xy = None
+        self.current_correction_info = ""
         self.current_manual_crop_xy = None
         self.render_scale = self.canvas_size / self.crop_size
         self.annotator = annotator
         self.idx = 0
         self.annotations: Dict[tuple[str, str, str], Dict[str, str]] = {}
-        if out_csv.exists():
-            for row in read_csv(out_csv):
-                self.annotations[(row["scene"], row["point_name"], row["image_name"])] = row
         self.root.title("GCP manual annotator")
+        self.candidates_var = tk.StringVar(value=str(candidates_csv or ""))
+        self.out_csv_var = tk.StringVar(value=str(out_csv))
+        self.image_root_var = tk.StringVar(value=str(image_root or ""))
+        self.build_path_controls(root)
+        self.load_annotations()
         self.info = ttk.Label(root, text="", font=("Arial", 11))
         self.info.pack(fill=tk.X, padx=8, pady=4)
         btns = ttk.Frame(root)
@@ -120,16 +147,197 @@ class Annotator:
         self.current_manual = None
         self.show_item()
 
+    def build_path_controls(self, root: tk.Tk) -> None:
+        frame = ttk.LabelFrame(root, text="Scene / file switching")
+        frame.pack(fill=tk.X, padx=8, pady=6)
+
+        ttk.Label(frame, text="Candidates").grid(row=0, column=0, sticky="w", padx=4, pady=2)
+        ttk.Entry(frame, textvariable=self.candidates_var).grid(row=0, column=1, sticky="ew", padx=4, pady=2)
+        ttk.Button(frame, text="Browse...", command=self.browse_candidates).grid(row=0, column=2, padx=4, pady=2)
+
+        ttk.Label(frame, text="Output CSV").grid(row=1, column=0, sticky="w", padx=4, pady=2)
+        ttk.Entry(frame, textvariable=self.out_csv_var).grid(row=1, column=1, sticky="ew", padx=4, pady=2)
+        ttk.Button(frame, text="Set...", command=self.browse_output_csv).grid(row=1, column=2, padx=4, pady=2)
+
+        ttk.Label(frame, text="Image root").grid(row=2, column=0, sticky="w", padx=4, pady=2)
+        ttk.Entry(frame, textvariable=self.image_root_var).grid(row=2, column=1, sticky="ew", padx=4, pady=2)
+        ttk.Button(frame, text="Set...", command=self.browse_image_root).grid(row=2, column=2, padx=4, pady=2)
+
+        ttk.Button(frame, text="Reload current", command=self.reload_from_entries).grid(row=3, column=1, sticky="e", padx=4, pady=3)
+        frame.columnconfigure(1, weight=1)
+
     def key(self, cand: Dict[str, str]) -> tuple[str, str, str]:
         return (cand["scene"], cand["point_name"], cand["image_name"])
+
+    def load_annotations(self) -> None:
+        self.annotations = {}
+        if self.out_csv.exists():
+            for row in read_csv(self.out_csv):
+                self.annotations[(row["scene"], row["point_name"], row["image_name"])] = row
+
+    def load_candidates_file(self, path: Path) -> List[Dict[str, str]]:
+        candidates = read_csv(path)
+        if self.point_name_filter:
+            candidates = [r for r in candidates if r.get("point_name") == self.point_name_filter]
+        candidates = sort_candidates(candidates)
+        if self.max_rows and self.max_rows > 0:
+            candidates = candidates[: self.max_rows]
+        return candidates
+
+    def infer_default_output_csv(self, candidates: List[Dict[str, str]]) -> Path:
+        scenes = sorted({r.get("scene", "") for r in candidates if r.get("scene")})
+        if len(scenes) == 1:
+            return self.default_out_dir / f"{scenes[0]}_manual_annotations.csv"
+        return self.out_csv
+
+    def browse_candidates(self) -> None:
+        initial_dir = str((self.candidates_csv or REPO_ROOT).parent if self.candidates_csv else REPO_ROOT / "outputs")
+        selected = filedialog.askopenfilename(
+            title="Select GCP candidate CSV",
+            initialdir=initial_dir,
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        )
+        if selected:
+            self.switch_candidates(Path(selected), update_output=True)
+
+    def browse_output_csv(self) -> None:
+        selected = filedialog.asksaveasfilename(
+            title="Select annotation output CSV",
+            initialdir=str(self.out_csv.parent),
+            initialfile=self.out_csv.name,
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        )
+        if selected:
+            self.save()
+            self.out_csv = Path(selected)
+            self.out_csv_var.set(str(self.out_csv))
+            self.default_out_dir = self.out_csv.parent
+            self.load_annotations()
+            self.show_item()
+
+    def browse_image_root(self) -> None:
+        initial_dir = str(self.image_root or REPO_ROOT)
+        selected = filedialog.askdirectory(title="Select image root override", initialdir=initial_dir)
+        if selected:
+            self.image_root = Path(selected)
+            self.image_root_var.set(str(self.image_root))
+            self.reset_view()
+            self.show_item()
+
+    def reload_from_entries(self) -> None:
+        candidates_path = Path(self.candidates_var.get())
+        if not candidates_path.exists():
+            messagebox.showerror("Missing candidates", f"Candidate CSV does not exist:\n{candidates_path}")
+            return
+        image_root_text = self.image_root_var.get().strip()
+        self.image_root = Path(image_root_text) if image_root_text else None
+        out_csv_text = self.out_csv_var.get().strip()
+        if out_csv_text:
+            self.out_csv = Path(out_csv_text)
+            self.default_out_dir = self.out_csv.parent
+        self.switch_candidates(candidates_path, update_output=False)
+
+    def switch_candidates(self, path: Path, update_output: bool) -> None:
+        self.save()
+        try:
+            candidates = self.load_candidates_file(path)
+        except Exception as exc:  # pragma: no cover - GUI feedback path
+            messagebox.showerror("Load failed", f"Could not load candidates:\n{path}\n\n{exc}")
+            return
+        if not candidates:
+            messagebox.showwarning("No candidates", f"No candidates loaded from:\n{path}")
+            return
+        self.candidates = candidates
+        self.candidates_csv = path
+        self.candidates_var.set(str(path))
+        if update_output:
+            self.out_csv = self.infer_default_output_csv(candidates)
+            self.out_csv_var.set(str(self.out_csv))
+        self.load_annotations()
+        self.idx = 0
+        self.reset_view()
+        self.show_item()
+        scenes = ", ".join(sorted({r.get("scene", "") for r in candidates if r.get("scene")}))
+        self.status.configure(text=f"Loaded {len(candidates)} candidates for {scenes}; output={self.out_csv}")
+
+    def resolve_image_path(self, cand: Dict[str, str]) -> Path:
+        raw = Path(cand["image_path"])
+        if raw.exists():
+            return raw
+        image_name = cand.get("image_name") or raw.name
+        if self.image_root:
+            candidates = [
+                self.image_root / image_name,
+                self.image_root / raw.name,
+                self.image_root / cand.get("scene", "") / image_name,
+            ]
+            for p in candidates:
+                if p.exists():
+                    return p
+        return raw
+
+    def saved_residuals(
+        self,
+        scene: str,
+        image_name: Optional[str] = None,
+        point_name: Optional[str] = None,
+        exclude_key: Optional[tuple[str, str, str]] = None,
+    ) -> List[Tuple[float, float]]:
+        residuals: List[Tuple[float, float]] = []
+        for key, row in self.annotations.items():
+            if exclude_key and key == exclude_key:
+                continue
+            if row.get("scene") != scene:
+                continue
+            if image_name is not None and row.get("image_name") != image_name:
+                continue
+            if point_name is not None and row.get("point_name") != point_name:
+                continue
+            try:
+                mx = float(row.get("manual_x") or "nan")
+                my = float(row.get("manual_y") or "nan")
+                px = float(row.get("projected_x") or "nan")
+                py = float(row.get("projected_y") or "nan")
+            except ValueError:
+                continue
+            if row.get("visible") != "1" or not all(v == v for v in [mx, my, px, py]):
+                continue
+            residuals.append((mx - px, my - py))
+        return residuals
+
+    def median_residual(self, residuals: List[Tuple[float, float]]) -> Optional[Tuple[float, float]]:
+        if not residuals:
+            return None
+        return (statistics.median([r[0] for r in residuals]), statistics.median([r[1] for r in residuals]))
+
+    def correction_for_candidate(self, cand: Dict[str, str]) -> tuple[Optional[Tuple[float, float]], str]:
+        scene = cand["scene"]
+        image_name = cand["image_name"]
+        point_name = cand["point_name"]
+        exclude = self.key(cand)
+        tiers = [
+            ("same-image", self.saved_residuals(scene, image_name=image_name, exclude_key=exclude)),
+            ("same-point", self.saved_residuals(scene, point_name=point_name, exclude_key=exclude)),
+            ("same-scene", self.saved_residuals(scene, exclude_key=exclude)),
+        ]
+        for name, residuals in tiers:
+            med = self.median_residual(residuals)
+            if med is not None:
+                return med, f"{name} median residual from n={len(residuals)}"
+        return None, "no correction history"
 
     def show_item(self) -> None:
         if not self.candidates:
             self.info.configure(text="No candidates.")
             return
         cand = self.candidates[self.idx]
-        image_path = Path(cand["image_path"])
-        img = Image.open(image_path).convert("RGB")
+        image_path = self.resolve_image_path(cand)
+        if not image_path.exists():
+            messagebox.showerror("Missing image", f"Image does not exist:\n{image_path}\n\nUse Image root to point to the scene folder.")
+            img = Image.new("RGB", (self.crop_size, self.crop_size), "black")
+        else:
+            img = Image.open(image_path).convert("RGB")
         px = float(cand["pixel_x"])
         py = float(cand["pixel_y"])
         half = self.crop_size // 2
@@ -148,6 +356,12 @@ class Annotator:
         self.crop_origin = (left, top)
         self.current_crop = crop
         self.current_candidate_xy = (px - left, py - top)
+        correction, correction_info = self.correction_for_candidate(cand)
+        self.current_corrected_xy = None
+        self.current_correction_info = correction_info
+        if correction is not None:
+            dx, dy = correction
+            self.current_corrected_xy = (px + dx - left, py + dy - top)
         ann = self.annotations.get(self.key(cand))
         self.current_manual = None
         self.current_manual_crop_xy = None
@@ -167,16 +381,17 @@ class Annotator:
         )
         old = self.annotations.get(self.key(cand))
         if old:
+            residual_text = self.residual_status_text(cand)
             self.status.configure(
                 text=(
                     f"Saved: visible={old.get('visible')} quality={old.get('quality')}  "
-                    f"zoom={self.view_zoom:.2f}x  (mouse wheel/+/- zoom image, right-drag pan, 0 reset)"
+                    f"{residual_text}  zoom={self.view_zoom:.2f}x"
                 )
             )
         else:
             self.status.configure(
                 text=(
-                    "Yellow cross = coarse projection. Cyan cross = manual mark. "
+                    "Yellow = coarse projection. Magenta = corrected hint. Cyan = manual mark. "
                     "Click true GCP center, then press v/a/x/n. Mouse wheel/+/- zoom image, right-drag pan, 0 reset."
                 )
             )
@@ -202,7 +417,10 @@ class Annotator:
         draw = ImageDraw.Draw(rendered)
         if self.current_candidate_xy is not None:
             cx, cy = self.current_candidate_xy
-            self.draw_cross(draw, cx * self.render_scale, cy * self.render_scale, (255, 230, 0))
+            self.draw_cross(draw, cx * self.render_scale, cy * self.render_scale, (255, 230, 0), arm=10, width=2)
+        if self.current_corrected_xy is not None:
+            px, py = self.current_corrected_xy
+            self.draw_cross(draw, px * self.render_scale, py * self.render_scale, (255, 0, 255), arm=9, width=2)
         if self.current_manual_crop_xy is not None:
             mx, my = self.current_manual_crop_xy
             self.draw_cross(draw, mx * self.render_scale, my * self.render_scale, (0, 255, 255))
@@ -256,14 +474,39 @@ class Annotator:
         row["updated_at"] = dt.datetime.now().isoformat(timespec="seconds")
         self.annotations[self.key(cand)] = row
         self.show_item()
+        self.status.configure(text=self.residual_status_text(cand))
+
+    def residual_status_text(self, cand: Dict[str, str]) -> str:
+        row = self.annotations.get(self.key(cand))
+        if not row or not row.get("manual_x") or not row.get("manual_y"):
+            return self.current_correction_info
+        try:
+            mx = float(row["manual_x"])
+            my = float(row["manual_y"])
+            px = float(row["projected_x"])
+            py = float(row["projected_y"])
+        except ValueError:
+            return self.current_correction_info
+        dx = mx - px
+        dy = my - py
+        norm = (dx * dx + dy * dy) ** 0.5
+        corrected = ""
+        correction, info = self.correction_for_candidate(cand)
+        if correction is not None:
+            cdx = dx - correction[0]
+            cdy = dy - correction[1]
+            cnorm = (cdx * cdx + cdy * cdy) ** 0.5
+            corrected = f"; vs corrected hint residual={cnorm:.1f}px"
+        return f"manual-coarse residual=({dx:+.1f},{dy:+.1f})px norm={norm:.1f}px{corrected}; correction={info}"
 
     def base_annotation(self, cand: Dict[str, str]) -> Dict[str, str]:
+        image_path = self.resolve_image_path(cand)
         return {
             "schema": "m3m_gcp_manual_image_observation_v1",
             "scene": cand["scene"],
             "point_name": cand["point_name"],
             "image_name": cand["image_name"],
-            "image_path": cand["image_path"],
+            "image_path": str(image_path),
             "rank_for_gcp": cand.get("rank_for_gcp", ""),
             "candidate_score": cand.get("center_score", ""),
             "projected_x": f"{float(cand['pixel_x']):.3f}",
@@ -385,11 +628,13 @@ def main() -> None:
     parser.add_argument("--crop_size", type=int, default=720)
     parser.add_argument("--display_size", type=int, default=860)
     parser.add_argument("--annotator", default="user", help="Annotator id written to the output CSV.")
+    parser.add_argument("--image_root", default="", help="Optional root used to resolve image_name when candidate image_path is stale.")
     args = parser.parse_args()
-    candidates = read_csv(Path(args.candidates_csv))
+    candidates_path = Path(args.candidates_csv)
+    candidates = read_csv(candidates_path)
     if args.point_name:
         candidates = [r for r in candidates if r.get("point_name") == args.point_name]
-    candidates.sort(key=lambda r: (r["point_name"], int(float(r.get("rank_for_gcp") or 9999)), r["image_name"]))
+    candidates = sort_candidates(candidates)
     if args.max_rows and args.max_rows > 0:
         candidates = candidates[: args.max_rows]
     root = tk.Tk()
@@ -400,6 +645,10 @@ def main() -> None:
         crop_size=args.crop_size,
         display_size=args.display_size,
         annotator=args.annotator,
+        candidates_csv=candidates_path,
+        image_root=Path(args.image_root) if args.image_root else None,
+        point_name_filter=args.point_name,
+        max_rows=args.max_rows,
     )
     root.mainloop()
 
