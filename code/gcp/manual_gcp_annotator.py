@@ -85,8 +85,8 @@ class Annotator:
         self.point_name_filter = point_name_filter
         self.max_rows = int(max_rows)
         self.crop_size = int(crop_size)
-        self.canvas_size = int(display_size)
-        self.display_size = self.canvas_size
+        self.default_canvas_size = int(display_size)
+        self.display_size = self.default_canvas_size
         self.view_zoom = 1.0
         self.min_view_zoom = 1.0
         self.max_view_zoom = 12.0
@@ -98,7 +98,7 @@ class Annotator:
         self.current_corrected_xy = None
         self.current_correction_info = ""
         self.current_manual_crop_xy = None
-        self.render_scale = self.canvas_size / self.crop_size
+        self.render_scale = self.default_canvas_size / self.crop_size
         self.annotator = annotator
         self.idx = 0
         self.annotations: Dict[tuple[str, str, str], Dict[str, str]] = {}
@@ -132,17 +132,19 @@ class Annotator:
         ttk.Entry(root, textvariable=self.note_var).pack(fill=tk.X, padx=8, pady=4)
         self.status = ttk.Label(root, text="", font=("Arial", 10))
         self.status.pack(fill=tk.X, padx=8, pady=4)
-        body = ttk.Frame(root)
+        body = ttk.Panedwindow(root, orient=tk.HORIZONTAL)
         body.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
-        self.canvas = tk.Canvas(body, width=self.canvas_size, height=self.canvas_size, bg="black")
-        self.canvas.pack(side=tk.LEFT, padx=(0, 8), pady=4)
+        canvas_frame = ttk.Frame(body)
         list_frame = ttk.Frame(body)
-        list_frame.pack(side=tk.LEFT, fill=tk.Y, pady=4)
+        body.add(canvas_frame, weight=5)
+        body.add(list_frame, weight=2)
+        self.canvas = tk.Canvas(canvas_frame, width=self.default_canvas_size, height=self.default_canvas_size, bg="black")
+        self.canvas.pack(fill=tk.BOTH, expand=True, padx=(0, 6), pady=4)
         ttk.Label(list_frame, text="Candidate list").pack(anchor=tk.W)
         list_container = ttk.Frame(list_frame)
-        list_container.pack(fill=tk.Y, expand=True)
+        list_container.pack(fill=tk.BOTH, expand=True)
         self.listbox = tk.Listbox(list_container, width=48, height=34, exportselection=False)
-        self.listbox.pack(side=tk.LEFT, fill=tk.Y, expand=True)
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         list_scroll = ttk.Scrollbar(list_container, orient=tk.VERTICAL, command=self.listbox.yview)
         list_scroll.pack(side=tk.LEFT, fill=tk.Y)
         self.listbox.configure(yscrollcommand=list_scroll.set)
@@ -152,16 +154,17 @@ class Annotator:
         self.canvas.bind("<B3-Motion>", self.on_right_drag)
         self.canvas.bind("<ButtonRelease-3>", self.on_right_release)
         self.canvas.bind("<MouseWheel>", self.on_mousewheel)
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
         root.bind("1", lambda e: self.run_shortcut(e, lambda: self.mark("1", "good", "1.0")))
         root.bind("2", lambda e: self.run_shortcut(e, lambda: self.mark("1", "ambiguous", "0.5")))
         root.bind("3", lambda e: self.run_shortcut(e, lambda: self.mark("0", "not_visible", "0.0")))
         root.bind("4", lambda e: self.run_shortcut(e, self.prev_item))
         root.bind("5", lambda e: self.run_shortcut(e, self.next_item))
         root.bind("6", lambda e: self.run_shortcut(e, self.save))
-        root.bind("<Left>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(-1, 0)))
-        root.bind("<Right>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(1, 0)))
-        root.bind("<Up>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0, -1)))
-        root.bind("<Down>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0, 1)))
+        root.bind("<Left>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(-0.1, 0.0)))
+        root.bind("<Right>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.1, 0.0)))
+        root.bind("<Up>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.0, -0.1)))
+        root.bind("<Down>", lambda e: self.run_shortcut(e, lambda: self.nudge_manual(0.0, 0.1)))
         root.bind("q", lambda e: self.quit())
         root.bind("+", lambda e: self.zoom_in())
         root.bind("=", lambda e: self.zoom_in())
@@ -517,7 +520,7 @@ class Annotator:
             self.status.configure(
                 text=(
                     "Yellow = coarse projection. Magenta = corrected hint. Cyan = manual mark. "
-                    "Click true GCP center, then press 1/2/3/4/5/6. Arrow keys nudge manual mark by 1 px."
+                    "Click true GCP center, then press 1/2/3/4/5/6. Arrow keys nudge manual mark by 0.1 px."
                 )
             )
 
@@ -542,20 +545,31 @@ class Annotator:
             return self.current_candidate_xy
         return None
 
+    def canvas_view_size(self) -> tuple[int, int]:
+        width = max(1, int(self.canvas.winfo_width() or self.default_canvas_size))
+        height = max(1, int(self.canvas.winfo_height() or self.default_canvas_size))
+        return width, height
+
+    def canvas_fit_side(self) -> int:
+        width, height = self.canvas_view_size()
+        return max(1, min(width, height))
+
     def center_pan_on_active(self, render_size: int) -> None:
         active = self.active_crop_xy()
         if active is None:
             self.clamp_pan(render_size)
             return
+        canvas_w, canvas_h = self.canvas_view_size()
         ax, ay = active
-        self.pan_x = self.canvas_size / 2 - ax * self.render_scale
-        self.pan_y = self.canvas_size / 2 - ay * self.render_scale
+        self.pan_x = canvas_w / 2 - ax * self.render_scale
+        self.pan_y = canvas_h / 2 - ay * self.render_scale
         self.clamp_pan(render_size)
 
     def render_current_view(self, center_active: bool = False) -> None:
         if self.current_crop is None:
             return
-        render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
+        canvas_w, canvas_h = self.canvas_view_size()
+        render_size = max(1, int(round(self.canvas_fit_side() * self.view_zoom)))
         self.render_scale = render_size / self.crop_size
         rendered = self.current_crop.resize((render_size, render_size), Image.Resampling.LANCZOS)
         draw = ImageDraw.Draw(rendered)
@@ -572,32 +586,36 @@ class Annotator:
             self.center_pan_on_active(render_size)
         else:
             self.clamp_pan(render_size)
-        viewport = Image.new("RGB", (self.canvas_size, self.canvas_size), "black")
+        viewport = Image.new("RGB", (canvas_w, canvas_h), "black")
         pan_x = int(round(self.pan_x))
         pan_y = int(round(self.pan_y))
         src_x = max(0, -pan_x)
         src_y = max(0, -pan_y)
         dst_x = max(0, pan_x)
         dst_y = max(0, pan_y)
-        visible_w = min(self.canvas_size - dst_x, render_size - src_x)
-        visible_h = min(self.canvas_size - dst_y, render_size - src_y)
+        visible_w = min(canvas_w - dst_x, render_size - src_x)
+        visible_h = min(canvas_h - dst_y, render_size - src_y)
         if visible_w > 0 and visible_h > 0:
             viewport.paste(rendered.crop((src_x, src_y, src_x + visible_w, src_y + visible_h)), (dst_x, dst_y))
         self.photo = ImageTk.PhotoImage(viewport)
-        self.canvas.configure(width=self.canvas_size, height=self.canvas_size)
         self.canvas.delete("all")
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
 
     def clamp_pan(self, render_size: int | None = None) -> None:
         if render_size is None:
-            render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
-        if render_size <= self.canvas_size:
-            self.pan_x = (self.canvas_size - render_size) / 2
-            self.pan_y = (self.canvas_size - render_size) / 2
-            return
-        min_pan = self.canvas_size - render_size
-        self.pan_x = min(0.0, max(float(min_pan), self.pan_x))
-        self.pan_y = min(0.0, max(float(min_pan), self.pan_y))
+            render_size = max(1, int(round(self.canvas_fit_side() * self.view_zoom)))
+        canvas_w, canvas_h = self.canvas_view_size()
+        if render_size <= canvas_w:
+            self.pan_x = (canvas_w - render_size) / 2
+        else:
+            min_pan_x = canvas_w - render_size
+            self.pan_x = min(0.0, max(float(min_pan_x), self.pan_x))
+        if render_size <= canvas_h:
+            self.pan_y = (canvas_h - render_size) / 2
+        else:
+            min_pan_y = canvas_h - render_size
+            self.pan_y = min(0.0, max(float(min_pan_y), self.pan_y))
+        return
 
     def on_click(self, event) -> None:
         left, top = self.crop_origin
@@ -629,7 +647,7 @@ class Annotator:
         self.update_listbox()
         self.status.configure(text=self.residual_status_text(cand))
 
-    def nudge_manual(self, dx: int, dy: int) -> None:
+    def nudge_manual(self, dx: float, dy: float) -> None:
         cand = self.candidates[self.idx]
         if self.current_manual is not None:
             x, y = self.current_manual
@@ -715,9 +733,9 @@ class Annotator:
             marker = " "
             if ann:
                 if ann.get("visible") == "1":
-                    marker = "✓"
+                    marker = "OK"
                 elif ann.get("visible") == "0":
-                    marker = "×"
+                    marker = "NO"
                 else:
                     marker = "?"
             label = (
@@ -766,8 +784,9 @@ class Annotator:
         if self.current_crop is None:
             return
         if anchor_x is None or anchor_y is None:
-            anchor_x = self.canvas_size / 2
-            anchor_y = self.canvas_size / 2
+            canvas_w, canvas_h = self.canvas_view_size()
+            anchor_x = canvas_w / 2
+            anchor_y = canvas_h / 2
         crop_x = (anchor_x - self.pan_x) / self.render_scale
         crop_y = (anchor_y - self.pan_y) / self.render_scale
         old_zoom = self.view_zoom
@@ -775,11 +794,11 @@ class Annotator:
         if abs(self.view_zoom - old_zoom) < 1e-9:
             return
         self.zoom_var.set(f"{self.view_zoom:.2f}")
-        render_size = max(1, int(round(self.canvas_size * self.view_zoom)))
+        render_size = max(1, int(round(self.canvas_fit_side() * self.view_zoom)))
         new_scale = render_size / self.crop_size
         self.pan_x = anchor_x - crop_x * new_scale
         self.pan_y = anchor_y - crop_y * new_scale
-        self.render_current_view()
+        self.render_current_view(center_active=False)
         self.status.configure(
             text=(
                 f"Image zoom={self.view_zoom:.2f}x. Mouse wheel/+/- zoom image, right-drag pan, 0 reset."
@@ -806,6 +825,10 @@ class Annotator:
         self.view_zoom = min(self.max_view_zoom, max(self.min_view_zoom, zoom))
         self.zoom_var.set(f"{self.view_zoom:.2f}")
         self.render_current_view(center_active=True)
+
+    def on_canvas_configure(self, event) -> None:
+        if self.current_crop is not None:
+            self.render_current_view(center_active=False)
 
     def on_mousewheel(self, event) -> None:
         anchor_x = event.x if event.widget is self.canvas else None

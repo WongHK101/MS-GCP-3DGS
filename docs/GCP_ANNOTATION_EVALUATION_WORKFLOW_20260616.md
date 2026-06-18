@@ -78,7 +78,7 @@ available, the residual relative to the correction-assisted hint.
 
 Additional interaction aids:
 
-- arrow keys nudge the manual cyan cross by one original-image pixel;
+- arrow keys nudge the manual cyan cross by 0.1 original-image pixel;
 - the zoom entry sets the image zoom and updates when the mouse wheel is used;
 - next/previous/list switching preserves the current zoom level;
 - the candidate list on the right can be clicked to jump to any candidate row;
