@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +16,26 @@ from tqdm import tqdm
 
 
 DEFAULT_TRAIN_REPO = r"E:\Multispectral" if Path(r"E:\Multispectral").exists() else "/root/autodl-tmp/Multispectral"
+DEFAULT_RASTERIZER_DEPTH_SEMANTICS = "alpha_weighted_unnormalized_inverse_camera_z"
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def git_commit(path: Path) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return ""
 
 
 def parse_train_repo(argv: Sequence[str]) -> Path:
@@ -197,11 +219,18 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         ],
     )
 
+    renderer_sources = [
+        train_repo / "gaussian_renderer" / "__init__.py",
+        train_repo / "submodules" / "diff-gaussian-rasterization" / "diff_gaussian_rasterization" / "__init__.py",
+        train_repo / "submodules" / "diff-gaussian-rasterization" / "cuda_rasterizer" / "forward.cu",
+    ]
     manifest: Dict[str, Any] = {
-        "schema": "ms_gcp_gaussian_depth_export_v1",
+        "schema": "ms_gcp_gaussian_depth_export_v1_1",
         "created_at": datetime.now().astimezone().isoformat(),
         "purpose": "Depth-only P1 Gaussian GCP geometry evaluator input; not a visualization artifact.",
         "train_repo": str(train_repo),
+        "renderer_repository": str(train_repo),
+        "renderer_commit": git_commit(train_repo),
         "source_path": str(dataset.source_path),
         "model_path": str(dataset.model_path),
         "iteration": int(args.iteration),
@@ -210,14 +239,34 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "mapping_csv": str(mapping_path),
         "depth_file_format": "float32 numpy .npy",
         "depth_semantics": args.depth_semantics,
-        "depth_semantics_note": (
-            "The first-paper Gaussian renderer returns the rasterizer depth image. "
-            "For the current rasterizer output this is interpreted as inverse camera-z depth; "
-            "downstream evaluator manifests must record and verify this assumption."
+        "depth_units": (
+            "alpha_transmittance_weighted_1/metre"
+            if args.depth_semantics == DEFAULT_RASTERIZER_DEPTH_SEMANTICS
+            else ("1/metre" if args.depth_semantics.endswith("inverse_camera_z") else "metre")
         ),
+        "image_domain": "rendered_colmap_camera_domain",
+        "depth_semantics_note": (
+            "The current Graphdeco-derived rasterizer output used by gaussian_renderer.render(...)[\"depth\"] "
+            "is the CUDA variable expected_invdepth = sum_j (1 / camera_z_j) * alpha_j * T_j. "
+            "It is not normalized by accumulated opacity/weight. Formal GCP evaluation must not convert "
+            "this artifact with camera_z=1/depth unless a future exporter also provides and applies the "
+            "corresponding alpha/weight normalization, or exports camera_z/ray_distance directly."
+        ),
+        "depth_accumulation_formula": "D(p)=sum_j alpha_j(p) T_j(p) / z_j, where z_j is camera-space z",
+        "alpha_map_available": False,
+        "depth_second_moment_available": False,
         "depth_scale_for_evaluator": 1.0,
         "depth_offset_for_evaluator": 0.0,
         "rendered_view_count": len(rows),
+        "depth_index": rows,
+        "renderer_source_trace": [
+            {
+                "path": str(path),
+                "sha256": file_sha256(path) if path.exists() else "",
+                "exists": path.exists(),
+            }
+            for path in renderer_sources
+        ],
         "image_list_csv": str(Path(args.image_list_csv).expanduser().resolve()) if args.image_list_csv else "",
         "image_name_column": args.image_name_column,
         "image_list_status_column": args.image_list_status_column,
@@ -228,6 +277,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "notes": [
             "No checkpoint mutation, no retraining, and no support modification.",
             "Depth arrays are saved as linear float data; PNG displays must not be used for metric evaluation.",
+            "This manifest intentionally labels the current renderer output as unsupported for formal depth-only GCP evaluation.",
         ],
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -249,8 +299,14 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--mapping_csv", default="")
     parser.add_argument(
         "--depth_semantics",
-        default="inverse_camera_z",
-        choices=["camera_z", "ray_distance", "inverse_camera_z", "inverse_ray_distance"],
+        default=DEFAULT_RASTERIZER_DEPTH_SEMANTICS,
+        choices=[
+            "camera_z",
+            "ray_distance",
+            "inverse_camera_z",
+            "inverse_ray_distance",
+            DEFAULT_RASTERIZER_DEPTH_SEMANTICS,
+        ],
     )
     parser.add_argument("--image_list_csv", default="", help="Optional CSV that restricts export to listed image names.")
     parser.add_argument("--image_name_column", default="image_name")

@@ -2,8 +2,9 @@
 
 ## Purpose
 
-MS-GCP-3DGS evaluates georeferenced geometry for UAV Gaussian reconstruction
-models. The benchmark estimates method-derived surface/support positions at
+MS-GCP-3DGS is an RGB UAV georeferenced geometry benchmark for Gaussian
+Splatting reconstruction methods. The benchmark estimates method-derived
+surface/support positions at
 manually annotated GCP image locations, registers those positions to surveyed
 GCP coordinates with a global Sim(3), and reports held-out checkpoint residuals.
 
@@ -51,9 +52,10 @@ Per scene:
 - checkpoint median, p90/p95, and max 3D error;
 - failure counts by reason.
 
-Aggregate reporting should include scene-weighted and GCP-weighted summaries and
-area-grouped summaries for 3k, 5k, 10k, 20k, 50k, and 100k scenes when those
-tracks are available.
+The formal release reports all six real-world urban UAV scenes: 3k, 5k, 10k,
+20k, 50k, and 100k. Aggregate reporting should include scene-weighted and
+GCP-weighted summaries, with 5k identified as a deliberately underexposed
+low-light challenge scene rather than a pure area-effect sample.
 
 ## Prohibited Operations
 
@@ -66,8 +68,10 @@ tracks are available.
 
 ## Scene Scale Policy
 
-Small scenes such as 3k and 5k are valid for smoke tests and small-area
-diagnostics, but formal georeferenced accuracy claims should emphasize scenes
-with stronger spatial GCP coverage, especially 50k and 100k. Each scene still
-uses its own fixed split, and all methods use the same split.
-
+All six scenes enter per-scene formal reporting. The 3k scene is not only a
+smoke test; it is a small formal scene with limited spatial scale. The 5k scene
+is a formal low-light challenge scene and should be reported separately when
+interpreting illumination sensitivity. Large-area claims should emphasize the
+50k and 100k scenes because they provide stronger spatial coverage and are more
+representative of survey-scale mapping. Each scene uses its own fixed split,
+and all methods use the same split.

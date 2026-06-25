@@ -23,3 +23,5 @@ cache/
 .venv/
 build/
 third_party/
+gcp_manual_annotations_*/
+scripts/diagnostics/

@@ -44,7 +44,10 @@ def write_csv(path: Path, rows: Iterable[Dict[str, Any]], fieldnames: Sequence[s
 def usable_observation(row: Dict[str, str]) -> bool:
     if str(row.get("visible", "")).strip() not in {"1", "true", "True", "yes", "Y"}:
         return False
-    if str(row.get("quality", "")).strip() in {"not_visible", "reject", "rejected"}:
+    quality = str(row.get("quality", "")).strip()
+    if quality in {"not_visible", "reject", "rejected"}:
+        return False
+    if quality and quality != "good":
         return False
     return bool(str(row.get("manual_x", "")).strip() and str(row.get("manual_y", "")).strip())
 
@@ -162,7 +165,7 @@ def main() -> None:
         "notes": [
             "This file only packages manual 2D GCP observations.",
             "It does not perform 3D reconstruction, bundle adjustment, or GCP residual evaluation.",
-            "Rows with visible=1, manual_x/manual_y, and quality not equal to not_visible are exported as evaluation-ready observations.",
+            "Rows with visible=1, manual_x/manual_y, and quality=good are exported as evaluation-ready observations.",
         ],
     }
     (out_dir / "gcp_annotation_summary_manifest.json").write_text(

@@ -10,7 +10,7 @@
     "image_domain": "distorted or undistorted.",
     "camera_model": "COLMAP camera model and parameter convention.",
     "pixel_coordinate_convention": "Pixel coordinate convention, e.g. zero-indexed pixel centers.",
-    "depth_semantics": "camera_z, ray_distance, inverse_camera_z, or inverse_ray_distance.",
+    "depth_semantics": "Formal evaluator accepts camera_z, ray_distance, inverse_camera_z, or inverse_ray_distance. The current Graphdeco-derived alpha_weighted_unnormalized_inverse_camera_z artifact must be rejected for formal depth-only evaluation unless normalized/exported differently.",
     "depth_units": "Depth unit after scale/offset conversion, normally meters in the camera/model frame.",
     "depth_invalid_rule": "How invalid depth is encoded.",
     "sim3_convention": "target_xyz = scale * rotation @ source_xyz + translation."
@@ -21,8 +21,10 @@
     "depth_offset": "Offset applied after scaling stored depth values.",
     "alpha_map_available": "Whether a per-pixel alpha/accumulation map is available.",
     "depth_second_moment_available": "Whether a depth second-moment or variance map is available.",
-    "renderer_version": "Renderer identifier used to produce depth maps.",
+    "renderer_repository": "Repository path or anonymized package reference used to produce depth maps.",
+    "renderer_commit": "Exact renderer/source commit used for depth export.",
+    "renderer_source_trace": "Source files and hashes that define payload[\"depth\"].",
+    "mapping_csv": "Image-name to depth-path mapping with width and height for each depth map.",
     "method_output_contract": "Reference to the method output contract file."
   }
 }
-

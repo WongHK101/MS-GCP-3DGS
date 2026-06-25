@@ -133,6 +133,8 @@ def observation_is_usable(row: Dict[str, str], min_confidence: float) -> bool:
     quality = str(row.get("quality", "")).strip()
     if quality in {"not_visible", "reject", "rejected"}:
         return False
+    if quality and quality != "good":
+        return False
     confidence_text = str(row.get("confidence", "")).strip()
     if confidence_text:
         try:
@@ -164,7 +166,7 @@ def main() -> None:
     parser.add_argument("--out_dir", required=True)
     parser.add_argument("--scene", default="", help="Optional scene id written to outputs.")
     parser.add_argument("--min_observations", type=int, default=2)
-    parser.add_argument("--min_confidence", type=float, default=0.0)
+    parser.add_argument("--min_confidence", type=float, default=1.0)
     args = parser.parse_args()
 
     cameras, images, _points3d = read_model(args.colmap_model)
