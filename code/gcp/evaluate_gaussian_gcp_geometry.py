@@ -23,6 +23,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from read_write_model import qvec2rotmat, read_model  # noqa: E402
 from triangulate_gcp_points import pixel_to_normalized  # noqa: E402
+from metric_depth_packet import (  # noqa: E402
+    METRIC_PACKET_MANIFEST_SCHEMA,
+    METRIC_PACKET_TENSOR_NAMES,
+    PRIMARY_DEPTH_SEMANTICS,
+    PRIMARY_DEPTH_TENSOR,
+    recompute_and_compare_packet,
+)
 from fit_gcp_sim3 import (  # noqa: E402
     DEFAULT_TARGET_FIELDS,
     apply_similarity,
@@ -139,6 +146,39 @@ def git_commit(path: Path = REPO_ROOT) -> str:
 
 def load_depth_manifest(path: Path) -> Dict[str, Any]:
     manifest = json.loads(path.read_text(encoding="utf-8"))
+    schema = manifest.get("schema", "")
+    if schema == METRIC_PACKET_MANIFEST_SCHEMA:
+        required = [
+            "primary_depth_tensor",
+            "primary_depth_semantics",
+            "tensor_names",
+            "depth_index",
+            "model_content_hash",
+            "renderer_commit",
+            "rasterizer_commit",
+            "exporter_commit",
+            "image_domain",
+            "pixel_coordinate_convention",
+        ]
+        missing = []
+        for name in required:
+            if name not in manifest:
+                missing.append(name)
+                continue
+            value = manifest.get(name)
+            if value is None or value == "" or value == []:
+                missing.append(name)
+        if missing:
+            raise ValueError(f"Metric depth packet manifest missing required fields {missing}: {path}")
+        if manifest["primary_depth_tensor"] != PRIMARY_DEPTH_TENSOR:
+            raise ValueError(f"Unsupported primary depth tensor: {manifest['primary_depth_tensor']}")
+        if manifest["primary_depth_semantics"] != PRIMARY_DEPTH_SEMANTICS:
+            raise ValueError(f"Unsupported primary depth semantics: {manifest['primary_depth_semantics']}")
+        tensors = set(manifest.get("tensor_names", []))
+        missing_tensors = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in tensors]
+        if missing_tensors:
+            raise ValueError(f"Metric depth packet manifest missing tensors: {missing_tensors}")
+        return manifest
     if "depth_semantics" not in manifest:
         raise ValueError(f"Depth manifest missing depth_semantics: {path}")
     if "mapping_csv" not in manifest and "depth_index" not in manifest:
@@ -162,9 +202,9 @@ def load_depth_index(manifest_path: Path, manifest: Dict[str, Any]) -> Dict[str,
         image_name = row.get("image_name", "").strip()
         if not image_name:
             continue
-        path_text = row.get("depth_path", "").strip()
+        path_text = row.get("packet_path", row.get("depth_path", "")).strip()
         if not path_text:
-            raise ValueError(f"Depth index row has no depth_path for {image_name}")
+            raise ValueError(f"Depth index row has no packet_path/depth_path for {image_name}")
         depth_path = Path(path_text)
         if not depth_path.is_absolute():
             depth_path = base / depth_path
@@ -174,6 +214,7 @@ def load_depth_index(manifest_path: Path, manifest: Dict[str, Any]) -> Dict[str,
             raise ValueError(f"Depth index row has invalid shape for {image_name}: {width}x{height}")
         payload = dict(row)
         payload["depth_path"] = str(depth_path)
+        payload["packet_path"] = str(depth_path)
         payload["height"] = height
         payload["width"] = width
         index[image_name] = payload
@@ -193,6 +234,11 @@ def reject_unsupported_depth_semantics(semantics: str) -> None:
         )
     if normalized not in SUPPORTED_EVALUATOR_DEPTH_SEMANTICS:
         raise ValueError(f"Unsupported depth semantics: {semantics}")
+
+
+def cli_flag_supplied(argv: Sequence[str], flag_name: str) -> bool:
+    flag = "--" + flag_name
+    return any(arg == flag or arg.startswith(flag + "=") for arg in argv)
 
 
 def load_split_roles(path: Path, scene: str) -> tuple[set[str], set[str]]:
@@ -284,13 +330,44 @@ def load_depth_map(path: Path, scale: float = 1.0, offset: float = 0.0, npz_key:
         arr = np.load(path)
     elif suffix == ".npz":
         payload = np.load(path)
-        key = npz_key if npz_key in payload else sorted(payload.files)[0]
+        if npz_key:
+            if npz_key not in payload:
+                raise KeyError(f"NPZ key {npz_key!r} missing from {path}; available={sorted(payload.files)}")
+            key = npz_key
+        else:
+            key = sorted(payload.files)[0]
         arr = payload[key]
     else:
         arr = np.asarray(Image.open(path))
     if arr.ndim == 3:
         arr = arr[..., 0]
     return np.asarray(arr, dtype=np.float64) * float(scale) + float(offset)
+
+
+def validate_metric_packet_npz(path: Path, entry: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    with np.load(path) as payload:
+        available = set(payload.files)
+        missing = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in available]
+        if missing:
+            raise ValueError(f"Metric packet {path} missing required tensors: {missing}")
+        packet = {name: np.asarray(payload[name]) for name in METRIC_PACKET_TENSOR_NAMES}
+    shapes = {name: packet[name].shape for name in METRIC_PACKET_TENSOR_NAMES}
+    if len(set(shapes.values())) != 1:
+        raise ValueError(f"Metric packet tensors have inconsistent shapes: {shapes}")
+    expected_shape = (int(entry["height"]), int(entry["width"]))
+    if tuple(next(iter(shapes.values()))) != expected_shape:
+        raise ValueError(f"Metric packet shape mismatch for {path}: expected {expected_shape}, got {shapes}")
+    dtypes = {name: str(packet[name].dtype) for name in METRIC_PACKET_TENSOR_NAMES}
+    for name, dtype in dtypes.items():
+        if name == "metric_depth_valid_mask":
+            if dtype not in {"bool", "bool_"}:
+                raise ValueError(f"Metric packet valid mask must be bool, got {dtype}")
+        elif dtype != "float32":
+            raise ValueError(f"Metric packet tensor {name} must be float32, got {dtype}")
+    recompute = recompute_and_compare_packet(packet)
+    if not recompute["passed"]:
+        raise ValueError(f"Metric packet derived tensor recomputation failed for {path}: {recompute}")
+    return packet
 
 
 def camera_z_from_depth_value(depth_value: float, x_norm: float, y_norm: float, semantics: str) -> float:
@@ -553,6 +630,7 @@ def run_roundtrip_unit_test() -> Dict[str, Any]:
 
 
 def main() -> None:
+    argv = sys.argv[1:]
     parser = argparse.ArgumentParser(
         description="Depth-only Gaussian GCP geometry evaluator core."
     )
@@ -605,7 +683,7 @@ def main() -> None:
     parser.add_argument("--min_confidence", type=float, default=1.0)
     parser.add_argument("--min_valid_observations", type=int, default=3)
     parser.add_argument("--max_multiview_scatter_m", type=float, default=0.0)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.run_roundtrip_unit_test:
         result = run_roundtrip_unit_test()
@@ -624,6 +702,7 @@ def main() -> None:
     depth_manifest: Dict[str, Any] | None = None
     depth_manifest_sha256 = ""
     depth_index: Dict[str, Dict[str, Any]] = {}
+    metric_packet_manifest = False
     scene_metadata_rows: Dict[str, Dict[str, str]] = {}
 
     if args.release_config:
@@ -634,8 +713,13 @@ def main() -> None:
             "scene_metadata_csv",
             "depth_dir",
             "depth_semantics",
+            "image_domain",
+            "pixel_coordinate_convention",
+            "depth_scale",
+            "depth_offset",
+            "npz_key",
         ]
-        supplied = [name for name in forbidden_overrides if getattr(args, name)]
+        supplied = [name for name in forbidden_overrides if cli_flag_supplied(argv, name)]
         if supplied:
             raise SystemExit(
                 "--release_config mode resolves these inputs from frozen manifests; "
@@ -675,7 +759,17 @@ def main() -> None:
         depth_manifest_path = Path(args.depth_manifest)
         depth_manifest_sha256 = file_sha256(depth_manifest_path)
         depth_manifest = load_depth_manifest(depth_manifest_path)
-        manifest_semantics = str(depth_manifest["depth_semantics"]).strip()
+        metric_packet_manifest = depth_manifest.get("schema", "") == METRIC_PACKET_MANIFEST_SCHEMA
+        if metric_packet_manifest:
+            manifest_semantics = str(depth_manifest["primary_depth_semantics"]).strip()
+            manifest_npz_key = str(depth_manifest["primary_depth_tensor"]).strip()
+            if manifest_npz_key != PRIMARY_DEPTH_TENSOR:
+                raise SystemExit(f"Unsupported metric packet primary tensor: {manifest_npz_key}")
+            args.npz_key = manifest_npz_key
+            args.depth_scale = 1.0
+            args.depth_offset = 0.0
+        else:
+            manifest_semantics = str(depth_manifest["depth_semantics"]).strip()
         if args.depth_semantics and args.depth_semantics != manifest_semantics:
             raise SystemExit(
                 f"CLI --depth_semantics ({args.depth_semantics}) does not match depth manifest "
@@ -683,6 +777,12 @@ def main() -> None:
             )
         args.depth_semantics = manifest_semantics
         reject_unsupported_depth_semantics(args.depth_semantics)
+        manifest_domain = str(depth_manifest.get("image_domain", "")).strip()
+        if manifest_domain:
+            args.image_domain = manifest_domain
+        manifest_pixel_convention = str(depth_manifest.get("pixel_coordinate_convention", "")).strip()
+        if manifest_pixel_convention:
+            args.pixel_coordinate_convention = manifest_pixel_convention
         depth_index = load_depth_index(depth_manifest_path, depth_manifest)
         if depth_manifest.get("depth_output_dir"):
             manifest_depth_dir = Path(str(depth_manifest["depth_output_dir"]))
@@ -694,8 +794,9 @@ def main() -> None:
             if not manifest_mapping.is_absolute():
                 manifest_mapping = depth_manifest_path.parent / manifest_mapping
             args.depth_dir = str(manifest_mapping.parent)
-        args.depth_scale = float(depth_manifest.get("depth_scale_for_evaluator", args.depth_scale))
-        args.depth_offset = float(depth_manifest.get("depth_offset_for_evaluator", args.depth_offset))
+        if not metric_packet_manifest:
+            args.depth_scale = float(depth_manifest.get("depth_scale_for_evaluator", args.depth_scale))
+            args.depth_offset = float(depth_manifest.get("depth_offset_for_evaluator", args.depth_offset))
     elif args.depth_semantics:
         reject_unsupported_depth_semantics(args.depth_semantics)
     else:
@@ -803,6 +904,27 @@ def main() -> None:
                 continue
         cache_key = str(depth_path)
         if cache_key not in depth_cache:
+            packet_validation: Dict[str, Any] = {}
+            if metric_packet_manifest:
+                expected_hash = str(
+                    depth_entry.get("packet_sha256")
+                    or depth_entry.get("sha256")
+                    or depth_entry.get("file_sha256")
+                    or ""
+                ).strip()
+                if not expected_hash:
+                    raise SystemExit(f"Metric packet index row is missing packet SHA-256: {image_name}")
+                actual_hash = file_sha256(depth_path)
+                if actual_hash != expected_hash:
+                    raise SystemExit(
+                        f"Metric packet hash mismatch for {image_name}: expected {expected_hash}, got {actual_hash}"
+                    )
+                packet_payload = validate_metric_packet_npz(depth_path, depth_entry)
+                packet_validation = {
+                    "packet_sha256": actual_hash,
+                    "packet_tensor_count": len(packet_payload),
+                    "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
+                }
             depth = load_depth_map(
                 depth_path,
                 scale=float(args.depth_scale),
@@ -826,6 +948,7 @@ def main() -> None:
                 {
                     "depth_width": depth_width,
                     "depth_height": depth_height,
+                    **packet_validation,
                 },
             )
         _depth_path, depth, depth_meta = depth_cache[cache_key]
@@ -860,6 +983,10 @@ def main() -> None:
         base_out["camera_height"] = camera_height
         base_out["depth_width"] = depth_width
         base_out["depth_height"] = depth_height
+        if metric_packet_manifest:
+            base_out["depth_packet_schema"] = METRIC_PACKET_MANIFEST_SCHEMA
+            base_out["primary_depth_tensor"] = PRIMARY_DEPTH_TENSOR
+            base_out["packet_sha256"] = depth_meta.get("packet_sha256", "")
         base_out["depth_pixel_scale_x"] = depth_pixel_scale_x
         base_out["depth_pixel_scale_y"] = depth_pixel_scale_y
         valid, patch_stats = robust_depth_patch(
@@ -1041,11 +1168,18 @@ def main() -> None:
         "depth_manifest_sha256": depth_manifest_sha256,
         "depth_manifest_summary": {
             "schema": depth_manifest.get("schema", "") if depth_manifest else "",
-            "depth_semantics": depth_manifest.get("depth_semantics", "") if depth_manifest else "",
+            "packet_schema": depth_manifest.get("packet_schema", "") if depth_manifest else "",
+            "primary_depth_tensor": depth_manifest.get("primary_depth_tensor", "") if depth_manifest else "",
+            "primary_depth_semantics": depth_manifest.get("primary_depth_semantics", "") if depth_manifest else "",
+            "depth_semantics": depth_manifest.get("depth_semantics", depth_manifest.get("primary_depth_semantics", "")) if depth_manifest else "",
             "depth_units": depth_manifest.get("depth_units", "") if depth_manifest else "",
             "image_domain": depth_manifest.get("image_domain", "") if depth_manifest else "",
             "renderer_repository": depth_manifest.get("renderer_repository", depth_manifest.get("train_repo", "")) if depth_manifest else "",
             "renderer_commit": depth_manifest.get("renderer_commit", "") if depth_manifest else "",
+            "rasterizer_commit": depth_manifest.get("rasterizer_commit", "") if depth_manifest else "",
+            "exporter_commit": depth_manifest.get("exporter_commit", "") if depth_manifest else "",
+            "model_content_hash": depth_manifest.get("model_content_hash", "") if depth_manifest else "",
+            "tensor_names": depth_manifest.get("tensor_names", []) if depth_manifest else [],
             "alpha_map_available": bool(depth_manifest.get("alpha_map_available", depth_manifest.get("uses_alpha_map", False))) if depth_manifest else False,
             "depth_second_moment_available": bool(depth_manifest.get("depth_second_moment_available", depth_manifest.get("uses_depth_second_moment", False))) if depth_manifest else False,
             "depth_index_entry_count": len(depth_index),
@@ -1060,8 +1194,8 @@ def main() -> None:
             "depth_manifest": str(depth_manifest_path) if depth_manifest_path else "",
         },
         "control_policy": args.control_policy,
-        "alpha_map_used": False,
-        "depth_second_moment_used": False,
+        "alpha_map_used": bool(metric_packet_manifest),
+        "depth_second_moment_used": bool(metric_packet_manifest),
         "patch_size": int(args.patch_size),
         "min_patch_valid_ratio": float(args.min_patch_valid_ratio),
         "min_valid_observations": int(args.min_valid_observations),
@@ -1110,6 +1244,9 @@ def main() -> None:
             "valid",
             "failure_reason",
             "depth_path",
+            "depth_packet_schema",
+            "primary_depth_tensor",
+            "packet_sha256",
             "patch_x0",
             "patch_x1",
             "patch_y0",

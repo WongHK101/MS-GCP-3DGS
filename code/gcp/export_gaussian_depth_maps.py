@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import os
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -14,28 +12,29 @@ from typing import Any, Dict, Iterable, List, Sequence
 import numpy as np
 from tqdm import tqdm
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from metric_depth_packet import (  # noqa: E402
+    DEFAULT_ALPHA_CUTOFF,
+    DEFAULT_EARLY_TERMINATION_THRESHOLD,
+    DEFAULT_NORMALIZATION_EPSILON,
+    DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+    DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+    HISTORICAL_INVALID_TENSOR,
+    METRIC_PACKET_MANIFEST_SCHEMA,
+    METRIC_PACKET_SCHEMA,
+    METRIC_PACKET_TENSOR_NAMES,
+    PRIMARY_DEPTH_SEMANTICS,
+    PRIMARY_DEPTH_TENSOR,
+    directory_tree_hash,
+    file_sha256,
+    git_commit,
+    packet_manifest_tensor_formulas,
+    recompute_and_compare_packet,
+    tensor_stats,
+)
 
 DEFAULT_TRAIN_REPO = r"E:\Multispectral" if Path(r"E:\Multispectral").exists() else "/root/autodl-tmp/Multispectral"
 DEFAULT_RASTERIZER_DEPTH_SEMANTICS = "alpha_weighted_unnormalized_inverse_camera_z"
-
-
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def git_commit(path: Path) -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "-C", str(path), "rev-parse", "HEAD"],
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except Exception:
-        return ""
 
 
 def parse_train_repo(argv: Sequence[str]) -> Path:
@@ -124,6 +123,13 @@ def depth_filename(image_name: str) -> str:
     return f"{stem}.npy"
 
 
+def packet_filename(image_name: str) -> str:
+    stem = Path(image_name).stem
+    if not stem:
+        raise ValueError(f"invalid image_name for packet filename: {image_name!r}")
+    return f"{stem}_metric_depth_packet.npz"
+
+
 def collect_views(scene: Any, camera_sets: str, allowlist: set[str] | None = None) -> List[tuple[str, Any]]:
     views: List[tuple[str, Any]] = []
     if camera_sets in {"train", "all"}:
@@ -177,26 +183,57 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                     background,
                     use_trained_exp=dataset.train_test_exp,
                     separate_sh=sparse_adam_available,
+                    return_metric_depth_packet=True,
+                    numerical_support_floor=float(args.numerical_support_floor),
+                    normalization_epsilon=float(args.normalization_epsilon),
+                    variance_clamp_tolerance=float(args.variance_clamp_tolerance),
                 )
-                depth = payload["depth"]
+                historical_depth = payload["depth"]
+                metric_packet = payload["metric_depth_packet"]
                 if dataset.train_test_exp:
-                    depth = depth[..., depth.shape[-1] // 2 :]
-                depth_np = depth.detach().squeeze().cpu().numpy().astype(np.float32)
+                    historical_depth = historical_depth[..., historical_depth.shape[-1] // 2 :]
+                    metric_packet = metric_packet[..., metric_packet.shape[-1] // 2 :]
+                historical_depth_np = historical_depth.detach().squeeze().cpu().numpy().astype(np.float32)
+                packet_np = metric_packet.detach().squeeze().cpu().numpy().astype(np.float32)
+                if packet_np.shape[0] != len(METRIC_PACKET_TENSOR_NAMES):
+                    raise RuntimeError(
+                        f"metric_depth_packet expected {len(METRIC_PACKET_TENSOR_NAMES)} tensors, "
+                        f"got shape {packet_np.shape}"
+                    )
                 image_name = camera_name(view)
-                depth_path = out_dir / depth_filename(image_name)
-                np.save(depth_path, depth_np)
+                packet_path = out_dir / packet_filename(image_name)
+                packet_payload = {
+                    name: packet_np[i].astype(np.float32)
+                    for i, name in enumerate(METRIC_PACKET_TENSOR_NAMES)
+                }
+                packet_payload["metric_depth_valid_mask"] = packet_payload["metric_depth_valid_mask"] > 0.5
+                packet_payload[HISTORICAL_INVALID_TENSOR] = historical_depth_np.astype(np.float32)
+                np.savez_compressed(packet_path, **packet_payload)
+                packet_hash = file_sha256(packet_path)
+                packet_size = packet_path.stat().st_size
+                recompute = recompute_and_compare_packet(packet_payload)
+                if not recompute["passed"]:
+                    raise RuntimeError(f"Derived tensor recomputation failed for {image_name}: {recompute}")
                 rows.append(
                     {
                         "index": index,
                         "split": split,
                         "image_name": image_name,
-                        "depth_path": str(depth_path),
-                        "height": int(depth_np.shape[0]),
-                        "width": int(depth_np.shape[1]),
-                        "finite_count": int(np.isfinite(depth_np).sum()),
-                        "min_depth": float(np.nanmin(depth_np)) if np.isfinite(depth_np).any() else "",
-                        "max_depth": float(np.nanmax(depth_np)) if np.isfinite(depth_np).any() else "",
-                        "median_depth": float(np.nanmedian(depth_np)) if np.isfinite(depth_np).any() else "",
+                        "packet_path": str(packet_path),
+                        "depth_path": str(packet_path),
+                        "packet_sha256": packet_hash,
+                        "packet_bytes": packet_size,
+                        "height": int(packet_np.shape[1]),
+                        "width": int(packet_np.shape[2]),
+                        "dtype": "float32",
+                        "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
+                        "primary_depth_semantics": PRIMARY_DEPTH_SEMANTICS,
+                        "tensor_names": "|".join(METRIC_PACKET_TENSOR_NAMES + [HISTORICAL_INVALID_TENSOR]),
+                        "valid_pixel_count": int(np.count_nonzero(packet_payload["metric_depth_valid_mask"])),
+                        "accumulated_alpha_min": float(np.nanmin(packet_payload["accumulated_alpha"])),
+                        "accumulated_alpha_max": float(np.nanmax(packet_payload["accumulated_alpha"])),
+                        "expected_camera_z_finite_count": int(np.isfinite(packet_payload[PRIMARY_DEPTH_TENSOR]).sum()),
+                        "packet_recompute_passed": bool(recompute["passed"]),
                     }
                 )
     finally:
@@ -209,13 +246,21 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             "index",
             "split",
             "image_name",
+            "packet_path",
             "depth_path",
+            "packet_sha256",
+            "packet_bytes",
             "height",
             "width",
-            "finite_count",
-            "min_depth",
-            "max_depth",
-            "median_depth",
+            "dtype",
+            "primary_depth_tensor",
+            "primary_depth_semantics",
+            "tensor_names",
+            "valid_pixel_count",
+            "accumulated_alpha_min",
+            "accumulated_alpha_max",
+            "expected_camera_z_finite_count",
+            "packet_recompute_passed",
         ],
     )
 
@@ -224,41 +269,54 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         train_repo / "submodules" / "diff-gaussian-rasterization" / "diff_gaussian_rasterization" / "__init__.py",
         train_repo / "submodules" / "diff-gaussian-rasterization" / "cuda_rasterizer" / "forward.cu",
     ]
+    rasterizer_repo = train_repo / "submodules" / "diff-gaussian-rasterization"
+    model_tree_hash = directory_tree_hash(Path(dataset.model_path))
     manifest: Dict[str, Any] = {
-        "schema": "ms_gcp_gaussian_depth_export_v1_1",
+        "schema": METRIC_PACKET_MANIFEST_SCHEMA,
+        "packet_schema": METRIC_PACKET_SCHEMA,
         "created_at": datetime.now().astimezone().isoformat(),
-        "purpose": "Depth-only P1 Gaussian GCP geometry evaluator input; not a visualization artifact.",
+        "purpose": "Metric depth packet for P1 Gaussian GCP geometry evaluator; not a visualization artifact.",
         "train_repo": str(train_repo),
         "renderer_repository": str(train_repo),
         "renderer_commit": git_commit(train_repo),
+        "rasterizer_repository": str(rasterizer_repo),
+        "rasterizer_commit": git_commit(rasterizer_repo) or git_commit(train_repo),
+        "exporter_repository": str(Path(__file__).resolve().parents[2]),
+        "exporter_commit": git_commit(Path(__file__).resolve().parents[2]),
         "source_path": str(dataset.source_path),
         "model_path": str(dataset.model_path),
+        "model_content_hash": model_tree_hash,
         "iteration": int(args.iteration),
         "camera_sets": args.camera_sets,
         "depth_output_dir": str(out_dir),
         "mapping_csv": str(mapping_path),
-        "depth_file_format": "float32 numpy .npy",
-        "depth_semantics": args.depth_semantics,
-        "depth_units": (
-            "alpha_transmittance_weighted_1/metre"
-            if args.depth_semantics == DEFAULT_RASTERIZER_DEPTH_SEMANTICS
-            else ("1/metre" if args.depth_semantics.endswith("inverse_camera_z") else "metre")
-        ),
+        "depth_file_format": "compressed numpy .npz metric depth packet",
+        "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
+        "primary_depth_semantics": PRIMARY_DEPTH_SEMANTICS,
+        "depth_semantics": PRIMARY_DEPTH_SEMANTICS,
+        "tensor_names": METRIC_PACKET_TENSOR_NAMES + [HISTORICAL_INVALID_TENSOR],
+        "tensor_formulas": packet_manifest_tensor_formulas(),
+        "dtype": "float32",
         "image_domain": "rendered_colmap_camera_domain",
+        "distorted_or_undistorted": "same_as_gaussian_render_camera",
+        "pixel_coordinate_convention": "zero_indexed_pixel_centers",
+        "camera_model_source": "Gaussian Scene/COLMAP camera loaded by training repository",
+        "alpha_cutoff": float(args.alpha_cutoff),
+        "early_termination_threshold": float(args.early_termination_threshold),
+        "numerical_support_floor": float(args.numerical_support_floor),
+        "normalization_epsilon": float(args.normalization_epsilon),
+        "variance_clamp_tolerance": float(args.variance_clamp_tolerance),
         "depth_semantics_note": (
-            "The current Graphdeco-derived rasterizer output used by gaussian_renderer.render(...)[\"depth\"] "
-            "is the CUDA variable expected_invdepth = sum_j (1 / camera_z_j) * alpha_j * T_j. "
-            "It is not normalized by accumulated opacity/weight. Formal GCP evaluation must not convert "
-            "this artifact with camera_z=1/depth unless a future exporter also provides and applies the "
-            "corresponding alpha/weight normalization, or exports camera_z/ray_distance directly."
+            "Primary formal P1 depth is alpha_normalized_expected_camera_z=M1/A for valid A. "
+            "The old renderer payload depth is preserved only as historical_invalid_unnormalized_inverse_depth."
         ),
-        "depth_accumulation_formula": "D(p)=sum_j alpha_j(p) T_j(p) / z_j, where z_j is camera-space z",
-        "alpha_map_available": False,
-        "depth_second_moment_available": False,
+        "alpha_map_available": True,
+        "depth_second_moment_available": True,
         "depth_scale_for_evaluator": 1.0,
         "depth_offset_for_evaluator": 0.0,
         "rendered_view_count": len(rows),
         "depth_index": rows,
+        "packet_index": rows,
         "renderer_source_trace": [
             {
                 "path": str(path),
@@ -272,12 +330,19 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "image_list_status_column": args.image_list_status_column,
         "image_list_status_values": args.image_list_status_values,
         "sparse_adam_available": bool(sparse_adam_available),
-        "uses_alpha_map": False,
-        "uses_depth_second_moment": False,
+        "uses_alpha_map": True,
+        "uses_depth_second_moment": True,
+        "runtime": {
+            "python": sys.version,
+            "torch": str(getattr(torch, "__version__", "")),
+            "torch_cuda": str(getattr(getattr(torch, "version", None), "cuda", "")),
+            "cuda_available": bool(torch.cuda.is_available()),
+            "device_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",
+        },
         "notes": [
             "No checkpoint mutation, no retraining, and no support modification.",
-            "Depth arrays are saved as linear float data; PNG displays must not be used for metric evaluation.",
-            "This manifest intentionally labels the current renderer output as unsupported for formal depth-only GCP evaluation.",
+            "Packet arrays are saved as linear float/bool data; PNG displays must not be used for metric evaluation.",
+            "historical_invalid_unnormalized_inverse_depth must not enter formal P1 ranking or camera_z=1/depth backprojection.",
         ],
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -297,17 +362,11 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--depth_output_dir", required=True)
     parser.add_argument("--manifest_path", default="")
     parser.add_argument("--mapping_csv", default="")
-    parser.add_argument(
-        "--depth_semantics",
-        default=DEFAULT_RASTERIZER_DEPTH_SEMANTICS,
-        choices=[
-            "camera_z",
-            "ray_distance",
-            "inverse_camera_z",
-            "inverse_ray_distance",
-            DEFAULT_RASTERIZER_DEPTH_SEMANTICS,
-        ],
-    )
+    parser.add_argument("--numerical_support_floor", type=float, default=DEFAULT_NUMERICAL_SUPPORT_FLOOR)
+    parser.add_argument("--normalization_epsilon", type=float, default=DEFAULT_NORMALIZATION_EPSILON)
+    parser.add_argument("--variance_clamp_tolerance", type=float, default=DEFAULT_VARIANCE_CLAMP_TOLERANCE)
+    parser.add_argument("--alpha_cutoff", type=float, default=DEFAULT_ALPHA_CUTOFF)
+    parser.add_argument("--early_termination_threshold", type=float, default=DEFAULT_EARLY_TERMINATION_THRESHOLD)
     parser.add_argument("--image_list_csv", default="", help="Optional CSV that restricts export to listed image names.")
     parser.add_argument("--image_name_column", default="image_name")
     parser.add_argument("--image_list_status_column", default="")

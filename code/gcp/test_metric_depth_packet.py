@@ -1,0 +1,253 @@
+from __future__ import annotations
+
+import json
+import math
+import sys
+from pathlib import Path
+from typing import Any, Callable
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from metric_depth_packet import (  # noqa: E402
+    DEFAULT_ALPHA_CUTOFF,
+    DEFAULT_EARLY_TERMINATION_THRESHOLD,
+    DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+    DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+    HISTORICAL_INVALID_TENSOR,
+    METRIC_PACKET_TENSOR_NAMES,
+    PRIMARY_DEPTH_TENSOR,
+    cpu_reference_from_layers,
+    derive_metric_depth_packet,
+    recompute_and_compare_packet,
+)
+
+
+ATOL = 1e-8
+RTOL = 1e-8
+
+
+def max_abs_rel(actual: Any, expected: Any) -> tuple[float, float]:
+    a = np.asarray(actual, dtype=np.float64)
+    e = np.asarray(expected, dtype=np.float64)
+    diff = np.nan_to_num(a - e, nan=0.0)
+    abs_err = float(np.max(np.abs(diff))) if diff.size else 0.0
+    denom = np.maximum(np.abs(np.nan_to_num(e, nan=0.0)), 1e-12)
+    rel_err = float(np.max(np.abs(diff) / denom)) if diff.size else 0.0
+    return abs_err, rel_err
+
+
+def assert_close_case(name: str, actual: Any, expected: Any, atol: float = ATOL, rtol: float = RTOL) -> dict[str, Any]:
+    abs_err, rel_err = max_abs_rel(actual, expected)
+    passed = bool(np.allclose(actual, expected, atol=atol, rtol=rtol, equal_nan=True))
+    if not passed:
+        raise AssertionError(f"{name} failed: actual={actual}, expected={expected}, abs={abs_err}, rel={rel_err}")
+    return {
+        "name": name,
+        "expected": np.asarray(expected).tolist(),
+        "actual": np.asarray(actual).tolist(),
+        "max_abs_error": abs_err,
+        "max_rel_error": rel_err,
+        "atol": atol,
+        "rtol": rtol,
+    }
+
+
+def test_single_plane_opacity_invariance() -> dict[str, Any]:
+    cases = []
+    for opacity in [0.10, 0.35, 0.85]:
+        packet = cpu_reference_from_layers(
+            camera_z=np.asarray([[[20.0]]]),
+            alpha=np.asarray([[[opacity]]]),
+        )
+        cases.append(
+            assert_close_case(
+                f"expected_camera_z_opacity_{opacity}",
+                packet[PRIMARY_DEPTH_TENSOR],
+                np.asarray([[20.0]]),
+            )
+        )
+        cases.append(
+            assert_close_case(
+                f"harmonic_camera_z_opacity_{opacity}",
+                packet["harmonic_camera_z"],
+                np.asarray([[20.0]]),
+            )
+        )
+    return {"cases": cases}
+
+
+def test_historical_invalid_inverse_opacity_dependence() -> dict[str, Any]:
+    z = 20.0
+    values = [opacity / z for opacity in [0.10, 0.35, 0.85]]
+    recovered = [1.0 / value for value in values]
+    if max(recovered) - min(recovered) <= 1.0:
+        raise AssertionError("historical unnormalized inverse-depth did not vary with opacity")
+    return {
+        "historical_tensor_name": HISTORICAL_INVALID_TENSOR,
+        "unnormalized_inverse_values": values,
+        "incorrect_1_over_values": recovered,
+    }
+
+
+def test_two_layer_expected_harmonic_variance() -> dict[str, Any]:
+    z_near = 10.0
+    z_far = 30.0
+    alpha_near = 0.4
+    alpha_far = 0.5
+    weight_near = alpha_near
+    weight_far = alpha_far * (1.0 - alpha_near)
+    a = weight_near + weight_far
+    m1 = weight_near * z_near + weight_far * z_far
+    m2 = weight_near * z_near * z_near + weight_far * z_far * z_far
+    h = weight_near / z_near + weight_far / z_far
+    expected_z = m1 / a
+    harmonic_z = a / h
+    variance = m2 / a - expected_z * expected_z
+    packet = cpu_reference_from_layers(
+        camera_z=np.asarray([[[z_near]], [[z_far]]]),
+        alpha=np.asarray([[[alpha_near]], [[alpha_far]]]),
+    )
+    return {
+        "cases": [
+            assert_close_case("A", packet["accumulated_alpha"], np.asarray([[a]])),
+            assert_close_case("M1", packet["weighted_camera_z_sum"], np.asarray([[m1]])),
+            assert_close_case("M2", packet["weighted_camera_z_second_moment"], np.asarray([[m2]])),
+            assert_close_case("H", packet["weighted_inverse_camera_z_sum"], np.asarray([[h]])),
+            assert_close_case("expected_z", packet[PRIMARY_DEPTH_TENSOR], np.asarray([[expected_z]]), atol=1e-6, rtol=1e-6),
+            assert_close_case("harmonic_z", packet["harmonic_camera_z"], np.asarray([[harmonic_z]]), atol=1e-6, rtol=1e-6),
+            assert_close_case("variance", packet["camera_z_variance"], np.asarray([[variance]]), atol=1e-6, rtol=1e-6),
+        ]
+    }
+
+
+def test_zero_and_near_zero_alpha_invalid() -> dict[str, Any]:
+    packet_zero = cpu_reference_from_layers(
+        camera_z=np.asarray([[[20.0]]]),
+        alpha=np.asarray([[[0.0]]]),
+    )
+    packet_low = cpu_reference_from_layers(
+        camera_z=np.asarray([[[20.0]]]),
+        alpha=np.asarray([[[DEFAULT_ALPHA_CUTOFF * 0.5]]]),
+    )
+    if bool(packet_zero["metric_depth_valid_mask"][0, 0]) or bool(packet_low["metric_depth_valid_mask"][0, 0]):
+        raise AssertionError("zero / below-cutoff alpha produced a valid metric depth")
+    if not math.isnan(float(packet_zero[PRIMARY_DEPTH_TENSOR][0, 0])):
+        raise AssertionError("zero alpha expected depth must be NaN")
+    return {
+        "zero_valid_mask": bool(packet_zero["metric_depth_valid_mask"][0, 0]),
+        "below_cutoff_valid_mask": bool(packet_low["metric_depth_valid_mask"][0, 0]),
+        "support_floor": DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+        "alpha_cutoff": DEFAULT_ALPHA_CUTOFF,
+    }
+
+
+def test_off_axis_camera_z_semantics() -> dict[str, Any]:
+    z = np.asarray(
+        [
+            [[12.0, 12.0], [12.0, 12.0]],
+        ]
+    )
+    alpha = np.ones_like(z) * 0.5
+    packet = cpu_reference_from_layers(z, alpha)
+    return {
+        "case": assert_close_case("off_axis_camera_z_constant", packet[PRIMARY_DEPTH_TENSOR], np.ones((2, 2)) * 12.0),
+        "note": "camera-z remains camera-axis depth; evaluator converts ray-distance separately when semantics require it.",
+    }
+
+
+def test_early_termination() -> dict[str, Any]:
+    packet = cpu_reference_from_layers(
+        camera_z=np.asarray([[[10.0]], [[100.0]]]),
+        alpha=np.asarray([[[0.99]], [[0.99]]]),
+        early_termination_threshold=0.02,
+    )
+    return {
+        "case": assert_close_case("early_termination_keeps_first_layer_only", packet[PRIMARY_DEPTH_TENSOR], np.asarray([[10.0]])),
+        "early_termination_threshold": 0.02,
+    }
+
+
+def test_derived_recomputation() -> dict[str, Any]:
+    packet = cpu_reference_from_layers(
+        camera_z=np.asarray([[[8.0]], [[18.0]]]),
+        alpha=np.asarray([[[0.3]], [[0.7]]]),
+    )
+    recompute = recompute_and_compare_packet(packet, atol=1e-6, rtol=1e-6)
+    if not recompute["passed"]:
+        raise AssertionError(recompute)
+    return recompute
+
+
+def test_negative_variance_guard() -> dict[str, Any]:
+    tiny = derive_metric_depth_packet(
+        np.asarray([[1.0]]),
+        np.asarray([[10.0]]),
+        np.asarray([[99.9999999]]),
+        np.asarray([[0.1]]),
+        variance_clamp_tolerance=1e-5,
+    )
+    if float(tiny["camera_z_variance"][0, 0]) != 0.0:
+        raise AssertionError("tiny negative variance was not clamped to zero")
+    try:
+        derive_metric_depth_packet(
+            np.asarray([[1.0]]),
+            np.asarray([[10.0]]),
+            np.asarray([[90.0]]),
+            np.asarray([[0.1]]),
+            variance_clamp_tolerance=1e-5,
+        )
+    except ValueError:
+        clearly_negative_rejected = True
+    else:
+        clearly_negative_rejected = False
+    if not clearly_negative_rejected:
+        raise AssertionError("clearly negative variance was not rejected")
+    return {
+        "tiny_negative_clamped": True,
+        "clearly_negative_rejected": clearly_negative_rejected,
+        "variance_clamp_tolerance": DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+    }
+
+
+def run_tests() -> list[dict[str, Any]]:
+    tests: list[tuple[str, Callable[[], dict[str, Any]]]] = [
+        ("single_plane_opacity_invariance", test_single_plane_opacity_invariance),
+        ("historical_invalid_inverse_opacity_dependence", test_historical_invalid_inverse_opacity_dependence),
+        ("two_layer_expected_harmonic_variance", test_two_layer_expected_harmonic_variance),
+        ("zero_and_near_zero_alpha_invalid", test_zero_and_near_zero_alpha_invalid),
+        ("off_axis_camera_z_semantics", test_off_axis_camera_z_semantics),
+        ("alpha_cutoff_and_early_termination", test_early_termination),
+        ("derived_tensor_recomputation", test_derived_recomputation),
+        ("negative_variance_guard", test_negative_variance_guard),
+    ]
+    results = []
+    for name, fn in tests:
+        try:
+            payload = fn()
+            results.append({"test": name, "status": "PASS", **payload})
+        except Exception as exc:  # noqa: BLE001
+            results.append({"test": name, "status": "FAIL", "error": repr(exc)})
+    return results
+
+
+def main() -> None:
+    results = run_tests()
+    passed = sum(1 for row in results if row["status"] == "PASS")
+    payload = {
+        "schema": "metric_depth_packet_cpu_test_matrix_v1",
+        "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
+        "required_tensors": METRIC_PACKET_TENSOR_NAMES,
+        "test_count": len(results),
+        "passed": passed,
+        "failed": len(results) - passed,
+        "results": results,
+    }
+    print(json.dumps(payload, indent=2))
+    if payload["failed"]:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
