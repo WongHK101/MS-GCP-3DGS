@@ -71,6 +71,20 @@ If future work studies these thresholds, it must use a separate diagnostic proto
 
 The evaluator now recomputes derived packet tensors using `numerical_support_floor` and `variance_clamp_tolerance` from the manifest, and requires both fields to be finite and non-negative.
 
+## Variance recomputation validation fix
+
+Real-image regression exposed only a `camera_z_variance` recomputation tolerance issue. Formal P1 depth (`M1/A`), raw accumulators (`A/M1/M2/H`), CUDA packet formulas, `numerical_support_floor`, and `variance_clamp_tolerance` remain unchanged.
+
+The evaluator/exporter now lock a separate variance recomputation audit policy in the metric-depth manifest:
+
+- `variance_validation_policy = float_forward_error_bound_v1`
+- `variance_validation_abs_floor = 1e-5`
+- `variance_validation_ulp_factor = 8`
+- `variance_validation_dtype = float32`
+- `variance_validation_rtol = 0`
+
+For valid pixels the variance audit uses `abs(packet_variance - (M2/A - (M1/A)^2)) <= abs_floor + ulp_factor * eps(dtype) * max(abs(M2/A), abs((M1/A)^2), 1.0)`. Other derived tensors keep the existing fixed recomputation tolerance. The policy records the worst pixel, valid-pixel count, failing-pixel count, maximum absolute error, maximum allowed error, and max error-to-bound ratio. This policy is not a CLI knob and does not change packet values.
+
 ## Execution Boundary
 
 Not executed:

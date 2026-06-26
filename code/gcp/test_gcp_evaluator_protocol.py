@@ -39,6 +39,7 @@ from metric_depth_packet import (  # noqa: E402
     PRIMARY_DEPTH_TENSOR,
     derive_metric_depth_packet,
     file_sha256 as packet_file_sha256,
+    variance_validation_manifest_fields,
 )
 from triangulate_gcp_points import pixel_to_normalized, project_point  # noqa: E402
 
@@ -297,6 +298,7 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
             "pixel_coordinate_convention": "zero_indexed_pixel_centers",
             "numerical_support_floor": DEFAULT_NUMERICAL_SUPPORT_FLOOR,
             "variance_clamp_tolerance": DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+            **variance_validation_manifest_fields(),
             "depth_index": [
                 {
                     "image_name": "im.jpg",
@@ -315,6 +317,7 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
             index["im.jpg"],
             DEFAULT_NUMERICAL_SUPPORT_FLOOR,
             DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+            **variance_validation_manifest_fields(),
         )
 
         bad_manifest_path = root / "metric_manifest_missing_hash.json"
@@ -337,18 +340,30 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
                 {"height": "1", "width": "2"},
                 DEFAULT_NUMERICAL_SUPPORT_FLOOR,
                 DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+                **variance_validation_manifest_fields(),
             )
         except ValueError:
             missing_tensor_rejected = True
         else:
             missing_tensor_rejected = False
-    if not missing_hash_rejected or not missing_tensor_rejected:
+        bad_policy_path = root / "metric_manifest_bad_policy.json"
+        bad_policy = dict(manifest)
+        bad_policy["variance_validation_abs_floor"] = -1.0
+        bad_policy_path.write_text(json.dumps(bad_policy), encoding="utf-8")
+        try:
+            load_depth_manifest(bad_policy_path)
+        except ValueError:
+            bad_policy_rejected = True
+        else:
+            bad_policy_rejected = False
+    if not missing_hash_rejected or not missing_tensor_rejected or not bad_policy_rejected:
         raise AssertionError("metric packet manifest/npz rejection failed")
     return {
         "valid_index_count": len(index),
         "valid_packet_tensor_count": len(valid_packet),
         "missing_model_hash_rejected": missing_hash_rejected,
         "missing_tensor_rejected": missing_tensor_rejected,
+        "bad_variance_policy_rejected": bad_policy_rejected,
     }
 
 

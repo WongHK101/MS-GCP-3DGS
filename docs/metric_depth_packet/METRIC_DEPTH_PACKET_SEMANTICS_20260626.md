@@ -39,6 +39,30 @@ The protocol records `alpha_cutoff=1/255` and `early_termination_threshold=1e-4`
 - Tiny negative variance from floating-point roundoff may be clamped to zero only within `variance_clamp_tolerance`.
 - Clearly negative variance is a test failure.
 
+## Variance Recomputaton Validation
+
+`camera_z_variance` is still the packet value emitted by the renderer/export path. Validation uses a scale-aware forward-error bound only to audit recomputation from the raw accumulators:
+
+`mu = M1/A`
+
+`second = M2/A`
+
+`variance_ref = second - mu^2`
+
+`scale = max(abs(second), abs(mu^2), 1.0)`
+
+`allowed_error = variance_validation_abs_floor + variance_validation_ulp_factor * eps(dtype) * scale`
+
+The locked manifest policy is:
+
+- `variance_validation_policy = float_forward_error_bound_v1`
+- `variance_validation_abs_floor = 1e-5`
+- `variance_validation_ulp_factor = 8`
+- `variance_validation_dtype = float32`
+- `variance_validation_rtol = 0`
+
+This validation policy does not modify packet values and is separate from `variance_clamp_tolerance`.
+
 ## Legacy Depth Payload
 
 The old renderer payload is:

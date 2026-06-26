@@ -21,6 +21,7 @@ from metric_depth_packet import (  # noqa: E402
     cpu_reference_from_layers,
     derive_metric_depth_packet,
     recompute_and_compare_packet,
+    variance_validation_manifest_fields,
 )
 
 
@@ -180,6 +181,53 @@ def test_derived_recomputation() -> dict[str, Any]:
     return recompute
 
 
+def test_high_depth_low_variance_forward_error_bound() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[1.0]], dtype=np.float32),
+        np.asarray([[100.0]], dtype=np.float32),
+        np.asarray([[10000.002]], dtype=np.float32),
+        np.asarray([[0.01]], dtype=np.float32),
+    )
+    strict_packet = {name: np.array(value, copy=True) for name, value in packet.items()}
+    variance_ref = float(packet["camera_z_variance"][0, 0])
+    strict_packet["camera_z_variance"][0, 0] = np.float32(variance_ref + 0.001)
+    strict_fixed_tolerance_would_fail = not bool(
+        np.allclose(
+            strict_packet["camera_z_variance"],
+            packet["camera_z_variance"],
+            atol=1e-5,
+            rtol=0,
+            equal_nan=True,
+        )
+    )
+    recompute = recompute_and_compare_packet(strict_packet, atol=1e-6, rtol=1e-6, **variance_validation_manifest_fields())
+    variance_row = next(row for row in recompute["rows"] if row["tensor"] == "camera_z_variance")
+    if not strict_fixed_tolerance_would_fail or not recompute["passed"]:
+        raise AssertionError({"strict_fixed_tolerance_would_fail": strict_fixed_tolerance_would_fail, "recompute": recompute})
+    return {
+        "strict_fixed_tolerance_would_fail": strict_fixed_tolerance_would_fail,
+        "variance_ref": variance_ref,
+        "injected_error": 0.001,
+        "variance_validation_row": variance_row,
+    }
+
+
+def test_corrupted_variance_beyond_bound_rejected() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[1.0]], dtype=np.float32),
+        np.asarray([[100.0]], dtype=np.float32),
+        np.asarray([[10000.002]], dtype=np.float32),
+        np.asarray([[0.01]], dtype=np.float32),
+    )
+    corrupted = {name: np.array(value, copy=True) for name, value in packet.items()}
+    corrupted["camera_z_variance"][0, 0] = np.float32(float(packet["camera_z_variance"][0, 0]) + 0.1)
+    recompute = recompute_and_compare_packet(corrupted, **variance_validation_manifest_fields())
+    variance_row = next(row for row in recompute["rows"] if row["tensor"] == "camera_z_variance")
+    if recompute["passed"] or variance_row["failing_pixel_count"] != 1 or variance_row["max_error_to_bound_ratio"] <= 1:
+        raise AssertionError(recompute)
+    return {"variance_validation_row": variance_row}
+
+
 def test_negative_variance_guard() -> dict[str, Any]:
     tiny = derive_metric_depth_packet(
         np.asarray([[1.0]]),
@@ -220,6 +268,8 @@ def run_tests() -> list[dict[str, Any]]:
         ("off_axis_camera_z_semantics", test_off_axis_camera_z_semantics),
         ("alpha_cutoff_and_early_termination", test_early_termination),
         ("derived_tensor_recomputation", test_derived_recomputation),
+        ("high_depth_low_variance_forward_error_bound", test_high_depth_low_variance_forward_error_bound),
+        ("corrupted_variance_beyond_bound_rejected", test_corrupted_variance_beyond_bound_rejected),
         ("negative_variance_guard", test_negative_variance_guard),
     ]
     results = []

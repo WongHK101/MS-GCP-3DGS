@@ -24,11 +24,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from read_write_model import qvec2rotmat, read_model  # noqa: E402
 from triangulate_gcp_points import pixel_to_normalized  # noqa: E402
 from metric_depth_packet import (  # noqa: E402
+    DEFAULT_VARIANCE_VALIDATION_DTYPE,
     METRIC_PACKET_MANIFEST_SCHEMA,
     METRIC_PACKET_TENSOR_NAMES,
     PRIMARY_DEPTH_SEMANTICS,
     PRIMARY_DEPTH_TENSOR,
+    VARIANCE_VALIDATION_POLICY,
     recompute_and_compare_packet,
+    validate_variance_validation_policy,
 )
 from fit_gcp_sim3 import (  # noqa: E402
     DEFAULT_TARGET_FIELDS,
@@ -161,6 +164,11 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
             "pixel_coordinate_convention",
             "numerical_support_floor",
             "variance_clamp_tolerance",
+            "variance_validation_policy",
+            "variance_validation_abs_floor",
+            "variance_validation_ulp_factor",
+            "variance_validation_dtype",
+            "variance_validation_rtol",
         ]
         missing = []
         for name in required:
@@ -183,6 +191,13 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
                 raise ValueError(f"Metric depth packet manifest field {name} must be numeric: {manifest.get(name)!r}") from exc
             if not math.isfinite(value) or value < 0:
                 raise ValueError(f"Metric depth packet manifest field {name} must be finite and non-negative: {value}")
+        validate_variance_validation_policy(
+            variance_validation_policy=str(manifest["variance_validation_policy"]),
+            variance_validation_abs_floor=float(manifest["variance_validation_abs_floor"]),
+            variance_validation_ulp_factor=float(manifest["variance_validation_ulp_factor"]),
+            variance_validation_dtype=str(manifest["variance_validation_dtype"]),
+            variance_validation_rtol=float(manifest["variance_validation_rtol"]),
+        )
         tensors = set(manifest.get("tensor_names", []))
         missing_tensors = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in tensors]
         if missing_tensors:
@@ -358,6 +373,11 @@ def validate_metric_packet_npz(
     entry: Dict[str, Any],
     numerical_support_floor: float,
     variance_clamp_tolerance: float,
+    variance_validation_policy: str,
+    variance_validation_abs_floor: float,
+    variance_validation_ulp_factor: float,
+    variance_validation_dtype: str,
+    variance_validation_rtol: float,
 ) -> Dict[str, np.ndarray]:
     with np.load(path) as payload:
         available = set(payload.files)
@@ -382,6 +402,11 @@ def validate_metric_packet_npz(
         packet,
         numerical_support_floor=float(numerical_support_floor),
         variance_clamp_tolerance=float(variance_clamp_tolerance),
+        variance_validation_policy=variance_validation_policy,
+        variance_validation_abs_floor=float(variance_validation_abs_floor),
+        variance_validation_ulp_factor=float(variance_validation_ulp_factor),
+        variance_validation_dtype=variance_validation_dtype,
+        variance_validation_rtol=float(variance_validation_rtol),
     )
     if not recompute["passed"]:
         raise ValueError(f"Metric packet derived tensor recomputation failed for {path}: {recompute}")
@@ -723,6 +748,11 @@ def main() -> None:
     metric_packet_manifest = False
     metric_packet_numerical_support_floor = 0.0
     metric_packet_variance_clamp_tolerance = 0.0
+    metric_packet_variance_validation_policy = VARIANCE_VALIDATION_POLICY
+    metric_packet_variance_validation_abs_floor = 0.0
+    metric_packet_variance_validation_ulp_factor = 0.0
+    metric_packet_variance_validation_dtype = DEFAULT_VARIANCE_VALIDATION_DTYPE
+    metric_packet_variance_validation_rtol = 0.0
     scene_metadata_rows: Dict[str, Dict[str, str]] = {}
 
     if args.release_config:
@@ -790,6 +820,11 @@ def main() -> None:
             args.depth_offset = 0.0
             metric_packet_numerical_support_floor = float(depth_manifest["numerical_support_floor"])
             metric_packet_variance_clamp_tolerance = float(depth_manifest["variance_clamp_tolerance"])
+            metric_packet_variance_validation_policy = str(depth_manifest["variance_validation_policy"])
+            metric_packet_variance_validation_abs_floor = float(depth_manifest["variance_validation_abs_floor"])
+            metric_packet_variance_validation_ulp_factor = float(depth_manifest["variance_validation_ulp_factor"])
+            metric_packet_variance_validation_dtype = str(depth_manifest["variance_validation_dtype"])
+            metric_packet_variance_validation_rtol = float(depth_manifest["variance_validation_rtol"])
         else:
             manifest_semantics = str(depth_manifest["depth_semantics"]).strip()
         if args.depth_semantics and args.depth_semantics != manifest_semantics:
@@ -946,6 +981,11 @@ def main() -> None:
                     depth_entry,
                     numerical_support_floor=metric_packet_numerical_support_floor,
                     variance_clamp_tolerance=metric_packet_variance_clamp_tolerance,
+                    variance_validation_policy=metric_packet_variance_validation_policy,
+                    variance_validation_abs_floor=metric_packet_variance_validation_abs_floor,
+                    variance_validation_ulp_factor=metric_packet_variance_validation_ulp_factor,
+                    variance_validation_dtype=metric_packet_variance_validation_dtype,
+                    variance_validation_rtol=metric_packet_variance_validation_rtol,
                 )
                 packet_validation = {
                     "packet_sha256": actual_hash,
@@ -1208,6 +1248,11 @@ def main() -> None:
             "model_content_hash": depth_manifest.get("model_content_hash", "") if depth_manifest else "",
             "numerical_support_floor": depth_manifest.get("numerical_support_floor", "") if depth_manifest else "",
             "variance_clamp_tolerance": depth_manifest.get("variance_clamp_tolerance", "") if depth_manifest else "",
+            "variance_validation_policy": depth_manifest.get("variance_validation_policy", "") if depth_manifest else "",
+            "variance_validation_abs_floor": depth_manifest.get("variance_validation_abs_floor", "") if depth_manifest else "",
+            "variance_validation_ulp_factor": depth_manifest.get("variance_validation_ulp_factor", "") if depth_manifest else "",
+            "variance_validation_dtype": depth_manifest.get("variance_validation_dtype", "") if depth_manifest else "",
+            "variance_validation_rtol": depth_manifest.get("variance_validation_rtol", "") if depth_manifest else "",
             "normalization_epsilon": depth_manifest.get("normalization_epsilon", "") if depth_manifest else "",
             "tensor_names": depth_manifest.get("tensor_names", []) if depth_manifest else [],
             "alpha_map_available": bool(depth_manifest.get("alpha_map_available", depth_manifest.get("uses_alpha_map", False))) if depth_manifest else False,

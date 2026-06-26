@@ -38,6 +38,11 @@ DEFAULT_NORMALIZATION_EPSILON = 1e-12
 DEFAULT_VARIANCE_CLAMP_TOLERANCE = 1e-6
 DEFAULT_ALPHA_CUTOFF = 1.0 / 255.0
 DEFAULT_EARLY_TERMINATION_THRESHOLD = 1e-4
+VARIANCE_VALIDATION_POLICY = "float_forward_error_bound_v1"
+DEFAULT_VARIANCE_VALIDATION_ABS_FLOOR = 1e-5
+DEFAULT_VARIANCE_VALIDATION_ULP_FACTOR = 8.0
+DEFAULT_VARIANCE_VALIDATION_DTYPE = "float32"
+DEFAULT_VARIANCE_VALIDATION_RTOL = 0.0
 
 
 def file_sha256(path: Path) -> str:
@@ -194,7 +199,19 @@ def recompute_and_compare_packet(
     rtol: float = 1e-5,
     numerical_support_floor: float = DEFAULT_NUMERICAL_SUPPORT_FLOOR,
     variance_clamp_tolerance: float = DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+    variance_validation_policy: str = VARIANCE_VALIDATION_POLICY,
+    variance_validation_abs_floor: float = DEFAULT_VARIANCE_VALIDATION_ABS_FLOOR,
+    variance_validation_ulp_factor: float = DEFAULT_VARIANCE_VALIDATION_ULP_FACTOR,
+    variance_validation_dtype: str = DEFAULT_VARIANCE_VALIDATION_DTYPE,
+    variance_validation_rtol: float = DEFAULT_VARIANCE_VALIDATION_RTOL,
 ) -> Dict[str, Any]:
+    policy = validate_variance_validation_policy(
+        variance_validation_policy=variance_validation_policy,
+        variance_validation_abs_floor=variance_validation_abs_floor,
+        variance_validation_ulp_factor=variance_validation_ulp_factor,
+        variance_validation_dtype=variance_validation_dtype,
+        variance_validation_rtol=variance_validation_rtol,
+    )
     derived = derive_metric_depth_packet(
         packet["accumulated_alpha"],
         packet["weighted_camera_z_sum"],
@@ -212,24 +229,165 @@ def recompute_and_compare_packet(
             equal = np.array_equal(actual.astype(bool), expected.astype(bool))
             abs_err = 0.0 if equal else 1.0
             rel_err = abs_err
+        elif name == "camera_z_variance":
+            equal, metrics = compare_variance_forward_error_bound(
+                packet=packet,
+                expected_variance=expected,
+                policy=policy,
+            )
+            abs_err = float(metrics["max_abs_error"])
+            rel_err = float(metrics["max_error_to_bound_ratio"])
         else:
             diff = np.nan_to_num(actual - expected, nan=0.0)
             abs_err = float(np.max(np.abs(diff))) if diff.size else 0.0
             denom = np.maximum(np.abs(np.nan_to_num(expected, nan=0.0)), 1e-12)
             rel_err = float(np.max(np.abs(diff) / denom)) if diff.size else 0.0
             equal = bool(np.allclose(actual, expected, atol=atol, rtol=rtol, equal_nan=True))
-        rows.append(
-            {
-                "tensor": name,
-                "passed": equal,
-                "max_abs_error": abs_err,
-                "max_rel_error": rel_err,
-                "atol": atol,
-                "rtol": rtol,
-            }
-        )
+        row = {
+            "tensor": name,
+            "passed": equal,
+            "max_abs_error": abs_err,
+            "max_rel_error": rel_err,
+            "atol": atol,
+            "rtol": rtol,
+        }
+        if name == "camera_z_variance":
+            row.update(metrics)
+        rows.append(row)
         ok = ok and equal
     return {"passed": ok, "rows": rows}
+
+
+def validate_variance_validation_policy(
+    variance_validation_policy: str,
+    variance_validation_abs_floor: float,
+    variance_validation_ulp_factor: float,
+    variance_validation_dtype: str,
+    variance_validation_rtol: float,
+) -> Dict[str, Any]:
+    if variance_validation_policy != VARIANCE_VALIDATION_POLICY:
+        raise ValueError(f"Unsupported variance validation policy: {variance_validation_policy!r}")
+    try:
+        abs_floor = float(variance_validation_abs_floor)
+        ulp_factor = float(variance_validation_ulp_factor)
+        rtol = float(variance_validation_rtol)
+    except Exception as exc:
+        raise ValueError("Variance validation fields must be numeric") from exc
+    if not math.isfinite(abs_floor) or abs_floor < 0:
+        raise ValueError(f"variance_validation_abs_floor must be finite and non-negative: {abs_floor}")
+    if not math.isfinite(ulp_factor) or ulp_factor < 0:
+        raise ValueError(f"variance_validation_ulp_factor must be finite and non-negative: {ulp_factor}")
+    if not math.isfinite(rtol) or rtol != 0.0:
+        raise ValueError(f"variance_validation_rtol is locked to 0 for {VARIANCE_VALIDATION_POLICY}: {rtol}")
+    dtype = np.dtype(str(variance_validation_dtype))
+    if not np.issubdtype(dtype, np.floating):
+        raise ValueError(f"variance_validation_dtype must be a floating dtype: {variance_validation_dtype!r}")
+    return {
+        "variance_validation_policy": variance_validation_policy,
+        "variance_validation_abs_floor": abs_floor,
+        "variance_validation_ulp_factor": ulp_factor,
+        "variance_validation_dtype": dtype.name,
+        "variance_validation_rtol": rtol,
+        "variance_validation_eps": float(np.finfo(dtype).eps),
+    }
+
+
+def variance_validation_manifest_fields() -> Dict[str, Any]:
+    policy = validate_variance_validation_policy(
+        variance_validation_policy=VARIANCE_VALIDATION_POLICY,
+        variance_validation_abs_floor=DEFAULT_VARIANCE_VALIDATION_ABS_FLOOR,
+        variance_validation_ulp_factor=DEFAULT_VARIANCE_VALIDATION_ULP_FACTOR,
+        variance_validation_dtype=DEFAULT_VARIANCE_VALIDATION_DTYPE,
+        variance_validation_rtol=DEFAULT_VARIANCE_VALIDATION_RTOL,
+    )
+    return {
+        "variance_validation_policy": policy["variance_validation_policy"],
+        "variance_validation_abs_floor": policy["variance_validation_abs_floor"],
+        "variance_validation_ulp_factor": policy["variance_validation_ulp_factor"],
+        "variance_validation_dtype": policy["variance_validation_dtype"],
+        "variance_validation_rtol": policy["variance_validation_rtol"],
+    }
+
+
+def compare_variance_forward_error_bound(
+    packet: Dict[str, np.ndarray],
+    expected_variance: np.ndarray,
+    policy: Dict[str, Any],
+) -> tuple[bool, Dict[str, Any]]:
+    actual = np.asarray(packet["camera_z_variance"])
+    if str(actual.dtype) != policy["variance_validation_dtype"]:
+        raise ValueError(
+            "camera_z_variance dtype does not match manifest policy: "
+            f"{actual.dtype} != {policy['variance_validation_dtype']}"
+        )
+    a = np.asarray(packet["accumulated_alpha"], dtype=np.float64)
+    m1 = np.asarray(packet["weighted_camera_z_sum"], dtype=np.float64)
+    m2 = np.asarray(packet["weighted_camera_z_second_moment"], dtype=np.float64)
+    valid = np.asarray(packet["metric_depth_valid_mask"]).astype(bool)
+    expected = np.asarray(expected_variance, dtype=np.float64)
+    actual64 = actual.astype(np.float64)
+
+    invalid = ~valid
+    invalid_nan_ok = bool(np.all(np.isnan(actual64[invalid])) and np.all(np.isnan(expected[invalid])))
+    valid_actual_finite = bool(np.all(np.isfinite(actual64[valid])))
+    valid_expected_finite = bool(np.all(np.isfinite(expected[valid])))
+
+    mu = np.full(a.shape, np.nan, dtype=np.float64)
+    second = np.full(a.shape, np.nan, dtype=np.float64)
+    variance_ref = np.full(a.shape, np.nan, dtype=np.float64)
+    mu[valid] = m1[valid] / a[valid]
+    second[valid] = m2[valid] / a[valid]
+    variance_ref[valid] = second[valid] - mu[valid] * mu[valid]
+    scale = np.maximum.reduce([np.abs(second), np.abs(mu * mu), np.ones_like(a, dtype=np.float64)])
+    allowed = policy["variance_validation_abs_floor"] + policy["variance_validation_ulp_factor"] * policy["variance_validation_eps"] * scale
+    diff = np.abs(actual64 - variance_ref)
+    valid_diff = diff[valid]
+    valid_allowed = allowed[valid]
+    if valid_diff.size:
+        ratios = valid_diff / valid_allowed
+        worst_flat = int(np.nanargmax(ratios))
+        valid_coords = np.argwhere(valid)
+        worst_coord = valid_coords[worst_flat].tolist()
+        max_abs_error = float(valid_diff[worst_flat])
+        max_allowed_error = float(valid_allowed[worst_flat])
+        max_ratio = float(ratios[worst_flat])
+        failing = int(np.count_nonzero(valid_diff > valid_allowed))
+        wy, wx = worst_coord[-2], worst_coord[-1]
+        worst_payload = {
+            "coordinate": worst_coord,
+            "A": float(a[tuple(worst_coord)]),
+            "M1": float(m1[tuple(worst_coord)]),
+            "M2": float(m2[tuple(worst_coord)]),
+            "mu": float(mu[tuple(worst_coord)]),
+            "second": float(second[tuple(worst_coord)]),
+            "variance_packet": float(actual64[tuple(worst_coord)]),
+            "variance_ref": float(variance_ref[tuple(worst_coord)]),
+            "y": int(wy),
+            "x": int(wx),
+        }
+    else:
+        max_abs_error = 0.0
+        max_allowed_error = float(policy["variance_validation_abs_floor"])
+        max_ratio = 0.0
+        failing = 0
+        worst_payload = {}
+    equal = invalid_nan_ok and valid_actual_finite and valid_expected_finite and failing == 0 and max_ratio <= 1.0
+    return equal, {
+        "variance_validation_policy": policy["variance_validation_policy"],
+        "variance_validation_abs_floor": policy["variance_validation_abs_floor"],
+        "variance_validation_ulp_factor": policy["variance_validation_ulp_factor"],
+        "variance_validation_dtype": policy["variance_validation_dtype"],
+        "variance_validation_rtol": policy["variance_validation_rtol"],
+        "max_abs_error": max_abs_error,
+        "max_allowed_error": max_allowed_error,
+        "max_error_to_bound_ratio": max_ratio,
+        "failing_pixel_count": failing,
+        "valid_pixel_count": int(np.count_nonzero(valid)),
+        "invalid_nan_ok": invalid_nan_ok,
+        "valid_actual_finite": valid_actual_finite,
+        "valid_expected_finite": valid_expected_finite,
+        "worst_pixel": worst_payload,
+    }
 
 
 def packet_manifest_tensor_formulas() -> Dict[str, str]:

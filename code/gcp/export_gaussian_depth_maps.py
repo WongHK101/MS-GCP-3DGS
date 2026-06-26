@@ -31,6 +31,7 @@ from metric_depth_packet import (  # noqa: E402
     packet_manifest_tensor_formulas,
     recompute_and_compare_packet,
     tensor_stats,
+    variance_validation_manifest_fields,
 )
 
 DEFAULT_TRAIN_REPO = r"E:\Multispectral" if Path(r"E:\Multispectral").exists() else "/root/autodl-tmp/Multispectral"
@@ -215,9 +216,11 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                     packet_payload,
                     numerical_support_floor=float(args.numerical_support_floor),
                     variance_clamp_tolerance=float(args.variance_clamp_tolerance),
+                    **variance_validation_manifest_fields(),
                 )
                 if not recompute["passed"]:
                     raise RuntimeError(f"Derived tensor recomputation failed for {image_name}: {recompute}")
+                variance_row = next(row for row in recompute["rows"] if row["tensor"] == "camera_z_variance")
                 rows.append(
                     {
                         "index": index,
@@ -238,6 +241,11 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                         "accumulated_alpha_max": float(np.nanmax(packet_payload["accumulated_alpha"])),
                         "expected_camera_z_finite_count": int(np.isfinite(packet_payload[PRIMARY_DEPTH_TENSOR]).sum()),
                         "packet_recompute_passed": bool(recompute["passed"]),
+                        "variance_validation_policy": variance_row["variance_validation_policy"],
+                        "variance_validation_max_abs_error": variance_row["max_abs_error"],
+                        "variance_validation_max_allowed_error": variance_row["max_allowed_error"],
+                        "variance_validation_max_error_to_bound_ratio": variance_row["max_error_to_bound_ratio"],
+                        "variance_validation_failing_pixel_count": variance_row["failing_pixel_count"],
                     }
                 )
     finally:
@@ -265,6 +273,11 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             "accumulated_alpha_max",
             "expected_camera_z_finite_count",
             "packet_recompute_passed",
+            "variance_validation_policy",
+            "variance_validation_max_abs_error",
+            "variance_validation_max_allowed_error",
+            "variance_validation_max_error_to_bound_ratio",
+            "variance_validation_failing_pixel_count",
         ],
     )
 
@@ -310,6 +323,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "numerical_support_floor": float(args.numerical_support_floor),
         "normalization_epsilon": float(args.normalization_epsilon),
         "variance_clamp_tolerance": float(args.variance_clamp_tolerance),
+        **variance_validation_manifest_fields(),
         "depth_semantics_note": (
             "Primary formal P1 depth is alpha_normalized_expected_camera_z=M1/A for valid A. "
             "The old renderer payload depth is preserved only as historical_invalid_unnormalized_inverse_depth. "
