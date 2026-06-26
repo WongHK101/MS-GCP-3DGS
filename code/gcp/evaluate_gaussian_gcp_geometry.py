@@ -159,6 +159,8 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
             "exporter_commit",
             "image_domain",
             "pixel_coordinate_convention",
+            "numerical_support_floor",
+            "variance_clamp_tolerance",
         ]
         missing = []
         for name in required:
@@ -174,6 +176,13 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
             raise ValueError(f"Unsupported primary depth tensor: {manifest['primary_depth_tensor']}")
         if manifest["primary_depth_semantics"] != PRIMARY_DEPTH_SEMANTICS:
             raise ValueError(f"Unsupported primary depth semantics: {manifest['primary_depth_semantics']}")
+        for name in ["numerical_support_floor", "variance_clamp_tolerance"]:
+            try:
+                value = float(manifest[name])
+            except Exception as exc:
+                raise ValueError(f"Metric depth packet manifest field {name} must be numeric: {manifest.get(name)!r}") from exc
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"Metric depth packet manifest field {name} must be finite and non-negative: {value}")
         tensors = set(manifest.get("tensor_names", []))
         missing_tensors = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in tensors]
         if missing_tensors:
@@ -344,7 +353,12 @@ def load_depth_map(path: Path, scale: float = 1.0, offset: float = 0.0, npz_key:
     return np.asarray(arr, dtype=np.float64) * float(scale) + float(offset)
 
 
-def validate_metric_packet_npz(path: Path, entry: Dict[str, Any]) -> Dict[str, np.ndarray]:
+def validate_metric_packet_npz(
+    path: Path,
+    entry: Dict[str, Any],
+    numerical_support_floor: float,
+    variance_clamp_tolerance: float,
+) -> Dict[str, np.ndarray]:
     with np.load(path) as payload:
         available = set(payload.files)
         missing = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in available]
@@ -364,7 +378,11 @@ def validate_metric_packet_npz(path: Path, entry: Dict[str, Any]) -> Dict[str, n
                 raise ValueError(f"Metric packet valid mask must be bool, got {dtype}")
         elif dtype != "float32":
             raise ValueError(f"Metric packet tensor {name} must be float32, got {dtype}")
-    recompute = recompute_and_compare_packet(packet)
+    recompute = recompute_and_compare_packet(
+        packet,
+        numerical_support_floor=float(numerical_support_floor),
+        variance_clamp_tolerance=float(variance_clamp_tolerance),
+    )
     if not recompute["passed"]:
         raise ValueError(f"Metric packet derived tensor recomputation failed for {path}: {recompute}")
     return packet
@@ -703,6 +721,8 @@ def main() -> None:
     depth_manifest_sha256 = ""
     depth_index: Dict[str, Dict[str, Any]] = {}
     metric_packet_manifest = False
+    metric_packet_numerical_support_floor = 0.0
+    metric_packet_variance_clamp_tolerance = 0.0
     scene_metadata_rows: Dict[str, Dict[str, str]] = {}
 
     if args.release_config:
@@ -768,6 +788,8 @@ def main() -> None:
             args.npz_key = manifest_npz_key
             args.depth_scale = 1.0
             args.depth_offset = 0.0
+            metric_packet_numerical_support_floor = float(depth_manifest["numerical_support_floor"])
+            metric_packet_variance_clamp_tolerance = float(depth_manifest["variance_clamp_tolerance"])
         else:
             manifest_semantics = str(depth_manifest["depth_semantics"]).strip()
         if args.depth_semantics and args.depth_semantics != manifest_semantics:
@@ -919,7 +941,12 @@ def main() -> None:
                     raise SystemExit(
                         f"Metric packet hash mismatch for {image_name}: expected {expected_hash}, got {actual_hash}"
                     )
-                packet_payload = validate_metric_packet_npz(depth_path, depth_entry)
+                packet_payload = validate_metric_packet_npz(
+                    depth_path,
+                    depth_entry,
+                    numerical_support_floor=metric_packet_numerical_support_floor,
+                    variance_clamp_tolerance=metric_packet_variance_clamp_tolerance,
+                )
                 packet_validation = {
                     "packet_sha256": actual_hash,
                     "packet_tensor_count": len(packet_payload),
@@ -1179,6 +1206,9 @@ def main() -> None:
             "rasterizer_commit": depth_manifest.get("rasterizer_commit", "") if depth_manifest else "",
             "exporter_commit": depth_manifest.get("exporter_commit", "") if depth_manifest else "",
             "model_content_hash": depth_manifest.get("model_content_hash", "") if depth_manifest else "",
+            "numerical_support_floor": depth_manifest.get("numerical_support_floor", "") if depth_manifest else "",
+            "variance_clamp_tolerance": depth_manifest.get("variance_clamp_tolerance", "") if depth_manifest else "",
+            "normalization_epsilon": depth_manifest.get("normalization_epsilon", "") if depth_manifest else "",
             "tensor_names": depth_manifest.get("tensor_names", []) if depth_manifest else [],
             "alpha_map_available": bool(depth_manifest.get("alpha_map_available", depth_manifest.get("uses_alpha_map", False))) if depth_manifest else False,
             "depth_second_moment_available": bool(depth_manifest.get("depth_second_moment_available", depth_manifest.get("uses_depth_second_moment", False))) if depth_manifest else False,

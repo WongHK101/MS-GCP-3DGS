@@ -211,7 +211,11 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                 np.savez_compressed(packet_path, **packet_payload)
                 packet_hash = file_sha256(packet_path)
                 packet_size = packet_path.stat().st_size
-                recompute = recompute_and_compare_packet(packet_payload)
+                recompute = recompute_and_compare_packet(
+                    packet_payload,
+                    numerical_support_floor=float(args.numerical_support_floor),
+                    variance_clamp_tolerance=float(args.variance_clamp_tolerance),
+                )
                 if not recompute["passed"]:
                     raise RuntimeError(f"Derived tensor recomputation failed for {image_name}: {recompute}")
                 rows.append(
@@ -301,14 +305,16 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "distorted_or_undistorted": "same_as_gaussian_render_camera",
         "pixel_coordinate_convention": "zero_indexed_pixel_centers",
         "camera_model_source": "Gaussian Scene/COLMAP camera loaded by training repository",
-        "alpha_cutoff": float(args.alpha_cutoff),
-        "early_termination_threshold": float(args.early_termination_threshold),
+        "alpha_cutoff": DEFAULT_ALPHA_CUTOFF,
+        "early_termination_threshold": DEFAULT_EARLY_TERMINATION_THRESHOLD,
         "numerical_support_floor": float(args.numerical_support_floor),
         "normalization_epsilon": float(args.normalization_epsilon),
         "variance_clamp_tolerance": float(args.variance_clamp_tolerance),
         "depth_semantics_note": (
             "Primary formal P1 depth is alpha_normalized_expected_camera_z=M1/A for valid A. "
-            "The old renderer payload depth is preserved only as historical_invalid_unnormalized_inverse_depth."
+            "The old renderer payload depth is preserved only as historical_invalid_unnormalized_inverse_depth. "
+            "alpha_cutoff and early_termination_threshold record fixed rasterizer behavior in this protocol; "
+            "they are not exporter CLI knobs."
         ),
         "alpha_map_available": True,
         "depth_second_moment_available": True,
@@ -365,8 +371,6 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--numerical_support_floor", type=float, default=DEFAULT_NUMERICAL_SUPPORT_FLOOR)
     parser.add_argument("--normalization_epsilon", type=float, default=DEFAULT_NORMALIZATION_EPSILON)
     parser.add_argument("--variance_clamp_tolerance", type=float, default=DEFAULT_VARIANCE_CLAMP_TOLERANCE)
-    parser.add_argument("--alpha_cutoff", type=float, default=DEFAULT_ALPHA_CUTOFF)
-    parser.add_argument("--early_termination_threshold", type=float, default=DEFAULT_EARLY_TERMINATION_THRESHOLD)
     parser.add_argument("--image_list_csv", default="", help="Optional CSV that restricts export to listed image names.")
     parser.add_argument("--image_name_column", default="image_name")
     parser.add_argument("--image_list_status_column", default="")

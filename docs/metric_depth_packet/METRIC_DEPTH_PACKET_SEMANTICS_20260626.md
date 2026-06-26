@@ -28,7 +28,9 @@ The packet stores:
 | `camera_z_variance` | `M2/A - (M1/A)^2` when `A > floor` else NaN | validity/scatter diagnostic |
 | `metric_depth_valid_mask` | `A > numerical_support_floor` | depth-packet validity mask |
 
-`normalization_epsilon` is recorded in the manifest for protocol completeness, but the formal definitions above use strict `M1/A`, `H/A`, and `A/H` after validity gating. Empty or near-empty support pixels must remain invalid and NaN rather than being made finite by epsilon-only division.
+`normalization_epsilon` is reserved metadata for future compatibility. It is not an active denominator in the current formal P1 definitions. The active definitions use strict `M1/A`, `H/A`, and `A/H` after validity gating. Empty or near-empty support pixels must remain invalid and NaN rather than being made finite by epsilon-only division.
+
+The protocol records `alpha_cutoff=1/255` and `early_termination_threshold=1e-4` as fixed behavior of the current rasterizer. The exporter does not expose these as CLI parameters. Any future threshold-sensitivity experiment must be a separate diagnostic protocol that actually wires the threshold values into the CUDA kernel.
 
 ## Invalid Pixel Policy
 
@@ -48,4 +50,3 @@ It is stored, if present, only as:
 `historical_invalid_unnormalized_inverse_depth`
 
 It must not enter formal P1 evaluation, formal ranking, or `camera_z=1/depth` backprojection.
-

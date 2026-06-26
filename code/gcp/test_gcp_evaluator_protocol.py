@@ -30,6 +30,8 @@ from evaluate_gaussian_gcp_geometry import (  # noqa: E402
 )
 from fit_gcp_sim3 import apply_similarity, fit_similarity_umeyama  # noqa: E402
 from metric_depth_packet import (  # noqa: E402
+    DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+    DEFAULT_VARIANCE_CLAMP_TOLERANCE,
     METRIC_PACKET_MANIFEST_SCHEMA,
     METRIC_PACKET_SCHEMA,
     METRIC_PACKET_TENSOR_NAMES,
@@ -293,6 +295,8 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
             "exporter_commit": "exporter",
             "image_domain": "rendered_colmap_camera_domain",
             "pixel_coordinate_convention": "zero_indexed_pixel_centers",
+            "numerical_support_floor": DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+            "variance_clamp_tolerance": DEFAULT_VARIANCE_CLAMP_TOLERANCE,
             "depth_index": [
                 {
                     "image_name": "im.jpg",
@@ -306,7 +310,12 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
         loaded = load_depth_manifest(manifest_path)
         index = load_depth_index(manifest_path, loaded)
-        valid_packet = validate_metric_packet_npz(packet_path, index["im.jpg"])
+        valid_packet = validate_metric_packet_npz(
+            packet_path,
+            index["im.jpg"],
+            DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+            DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+        )
 
         bad_manifest_path = root / "metric_manifest_missing_hash.json"
         bad_manifest = dict(manifest)
@@ -323,7 +332,12 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
         partial = {name: valid_packet[name] for name in METRIC_PACKET_TENSOR_NAMES if name != "camera_z_variance"}
         np.savez_compressed(bad_packet_path, **partial)
         try:
-            validate_metric_packet_npz(bad_packet_path, {"height": "1", "width": "2"})
+            validate_metric_packet_npz(
+                bad_packet_path,
+                {"height": "1", "width": "2"},
+                DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+                DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+            )
         except ValueError:
             missing_tensor_rejected = True
         else:

@@ -58,6 +58,18 @@ Completed in the local compatible CUDA environment:
 - The base Python environment was incompatible (`torch cu124` versus CUDA toolkit 11.8), so the local `gs` conda environment (`torch 2.4.1+cu118`) was used.
 - CUDA extension editable install succeeded in `gs`.
 - The synthetic packet test passed and generated a representative `.npz` packet plus manifest under `outputs/metric_depth_packet_20260626/cuda_tiny/`.
+- The final safety pass additionally verified independent raw `A/M1/M2/H` assertions, multi-opacity behavior, off-axis camera-z behavior, metric-packet non-differentiability, and eval-enabled/disabled gradient parity.
+
+## Final protocol-lock fix
+
+Following file-level review, `alpha_cutoff` and `early_termination_threshold` are no longer exporter CLI parameters. They are recorded as fixed rasterizer behavior:
+
+- `alpha_cutoff = 1/255`
+- `early_termination_threshold = 1e-4`
+
+If future work studies these thresholds, it must use a separate diagnostic protocol that actually connects threshold values to the CUDA kernel.
+
+The evaluator now recomputes derived packet tensors using `numerical_support_floor` and `variance_clamp_tolerance` from the manifest, and requires both fields to be finite and non-negative.
 
 ## Execution Boundary
 

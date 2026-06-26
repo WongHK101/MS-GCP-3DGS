@@ -55,13 +55,27 @@ Validated checks:
   - harmonic z = 20
   - variance = 0
 - two-layer raw-vs-derived packet consistency:
+  - raw `A`: actual `0.7000000477`, expected `0.7`
+  - raw `M1`: actual `13.0`, expected `13.0`
+  - raw `M2`: actual `310.0`, expected `310.0`
+  - raw `H`: actual `0.0500000007`, expected `0.05`
   - `alpha_normalized_expected_camera_z` max abs error: `9.15e-7`
   - `alpha_normalized_expected_inverse_camera_z` max abs error: `4.56e-10`
   - `harmonic_camera_z` max abs error: `2.09e-7`
   - `camera_z_variance` max abs error: `2.80e-5`
   - historical invalid inverse-depth payload matches `H` within `3.73e-9`
+- multi-opacity single-plane check:
+  - opacity `0.1`: `A=0.1000000015`, old unnormalized inverse depth `0.0050000004`, expected camera-z `20`
+  - opacity `0.8`: `A=0.8000000119`, old unnormalized inverse depth `0.0400000028`, expected camera-z `20`
+  - expected camera-z remains invariant while `A` and old unnormalized inverse-depth change.
+- off-axis camera-z check:
+  - off-axis valid pixel expected camera-z remains `20`, confirming camera-z is not being interpreted as ray distance.
 - derived tensor recomputation from `A/M1/M2/H`: pass
 - zero-alpha invalid/NaN policy: pass
+- backward/gradient compatibility smoke:
+  - `metric_depth_packet.requires_grad=false`
+  - eval-disabled and eval-enabled losses match
+  - gradients for original differentiable inputs are equal within strict tolerance; all reported max abs errors were `0`.
 
 Representative artifacts:
 

@@ -51,5 +51,10 @@ The formal evaluator rejects:
 - primary tensor other than `alpha_normalized_expected_camera_z`;
 - primary semantics other than `camera_z`;
 - missing model/checkpoint content hash;
+- missing finite non-negative `numerical_support_floor`;
+- missing finite non-negative `variance_clamp_tolerance`;
 - manual release-mode CLI overrides for semantics, key, scale, offset, domain, or convention.
 
+`normalization_epsilon` is reserved metadata in the current schema. It is recorded for protocol traceability but is not an active denominator in formal P1 metric-depth calculation.
+
+`alpha_cutoff=1/255` and `early_termination_threshold=1e-4` are fixed rasterizer behavior fields. The exporter must not expose CLI options that write different values to the manifest unless a future diagnostic protocol also wires those values into the CUDA kernel.

@@ -188,12 +188,20 @@ def tensor_stats(array: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def recompute_and_compare_packet(packet: Dict[str, np.ndarray], atol: float = 1e-5, rtol: float = 1e-5) -> Dict[str, Any]:
+def recompute_and_compare_packet(
+    packet: Dict[str, np.ndarray],
+    atol: float = 1e-5,
+    rtol: float = 1e-5,
+    numerical_support_floor: float = DEFAULT_NUMERICAL_SUPPORT_FLOOR,
+    variance_clamp_tolerance: float = DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+) -> Dict[str, Any]:
     derived = derive_metric_depth_packet(
         packet["accumulated_alpha"],
         packet["weighted_camera_z_sum"],
         packet["weighted_camera_z_second_moment"],
         packet["weighted_inverse_camera_z_sum"],
+        numerical_support_floor=numerical_support_floor,
+        variance_clamp_tolerance=variance_clamp_tolerance,
     )
     rows = []
     ok = True
