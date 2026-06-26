@@ -52,11 +52,12 @@ Completed locally:
 - CPU synthetic metric-depth packet tests.
 - Evaluator protocol and v2 packet validation tests.
 
-Blocked in the current local environment:
+Completed in the local compatible CUDA environment:
 
 - Tiny CUDA compile/export parity test.
-
-Reason: the local machine has CUDA toolkit 11.8, but the active PyTorch build is `cu124`. Both configured AutoDL ports were unavailable during this pass, so CUDA compilation was not attempted on a compatible server.
+- The base Python environment was incompatible (`torch cu124` versus CUDA toolkit 11.8), so the local `gs` conda environment (`torch 2.4.1+cu118`) was used.
+- CUDA extension editable install succeeded in `gs`.
+- The synthetic packet test passed and generated a representative `.npz` packet plus manifest under `outputs/metric_depth_packet_20260626/cuda_tiny/`.
 
 ## Execution Boundary
 
@@ -68,4 +69,3 @@ Not executed:
 - Checkpoint mutation.
 - Support or split mutation.
 - External baseline adaptation.
-
