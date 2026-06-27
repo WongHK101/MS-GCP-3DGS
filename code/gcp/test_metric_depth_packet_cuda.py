@@ -383,7 +383,13 @@ def main() -> None:
     parser.add_argument("--out_dir", default=r"E:\M3M-GCP-3DGS\outputs\metric_depth_packet_20260626\cuda_tiny")
     args = parser.parse_args()
     result = run_cuda_test(Path(args.train_repo).resolve(), Path(args.out_dir).resolve())
-    print(json.dumps(result, indent=2))
+    print(
+        json.dumps(
+            result,
+            indent=2,
+            default=lambda obj: obj.tolist() if isinstance(obj, np.ndarray) else str(obj),
+        )
+    )
 
 
 if __name__ == "__main__":
