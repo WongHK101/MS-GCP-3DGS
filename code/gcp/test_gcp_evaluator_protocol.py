@@ -293,6 +293,7 @@ def test_metric_packet_manifest_and_npz_validation() -> dict[str, Any]:
             "model_content_hash": {"kind": "file", "sha256": "0" * 64},
             "renderer_commit": "renderer",
             "rasterizer_commit": "rasterizer",
+            "rasterizer_tree_hash": "321f28fd8c0bb6d3840468545efbc4c7417332c8",
             "exporter_commit": "exporter",
             "image_domain": "rendered_colmap_camera_domain",
             "pixel_coordinate_convention": "zero_indexed_pixel_centers",
@@ -374,6 +375,7 @@ def test_release_overrides_rejected() -> dict[str, Any]:
         for flag, value in [
             ("--annotations_csv", str(Path(d) / "manual.csv")),
             ("--split_csv", str(Path(d) / "manual_split.csv")),
+            ("--min_valid_observations", "3"),
         ]:
             cmd = [
                 sys.executable,
@@ -388,7 +390,10 @@ def test_release_overrides_rejected() -> dict[str, Any]:
                 str(Path(d) / "depth_manifest.json"),
             ]
             result = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            rejected[flag] = result.returncode != 0 and "manual overrides" in (result.stderr + result.stdout)
+            text = result.stderr + result.stdout
+            rejected[flag] = result.returncode != 0 and (
+                "manual overrides" in text or "min_valid_observations to 1" in text
+            )
     if not all(rejected.values()):
         raise AssertionError(rejected)
     return {"override_rejections": rejected}

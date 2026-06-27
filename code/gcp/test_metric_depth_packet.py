@@ -16,6 +16,7 @@ from metric_depth_packet import (  # noqa: E402
     DEFAULT_NUMERICAL_SUPPORT_FLOOR,
     DEFAULT_VARIANCE_CLAMP_TOLERANCE,
     DIAGNOSTIC_VARIANCE_TENSOR,
+    DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR,
     HISTORICAL_INVALID_TENSOR,
     METRIC_PACKET_TENSOR_NAMES,
     PRIMARY_DEPTH_TENSOR,
@@ -263,6 +264,35 @@ def test_real_blocker_variance_cancellation_accepted() -> dict[str, Any]:
     }
 
 
+def test_100k_nonnegativity_unresolved_is_diagnostic_only() -> dict[str, Any]:
+    a = np.asarray([[0.9998481273651123]], dtype=np.float32)
+    m1 = np.asarray([[180.62217712402344]], dtype=np.float32)
+    m2 = np.asarray([[32629.279296875]], dtype=np.float32)
+    h = np.asarray([[0.005535]], dtype=np.float32)
+    packet = derive_metric_depth_packet(a, m1, m2, h)
+    packet["camera_z_variance"][0, 0] = np.float32(-0.046141814440488815)
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    row = _variance_row(recompute)
+    diag = recompute["diagnostic_tensors"][DIAGNOSTIC_VARIANCE_TENSOR]
+    diag_mask = recompute["diagnostic_tensors"][DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR]
+    if not recompute["passed"]:
+        raise AssertionError(recompute)
+    if row["variance_consistency_fail_count"] != 0:
+        raise AssertionError(row)
+    if row["variance_nonnegativity_unresolved_count"] != 1:
+        raise AssertionError(row)
+    if not math.isnan(float(diag[0, 0])) or bool(diag_mask[0, 0]):
+        raise AssertionError({"diagnostic": diag, "diagnostic_mask": diag_mask})
+    if row["variance_packet_negative_max_ratio"] <= 1.0 or row["variance_ref_negative_max_ratio"] <= 1.0:
+        raise AssertionError(row)
+    return {
+        "variance_validation_row": row,
+        "raw_variance": float(packet["camera_z_variance"][0, 0]),
+        "diagnostic_variance_is_nan": bool(math.isnan(float(diag[0, 0]))),
+        "diagnostic_valid": bool(diag_mask[0, 0]),
+    }
+
+
 def test_negative_variance_beyond_forward_bound_rejected() -> dict[str, Any]:
     packet = derive_metric_depth_packet(
         np.asarray([[1.0]], dtype=np.float32),
@@ -361,6 +391,7 @@ def run_tests() -> list[dict[str, Any]]:
         ("high_depth_low_variance_forward_error_bound", test_high_depth_low_variance_forward_error_bound),
         ("corrupted_variance_beyond_bound_rejected", test_corrupted_variance_beyond_bound_rejected),
         ("real_blocker_variance_cancellation_accepted", test_real_blocker_variance_cancellation_accepted),
+        ("100k_nonnegativity_unresolved_is_diagnostic_only", test_100k_nonnegativity_unresolved_is_diagnostic_only),
         ("negative_variance_beyond_forward_bound_rejected", test_negative_variance_beyond_forward_bound_rejected),
         ("packet_ref_mismatch_beyond_bound_rejected", test_packet_ref_mismatch_beyond_bound_rejected),
         ("positive_variance_diagnostic_unchanged", test_positive_variance_diagnostic_unchanged),

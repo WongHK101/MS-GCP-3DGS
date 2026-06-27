@@ -26,7 +26,8 @@ The packet stores:
 | `alpha_normalized_expected_inverse_camera_z` | `H / A` when `A > floor` else NaN | sensitivity diagnostic only |
 | `harmonic_camera_z` | `A / H` when `A > floor` and `H > 0` else NaN | sensitivity diagnostic only |
 | `camera_z_variance` | raw float32 `M2/A - (M1/A)^2` when `A > floor` else NaN | raw validity/scatter diagnostic |
-| `camera_z_variance_diagnostic` | diagnostic-only `max(camera_z_variance,0)` after forward-bound validation | variance diagnostic only; not stored as raw packet |
+| `camera_z_variance_diagnostic` | diagnostic-only non-negative view after forward-bound validation; unresolved pixels are NaN | variance diagnostic only; not stored as raw packet |
+| `camera_z_variance_diagnostic_valid_mask` | boolean mask for pixels whose variance packet/ref consistency and non-negativity checks pass | variance diagnostic only |
 | `metric_depth_valid_mask` | `A > numerical_support_floor` | depth-packet validity mask |
 
 `normalization_epsilon` is reserved metadata for future compatibility. It is not an active denominator in the current formal P1 definitions. The active definitions use strict `M1/A`, `H/A`, and `A/H` after validity gating. Empty or near-empty support pixels must remain invalid and NaN rather than being made finite by epsilon-only division.
@@ -38,9 +39,9 @@ The protocol records `alpha_cutoff=1/255` and `early_termination_threshold=1e-4`
 - If `A <= numerical_support_floor`, all derived depth/variance tensors are NaN and `metric_depth_valid_mask=false`.
 - If `H <= 0`, `harmonic_camera_z=NaN`.
 - Raw `camera_z_variance` is never overwritten in CUDA, exporter, or NPZ output, including values within `variance_clamp_tolerance`.
-- Negative raw variance is accepted only if both packet-ref consistency and non-negativity-under-forward-error-bound checks pass.
+- Variance packet/ref consistency failure remains a hard packet-validation failure.
+- Negative raw variance whose packet/ref consistency passes but whose packet or reference value is below the frozen non-negativity bound is not a formal P1 blocker; it is recorded as `float32_variance_nonnegativity_unresolved` and excluded from the diagnostic variance view.
 - Accepted cancellation-consistent negative values are classified as `float_cancellation_consistent_with_zero`; only the downstream diagnostic view is zero-clamped.
-- Negative values outside the frozen forward-error bound are hard failures.
 
 ## Variance Recomputaton Validation
 
@@ -71,6 +72,8 @@ For non-negativity, the same frozen bound is applied to both the packet value an
 - `abs(packet - variance_ref) <= allowed_error`
 - `packet >= -allowed_error`
 - `variance_ref >= -allowed_error`
+
+The first condition is the packet-level hard gate. The latter two conditions determine whether the variance diagnostic view is valid. If packet/ref consistency passes but either non-negativity condition fails, the formal P1 depth tensor `alpha_normalized_expected_camera_z` remains valid, while the variance diagnostic mask is false for that pixel.
 
 The manifest locks:
 

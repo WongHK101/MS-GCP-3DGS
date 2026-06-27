@@ -28,6 +28,15 @@ views. The evaluator extracts 3D positions at GCP pixels, aggregates
 multi-view observations per GCP, fits a global Sim(3) on control points, and
 reports held-out checkpoint residuals.
 
+Formal release-mode evaluation is locked to the frozen release config. The
+release config defines the annotation tables, GCP table, scene metadata, and
+control/checkpoint split. Formal invocations may supply the release config,
+depth manifest, scene id, method id, COLMAP model, and output directory, but
+must not override annotations, GCPs, splits, metadata, depth semantics, tensor
+keys, or depth directory contents outside the manifest. Release mode fixes
+`min_valid_observations=1` for all scenes and methods; each GCP reports whether
+aggregation used one view, two-view median, or robust multi-view median.
+
 ## Required Inputs
 
 - A COLMAP sparse model defining the camera frame used by the method.

@@ -34,7 +34,9 @@ Required protocol locks:
 - `model_content_hash`
 - `renderer_commit`
 - `rasterizer_commit`
+- `rasterizer_tree_hash`
 - `exporter_commit`
+- `depth_units`
 - `depth_index`
 
 Each `depth_index` row must include:
@@ -68,4 +70,6 @@ The formal evaluator rejects:
 
 `alpha_cutoff=1/255` and `early_termination_threshold=1e-4` are fixed rasterizer behavior fields. The exporter must not expose CLI options that write different values to the manifest unless a future diagnostic protocol also wires those values into the CUDA kernel.
 
-Raw `camera_z_variance` values are immutable packet fields. The evaluator may derive a diagnostic-only non-negative variance view after the frozen forward-error-bound checks pass, but the source NPZ tensor and packet hash must remain unchanged.
+Raw `camera_z_variance` values are immutable packet fields. The evaluator may derive a diagnostic-only non-negative variance view after the frozen packet/ref consistency check. Pixels whose packet/ref consistency passes but whose raw packet or recomputed reference variance is below the frozen non-negativity bound are recorded as `float32_variance_nonnegativity_unresolved`, marked false in `camera_z_variance_diagnostic_valid_mask`, and do not block formal P1 expected-camera-z evaluation.
+
+Release-mode evaluator runs must use the frozen release config and may not provide manual annotation, GCP, split, metadata, depth-directory, depth-key, or depth-semantics overrides. The summary records the canonical release config SHA-256, relocated release config SHA-256, release id, and verified release files.

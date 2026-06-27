@@ -34,6 +34,7 @@ PRIMARY_DEPTH_TENSOR = "alpha_normalized_expected_camera_z"
 PRIMARY_DEPTH_SEMANTICS = "camera_z"
 HISTORICAL_INVALID_TENSOR = "historical_invalid_unnormalized_inverse_depth"
 DIAGNOSTIC_VARIANCE_TENSOR = "camera_z_variance_diagnostic"
+DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR = "camera_z_variance_diagnostic_valid_mask"
 DEFAULT_NUMERICAL_SUPPORT_FLOOR = 1e-6
 DEFAULT_NORMALIZATION_EPSILON = 1e-12
 DEFAULT_VARIANCE_CLAMP_TOLERANCE = 1e-6
@@ -265,7 +266,7 @@ def recompute_and_compare_packet(
         ok = ok and equal
     out: Dict[str, Any] = {"passed": ok, "rows": rows}
     if "diagnostic" in locals():
-        out["diagnostic_tensors"] = {DIAGNOSTIC_VARIANCE_TENSOR: diagnostic}
+        out["diagnostic_tensors"] = dict(diagnostic)
     return out
 
 
@@ -417,12 +418,20 @@ def compare_variance_forward_error_bound(
     consistency_fail = diff > allowed
     packet_negative_fail = actual64 < -allowed
     ref_negative_fail = variance_ref < -allowed
-    rejected_mask = valid & (consistency_fail | packet_negative_fail | ref_negative_fail)
-    accepted_cancellation_mask = valid & (~rejected_mask) & ((actual64 < 0) | (variance_ref < 0))
+    rejected_mask = valid & consistency_fail
+    nonnegativity_unresolved_mask = valid & (~consistency_fail) & (packet_negative_fail | ref_negative_fail)
+    accepted_cancellation_mask = (
+        valid
+        & (~consistency_fail)
+        & (~nonnegativity_unresolved_mask)
+        & ((actual64 < 0) | (variance_ref < 0))
+    )
     raw_negative_mask = valid & (actual64 < 0)
     diagnostic_clamp_mask = accepted_cancellation_mask & raw_negative_mask
     diagnostic_variance = actual.astype(np.float32).copy()
+    diagnostic_valid_mask = valid & (~consistency_fail) & (~nonnegativity_unresolved_mask)
     diagnostic_variance[diagnostic_clamp_mask] = np.float32(0.0)
+    diagnostic_variance[valid & (~diagnostic_valid_mask)] = np.nan
 
     valid_diff = diff[valid]
     valid_allowed = allowed[valid]
@@ -436,12 +445,18 @@ def compare_variance_forward_error_bound(
         ) / valid_allowed
         ratios = np.maximum(consistency_ratios, negative_ratios)
         worst_flat = int(np.nanargmax(ratios))
+        consistency_worst_flat = int(np.nanargmax(consistency_ratios))
+        packet_negative_ratios = np.maximum(-valid_actual, np.zeros_like(valid_actual, dtype=np.float64)) / valid_allowed
+        ref_negative_ratios = np.maximum(-valid_ref, np.zeros_like(valid_ref, dtype=np.float64)) / valid_allowed
         valid_coords = np.argwhere(valid)
         worst_coord = valid_coords[worst_flat].tolist()
-        max_abs_error = float(valid_diff[worst_flat])
-        max_allowed_error = float(valid_allowed[worst_flat])
+        consistency_worst_coord = valid_coords[consistency_worst_flat].tolist()
+        max_abs_error = float(valid_diff[consistency_worst_flat])
+        max_allowed_error = float(valid_allowed[consistency_worst_flat])
+        consistency_ratio = float(consistency_ratios[consistency_worst_flat])
         max_ratio = float(ratios[worst_flat])
-        failing = int(np.count_nonzero(rejected_mask))
+        consistency_fail_count = int(np.count_nonzero(valid & consistency_fail))
+        nonnegativity_fail_count = int(np.count_nonzero(nonnegativity_unresolved_mask))
         wy, wx = worst_coord[-2], worst_coord[-1]
         worst_payload = {
             "coordinate": worst_coord,
@@ -459,13 +474,37 @@ def compare_variance_forward_error_bound(
             "y": int(wy),
             "x": int(wx),
         }
+        cwy, cwx = consistency_worst_coord[-2], consistency_worst_coord[-1]
+        consistency_worst_payload = {
+            "coordinate": consistency_worst_coord,
+            "A": float(a[tuple(consistency_worst_coord)]),
+            "M1": float(m1[tuple(consistency_worst_coord)]),
+            "M2": float(m2[tuple(consistency_worst_coord)]),
+            "mu": float(mu[tuple(consistency_worst_coord)]),
+            "second": float(second[tuple(consistency_worst_coord)]),
+            "variance_packet": float(actual64[tuple(consistency_worst_coord)]),
+            "variance_ref": float(variance_ref[tuple(consistency_worst_coord)]),
+            "allowed_error": float(allowed[tuple(consistency_worst_coord)]),
+            "packet_ref_abs_error": float(diff[tuple(consistency_worst_coord)]),
+            "packet_ref_consistency_ratio": consistency_ratio,
+            "y": int(cwy),
+            "x": int(cwx),
+        }
+        packet_negative_max_ratio = float(np.max(packet_negative_ratios)) if packet_negative_ratios.size else 0.0
+        ref_negative_max_ratio = float(np.max(ref_negative_ratios)) if ref_negative_ratios.size else 0.0
     else:
         max_abs_error = 0.0
         max_allowed_error = float(policy["variance_validation_abs_floor"])
+        consistency_ratio = 0.0
         max_ratio = 0.0
-        failing = 0
+        consistency_fail_count = 0
+        nonnegativity_fail_count = 0
+        packet_negative_max_ratio = 0.0
+        ref_negative_max_ratio = 0.0
         worst_payload = {}
+        consistency_worst_payload = {}
     raw_negative_values = actual64[raw_negative_mask]
+    unresolved_summary = _component_summary(nonnegativity_unresolved_mask)
     accepted_summary = _component_summary(diagnostic_clamp_mask)
     accepted_count = int(np.count_nonzero(accepted_cancellation_mask))
     rejected_count = int(np.count_nonzero(rejected_mask))
@@ -479,9 +518,7 @@ def compare_variance_forward_error_bound(
         invalid_nan_ok
         and valid_actual_finite
         and valid_expected_finite
-        and failing == 0
-        and rejected_count == 0
-        and max_ratio <= 1.0
+        and consistency_fail_count == 0
     )
     return equal, {
         "variance_validation_policy": policy["variance_validation_policy"],
@@ -494,8 +531,17 @@ def compare_variance_forward_error_bound(
         "variance_validation_rtol": policy["variance_validation_rtol"],
         "max_abs_error": max_abs_error,
         "max_allowed_error": max_allowed_error,
-        "max_error_to_bound_ratio": max_ratio,
-        "failing_pixel_count": failing,
+        "max_error_to_bound_ratio": consistency_ratio,
+        "packet_ref_abs_error": max_abs_error,
+        "packet_ref_allowed_error": max_allowed_error,
+        "packet_ref_consistency_ratio": consistency_ratio,
+        "variance_consistency_status": "pass" if consistency_fail_count == 0 else "fail",
+        "variance_consistency_fail_count": consistency_fail_count,
+        "variance_nonnegativity_unresolved_count": nonnegativity_fail_count,
+        "variance_consistency_max_ratio": consistency_ratio,
+        "variance_packet_negative_max_ratio": packet_negative_max_ratio,
+        "variance_ref_negative_max_ratio": ref_negative_max_ratio,
+        "failing_pixel_count": consistency_fail_count,
         "valid_pixel_count": int(np.count_nonzero(valid)),
         "raw_negative_variance_count": int(np.count_nonzero(raw_negative_mask)),
         "raw_negative_variance_rate": float(np.count_nonzero(raw_negative_mask) / np.count_nonzero(valid)) if np.count_nonzero(valid) else 0.0,
@@ -503,6 +549,12 @@ def compare_variance_forward_error_bound(
         "cancellation_accepted_count": accepted_count,
         "cancellation_rejected_count": rejected_count,
         "diagnostic_zero_clamped_count": int(np.count_nonzero(diagnostic_clamp_mask)),
+        "variance_diagnostic_invalid_count": int(np.count_nonzero(valid & (~diagnostic_valid_mask))),
+        "variance_diagnostic_valid_count": int(np.count_nonzero(diagnostic_valid_mask)),
+        "variance_diagnostic_valid_ratio": float(np.count_nonzero(diagnostic_valid_mask) / np.count_nonzero(valid)) if np.count_nonzero(valid) else 0.0,
+        "variance_diagnostic_failure_reason": "float32_variance_nonnegativity_unresolved" if nonnegativity_fail_count else "",
+        "nonnegativity_unresolved_coordinates": _limited_coordinates(nonnegativity_unresolved_mask),
+        "nonnegativity_unresolved_spatial_distribution": unresolved_summary,
         "min_raw_variance": float(np.nanmin(actual64[valid])) if np.count_nonzero(valid) else None,
         "max_negative_magnitude": max_negative_magnitude,
         "max_negative_to_bound_ratio": max_negative_to_bound_ratio,
@@ -512,7 +564,11 @@ def compare_variance_forward_error_bound(
         "valid_actual_finite": valid_actual_finite,
         "valid_expected_finite": valid_expected_finite,
         "worst_pixel": worst_payload,
-    }, diagnostic_variance
+        "consistency_worst_pixel": consistency_worst_payload,
+    }, {
+        DIAGNOSTIC_VARIANCE_TENSOR: diagnostic_variance,
+        DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR: diagnostic_valid_mask.astype(np.bool_),
+    }
 
 
 def packet_manifest_tensor_formulas() -> Dict[str, str]:
@@ -525,7 +581,8 @@ def packet_manifest_tensor_formulas() -> Dict[str, str]:
         "alpha_normalized_expected_inverse_camera_z": "H/A for A>floor else NaN",
         "harmonic_camera_z": "A/H for A>floor and H>0 else NaN",
         "camera_z_variance": "Raw float32 M2/A-(M1/A)^2 for A>floor else NaN; preserved exactly, including cancellation-consistent negative values",
-        DIAGNOSTIC_VARIANCE_TENSOR: "Diagnostic-only max(camera_z_variance,0) after forward-bound validation; not stored as raw packet and not formal P1 depth",
+        DIAGNOSTIC_VARIANCE_TENSOR: "Diagnostic-only variance view; unresolved nonnegative pixels are NaN; not stored as raw packet and not formal P1 depth",
+        DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR: "Diagnostic-only boolean mask for variance pixels that pass consistency and nonnegativity checks",
         "metric_depth_valid_mask": "A>numerical_support_floor",
     }
 

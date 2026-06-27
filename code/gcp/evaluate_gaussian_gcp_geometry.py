@@ -26,6 +26,7 @@ from triangulate_gcp_points import pixel_to_normalized  # noqa: E402
 from metric_depth_packet import (  # noqa: E402
     DEFAULT_VARIANCE_VALIDATION_DTYPE,
     DIAGNOSTIC_VARIANCE_TENSOR,
+    DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR,
     METRIC_PACKET_MANIFEST_SCHEMA,
     METRIC_PACKET_TENSOR_NAMES,
     PRIMARY_DEPTH_SEMANTICS,
@@ -163,6 +164,7 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
             "model_content_hash",
             "renderer_commit",
             "rasterizer_commit",
+            "rasterizer_tree_hash",
             "exporter_commit",
             "image_domain",
             "pixel_coordinate_convention",
@@ -433,8 +435,8 @@ def validate_metric_packet_npz(
     if not recompute["passed"]:
         raise ValueError(f"Metric packet derived tensor recomputation failed for {path}: {recompute}")
     diagnostic = recompute.get("diagnostic_tensors", {})
-    if DIAGNOSTIC_VARIANCE_TENSOR in diagnostic:
-        packet[DIAGNOSTIC_VARIANCE_TENSOR] = np.asarray(diagnostic[DIAGNOSTIC_VARIANCE_TENSOR])
+    for name, value in diagnostic.items():
+        packet[name] = np.asarray(value)
     return packet
 
 
@@ -569,6 +571,65 @@ def robust_depth_patch(
     }
 
 
+def metric_packet_patch_diagnostics(
+    packet: Dict[str, np.ndarray],
+    depth_u: float,
+    depth_v: float,
+    patch_size: int,
+) -> Dict[str, Any]:
+    required = [
+        "accumulated_alpha",
+        "camera_z_variance",
+        "metric_depth_valid_mask",
+        DIAGNOSTIC_VARIANCE_TENSOR,
+        DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR,
+    ]
+    if any(name not in packet for name in required):
+        return {}
+    alpha = np.asarray(packet["accumulated_alpha"], dtype=np.float64)
+    raw_variance = np.asarray(packet["camera_z_variance"], dtype=np.float64)
+    metric_valid_mask = np.asarray(packet["metric_depth_valid_mask"]).astype(bool)
+    diagnostic_variance = np.asarray(packet[DIAGNOSTIC_VARIANCE_TENSOR], dtype=np.float64)
+    diagnostic_mask = np.asarray(packet[DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR]).astype(bool)
+    height, width = alpha.shape[:2]
+    if depth_u < 0 or depth_v < 0 or depth_u >= width or depth_v >= height:
+        return {}
+    cx = int(round(float(depth_u)))
+    cy = int(round(float(depth_v)))
+    half = int(patch_size) // 2
+    x0 = max(0, cx - half)
+    x1 = min(width, cx + half + 1)
+    y0 = max(0, cy - half)
+    y1 = min(height, cy + half + 1)
+    alpha_patch = alpha[y0:y1, x0:x1]
+    raw_variance_patch = raw_variance[y0:y1, x0:x1]
+    metric_valid_patch = metric_valid_mask[y0:y1, x0:x1]
+    diagnostic_variance_patch = diagnostic_variance[y0:y1, x0:x1]
+    diagnostic_mask_patch = diagnostic_mask[y0:y1, x0:x1]
+    alpha_finite = alpha_patch[np.isfinite(alpha_patch)]
+    diag_values = diagnostic_variance_patch[diagnostic_mask_patch & np.isfinite(diagnostic_variance_patch)]
+    total = int(np.count_nonzero(metric_valid_patch))
+    diagnostic_valid = int(np.count_nonzero(diagnostic_mask_patch))
+    raw_negative = int(np.count_nonzero(np.isfinite(raw_variance_patch) & (raw_variance_patch < 0)))
+    unresolved = int(np.count_nonzero(metric_valid_patch & (~diagnostic_mask_patch)))
+    out: Dict[str, Any] = {
+        "accumulated_alpha_patch_min": float(np.min(alpha_finite)) if alpha_finite.size else math.nan,
+        "accumulated_alpha_patch_p10": float(np.percentile(alpha_finite, 10)) if alpha_finite.size else math.nan,
+        "accumulated_alpha_patch_median": float(np.median(alpha_finite)) if alpha_finite.size else math.nan,
+        "variance_diagnostic_valid_ratio": diagnostic_valid / max(1, total),
+        "variance_raw_negative_count": raw_negative,
+        "variance_nonnegativity_unresolved_count": unresolved,
+        "observation_view_count": 1,
+    }
+    if diag_values.size:
+        out["variance_diagnostic_median"] = float(np.median(diag_values))
+        out["variance_diagnostic_p90"] = float(np.percentile(diag_values, 90))
+    else:
+        out["variance_diagnostic_median"] = math.nan
+        out["variance_diagnostic_p90"] = math.nan
+    return out
+
+
 def aggregate_points(points: List[np.ndarray]) -> tuple[np.ndarray, Dict[str, float]]:
     stack = np.vstack(points)
     aggregate = np.median(stack, axis=0)
@@ -579,6 +640,16 @@ def aggregate_points(points: List[np.ndarray]) -> tuple[np.ndarray, Dict[str, fl
         "scatter_max_m": float(np.max(distances)),
         "scatter_mean_m": float(np.mean(distances)),
     }
+
+
+def aggregation_mode(valid_count: int) -> str:
+    if valid_count <= 0:
+        return ""
+    if valid_count == 1:
+        return "single_view"
+    if valid_count == 2:
+        return "two_view_median"
+    return "robust_multiview_median"
 
 
 def residual_row(point_name: str, role: str, model_xyz: np.ndarray, target_xyz: np.ndarray, pred_xyz: np.ndarray) -> Dict[str, Any]:
@@ -763,6 +834,8 @@ def main() -> None:
     release_config_path: Path | None = None
     release_config: Dict[str, Any] | None = None
     release_verified_files: List[Dict[str, Any]] = []
+    canonical_release_config_sha256 = ""
+    relocated_release_config_sha256 = ""
     split_csv: Path | None = None
     scene_metadata_csv: Path | None = None
     release_config_sha256 = ""
@@ -818,7 +891,16 @@ def main() -> None:
                 "--release_config uses the frozen split; do not also pass "
                 "--control_points or --checkpoint_points"
             )
+        if cli_flag_supplied(argv, "min_valid_observations") and int(args.min_valid_observations) != 1:
+            raise SystemExit("--release_config mode fixes --min_valid_observations to 1")
         args.control_policy = "require_all"
+        args.min_valid_observations = 1
+        canonical_release_config_sha256 = str(
+            release_config.get("canonical_release_config_sha256")
+            or release_config.get("canonical_config_sha256")
+            or release_config_sha256
+        )
+        relocated_release_config_sha256 = release_config_sha256
         args.gcp_csv = str(release_base / release_config["gcp_csv"])
         args.split_csv = str(release_base / release_config["split_csv"])
         args.scene_metadata_csv = str(release_base / release_config["scene_metadata_csv"])
@@ -1025,6 +1107,7 @@ def main() -> None:
                     "packet_sha256": actual_hash,
                     "packet_tensor_count": len(packet_payload),
                     "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
+                    "_metric_packet_payload": packet_payload,
                 }
             depth = load_depth_map(
                 depth_path,
@@ -1105,6 +1188,15 @@ def main() -> None:
             depth_semantics=str(args.depth_semantics),
         )
         base_out.update(patch_stats)
+        if metric_packet_manifest and "_metric_packet_payload" in depth_meta:
+            base_out.update(
+                metric_packet_patch_diagnostics(
+                    packet=depth_meta["_metric_packet_payload"],
+                    depth_u=depth_u,
+                    depth_v=depth_v,
+                    patch_size=int(args.patch_size),
+                )
+            )
         base_out["depth_path"] = str(depth_path)
         if not valid:
             reason = str(patch_stats.get("failure_reason", "invalid_depth"))
@@ -1138,6 +1230,8 @@ def main() -> None:
             "raw_observation_count": raw_count,
             "valid_observation_count": valid_count,
             "valid_observation_ratio": valid_count / max(1, raw_count),
+            "aggregation_mode": aggregation_mode(valid_count),
+            "multiview_robust_eligible": int(valid_count >= 3),
             "valid": 0,
             "failure_reason": "",
         }
@@ -1173,6 +1267,22 @@ def main() -> None:
                     "distance_to_aggregate_m": distance,
                 }
             )
+
+    multiview_robust_subset = [
+        {
+            "scene": row["scene"],
+            "method_id": row["method_id"],
+            "point_name": row["point_name"],
+            "valid_observation_count": row["valid_observation_count"],
+            "aggregation_mode": row.get("aggregation_mode", ""),
+            "scatter_median_m": row.get("scatter_median_m", ""),
+            "scatter_p90_m": row.get("scatter_p90_m", ""),
+            "scatter_max_m": row.get("scatter_max_m", ""),
+            "scatter_mean_m": row.get("scatter_mean_m", ""),
+        }
+        for row in aggregated_rows
+        if int(row.get("valid", 0)) and int(row.get("valid_observation_count", 0)) >= 3
+    ]
 
     requested_controls = sorted(control_points & set(target_points))
     requested_checkpoints = sorted(checkpoint_points & set(target_points))
@@ -1263,6 +1373,8 @@ def main() -> None:
         "depth_pixel_scale_y": float(args.depth_pixel_scale_y),
         "release_config": str(release_config_path) if release_config_path else "",
         "release_config_sha256": release_config_sha256,
+        "canonical_release_config_sha256": canonical_release_config_sha256,
+        "relocated_release_config_sha256": relocated_release_config_sha256,
         "release_id": release_config.get("release_id", "") if release_config else "",
         "release_verified_files": release_verified_files,
         "depth_manifest": str(depth_manifest_path) if depth_manifest_path else "",
@@ -1278,6 +1390,7 @@ def main() -> None:
             "renderer_repository": depth_manifest.get("renderer_repository", depth_manifest.get("train_repo", "")) if depth_manifest else "",
             "renderer_commit": depth_manifest.get("renderer_commit", "") if depth_manifest else "",
             "rasterizer_commit": depth_manifest.get("rasterizer_commit", "") if depth_manifest else "",
+            "rasterizer_tree_hash": depth_manifest.get("rasterizer_tree_hash", "") if depth_manifest else "",
             "exporter_commit": depth_manifest.get("exporter_commit", "") if depth_manifest else "",
             "model_content_hash": depth_manifest.get("model_content_hash", "") if depth_manifest else "",
             "numerical_support_floor": depth_manifest.get("numerical_support_floor", "") if depth_manifest else "",
@@ -1295,6 +1408,7 @@ def main() -> None:
             "alpha_map_available": bool(depth_manifest.get("alpha_map_available", depth_manifest.get("uses_alpha_map", False))) if depth_manifest else False,
             "depth_second_moment_available": bool(depth_manifest.get("depth_second_moment_available", depth_manifest.get("uses_depth_second_moment", False))) if depth_manifest else False,
             "depth_index_entry_count": len(depth_index),
+            "rasterizer_source_trace": depth_manifest.get("rasterizer_source_trace", []) if depth_manifest else [],
         },
         "input_files": {
             "colmap_model": str(colmap_model),
@@ -1311,6 +1425,8 @@ def main() -> None:
         "patch_size": int(args.patch_size),
         "min_patch_valid_ratio": float(args.min_patch_valid_ratio),
         "min_valid_observations": int(args.min_valid_observations),
+        "multiview_robust_subset_count": len(multiview_robust_subset),
+        "multiview_robust_subset_points": [row["point_name"] for row in multiview_robust_subset],
         "raw_observation_rows": len(raw_rows),
         "valid_observation_rows": int(sum(int(row.get("valid", 0)) for row in observation_rows)),
         "aggregated_gcp_count": len(aggregated_points),
@@ -1373,6 +1489,15 @@ def main() -> None:
             "depth_raw_p90_minus_p10",
             "camera_z",
             "camera_z_mad",
+            "accumulated_alpha_patch_min",
+            "accumulated_alpha_patch_p10",
+            "accumulated_alpha_patch_median",
+            "variance_diagnostic_median",
+            "variance_diagnostic_p90",
+            "variance_diagnostic_valid_ratio",
+            "variance_raw_negative_count",
+            "variance_nonnegativity_unresolved_count",
+            "observation_view_count",
             "model_x",
             "model_y",
             "model_z",
@@ -1388,6 +1513,8 @@ def main() -> None:
             "raw_observation_count",
             "valid_observation_count",
             "valid_observation_ratio",
+            "aggregation_mode",
+            "multiview_robust_eligible",
             "valid",
             "failure_reason",
             "model_x",
@@ -1403,6 +1530,21 @@ def main() -> None:
         out_dir / "method_gcp_multiview_scatter.csv",
         scatter_rows,
         ["scene", "method_id", "point_name", "distance_to_aggregate_m"],
+    )
+    write_csv(
+        out_dir / "method_gcp_multiview_robust_subset.csv",
+        multiview_robust_subset,
+        [
+            "scene",
+            "method_id",
+            "point_name",
+            "valid_observation_count",
+            "aggregation_mode",
+            "scatter_median_m",
+            "scatter_p90_m",
+            "scatter_max_m",
+            "scatter_mean_m",
+        ],
     )
     write_csv(
         out_dir / "method_gcp_sim3_control_residuals.csv",

@@ -20,6 +20,7 @@ from metric_depth_packet import (  # noqa: E402
     DEFAULT_NUMERICAL_SUPPORT_FLOOR,
     DEFAULT_VARIANCE_CLAMP_TOLERANCE,
     DIAGNOSTIC_VARIANCE_TENSOR,
+    DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR,
     HISTORICAL_INVALID_TENSOR,
     METRIC_PACKET_MANIFEST_SCHEMA,
     METRIC_PACKET_SCHEMA,
@@ -37,6 +38,7 @@ from metric_depth_packet import (  # noqa: E402
 
 DEFAULT_TRAIN_REPO = r"E:\Multispectral" if Path(r"E:\Multispectral").exists() else "/root/autodl-tmp/Multispectral"
 DEFAULT_RASTERIZER_DEPTH_SEMANTICS = "alpha_weighted_unnormalized_inverse_camera_z"
+RASTERIZER_TRACKED_TREE_HASH = "321f28fd8c0bb6d3840468545efbc4c7417332c8"
 
 
 def parse_train_repo(argv: Sequence[str]) -> Path:
@@ -246,6 +248,15 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                         "variance_validation_max_abs_error": variance_row["max_abs_error"],
                         "variance_validation_max_allowed_error": variance_row["max_allowed_error"],
                         "variance_validation_max_error_to_bound_ratio": variance_row["max_error_to_bound_ratio"],
+                        "variance_packet_ref_abs_error": variance_row["packet_ref_abs_error"],
+                        "variance_packet_ref_allowed_error": variance_row["packet_ref_allowed_error"],
+                        "variance_packet_ref_consistency_ratio": variance_row["packet_ref_consistency_ratio"],
+                        "variance_packet_negative_to_bound_ratio": variance_row["variance_packet_negative_max_ratio"],
+                        "variance_ref_negative_to_bound_ratio": variance_row["variance_ref_negative_max_ratio"],
+                        "variance_consistency_fail_count": variance_row["variance_consistency_fail_count"],
+                        "variance_nonnegativity_unresolved_count": variance_row["variance_nonnegativity_unresolved_count"],
+                        "variance_diagnostic_valid_ratio": variance_row["variance_diagnostic_valid_ratio"],
+                        "variance_diagnostic_invalid_count": variance_row["variance_diagnostic_invalid_count"],
                         "variance_validation_failing_pixel_count": variance_row["failing_pixel_count"],
                         "variance_raw_negative_count": variance_row["raw_negative_variance_count"],
                         "variance_cancellation_accepted_count": variance_row["cancellation_accepted_count"],
@@ -286,6 +297,15 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             "variance_validation_max_abs_error",
             "variance_validation_max_allowed_error",
             "variance_validation_max_error_to_bound_ratio",
+            "variance_packet_ref_abs_error",
+            "variance_packet_ref_allowed_error",
+            "variance_packet_ref_consistency_ratio",
+            "variance_packet_negative_to_bound_ratio",
+            "variance_ref_negative_to_bound_ratio",
+            "variance_consistency_fail_count",
+            "variance_nonnegativity_unresolved_count",
+            "variance_diagnostic_valid_ratio",
+            "variance_diagnostic_invalid_count",
             "variance_validation_failing_pixel_count",
             "variance_raw_negative_count",
             "variance_cancellation_accepted_count",
@@ -314,7 +334,8 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "renderer_repository": str(train_repo),
         "renderer_commit": git_commit(train_repo),
         "rasterizer_repository": str(rasterizer_repo),
-        "rasterizer_commit": git_commit(rasterizer_repo) or git_commit(train_repo),
+        "rasterizer_commit": git_commit(rasterizer_repo) or "tracked_tree_not_git_submodule",
+        "rasterizer_tree_hash": RASTERIZER_TRACKED_TREE_HASH,
         "exporter_repository": str(Path(__file__).resolve().parents[2]),
         "exporter_commit": git_commit(Path(__file__).resolve().parents[2]),
         "source_path": str(dataset.source_path),
@@ -328,9 +349,10 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
         "primary_depth_semantics": PRIMARY_DEPTH_SEMANTICS,
         "depth_semantics": PRIMARY_DEPTH_SEMANTICS,
+        "depth_units": "model_coordinate_units_before_sim3",
         "tensor_names": METRIC_PACKET_TENSOR_NAMES + [HISTORICAL_INVALID_TENSOR],
         "tensor_formulas": packet_manifest_tensor_formulas(),
-        "diagnostic_tensor_names": [DIAGNOSTIC_VARIANCE_TENSOR],
+        "diagnostic_tensor_names": [DIAGNOSTIC_VARIANCE_TENSOR, DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR],
         "dtype": "float32",
         "image_domain": "rendered_colmap_camera_domain",
         "distorted_or_undistorted": "same_as_gaussian_render_camera",
@@ -362,6 +384,15 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                 "exists": path.exists(),
             }
             for path in renderer_sources
+        ],
+        "rasterizer_source_trace": [
+            {
+                "path": str(path),
+                "sha256": file_sha256(path) if path.exists() else "",
+                "exists": path.exists(),
+            }
+            for path in renderer_sources
+            if "diff-gaussian-rasterization" in str(path)
         ],
         "image_list_csv": str(Path(args.image_list_csv).expanduser().resolve()) if args.image_list_csv else "",
         "image_name_column": args.image_name_column,
