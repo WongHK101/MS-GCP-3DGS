@@ -25,7 +25,8 @@ The packet stores:
 | `alpha_normalized_expected_camera_z` | `M1 / A` when `A > floor` else NaN | formal P1 primary camera-z |
 | `alpha_normalized_expected_inverse_camera_z` | `H / A` when `A > floor` else NaN | sensitivity diagnostic only |
 | `harmonic_camera_z` | `A / H` when `A > floor` and `H > 0` else NaN | sensitivity diagnostic only |
-| `camera_z_variance` | `M2/A - (M1/A)^2` when `A > floor` else NaN | validity/scatter diagnostic |
+| `camera_z_variance` | raw float32 `M2/A - (M1/A)^2` when `A > floor` else NaN | raw validity/scatter diagnostic |
+| `camera_z_variance_diagnostic` | diagnostic-only `max(camera_z_variance,0)` after forward-bound validation | variance diagnostic only; not stored as raw packet |
 | `metric_depth_valid_mask` | `A > numerical_support_floor` | depth-packet validity mask |
 
 `normalization_epsilon` is reserved metadata for future compatibility. It is not an active denominator in the current formal P1 definitions. The active definitions use strict `M1/A`, `H/A`, and `A/H` after validity gating. Empty or near-empty support pixels must remain invalid and NaN rather than being made finite by epsilon-only division.
@@ -36,8 +37,10 @@ The protocol records `alpha_cutoff=1/255` and `early_termination_threshold=1e-4`
 
 - If `A <= numerical_support_floor`, all derived depth/variance tensors are NaN and `metric_depth_valid_mask=false`.
 - If `H <= 0`, `harmonic_camera_z=NaN`.
-- Tiny negative variance from floating-point roundoff may be clamped to zero only within `variance_clamp_tolerance`.
-- Clearly negative variance is a test failure.
+- Raw `camera_z_variance` is never overwritten in CUDA, exporter, or NPZ output, including values within `variance_clamp_tolerance`.
+- Negative raw variance is accepted only if both packet-ref consistency and non-negativity-under-forward-error-bound checks pass.
+- Accepted cancellation-consistent negative values are classified as `float_cancellation_consistent_with_zero`; only the downstream diagnostic view is zero-clamped.
+- Negative values outside the frozen forward-error bound are hard failures.
 
 ## Variance Recomputaton Validation
 
@@ -62,6 +65,20 @@ The locked manifest policy is:
 - `variance_validation_rtol = 0`
 
 This validation policy does not modify packet values and is separate from `variance_clamp_tolerance`.
+
+For non-negativity, the same frozen bound is applied to both the packet value and the raw-accumulator recomputation:
+
+- `abs(packet - variance_ref) <= allowed_error`
+- `packet >= -allowed_error`
+- `variance_ref >= -allowed_error`
+
+The manifest locks:
+
+- `variance_nonnegativity_policy = float_forward_error_bound_v1`
+- `variance_negative_handling = preserve_raw_and_zero_clamp_diagnostic_only`
+- `variance_raw_packet_modified = false`
+
+`variance_clamp_tolerance` remains recorded for protocol traceability but does not authorize mutation of the raw NPZ tensor.
 
 ## Legacy Depth Payload
 

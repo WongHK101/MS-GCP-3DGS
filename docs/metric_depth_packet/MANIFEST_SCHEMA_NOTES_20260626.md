@@ -23,6 +23,14 @@ Required protocol locks:
 - `numerical_support_floor`
 - `normalization_epsilon`
 - `variance_clamp_tolerance`
+- `variance_validation_policy`
+- `variance_validation_abs_floor`
+- `variance_validation_ulp_factor`
+- `variance_validation_dtype`
+- `variance_validation_rtol`
+- `variance_nonnegativity_policy`
+- `variance_negative_handling`
+- `variance_raw_packet_modified`
 - `model_content_hash`
 - `renderer_commit`
 - `rasterizer_commit`
@@ -53,8 +61,11 @@ The formal evaluator rejects:
 - missing model/checkpoint content hash;
 - missing finite non-negative `numerical_support_floor`;
 - missing finite non-negative `variance_clamp_tolerance`;
+- missing or unsupported variance validation / non-negativity / negative-handling fields;
 - manual release-mode CLI overrides for semantics, key, scale, offset, domain, or convention.
 
 `normalization_epsilon` is reserved metadata in the current schema. It is recorded for protocol traceability but is not an active denominator in formal P1 metric-depth calculation.
 
 `alpha_cutoff=1/255` and `early_termination_threshold=1e-4` are fixed rasterizer behavior fields. The exporter must not expose CLI options that write different values to the manifest unless a future diagnostic protocol also wires those values into the CUDA kernel.
+
+Raw `camera_z_variance` values are immutable packet fields. The evaluator may derive a diagnostic-only non-negative variance view after the frozen forward-error-bound checks pass, but the source NPZ tensor and packet hash must remain unchanged.

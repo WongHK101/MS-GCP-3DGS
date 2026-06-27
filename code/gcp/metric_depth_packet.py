@@ -33,12 +33,17 @@ RAW_ACCUMULATOR_TENSORS = [
 PRIMARY_DEPTH_TENSOR = "alpha_normalized_expected_camera_z"
 PRIMARY_DEPTH_SEMANTICS = "camera_z"
 HISTORICAL_INVALID_TENSOR = "historical_invalid_unnormalized_inverse_depth"
+DIAGNOSTIC_VARIANCE_TENSOR = "camera_z_variance_diagnostic"
 DEFAULT_NUMERICAL_SUPPORT_FLOOR = 1e-6
 DEFAULT_NORMALIZATION_EPSILON = 1e-12
 DEFAULT_VARIANCE_CLAMP_TOLERANCE = 1e-6
 DEFAULT_ALPHA_CUTOFF = 1.0 / 255.0
 DEFAULT_EARLY_TERMINATION_THRESHOLD = 1e-4
 VARIANCE_VALIDATION_POLICY = "float_forward_error_bound_v1"
+VARIANCE_NONNEGATIVITY_POLICY = "float_forward_error_bound_v1"
+VARIANCE_NEGATIVE_HANDLING = "preserve_raw_and_zero_clamp_diagnostic_only"
+VARIANCE_CANCELLATION_CLASSIFICATION = "float_cancellation_consistent_with_zero"
+VARIANCE_RAW_PACKET_MODIFIED = False
 DEFAULT_VARIANCE_VALIDATION_ABS_FLOOR = 1e-5
 DEFAULT_VARIANCE_VALIDATION_ULP_FACTOR = 8.0
 DEFAULT_VARIANCE_VALIDATION_DTYPE = "float32"
@@ -120,12 +125,6 @@ def derive_metric_depth_packet(
     harmonic_valid = valid & (h > 0)
     harmonic_z[harmonic_valid] = a[harmonic_valid] / h[harmonic_valid]
     variance[valid] = m2[valid] / a[valid] - expected_z[valid] * expected_z[valid]
-    tiny_negative = valid & (variance < 0) & (variance >= -float(variance_clamp_tolerance))
-    variance[tiny_negative] = 0.0
-    clearly_negative = valid & (variance < -float(variance_clamp_tolerance))
-    if np.any(clearly_negative):
-        worst = float(np.nanmin(variance[clearly_negative]))
-        raise ValueError(f"Metric depth variance has clearly negative values; worst={worst}")
     return {
         "accumulated_alpha": a.astype(np.float32),
         "weighted_camera_z_sum": m1.astype(np.float32),
@@ -204,7 +203,16 @@ def recompute_and_compare_packet(
     variance_validation_ulp_factor: float = DEFAULT_VARIANCE_VALIDATION_ULP_FACTOR,
     variance_validation_dtype: str = DEFAULT_VARIANCE_VALIDATION_DTYPE,
     variance_validation_rtol: float = DEFAULT_VARIANCE_VALIDATION_RTOL,
+    variance_nonnegativity_policy: str = VARIANCE_NONNEGATIVITY_POLICY,
+    variance_negative_handling: str = VARIANCE_NEGATIVE_HANDLING,
+    variance_raw_packet_modified: bool = VARIANCE_RAW_PACKET_MODIFIED,
 ) -> Dict[str, Any]:
+    if variance_nonnegativity_policy != VARIANCE_NONNEGATIVITY_POLICY:
+        raise ValueError(f"Unsupported variance nonnegativity policy: {variance_nonnegativity_policy}")
+    if variance_negative_handling != VARIANCE_NEGATIVE_HANDLING:
+        raise ValueError(f"Unsupported variance negative handling: {variance_negative_handling}")
+    if bool(variance_raw_packet_modified) != VARIANCE_RAW_PACKET_MODIFIED:
+        raise ValueError(f"Unsupported variance_raw_packet_modified flag: {variance_raw_packet_modified}")
     policy = validate_variance_validation_policy(
         variance_validation_policy=variance_validation_policy,
         variance_validation_abs_floor=variance_validation_abs_floor,
@@ -230,7 +238,7 @@ def recompute_and_compare_packet(
             abs_err = 0.0 if equal else 1.0
             rel_err = abs_err
         elif name == "camera_z_variance":
-            equal, metrics = compare_variance_forward_error_bound(
+            equal, metrics, diagnostic = compare_variance_forward_error_bound(
                 packet=packet,
                 expected_variance=expected,
                 policy=policy,
@@ -255,7 +263,10 @@ def recompute_and_compare_packet(
             row.update(metrics)
         rows.append(row)
         ok = ok and equal
-    return {"passed": ok, "rows": rows}
+    out: Dict[str, Any] = {"passed": ok, "rows": rows}
+    if "diagnostic" in locals():
+        out["diagnostic_tensors"] = {DIAGNOSTIC_VARIANCE_TENSOR: diagnostic}
+    return out
 
 
 def validate_variance_validation_policy(
@@ -306,6 +317,68 @@ def variance_validation_manifest_fields() -> Dict[str, Any]:
         "variance_validation_ulp_factor": policy["variance_validation_ulp_factor"],
         "variance_validation_dtype": policy["variance_validation_dtype"],
         "variance_validation_rtol": policy["variance_validation_rtol"],
+        "variance_nonnegativity_policy": VARIANCE_NONNEGATIVITY_POLICY,
+        "variance_negative_handling": VARIANCE_NEGATIVE_HANDLING,
+        "variance_raw_packet_modified": VARIANCE_RAW_PACKET_MODIFIED,
+    }
+
+
+def _limited_coordinates(mask: np.ndarray, limit: int = 50) -> list[list[int]]:
+    coords = np.argwhere(mask)
+    return coords[:limit].astype(int).tolist()
+
+
+def _component_summary(mask: np.ndarray) -> Dict[str, Any]:
+    coords = [tuple(map(int, coord)) for coord in np.argwhere(mask)]
+    total = len(coords)
+    if total == 0:
+        return {
+            "count": 0,
+            "rate": 0.0,
+            "max_connected_component_size": 0,
+            "bounding_box_yx": None,
+            "quadrant_counts": {},
+            "sample_coordinates": [],
+        }
+    coord_set = set(coords)
+    max_component = 0
+    while coord_set:
+        start = coord_set.pop()
+        stack = [start]
+        size = 1
+        while stack:
+            y, x = stack.pop()
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    if dy == 0 and dx == 0:
+                        continue
+                    nb = (y + dy, x + dx)
+                    if nb in coord_set:
+                        coord_set.remove(nb)
+                        stack.append(nb)
+                        size += 1
+        max_component = max(max_component, size)
+    arr = np.asarray(coords, dtype=int)
+    height, width = mask.shape[-2], mask.shape[-1]
+    mid_y, mid_x = height / 2.0, width / 2.0
+    quadrants = {
+        "top_left": int(np.count_nonzero((arr[:, -2] < mid_y) & (arr[:, -1] < mid_x))),
+        "top_right": int(np.count_nonzero((arr[:, -2] < mid_y) & (arr[:, -1] >= mid_x))),
+        "bottom_left": int(np.count_nonzero((arr[:, -2] >= mid_y) & (arr[:, -1] < mid_x))),
+        "bottom_right": int(np.count_nonzero((arr[:, -2] >= mid_y) & (arr[:, -1] >= mid_x))),
+    }
+    return {
+        "count": total,
+        "rate": float(total / mask.size) if mask.size else 0.0,
+        "max_connected_component_size": int(max_component),
+        "bounding_box_yx": {
+            "y_min": int(np.min(arr[:, -2])),
+            "y_max": int(np.max(arr[:, -2])),
+            "x_min": int(np.min(arr[:, -1])),
+            "x_max": int(np.max(arr[:, -1])),
+        },
+        "quadrant_counts": quadrants,
+        "sample_coordinates": arr[:50].astype(int).tolist(),
     }
 
 
@@ -313,7 +386,7 @@ def compare_variance_forward_error_bound(
     packet: Dict[str, np.ndarray],
     expected_variance: np.ndarray,
     policy: Dict[str, Any],
-) -> tuple[bool, Dict[str, Any]]:
+) -> tuple[bool, Dict[str, Any], np.ndarray]:
     actual = np.asarray(packet["camera_z_variance"])
     if str(actual.dtype) != policy["variance_validation_dtype"]:
         raise ValueError(
@@ -341,17 +414,34 @@ def compare_variance_forward_error_bound(
     scale = np.maximum.reduce([np.abs(second), np.abs(mu * mu), np.ones_like(a, dtype=np.float64)])
     allowed = policy["variance_validation_abs_floor"] + policy["variance_validation_ulp_factor"] * policy["variance_validation_eps"] * scale
     diff = np.abs(actual64 - variance_ref)
+    consistency_fail = diff > allowed
+    packet_negative_fail = actual64 < -allowed
+    ref_negative_fail = variance_ref < -allowed
+    rejected_mask = valid & (consistency_fail | packet_negative_fail | ref_negative_fail)
+    accepted_cancellation_mask = valid & (~rejected_mask) & ((actual64 < 0) | (variance_ref < 0))
+    raw_negative_mask = valid & (actual64 < 0)
+    diagnostic_clamp_mask = accepted_cancellation_mask & raw_negative_mask
+    diagnostic_variance = actual.astype(np.float32).copy()
+    diagnostic_variance[diagnostic_clamp_mask] = np.float32(0.0)
+
     valid_diff = diff[valid]
     valid_allowed = allowed[valid]
     if valid_diff.size:
-        ratios = valid_diff / valid_allowed
+        consistency_ratios = valid_diff / valid_allowed
+        valid_actual = actual64[valid]
+        valid_ref = variance_ref[valid]
+        negative_ratios = np.maximum(
+            np.maximum(-valid_actual, -valid_ref),
+            np.zeros_like(valid_actual, dtype=np.float64),
+        ) / valid_allowed
+        ratios = np.maximum(consistency_ratios, negative_ratios)
         worst_flat = int(np.nanargmax(ratios))
         valid_coords = np.argwhere(valid)
         worst_coord = valid_coords[worst_flat].tolist()
         max_abs_error = float(valid_diff[worst_flat])
         max_allowed_error = float(valid_allowed[worst_flat])
         max_ratio = float(ratios[worst_flat])
-        failing = int(np.count_nonzero(valid_diff > valid_allowed))
+        failing = int(np.count_nonzero(rejected_mask))
         wy, wx = worst_coord[-2], worst_coord[-1]
         worst_payload = {
             "coordinate": worst_coord,
@@ -362,6 +452,10 @@ def compare_variance_forward_error_bound(
             "second": float(second[tuple(worst_coord)]),
             "variance_packet": float(actual64[tuple(worst_coord)]),
             "variance_ref": float(variance_ref[tuple(worst_coord)]),
+            "allowed_error": float(allowed[tuple(worst_coord)]),
+            "packet_ref_abs_error": float(diff[tuple(worst_coord)]),
+            "packet_negative_to_bound_ratio": float(max(0.0, -actual64[tuple(worst_coord)]) / allowed[tuple(worst_coord)]),
+            "ref_negative_to_bound_ratio": float(max(0.0, -variance_ref[tuple(worst_coord)]) / allowed[tuple(worst_coord)]),
             "y": int(wy),
             "x": int(wx),
         }
@@ -371,9 +465,29 @@ def compare_variance_forward_error_bound(
         max_ratio = 0.0
         failing = 0
         worst_payload = {}
-    equal = invalid_nan_ok and valid_actual_finite and valid_expected_finite and failing == 0 and max_ratio <= 1.0
+    raw_negative_values = actual64[raw_negative_mask]
+    accepted_summary = _component_summary(diagnostic_clamp_mask)
+    accepted_count = int(np.count_nonzero(accepted_cancellation_mask))
+    rejected_count = int(np.count_nonzero(rejected_mask))
+    max_negative_magnitude = float(np.max(-raw_negative_values)) if raw_negative_values.size else 0.0
+    if raw_negative_values.size:
+        negative_to_bound = (-actual64[raw_negative_mask]) / allowed[raw_negative_mask]
+        max_negative_to_bound_ratio = float(np.max(negative_to_bound))
+    else:
+        max_negative_to_bound_ratio = 0.0
+    equal = (
+        invalid_nan_ok
+        and valid_actual_finite
+        and valid_expected_finite
+        and failing == 0
+        and rejected_count == 0
+        and max_ratio <= 1.0
+    )
     return equal, {
         "variance_validation_policy": policy["variance_validation_policy"],
+        "variance_nonnegativity_policy": VARIANCE_NONNEGATIVITY_POLICY,
+        "variance_negative_handling": VARIANCE_NEGATIVE_HANDLING,
+        "variance_raw_packet_modified": VARIANCE_RAW_PACKET_MODIFIED,
         "variance_validation_abs_floor": policy["variance_validation_abs_floor"],
         "variance_validation_ulp_factor": policy["variance_validation_ulp_factor"],
         "variance_validation_dtype": policy["variance_validation_dtype"],
@@ -383,11 +497,22 @@ def compare_variance_forward_error_bound(
         "max_error_to_bound_ratio": max_ratio,
         "failing_pixel_count": failing,
         "valid_pixel_count": int(np.count_nonzero(valid)),
+        "raw_negative_variance_count": int(np.count_nonzero(raw_negative_mask)),
+        "raw_negative_variance_rate": float(np.count_nonzero(raw_negative_mask) / np.count_nonzero(valid)) if np.count_nonzero(valid) else 0.0,
+        "cancellation_classification": VARIANCE_CANCELLATION_CLASSIFICATION,
+        "cancellation_accepted_count": accepted_count,
+        "cancellation_rejected_count": rejected_count,
+        "diagnostic_zero_clamped_count": int(np.count_nonzero(diagnostic_clamp_mask)),
+        "min_raw_variance": float(np.nanmin(actual64[valid])) if np.count_nonzero(valid) else None,
+        "max_negative_magnitude": max_negative_magnitude,
+        "max_negative_to_bound_ratio": max_negative_to_bound_ratio,
+        "accepted_negative_coordinates": _limited_coordinates(diagnostic_clamp_mask),
+        "accepted_negative_spatial_distribution": accepted_summary,
         "invalid_nan_ok": invalid_nan_ok,
         "valid_actual_finite": valid_actual_finite,
         "valid_expected_finite": valid_expected_finite,
         "worst_pixel": worst_payload,
-    }
+    }, diagnostic_variance
 
 
 def packet_manifest_tensor_formulas() -> Dict[str, str]:
@@ -399,7 +524,8 @@ def packet_manifest_tensor_formulas() -> Dict[str, str]:
         "alpha_normalized_expected_camera_z": "M1/A for A>floor else NaN",
         "alpha_normalized_expected_inverse_camera_z": "H/A for A>floor else NaN",
         "harmonic_camera_z": "A/H for A>floor and H>0 else NaN",
-        "camera_z_variance": "M2/A-(M1/A)^2 for A>floor else NaN",
+        "camera_z_variance": "Raw float32 M2/A-(M1/A)^2 for A>floor else NaN; preserved exactly, including cancellation-consistent negative values",
+        DIAGNOSTIC_VARIANCE_TENSOR: "Diagnostic-only max(camera_z_variance,0) after forward-bound validation; not stored as raw packet and not formal P1 depth",
         "metric_depth_valid_mask": "A>numerical_support_floor",
     }
 

@@ -19,6 +19,7 @@ from metric_depth_packet import (  # noqa: E402
     DEFAULT_NORMALIZATION_EPSILON,
     DEFAULT_NUMERICAL_SUPPORT_FLOOR,
     DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+    DIAGNOSTIC_VARIANCE_TENSOR,
     HISTORICAL_INVALID_TENSOR,
     METRIC_PACKET_MANIFEST_SCHEMA,
     METRIC_PACKET_SCHEMA,
@@ -246,6 +247,14 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                         "variance_validation_max_allowed_error": variance_row["max_allowed_error"],
                         "variance_validation_max_error_to_bound_ratio": variance_row["max_error_to_bound_ratio"],
                         "variance_validation_failing_pixel_count": variance_row["failing_pixel_count"],
+                        "variance_raw_negative_count": variance_row["raw_negative_variance_count"],
+                        "variance_cancellation_accepted_count": variance_row["cancellation_accepted_count"],
+                        "variance_cancellation_rejected_count": variance_row["cancellation_rejected_count"],
+                        "variance_min_raw": variance_row["min_raw_variance"],
+                        "variance_max_negative_magnitude": variance_row["max_negative_magnitude"],
+                        "variance_max_negative_to_bound_ratio": variance_row["max_negative_to_bound_ratio"],
+                        "variance_diagnostic_zero_clamped_count": variance_row["diagnostic_zero_clamped_count"],
+                        "variance_max_connected_component_size": variance_row["accepted_negative_spatial_distribution"]["max_connected_component_size"],
                     }
                 )
     finally:
@@ -278,6 +287,14 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             "variance_validation_max_allowed_error",
             "variance_validation_max_error_to_bound_ratio",
             "variance_validation_failing_pixel_count",
+            "variance_raw_negative_count",
+            "variance_cancellation_accepted_count",
+            "variance_cancellation_rejected_count",
+            "variance_min_raw",
+            "variance_max_negative_magnitude",
+            "variance_max_negative_to_bound_ratio",
+            "variance_diagnostic_zero_clamped_count",
+            "variance_max_connected_component_size",
         ],
     )
 
@@ -313,6 +330,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "depth_semantics": PRIMARY_DEPTH_SEMANTICS,
         "tensor_names": METRIC_PACKET_TENSOR_NAMES + [HISTORICAL_INVALID_TENSOR],
         "tensor_formulas": packet_manifest_tensor_formulas(),
+        "diagnostic_tensor_names": [DIAGNOSTIC_VARIANCE_TENSOR],
         "dtype": "float32",
         "image_domain": "rendered_colmap_camera_domain",
         "distorted_or_undistorted": "same_as_gaussian_render_camera",

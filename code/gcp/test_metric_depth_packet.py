@@ -15,6 +15,7 @@ from metric_depth_packet import (  # noqa: E402
     DEFAULT_EARLY_TERMINATION_THRESHOLD,
     DEFAULT_NUMERICAL_SUPPORT_FLOOR,
     DEFAULT_VARIANCE_CLAMP_TOLERANCE,
+    DIAGNOSTIC_VARIANCE_TENSOR,
     HISTORICAL_INVALID_TENSOR,
     METRIC_PACKET_TENSOR_NAMES,
     PRIMARY_DEPTH_TENSOR,
@@ -228,35 +229,124 @@ def test_corrupted_variance_beyond_bound_rejected() -> dict[str, Any]:
     return {"variance_validation_row": variance_row}
 
 
-def test_negative_variance_guard() -> dict[str, Any]:
-    tiny = derive_metric_depth_packet(
-        np.asarray([[1.0]]),
-        np.asarray([[10.0]]),
-        np.asarray([[99.9999999]]),
-        np.asarray([[0.1]]),
+def _variance_row(recompute: dict[str, Any]) -> dict[str, Any]:
+    return next(row for row in recompute["rows"] if row["tensor"] == "camera_z_variance")
+
+
+def test_real_blocker_variance_cancellation_accepted() -> dict[str, Any]:
+    a = np.asarray([[0.0999979]], dtype=np.float32)
+    mu = 39.64956977159261
+    variance_ref = -0.00042971063999175385
+    m1 = np.asarray([[float(a[0, 0]) * mu]], dtype=np.float32)
+    second = mu * mu + variance_ref
+    m2 = np.asarray([[float(a[0, 0]) * second]], dtype=np.float32)
+    h = np.asarray([[float(a[0, 0]) / mu]], dtype=np.float32)
+    packet = derive_metric_depth_packet(a, m1, m2, h)
+    packet["camera_z_variance"][0, 0] = np.float32(-0.0004248161567375064)
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    row = _variance_row(recompute)
+    diag = recompute["diagnostic_tensors"][DIAGNOSTIC_VARIANCE_TENSOR]
+    if not recompute["passed"]:
+        raise AssertionError(recompute)
+    if row["cancellation_accepted_count"] != 1 or row["cancellation_rejected_count"] != 0:
+        raise AssertionError(row)
+    if float(packet["camera_z_variance"][0, 0]) >= 0:
+        raise AssertionError("raw packet variance was unexpectedly modified")
+    if float(diag[0, 0]) != 0.0:
+        raise AssertionError("diagnostic variance did not clamp accepted cancellation to zero")
+    if not (0.0014 < row["max_allowed_error"] < 0.0017):
+        raise AssertionError(row)
+    return {
+        "variance_validation_row": row,
+        "raw_variance": float(packet["camera_z_variance"][0, 0]),
+        "diagnostic_variance": float(diag[0, 0]),
+    }
+
+
+def test_negative_variance_beyond_forward_bound_rejected() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[1.0]], dtype=np.float32),
+        np.asarray([[10.0]], dtype=np.float32),
+        np.asarray([[100.0]], dtype=np.float32),
+        np.asarray([[0.1]], dtype=np.float32),
+    )
+    packet["camera_z_variance"][0, 0] = np.float32(-0.01)
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    row = _variance_row(recompute)
+    if recompute["passed"] or row["cancellation_rejected_count"] != 1:
+        raise AssertionError(recompute)
+    return {"variance_validation_row": row}
+
+
+def test_packet_ref_mismatch_beyond_bound_rejected() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[1.0]], dtype=np.float32),
+        np.asarray([[10.0]], dtype=np.float32),
+        np.asarray([[110.0]], dtype=np.float32),
+        np.asarray([[0.1]], dtype=np.float32),
+    )
+    packet["camera_z_variance"][0, 0] = np.float32(20.0)
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    row = _variance_row(recompute)
+    if recompute["passed"] or row["failing_pixel_count"] != 1:
+        raise AssertionError(recompute)
+    return {"variance_validation_row": row}
+
+
+def test_positive_variance_diagnostic_unchanged() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[1.0]], dtype=np.float32),
+        np.asarray([[10.0]], dtype=np.float32),
+        np.asarray([[110.0]], dtype=np.float32),
+        np.asarray([[0.1]], dtype=np.float32),
+    )
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    diag = recompute["diagnostic_tensors"][DIAGNOSTIC_VARIANCE_TENSOR]
+    if not recompute["passed"]:
+        raise AssertionError(recompute)
+    if not np.array_equal(packet["camera_z_variance"], diag):
+        raise AssertionError("positive diagnostic variance changed")
+    return {"raw_variance": float(packet["camera_z_variance"][0, 0]), "diagnostic_variance": float(diag[0, 0])}
+
+
+def test_tiny_negative_raw_preserved_and_diagnostic_clamped() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[1.0]], dtype=np.float32),
+        np.asarray([[10.0]], dtype=np.float32),
+        np.asarray([[100.0]], dtype=np.float32),
+        np.asarray([[0.1]], dtype=np.float32),
         variance_clamp_tolerance=1e-5,
     )
-    if float(tiny["camera_z_variance"][0, 0]) != 0.0:
-        raise AssertionError("tiny negative variance was not clamped to zero")
-    try:
-        derive_metric_depth_packet(
-            np.asarray([[1.0]]),
-            np.asarray([[10.0]]),
-            np.asarray([[90.0]]),
-            np.asarray([[0.1]]),
-            variance_clamp_tolerance=1e-5,
-        )
-    except ValueError:
-        clearly_negative_rejected = True
-    else:
-        clearly_negative_rejected = False
-    if not clearly_negative_rejected:
-        raise AssertionError("clearly negative variance was not rejected")
+    packet["camera_z_variance"][0, 0] = np.float32(-5e-7)
+    raw = float(packet["camera_z_variance"][0, 0])
+    if raw >= 0.0:
+        raise AssertionError(f"tiny negative raw variance was not preserved: {raw}")
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    row = _variance_row(recompute)
+    diag = recompute["diagnostic_tensors"][DIAGNOSTIC_VARIANCE_TENSOR]
+    if not recompute["passed"] or row["diagnostic_zero_clamped_count"] != 1:
+        raise AssertionError(recompute)
+    if float(diag[0, 0]) != 0.0:
+        raise AssertionError("tiny negative diagnostic variance was not clamped")
     return {
-        "tiny_negative_clamped": True,
-        "clearly_negative_rejected": clearly_negative_rejected,
+        "tiny_negative_raw_preserved": raw,
+        "diagnostic_variance": float(diag[0, 0]),
         "variance_clamp_tolerance": DEFAULT_VARIANCE_CLAMP_TOLERANCE,
     }
+
+
+def test_invalid_mask_nan_behavior_unchanged() -> dict[str, Any]:
+    packet = derive_metric_depth_packet(
+        np.asarray([[0.0]], dtype=np.float32),
+        np.asarray([[0.0]], dtype=np.float32),
+        np.asarray([[0.0]], dtype=np.float32),
+        np.asarray([[0.0]], dtype=np.float32),
+    )
+    recompute = recompute_and_compare_packet(packet, **variance_validation_manifest_fields())
+    row = _variance_row(recompute)
+    if not recompute["passed"] or not row["invalid_nan_ok"]:
+        raise AssertionError(recompute)
+    return {"valid_mask": bool(packet["metric_depth_valid_mask"][0, 0]), "invalid_nan_ok": row["invalid_nan_ok"]}
 
 
 def run_tests() -> list[dict[str, Any]]:
@@ -270,7 +360,12 @@ def run_tests() -> list[dict[str, Any]]:
         ("derived_tensor_recomputation", test_derived_recomputation),
         ("high_depth_low_variance_forward_error_bound", test_high_depth_low_variance_forward_error_bound),
         ("corrupted_variance_beyond_bound_rejected", test_corrupted_variance_beyond_bound_rejected),
-        ("negative_variance_guard", test_negative_variance_guard),
+        ("real_blocker_variance_cancellation_accepted", test_real_blocker_variance_cancellation_accepted),
+        ("negative_variance_beyond_forward_bound_rejected", test_negative_variance_beyond_forward_bound_rejected),
+        ("packet_ref_mismatch_beyond_bound_rejected", test_packet_ref_mismatch_beyond_bound_rejected),
+        ("positive_variance_diagnostic_unchanged", test_positive_variance_diagnostic_unchanged),
+        ("tiny_negative_raw_preserved_and_diagnostic_clamped", test_tiny_negative_raw_preserved_and_diagnostic_clamped),
+        ("invalid_mask_nan_behavior_unchanged", test_invalid_mask_nan_behavior_unchanged),
     ]
     results = []
     for name, fn in tests:
@@ -294,7 +389,13 @@ def main() -> None:
         "failed": len(results) - passed,
         "results": results,
     }
-    print(json.dumps(payload, indent=2))
+    print(
+        json.dumps(
+            payload,
+            indent=2,
+            default=lambda obj: obj.tolist() if isinstance(obj, np.ndarray) else str(obj),
+        )
+    )
     if payload["failed"]:
         raise SystemExit(1)
 

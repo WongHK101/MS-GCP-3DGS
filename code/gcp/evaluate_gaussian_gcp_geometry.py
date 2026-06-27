@@ -25,10 +25,14 @@ from read_write_model import qvec2rotmat, read_model  # noqa: E402
 from triangulate_gcp_points import pixel_to_normalized  # noqa: E402
 from metric_depth_packet import (  # noqa: E402
     DEFAULT_VARIANCE_VALIDATION_DTYPE,
+    DIAGNOSTIC_VARIANCE_TENSOR,
     METRIC_PACKET_MANIFEST_SCHEMA,
     METRIC_PACKET_TENSOR_NAMES,
     PRIMARY_DEPTH_SEMANTICS,
     PRIMARY_DEPTH_TENSOR,
+    VARIANCE_NEGATIVE_HANDLING,
+    VARIANCE_NONNEGATIVITY_POLICY,
+    VARIANCE_RAW_PACKET_MODIFIED,
     VARIANCE_VALIDATION_POLICY,
     recompute_and_compare_packet,
     validate_variance_validation_policy,
@@ -169,6 +173,9 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
             "variance_validation_ulp_factor",
             "variance_validation_dtype",
             "variance_validation_rtol",
+            "variance_nonnegativity_policy",
+            "variance_negative_handling",
+            "variance_raw_packet_modified",
         ]
         missing = []
         for name in required:
@@ -198,6 +205,12 @@ def load_depth_manifest(path: Path) -> Dict[str, Any]:
             variance_validation_dtype=str(manifest["variance_validation_dtype"]),
             variance_validation_rtol=float(manifest["variance_validation_rtol"]),
         )
+        if manifest["variance_nonnegativity_policy"] != VARIANCE_NONNEGATIVITY_POLICY:
+            raise ValueError(f"Unsupported variance nonnegativity policy: {manifest['variance_nonnegativity_policy']}")
+        if manifest["variance_negative_handling"] != VARIANCE_NEGATIVE_HANDLING:
+            raise ValueError(f"Unsupported variance negative handling: {manifest['variance_negative_handling']}")
+        if bool(manifest["variance_raw_packet_modified"]) != VARIANCE_RAW_PACKET_MODIFIED:
+            raise ValueError(f"Unsupported variance_raw_packet_modified flag: {manifest['variance_raw_packet_modified']}")
         tensors = set(manifest.get("tensor_names", []))
         missing_tensors = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in tensors]
         if missing_tensors:
@@ -378,7 +391,16 @@ def validate_metric_packet_npz(
     variance_validation_ulp_factor: float,
     variance_validation_dtype: str,
     variance_validation_rtol: float,
+    variance_nonnegativity_policy: str = VARIANCE_NONNEGATIVITY_POLICY,
+    variance_negative_handling: str = VARIANCE_NEGATIVE_HANDLING,
+    variance_raw_packet_modified: bool = VARIANCE_RAW_PACKET_MODIFIED,
 ) -> Dict[str, np.ndarray]:
+    if variance_nonnegativity_policy != VARIANCE_NONNEGATIVITY_POLICY:
+        raise ValueError(f"Unsupported variance nonnegativity policy: {variance_nonnegativity_policy}")
+    if variance_negative_handling != VARIANCE_NEGATIVE_HANDLING:
+        raise ValueError(f"Unsupported variance negative handling: {variance_negative_handling}")
+    if bool(variance_raw_packet_modified) != VARIANCE_RAW_PACKET_MODIFIED:
+        raise ValueError(f"Unsupported variance_raw_packet_modified flag: {variance_raw_packet_modified}")
     with np.load(path) as payload:
         available = set(payload.files)
         missing = [name for name in METRIC_PACKET_TENSOR_NAMES if name not in available]
@@ -410,6 +432,9 @@ def validate_metric_packet_npz(
     )
     if not recompute["passed"]:
         raise ValueError(f"Metric packet derived tensor recomputation failed for {path}: {recompute}")
+    diagnostic = recompute.get("diagnostic_tensors", {})
+    if DIAGNOSTIC_VARIANCE_TENSOR in diagnostic:
+        packet[DIAGNOSTIC_VARIANCE_TENSOR] = np.asarray(diagnostic[DIAGNOSTIC_VARIANCE_TENSOR])
     return packet
 
 
@@ -753,6 +778,9 @@ def main() -> None:
     metric_packet_variance_validation_ulp_factor = 0.0
     metric_packet_variance_validation_dtype = DEFAULT_VARIANCE_VALIDATION_DTYPE
     metric_packet_variance_validation_rtol = 0.0
+    metric_packet_variance_nonnegativity_policy = VARIANCE_NONNEGATIVITY_POLICY
+    metric_packet_variance_negative_handling = VARIANCE_NEGATIVE_HANDLING
+    metric_packet_variance_raw_packet_modified = VARIANCE_RAW_PACKET_MODIFIED
     scene_metadata_rows: Dict[str, Dict[str, str]] = {}
 
     if args.release_config:
@@ -825,6 +853,9 @@ def main() -> None:
             metric_packet_variance_validation_ulp_factor = float(depth_manifest["variance_validation_ulp_factor"])
             metric_packet_variance_validation_dtype = str(depth_manifest["variance_validation_dtype"])
             metric_packet_variance_validation_rtol = float(depth_manifest["variance_validation_rtol"])
+            metric_packet_variance_nonnegativity_policy = str(depth_manifest["variance_nonnegativity_policy"])
+            metric_packet_variance_negative_handling = str(depth_manifest["variance_negative_handling"])
+            metric_packet_variance_raw_packet_modified = bool(depth_manifest["variance_raw_packet_modified"])
         else:
             manifest_semantics = str(depth_manifest["depth_semantics"]).strip()
         if args.depth_semantics and args.depth_semantics != manifest_semantics:
@@ -986,6 +1017,9 @@ def main() -> None:
                     variance_validation_ulp_factor=metric_packet_variance_validation_ulp_factor,
                     variance_validation_dtype=metric_packet_variance_validation_dtype,
                     variance_validation_rtol=metric_packet_variance_validation_rtol,
+                    variance_nonnegativity_policy=metric_packet_variance_nonnegativity_policy,
+                    variance_negative_handling=metric_packet_variance_negative_handling,
+                    variance_raw_packet_modified=metric_packet_variance_raw_packet_modified,
                 )
                 packet_validation = {
                     "packet_sha256": actual_hash,
@@ -1253,6 +1287,9 @@ def main() -> None:
             "variance_validation_ulp_factor": depth_manifest.get("variance_validation_ulp_factor", "") if depth_manifest else "",
             "variance_validation_dtype": depth_manifest.get("variance_validation_dtype", "") if depth_manifest else "",
             "variance_validation_rtol": depth_manifest.get("variance_validation_rtol", "") if depth_manifest else "",
+            "variance_nonnegativity_policy": depth_manifest.get("variance_nonnegativity_policy", "") if depth_manifest else "",
+            "variance_negative_handling": depth_manifest.get("variance_negative_handling", "") if depth_manifest else "",
+            "variance_raw_packet_modified": depth_manifest.get("variance_raw_packet_modified", "") if depth_manifest else "",
             "normalization_epsilon": depth_manifest.get("normalization_epsilon", "") if depth_manifest else "",
             "tensor_names": depth_manifest.get("tensor_names", []) if depth_manifest else [],
             "alpha_map_available": bool(depth_manifest.get("alpha_map_available", depth_manifest.get("uses_alpha_map", False))) if depth_manifest else False,
