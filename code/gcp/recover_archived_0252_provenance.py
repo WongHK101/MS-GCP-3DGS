@@ -790,11 +790,11 @@ def main() -> int:
         shutil.copy2(doc_path, out_root / "gcp_archived_0252_provenance.md")
     (out_root / "git_status_porcelain.txt").write_text(exact_commands["git_status_porcelain"], encoding="utf-8")
     (out_root / "diagnostic_commit.txt").write_text(
-        git_text(["log", "-1", "--pretty=fuller"], Path.cwd()) + "\n",
+        git_text(["log", "--pretty=fuller", "7f511e101023d7ea04521f50a128cc6d80ab7926..HEAD"], Path.cwd()) + "\n",
         encoding="utf-8",
     )
     (out_root / "diagnostic_commit.patch").write_text(
-        git_text(["show", "--stat", "--patch", "--find-renames", "--find-copies", "HEAD"], Path.cwd()) + "\n",
+        git_text(["diff", "--stat", "--patch", "--find-renames", "--find-copies", "7f511e101023d7ea04521f50a128cc6d80ab7926..HEAD"], Path.cwd()) + "\n",
         encoding="utf-8",
     )
 
