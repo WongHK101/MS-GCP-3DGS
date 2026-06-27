@@ -785,7 +785,18 @@ def main() -> int:
     )
 
     shutil.copy2(Path(__file__), out_root / "recover_archived_0252_provenance.py")
+    doc_path = Path.cwd() / "docs" / "gcp_archived_0252_provenance.md"
+    if doc_path.exists():
+        shutil.copy2(doc_path, out_root / "gcp_archived_0252_provenance.md")
     (out_root / "git_status_porcelain.txt").write_text(exact_commands["git_status_porcelain"], encoding="utf-8")
+    (out_root / "diagnostic_commit.txt").write_text(
+        git_text(["log", "-1", "--pretty=fuller"], Path.cwd()) + "\n",
+        encoding="utf-8",
+    )
+    (out_root / "diagnostic_commit.patch").write_text(
+        git_text(["show", "--stat", "--patch", "--find-renames", "--find-copies", "HEAD"], Path.cwd()) + "\n",
+        encoding="utf-8",
+    )
 
     package_files = [p for p in sorted(out_root.rglob("*")) if p.is_file()]
     content_hash_rows = []
