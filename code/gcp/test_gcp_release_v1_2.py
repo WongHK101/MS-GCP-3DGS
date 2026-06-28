@@ -45,8 +45,17 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     verify_payload_integrity,
     write_json_deterministic,
 )
+from evaluate_gaussian_gcp_geometry import (  # noqa: E402
+    load_release_config,
+    pixel_domain_release_layout,
+    release_annotation_name_for_scene,
+    release_file_registry,
+    require_release_registry_file,
+    verify_release_files,
+)
 
 RELEASE_TOKEN = "v1_2_2"
+DEFAULT_RELEASE_V12 = Path(r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations_v1_2")
 DEFAULT_RELEASE_V122 = Path(r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations_v1_2_2")
 DEFAULT_RELEASE_V121 = Path(r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations_v1_2_1")
 DEFAULT_REMOTE_MANIFEST = Path(
@@ -608,6 +617,76 @@ def test_actual_release_smoke(release_dir: Path, v121_dir: Path, remote_manifest
     }
 
 
+def test_formal_loader_layouts(
+    release_dir: Path,
+    v12_dir: Path = DEFAULT_RELEASE_V12,
+    v121_dir: Path = DEFAULT_RELEASE_V121,
+) -> dict[str, Any]:
+    expected = {
+        v12_dir: ("v1_2", "pixel_domain_v1_2.csv", "gcp_benchmark_release_v1_2.json"),
+        v121_dir: ("v1_2_1", "pixel_domain_v1_2_1.csv", "gcp_benchmark_release_v1_2_1.json"),
+        release_dir: ("v1_2_2", "pixel_domain_v1_2_2.csv", "gcp_benchmark_release_v1_2_2.json"),
+    }
+    layout_results = {}
+    for root, (token, suffix, config_name) in expected.items():
+        if not root.exists():
+            raise FileNotFoundError(f"release directory missing for loader layout test: {root}")
+        config_path = root / config_name
+        config = load_release_config(config_path)
+        layout = pixel_domain_release_layout(config)
+        if layout["token"] != token:
+            raise AssertionError(f"{root.name} token mismatch: {layout['token']} != {token}")
+        if layout["annotation_suffix"] != suffix:
+            raise AssertionError(f"{root.name} annotation suffix mismatch: {layout['annotation_suffix']} != {suffix}")
+        verified = verify_release_files(config_path, config)
+        registry = release_file_registry(verified)
+        manifest_name = f"{token}_release_file_manifest.json"
+        root_name = f"{token}_release_root_digest.json"
+        if manifest_name not in registry:
+            raise AssertionError(f"{root.name} payload manifest not registered under actual name: {manifest_name}")
+        if root_name not in registry:
+            raise AssertionError(f"{root.name} root digest not registered under actual name: {root_name}")
+        annotation_name = release_annotation_name_for_scene(config, "gcp_3000_20260602")
+        if annotation_name.endswith("final_good_nadir_v1.csv"):
+            raise AssertionError("pixel-domain release loader fell back to raw v1 annotation")
+        if annotation_name not in registry:
+            raise AssertionError(f"{root.name} annotation not in registry: {annotation_name}")
+        layout_results[root.name] = {
+            "token": token,
+            "payload_manifest": manifest_name,
+            "root_digest": root_name,
+            "annotation_name": annotation_name,
+            "verified_file_count": len(verified),
+        }
+
+    config = load_release_config(release_dir / "gcp_benchmark_release_v1_2_2.json")
+    verified = verify_release_files(release_dir / "gcp_benchmark_release_v1_2_2.json", config)
+    registry = release_file_registry(verified)
+    annotation_name = release_annotation_name_for_scene(config, "gcp_3000_20260602")
+    missing_registry = dict(registry)
+    missing_registry.pop(annotation_name, None)
+    missing_registry.pop(str((release_dir / annotation_name).resolve()), None)
+    try:
+        require_release_registry_file(missing_registry, release_dir, annotation_name, "Frozen annotation file")
+    except ValueError:
+        missing_annotation_hard_fail = True
+    else:
+        raise AssertionError("missing v1.2.2 pixel-domain annotation did not hard fail")
+    try:
+        pixel_domain_release_layout({"schema": "ms_gcp_3dgs_benchmark_release_config_v1_2_999"})
+    except ValueError:
+        unknown_schema_hard_fail = True
+    else:
+        raise AssertionError("unknown pixel-domain schema did not hard fail")
+    return {
+        "layout_results": layout_results,
+        "missing_annotation_hard_fail": missing_annotation_hard_fail,
+        "unknown_schema_hard_fail": unknown_schema_hard_fail,
+        "no_depth_tensor_read": True,
+        "formal_metric_computation": False,
+    }
+
+
 def run_tests(real_release_dir: Path | None = None, v121_dir: Path = DEFAULT_RELEASE_V121, remote_manifest_path: Path = DEFAULT_REMOTE_MANIFEST) -> list[dict[str, Any]]:
     tests: list[tuple[str, Callable[[], dict[str, Any]]]] = [
         ("golden_observation_id_serialization", test_golden_serialization),
@@ -623,6 +702,12 @@ def run_tests(real_release_dir: Path | None = None, v121_dir: Path = DEFAULT_REL
             (
                 "actual_v1_2_2_release_interface_smoke",
                 lambda: test_actual_release_smoke(real_release_dir, v121_dir, remote_manifest_path),
+            )
+        )
+        tests.append(
+            (
+                "actual_v1_2_2_formal_loader_layout_smoke",
+                lambda: test_formal_loader_layouts(real_release_dir, DEFAULT_RELEASE_V12, v121_dir),
             )
         )
     rows = []

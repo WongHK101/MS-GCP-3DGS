@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import fnmatch
 import hashlib
 import json
 import math
@@ -49,6 +50,7 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     PIXEL_DOMAIN_RELEASE_SCHEMAS,
     RELEASE_V12_SCHEMA,
     RELEASE_V121_SCHEMA,
+    RELEASE_V122_SCHEMA,
     validate_release_v12_rows_for_evaluator,
     verify_payload_integrity,
 )
@@ -89,12 +91,72 @@ def load_release_config(path: Path) -> Dict[str, Any]:
     return config
 
 
+PIXEL_DOMAIN_RELEASE_LAYOUTS = {
+    RELEASE_V12_SCHEMA: {
+        "token": "v1_2",
+        "annotation_suffix": "pixel_domain_v1_2.csv",
+        "payload_manifest": "v1_2_release_file_manifest.json",
+        "root_digest_record": "v1_2_release_root_digest.json",
+    },
+    RELEASE_V121_SCHEMA: {
+        "token": "v1_2_1",
+        "annotation_suffix": "pixel_domain_v1_2_1.csv",
+        "payload_manifest": "v1_2_1_release_file_manifest.json",
+        "root_digest_record": "v1_2_1_release_root_digest.json",
+    },
+    RELEASE_V122_SCHEMA: {
+        "token": "v1_2_2",
+        "annotation_suffix": "pixel_domain_v1_2_2.csv",
+        "payload_manifest": "v1_2_2_release_file_manifest.json",
+        "root_digest_record": "v1_2_2_release_root_digest.json",
+    },
+}
+
+
+def release_relative_path(value: Any, field_name: str) -> str:
+    rel = str(value or "").strip()
+    if not rel:
+        raise ValueError(f"Missing release layout field: {field_name}")
+    path = Path(rel)
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError(f"Release layout field must be a root-relative path: {field_name}={rel!r}")
+    return rel.replace("\\", "/")
+
+
+def pixel_domain_release_layout(config: Dict[str, Any]) -> Dict[str, str]:
+    schema = str(config.get("schema", ""))
+    if schema not in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+        raise ValueError(f"Not a pixel-domain release schema: {schema}")
+    if schema not in PIXEL_DOMAIN_RELEASE_LAYOUTS:
+        raise ValueError(f"No evaluator release layout mapping for pixel-domain schema: {schema}")
+    layout = dict(PIXEL_DOMAIN_RELEASE_LAYOUTS[schema])
+    if config.get("payload_manifest"):
+        layout["payload_manifest"] = release_relative_path(config["payload_manifest"], "payload_manifest")
+    if config.get("root_digest_record"):
+        layout["root_digest_record"] = release_relative_path(config["root_digest_record"], "root_digest_record")
+    return layout
+
+
+def release_annotation_name_for_scene(config: Dict[str, Any], scene: str) -> str:
+    layout = pixel_domain_release_layout(config)
+    annotation_name = f"{scene}_gcp_annotations_{layout['annotation_suffix']}"
+    pattern = str(config.get("annotation_csv_pattern", "")).strip()
+    if pattern and not fnmatch.fnmatch(annotation_name, pattern):
+        raise ValueError(
+            f"Resolved annotation name does not match release pattern: "
+            f"{annotation_name} vs {pattern}"
+        )
+    return annotation_name
+
+
 def verify_release_files(config_path: Path, config: Dict[str, Any]) -> List[Dict[str, Any]]:
     base = config_path.parent
     if config.get("schema") in PIXEL_DOMAIN_RELEASE_SCHEMAS:
-        token = "v1_2_1" if config.get("schema") == RELEASE_V121_SCHEMA else "v1_2"
-        manifest_path = base / f"{token}_release_file_manifest.json"
-        root_record_path = base / f"{token}_release_root_digest.json"
+        layout = pixel_domain_release_layout(config)
+        manifest_rel = layout["payload_manifest"]
+        root_record_rel = layout["root_digest_record"]
+        manifest_path = base / manifest_rel
+        root_record_path = base / root_record_rel
         integrity = verify_payload_integrity(base, manifest_path, root_record_path)
         if not integrity["passed"]:
             raise ValueError(f"v1.2 release integrity failed: {integrity}")
@@ -115,13 +177,13 @@ def verify_release_files(config_path: Path, config: Dict[str, Any]) -> List[Dict
             [
                 {
                     "path": str(manifest_path),
-                    "release_relative_path": "v1_2_release_file_manifest.json",
+                    "release_relative_path": manifest_rel,
                     "sha256": file_sha256(manifest_path),
                     "bytes": manifest_path.stat().st_size,
                 },
                 {
                     "path": str(root_record_path),
-                    "release_relative_path": "v1_2_release_root_digest.json",
+                    "release_relative_path": root_record_rel,
                     "sha256": file_sha256(root_record_path),
                     "bytes": root_record_path.stat().st_size,
                 },
@@ -161,6 +223,18 @@ def release_file_registry(verified_files: Sequence[Dict[str, Any]]) -> Dict[str,
         registry[path.name] = dict(item)
         registry[str(item.get("release_relative_path", ""))] = dict(item)
     return registry
+
+
+def require_release_registry_file(
+    release_registry: Dict[str, Dict[str, Any]],
+    release_base: Path,
+    release_relative_path: str,
+    label: str,
+) -> Path:
+    path = release_base / release_relative_path
+    if release_relative_path not in release_registry and str(path.resolve()) not in release_registry:
+        raise ValueError(f"{label} is not in verified release registry: {release_relative_path}")
+    return path
 
 
 def load_scene_metadata(path: Path) -> Dict[str, Dict[str, str]]:
@@ -953,17 +1027,21 @@ def main() -> None:
         scene_metadata_rows = load_scene_metadata(Path(args.scene_metadata_csv))
         if args.scene not in scene_metadata_rows:
             raise SystemExit(f"Unknown scene for frozen release config: {args.scene}")
-        if release_schema == RELEASE_V121_SCHEMA:
-            annotation_name = f"{args.scene}_gcp_annotations_pixel_domain_v1_2_1.csv"
-        elif release_schema == RELEASE_V12_SCHEMA:
-            annotation_name = f"{args.scene}_gcp_annotations_pixel_domain_v1_2.csv"
+        if release_schema in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+            annotation_name = release_annotation_name_for_scene(release_config, args.scene)
         else:
             annotation_name = f"{args.scene}_gcp_annotations_final_good_nadir_v1.csv"
-        annotation_path = release_base / annotation_name
-        if annotation_name not in release_registry and str(annotation_path.resolve()) not in release_registry:
+        try:
+            annotation_path = require_release_registry_file(
+                release_registry,
+                release_base,
+                annotation_name,
+                "Frozen annotation file",
+            )
+        except ValueError as exc:
             raise SystemExit(
                 f"Frozen annotation file for scene {args.scene} is not in release registry: {annotation_name}"
-            )
+            ) from exc
         args.annotations_csv = str(annotation_path)
 
     if args.depth_manifest:
