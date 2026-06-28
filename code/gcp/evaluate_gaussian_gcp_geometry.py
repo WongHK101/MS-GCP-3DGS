@@ -45,6 +45,11 @@ from fit_gcp_sim3 import (  # noqa: E402
     parse_name_set,
     residual_stats,
 )
+from gcp_pixel_domain_v1_2 import (  # noqa: E402
+    RELEASE_V12_SCHEMA,
+    validate_release_v12_rows_for_evaluator,
+    verify_payload_integrity,
+)
 
 
 DEPTH_SUFFIXES = (".npy", ".npz", ".tif", ".tiff", ".png")
@@ -76,13 +81,53 @@ def file_sha256(path: Path) -> str:
 
 def load_release_config(path: Path) -> Dict[str, Any]:
     config = json.loads(path.read_text(encoding="utf-8"))
-    if config.get("schema") != "ms_gcp_3dgs_benchmark_release_config_v1_1":
+    supported = {
+        "ms_gcp_3dgs_benchmark_release_config_v1_1",
+        RELEASE_V12_SCHEMA,
+    }
+    if config.get("schema") not in supported:
         raise ValueError(f"Unsupported release config schema: {config.get('schema')}")
     return config
 
 
 def verify_release_files(config_path: Path, config: Dict[str, Any]) -> List[Dict[str, Any]]:
     base = config_path.parent
+    if config.get("schema") == RELEASE_V12_SCHEMA:
+        manifest_path = base / "v1_2_release_file_manifest.json"
+        root_record_path = base / "v1_2_release_root_digest.json"
+        integrity = verify_payload_integrity(base, manifest_path, root_record_path)
+        if not integrity["passed"]:
+            raise ValueError(f"v1.2 release integrity failed: {integrity}")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        verified = []
+        for item in manifest.get("files", []):
+            rel = item.get("path", "")
+            path = base / rel
+            verified.append(
+                {
+                    "path": str(path),
+                    "release_relative_path": rel,
+                    "sha256": item.get("sha256", ""),
+                    "bytes": int(item.get("bytes", 0)),
+                }
+            )
+        verified.extend(
+            [
+                {
+                    "path": str(manifest_path),
+                    "release_relative_path": "v1_2_release_file_manifest.json",
+                    "sha256": file_sha256(manifest_path),
+                    "bytes": manifest_path.stat().st_size,
+                },
+                {
+                    "path": str(root_record_path),
+                    "release_relative_path": "v1_2_release_root_digest.json",
+                    "sha256": file_sha256(root_record_path),
+                    "bytes": root_record_path.stat().st_size,
+                },
+            ]
+        )
+        return verified
     verified = []
     for item in config.get("files", []):
         rel = item.get("path", "")
@@ -881,6 +926,7 @@ def main() -> None:
         release_config_path = Path(args.release_config)
         release_config_sha256 = file_sha256(release_config_path)
         release_config = load_release_config(release_config_path)
+        release_schema = str(release_config.get("schema", ""))
         release_verified_files = verify_release_files(release_config_path, release_config)
         release_registry = release_file_registry(release_verified_files)
         release_base = release_config_path.parent
@@ -907,7 +953,10 @@ def main() -> None:
         scene_metadata_rows = load_scene_metadata(Path(args.scene_metadata_csv))
         if args.scene not in scene_metadata_rows:
             raise SystemExit(f"Unknown scene for frozen release config: {args.scene}")
-        annotation_name = f"{args.scene}_gcp_annotations_final_good_nadir_v1.csv"
+        if release_schema == RELEASE_V12_SCHEMA:
+            annotation_name = f"{args.scene}_gcp_annotations_pixel_domain_v1_2.csv"
+        else:
+            annotation_name = f"{args.scene}_gcp_annotations_final_good_nadir_v1.csv"
         annotation_path = release_base / annotation_name
         if annotation_name not in release_registry and str(annotation_path.resolve()) not in release_registry:
             raise SystemExit(
@@ -1013,6 +1062,20 @@ def main() -> None:
             validate_annotation_rows_scene(raw_rows, args.scene)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
+    if release_config and release_config.get("schema") == RELEASE_V12_SCHEMA:
+        if depth_manifest is None:
+            raise SystemExit("v1.2 release mode requires --depth_manifest")
+        try:
+            raw_rows = validate_release_v12_rows_for_evaluator(
+                release_base=release_config_path.parent if release_config_path else annotations_csv.parent,
+                scene=args.scene,
+                rows=raw_rows,
+                colmap_cameras=cameras,
+                colmap_images=images,
+                depth_manifest=depth_manifest,
+            )
+        except ValueError as exc:
+            raise SystemExit(f"v1.2 release pixel-domain validation failed: {exc}") from exc
     observation_rows: List[Dict[str, Any]] = []
     valid_points_by_gcp: Dict[str, List[np.ndarray]] = defaultdict(list)
     failure_counter: Counter[str] = Counter()
@@ -1373,6 +1436,7 @@ def main() -> None:
         "depth_pixel_scale_y": float(args.depth_pixel_scale_y),
         "release_config": str(release_config_path) if release_config_path else "",
         "release_config_sha256": release_config_sha256,
+        "release_config_schema": release_config.get("schema", "") if release_config else "",
         "canonical_release_config_sha256": canonical_release_config_sha256,
         "relocated_release_config_sha256": relocated_release_config_sha256,
         "release_id": release_config.get("release_id", "") if release_config else "",
