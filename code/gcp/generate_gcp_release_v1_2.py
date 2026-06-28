@@ -21,6 +21,8 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     PIXEL_CONVENTION,
     RELEASE_V12_ID,
     RELEASE_V12_SCHEMA,
+    RELEASE_V121_ID,
+    RELEASE_V121_SCHEMA,
     RGB_MATRIX_HASH_MAGIC,
     ROUNDTRIP_TOL_PX,
     SCENES,
@@ -29,6 +31,7 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     TRANSFORM_VERSION,
     CameraRecord,
     ImageRecord,
+    canonical_records_root_sha256,
     canonical_record_sha256,
     camera_canonical_record,
     camera_record_hash,
@@ -62,7 +65,7 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET_ROOT = Path(r"E:\datasets\M3M-GCP")
 DEFAULT_RELEASE_V11 = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations"
-DEFAULT_FINAL_DIR = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2"
+DEFAULT_FINAL_DIR = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2_1"
 DEFAULT_PROJECT_ROOT = Path(r"E:\M3M-GCP-3DGS")
 DEFAULT_REMOTE_MANIFEST = (
     DEFAULT_PROJECT_ROOT
@@ -78,8 +81,15 @@ COPY_METADATA_FILES = [
     "gcp_control_checkpoint_splits_v1.csv",
     "scene_metadata_gcp_benchmark_v1_1.csv",
     "final_annotation_inclusion_provenance.csv",
-    "final_pointset_file_manifest.json",
 ]
+
+LEGACY_V11_PROVENANCE_FILES = {
+    "final_pointset_file_manifest.json": "legacy_v1_1_provenance/final_pointset_file_manifest_v1_1.json",
+}
+
+RELEASE_TOKEN = "v1_2_1"
+RELEASE_SCHEMA = RELEASE_V121_SCHEMA
+RELEASE_ID = RELEASE_V121_ID
 
 OBS_FIELDS = [
     "observation_id",
@@ -151,6 +161,41 @@ def read_stage1_observation_ids(stage1_dir: Path) -> dict[tuple[str, str, str, s
     }
 
 
+def read_stage1_rows(stage1_dir: Path) -> dict[tuple[str, str, str, str, str], dict[str, str]]:
+    path = stage1_dir / "per_observation_domain_audit.csv"
+    rows = read_csv(path)
+    return {
+        (
+            row["scene"],
+            row["point_name"],
+            row["raw_image_name"],
+            row["raw_manual_x_text"],
+            row["raw_manual_y_text"],
+        ): row
+        for row in rows
+    }
+
+
+def percentile(values: list[float], q: float) -> float:
+    if not values:
+        return float("nan")
+    ordered = sorted(values)
+    pos = (len(ordered) - 1) * q
+    lo = int(math.floor(pos))
+    hi = int(math.ceil(pos))
+    if lo == hi:
+        return ordered[lo]
+    return ordered[lo] * (hi - pos) + ordered[hi] * (pos - lo)
+
+
+def stats_payload(values: list[float]) -> dict[str, str]:
+    return {
+        "median": fmt_float(percentile(values, 0.5)),
+        "p95": fmt_float(percentile(values, 0.95)),
+        "max": fmt_float(max(values) if values else float("nan")),
+    }
+
+
 def make_unique_staging(final_dir: Path) -> Path:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base = final_dir.with_name(f"{final_dir.name}.staging_{stamp}")
@@ -209,21 +254,29 @@ def load_archived_undistorted(project_root: Path, scene: str) -> dict[tuple[str,
 
 def copy_metadata(release_v11: Path, staging: Path) -> list[dict[str, Any]]:
     rows = []
-    for name in COPY_METADATA_FILES:
+    copy_plan = [(name, name, "active_release_metadata") for name in COPY_METADATA_FILES]
+    copy_plan.extend(
+        (src_name, dst_name, "provenance_only_not_active_release_manifest")
+        for src_name, dst_name in LEGACY_V11_PROVENANCE_FILES.items()
+    )
+    for name, dst_name, role in copy_plan:
         src = release_v11 / name
         if not src.exists():
             raise FileNotFoundError(f"required byte-copy metadata file missing: {src}")
-        dst = staging / name
+        dst = staging / dst_name
+        dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
         src_hash = file_sha256(src)
         dst_hash = file_sha256(dst)
         rows.append(
             {
                 "file_name": name,
+                "release_relative_path": dst_name.replace("\\", "/"),
+                "release_role": role,
                 "v1_1_source_path": str(src),
                 "v1_1_sha256": src_hash,
-                "v1_2_copied_path": str(dst),
-                "v1_2_sha256": dst_hash,
+                "v1_2_1_copied_path": str(dst),
+                "v1_2_1_sha256": dst_hash,
                 "byte_equal": src_hash == dst_hash and src.stat().st_size == dst.stat().st_size,
             }
         )
@@ -232,7 +285,16 @@ def copy_metadata(release_v11: Path, staging: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def mapping_record(scene: str, image_name: str, src_img: ImageRecord, src_cam: CameraRecord, tgt_img: ImageRecord, tgt_cam: CameraRecord) -> dict[str, Any]:
+def mapping_record(
+    scene: str,
+    image_name: str,
+    src_img: ImageRecord,
+    src_cam: CameraRecord,
+    tgt_img: ImageRecord,
+    tgt_cam: CameraRecord,
+    source_image_sha256: str,
+    target_image_sha256: str,
+) -> dict[str, Any]:
     pose = pose_equivalence(src_img, tgt_img)
     return {
         "mapping_type": "pose_equivalent_colmap_undistortion_intrinsics_remap",
@@ -241,15 +303,82 @@ def mapping_record(scene: str, image_name: str, src_img: ImageRecord, src_cam: C
         "source_camera_record_sha256": camera_record_hash(src_cam),
         "source_image_id": src_img.image_id,
         "source_image_name": image_name,
+        "source_image_sha256": source_image_sha256,
         "source_pose_record_sha256": image_pose_record_hash(src_img),
         "target_camera_id": tgt_cam.camera_id,
         "target_camera_record_sha256": camera_record_hash(tgt_cam),
         "target_image_id": tgt_img.image_id,
         "target_image_name": image_name,
+        "target_image_sha256": target_image_sha256,
         "target_pose_record_sha256": image_pose_record_hash(tgt_img),
         "transform_version": TRANSFORM_VERSION,
         **pose,
     }
+
+
+def validate_cross_manifest_consistency(
+    obs_rows: list[dict[str, Any]],
+    mapping_rows: list[dict[str, Any]],
+    camera_manifest: dict[str, Any],
+) -> dict[str, Any]:
+    camera_records: dict[tuple[str, str, int], str] = {}
+    pose_records: dict[tuple[str, str, str], str] = {}
+    for scene, scene_payload in camera_manifest.get("scenes", {}).items():
+        for role, model_key in [("source", "source_model"), ("target", "target_model")]:
+            for camera in scene_payload.get(model_key, {}).get("cameras", []):
+                camera_records[(scene, role, int(camera["camera_id"]))] = str(camera["record_sha256"])
+            for image in scene_payload.get(model_key, {}).get("images", []):
+                pose_records[(scene, role, Path(str(image["image_name"])).name)] = str(image["record_sha256"])
+    mapping_by_key = {
+        (row["scene"], row["source_image_name"], row["target_image_name"]): row
+        for row in mapping_rows
+    }
+    camera_mismatch = 0
+    pose_mismatch = 0
+    orphan_mapping_reference = 0
+    used_camera_keys: set[tuple[str, str, int]] = set()
+    used_pose_keys: set[tuple[str, str, str]] = set()
+    for row in obs_rows:
+        scene = row["scene"]
+        image_name = row["raw_image_name"]
+        mrow = mapping_by_key.get((scene, image_name, image_name))
+        if mrow is None:
+            orphan_mapping_reference += 1
+            continue
+        checks = [
+            ((scene, "source", int(row["source_camera_id"])), "source_camera_record_sha256", "camera"),
+            ((scene, "target", int(row["target_camera_id"])), "target_camera_record_sha256", "camera"),
+            ((scene, "source", image_name), "source_pose_record_sha256", "pose"),
+            ((scene, "target", image_name), "target_pose_record_sha256", "pose"),
+        ]
+        for key, field, kind in checks:
+            lookup = camera_records if kind == "camera" else pose_records
+            expected = lookup.get(key)
+            if expected is None:
+                orphan_mapping_reference += 1
+                continue
+            if str(row[field]) != expected or str(mrow[field]) != expected:
+                if kind == "camera":
+                    camera_mismatch += 1
+                else:
+                    pose_mismatch += 1
+            if kind == "camera":
+                used_camera_keys.add(key)  # type: ignore[arg-type]
+            else:
+                used_pose_keys.add(key)  # type: ignore[arg-type]
+    orphan_provenance_records = (len(set(camera_records) - used_camera_keys) + len(set(pose_records) - used_pose_keys))
+    summary = {
+        "camera_hash_mismatch_count": camera_mismatch,
+        "pose_hash_mismatch_count": pose_mismatch,
+        "orphan_mapping_reference_count": orphan_mapping_reference,
+        "orphan_provenance_record_count": orphan_provenance_records,
+        "camera_provenance_record_count": len(camera_records),
+        "pose_provenance_record_count": len(pose_records),
+        "mapping_record_count": len(mapping_rows),
+    }
+    if any(summary[k] for k in ["camera_hash_mismatch_count", "pose_hash_mismatch_count", "orphan_mapping_reference_count", "orphan_provenance_record_count"]):
+        raise ValueError(f"cross-manifest consistency failed: {summary}")
+    return summary
 
 
 def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: dict[str, Any]) -> dict[str, Any]:
@@ -260,13 +389,23 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
     remote_manifest_path = Path(args.remote_light_manifest)
     remote_manifest = json.loads(remote_manifest_path.read_text(encoding="utf-8"))
     stage1_ids = read_stage1_observation_ids(stage1_dir)
+    stage1_rows = read_stage1_rows(stage1_dir)
     metadata_copy = copy_metadata(release_v11, staging)
 
     copied_files = {row["file_name"]: row for row in metadata_copy}
     all_obs_rows = []
     all_mapping_rows = []
     orientation_by_image: dict[tuple[str, str], dict[str, Any]] = {}
-    camera_manifest: dict[str, Any] = {"schema": "ms_gcp_camera_provenance_v1_2", "scenes": {}}
+    camera_manifest: dict[str, Any] = {
+        "schema": "ms_gcp_camera_provenance_v1_2_1",
+        "canonical_record_hash_policy": {
+            "serialization": "UTF-8 no BOM; ensure_ascii=False; sort_keys=True; separators=(',', ':')",
+            "camera_record_fields": ["camera_id", "model", "width", "height", "params"],
+            "pose_record_fields": ["image_id", "image_name", "camera_id", "qvec", "tvec"],
+            "float_format": ".17g",
+        },
+        "scenes": {},
+    }
     projection_summary_rows = []
     archived_summary_rows = []
 
@@ -279,6 +418,11 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
         archived = load_archived_undistorted(project_root, scene)
         scene_obs = []
         archived_errors = []
+        raw_to_target_displacements: list[float] = []
+        roundtrip_errors: list[float] = []
+        stage1_target_errors: list[float] = []
+        in_bounds_count = 0
+        out_of_bounds_count = 0
         for row in release_rows:
             image_name = Path(row["image_name"]).name
             point_name = row["point_name"]
@@ -330,7 +474,23 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
             stage1_key = (scene, point_name, image_name, raw_x_text, raw_y_text)
             if stage1_ids.get(stage1_key) != obs_id:
                 raise ValueError(f"Stage-1 observation_id mismatch for {stage1_key}: {obs_id} != {stage1_ids.get(stage1_key)}")
-            mrec = mapping_record(scene, image_name, src_img, src_cam, tgt_img, tgt_cam)
+            stage1_row = stage1_rows.get(stage1_key)
+            if stage1_row is None:
+                raise ValueError(f"Stage-1 row missing for {stage1_key}")
+            raw_to_target_displacements.append(math.hypot(projection["target_x"] - float(raw_x_text), projection["target_y"] - float(raw_y_text)))
+            roundtrip_errors.append(float(projection["roundtrip_error_px"]))
+            if 0 <= projection["target_x"] < tgt_cam.width and 0 <= projection["target_y"] < tgt_cam.height:
+                in_bounds_count += 1
+            else:
+                out_of_bounds_count += 1
+            stage1_target_errors.append(
+                math.hypot(
+                    projection["target_x"] - float(stage1_row["target_x"]),
+                    projection["target_y"] - float(stage1_row["target_y"]),
+                )
+            )
+            target_image_sha = target_hashes.get(image_name, {}).get("sha256", "")
+            mrec = mapping_record(scene, image_name, src_img, src_cam, tgt_img, tgt_cam, orient["raw_image_sha256"], target_image_sha)
             mrec_sha = canonical_record_sha256(mrec)
             out = {
                 "observation_id": obs_id,
@@ -366,7 +526,7 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
                 "target_pixel_convention": PIXEL_CONVENTION,
                 "target_image_width": tgt_cam.width,
                 "target_image_height": tgt_cam.height,
-                "target_image_sha256": target_hashes.get(image_name, {}).get("sha256", ""),
+                "target_image_sha256": target_image_sha,
                 "target_camera_id": tgt_cam.camera_id,
                 "target_camera_model": tgt_cam.model,
                 "target_camera_width": tgt_cam.width,
@@ -390,13 +550,22 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
             scene_obs.append(out)
             all_obs_rows.append(out)
             all_mapping_rows.append({**mrec, "source_target_mapping_record_sha256": mrec_sha})
-        write_csv_deterministic(staging / f"{scene}_gcp_annotations_pixel_domain_v1_2.csv", scene_obs, OBS_FIELDS)
+        write_csv_deterministic(staging / f"{scene}_gcp_annotations_pixel_domain_v1_2_1.csv", scene_obs, OBS_FIELDS)
+        disp_stats = stats_payload(raw_to_target_displacements)
+        roundtrip_stats = stats_payload(roundtrip_errors)
         projection_summary_rows.append(
             {
                 "scene": scene,
                 "observation_count": len(scene_obs),
-                "median_raw_to_target_displacement_px": "",  # retained in Stage-1 package
-                "max_roundtrip_error_px": max(float(r["roundtrip_error_px"]) for r in scene_obs),
+                "median_raw_to_target_displacement_px": disp_stats["median"],
+                "p95_raw_to_target_displacement_px": disp_stats["p95"],
+                "max_raw_to_target_displacement_px": disp_stats["max"],
+                "median_roundtrip_error_px": roundtrip_stats["median"],
+                "p95_roundtrip_error_px": roundtrip_stats["p95"],
+                "max_roundtrip_error_px": roundtrip_stats["max"],
+                "target_in_bounds_count": in_bounds_count,
+                "target_out_of_bounds_count": out_of_bounds_count,
+                "stage1_target_coordinate_max_error_px": fmt_float(max(stage1_target_errors)),
                 "archived_undistorted_rows": len(archived_errors),
                 "archived_undistorted_max_error_px": max(archived_errors) if archived_errors else "",
             }
@@ -418,14 +587,15 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
     obs_ids = [row["observation_id"] for row in all_obs_rows]
     if len(obs_ids) != 611 or len(set(obs_ids)) != 611:
         raise ValueError(f"observation id count/collision failure: rows={len(obs_ids)} unique={len(set(obs_ids))}")
+    cross_manifest_summary = validate_cross_manifest_consistency(all_obs_rows, all_mapping_rows, camera_manifest)
 
-    write_csv_deterministic(staging / "source_target_mapping_manifest_v1_2.csv", all_mapping_rows, sorted({k for row in all_mapping_rows for k in row}))
-    write_json_deterministic(staging / "source_target_mapping_manifest_v1_2.json", all_mapping_rows)
-    write_json_deterministic(staging / "camera_provenance_manifest_v1_2.json", camera_manifest)
-    write_json_deterministic(staging / "raw_image_orientation_manifest_v1_2.json", sorted(orientation_by_image.values(), key=lambda r: (r["scene"], r["image_name"])))
-    write_csv_deterministic(staging / "projection_validation_summary_v1_2.csv", projection_summary_rows, sorted({k for row in projection_summary_rows for k in row}))
-    write_csv_deterministic(staging / "archived_undistorted_agreement_v1_2.csv", archived_summary_rows, ["scene", "count", "max_error_px", "tolerance_px"])
-    write_protocol_doc(staging / "V1_2_PIXEL_DOMAIN_PROTOCOL.md")
+    write_csv_deterministic(staging / "source_target_mapping_manifest_v1_2_1.csv", all_mapping_rows, sorted({k for row in all_mapping_rows for k in row}))
+    write_json_deterministic(staging / "source_target_mapping_manifest_v1_2_1.json", all_mapping_rows)
+    write_json_deterministic(staging / "camera_provenance_manifest_v1_2_1.json", camera_manifest)
+    write_json_deterministic(staging / "raw_image_orientation_manifest_v1_2_1.json", sorted(orientation_by_image.values(), key=lambda r: (r["scene"], r["image_name"])))
+    write_csv_deterministic(staging / "projection_validation_summary_v1_2_1.csv", projection_summary_rows, sorted({k for row in projection_summary_rows for k in row}))
+    write_csv_deterministic(staging / "archived_undistorted_agreement_v1_2_1.csv", archived_summary_rows, ["scene", "count", "max_error_px", "tolerance_px"])
+    write_protocol_doc(staging / "V1_2_1_PIXEL_DOMAIN_PROTOCOL.md")
 
     generator = generator_provenance(
         REPO_ROOT,
@@ -437,21 +607,39 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
             "Generator worktree must be clean before freezing release v1.2; "
             f"dirty status: {generator['generator_worktree_status_porcelain']!r}"
         )
+    mapping_csv_sha = file_sha256(staging / "source_target_mapping_manifest_v1_2_1.csv")
+    mapping_json_sha = file_sha256(staging / "source_target_mapping_manifest_v1_2_1.json")
+    mapping_root_sha = canonical_records_root_sha256(
+        all_mapping_rows,
+        ["scene", "source_image_name", "target_image_name", "source_image_id", "target_image_id"],
+    )
     config = {
-        "schema": RELEASE_V12_SCHEMA,
-        "release_id": RELEASE_V12_ID,
-        "annotation_csv_pattern": "gcp_*_gcp_annotations_pixel_domain_v1_2.csv",
+        "schema": RELEASE_SCHEMA,
+        "release_id": RELEASE_ID,
+        "supersedes_release_id": RELEASE_V12_ID,
+        "superseded_release_disposition": "withdrawn_before_stage3_due_to_inconsistent_record_hash_provenance",
+        "annotation_csv_pattern": "gcp_*_gcp_annotations_pixel_domain_v1_2_1.csv",
         "gcp_csv": "gcp_points_primary_usable_cgcs2000_cm108_v1.csv",
         "split_csv": "gcp_control_checkpoint_splits_v1.csv",
         "scene_metadata_csv": "scene_metadata_gcp_benchmark_v1_1.csv",
         "inclusion_provenance_csv": "final_annotation_inclusion_provenance.csv",
-        "projection_manifest": "projection_manifest_v1_2.json",
-        "camera_provenance_manifest": "camera_provenance_manifest_v1_2.json",
-        "orientation_manifest": "raw_image_orientation_manifest_v1_2.json",
-        "mapping_manifest_csv": "source_target_mapping_manifest_v1_2.csv",
-        "mapping_manifest_json": "source_target_mapping_manifest_v1_2.json",
-        "payload_manifest": "v1_2_release_file_manifest.json",
-        "root_digest_record": "v1_2_release_root_digest.json",
+        "legacy_v1_1_provenance_manifest": "legacy_v1_1_provenance/final_pointset_file_manifest_v1_1.json",
+        "legacy_v1_1_provenance_role": "provenance_only_not_active_release_manifest",
+        "projection_manifest": "projection_manifest_v1_2_1.json",
+        "camera_provenance_manifest": "camera_provenance_manifest_v1_2_1.json",
+        "orientation_manifest": "raw_image_orientation_manifest_v1_2_1.json",
+        "mapping_manifest_csv": "source_target_mapping_manifest_v1_2_1.csv",
+        "mapping_manifest_json": "source_target_mapping_manifest_v1_2_1.json",
+        "mapping_json_file_sha256": mapping_json_sha,
+        "mapping_csv_file_sha256": mapping_csv_sha,
+        "mapping_records_root_sha256": mapping_root_sha,
+        "mapping_records_root_policy": {
+            "sort_keys": ["scene", "source_image_name", "target_image_name", "source_image_id", "target_image_id"],
+            "serialization": "UTF-8 no BOM; ensure_ascii=False; sort_keys=True; separators=(',', ':')",
+            "includes_source_target_mapping_record_sha256": True,
+        },
+        "payload_manifest": "v1_2_1_release_file_manifest.json",
+        "root_digest_record": "v1_2_1_release_root_digest.json",
         "formal_run_requirements": [
             "recompute target_x/target_y from canonical raw pixel and camera provenance",
             "fail on source/target image or camera hash mismatch",
@@ -463,37 +651,41 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
             "final_annotation_observations": 611,
             "scene_final_observations": {scene: sum(1 for row in all_obs_rows if row["scene"] == scene) for scene in SCENES},
         },
+        "cross_manifest_consistency": cross_manifest_summary,
         "generator_provenance": generator,
     }
-    write_json_deterministic(staging / "projection_manifest_v1_2.json", build_projection_manifest(all_obs_rows))
-    write_json_deterministic(staging / "gcp_benchmark_release_v1_2.json", config)
+    write_json_deterministic(
+        staging / "projection_manifest_v1_2_1.json",
+        build_projection_manifest(all_obs_rows, mapping_csv_sha, mapping_json_sha, mapping_root_sha),
+    )
+    write_json_deterministic(staging / "gcp_benchmark_release_v1_2_1.json", config)
 
     entries = payload_manifest_entries(
         staging,
-        exclude={"v1_2_release_file_manifest.json", "v1_2_release_root_digest.json"},
+        exclude={"v1_2_1_release_file_manifest.json", "v1_2_1_release_root_digest.json"},
     )
     manifest = {
         "schema": "ms_gcp_release_payload_manifest_v1",
-        "release_id": RELEASE_V12_ID,
+        "release_id": RELEASE_ID,
         "path_sort": "UTF-8 byte order over POSIX relative paths",
-        "excluded_files": ["v1_2_release_file_manifest.json", "v1_2_release_root_digest.json"],
+        "excluded_files": ["v1_2_1_release_file_manifest.json", "v1_2_1_release_root_digest.json"],
         "files": entries,
     }
-    write_json_deterministic(staging / "v1_2_release_file_manifest.json", manifest)
-    manifest_sha = file_sha256(staging / "v1_2_release_file_manifest.json")
+    write_json_deterministic(staging / "v1_2_1_release_file_manifest.json", manifest)
+    manifest_sha = file_sha256(staging / "v1_2_1_release_file_manifest.json")
     root_digest = payload_root_digest(entries)
     root_record = {
         "schema": "ms_gcp_release_root_digest_v1",
-        "release_id": RELEASE_V12_ID,
+        "release_id": RELEASE_ID,
         "payload_file_count": len(entries),
-        "payload_manifest_path": "v1_2_release_file_manifest.json",
+        "payload_manifest_path": "v1_2_1_release_file_manifest.json",
         "payload_manifest_sha256": manifest_sha,
         "payload_root_digest_algorithm": "sha256(sorted manifest entries; JSON ensure_ascii=False sort_keys=True separators=( ',', ':' ); UTF-8 no BOM)",
         "payload_root_digest_sha256": root_digest,
         "generator_provenance": generator,
     }
-    write_json_deterministic(staging / "v1_2_release_root_digest.json", root_record)
-    integrity = verify_payload_integrity(staging, staging / "v1_2_release_file_manifest.json", staging / "v1_2_release_root_digest.json")
+    write_json_deterministic(staging / "v1_2_1_release_root_digest.json", root_record)
+    integrity = verify_payload_integrity(staging, staging / "v1_2_1_release_file_manifest.json", staging / "v1_2_1_release_root_digest.json")
     if not integrity["passed"]:
         raise ValueError(f"release payload integrity failed: {integrity}")
 
@@ -503,6 +695,7 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
         "metadata_copy": metadata_copy,
         "integrity": integrity,
         "generator_provenance": generator,
+        "cross_manifest_consistency": cross_manifest_summary,
         "orientation_image_count": len(orientation_by_image),
     }
 
@@ -515,6 +708,26 @@ def model_file(model: dict[str, Any], name: str) -> str:
 
 
 def compact_model(model: dict[str, Any]) -> dict[str, Any]:
+    cameras = []
+    for raw in model.get("cameras", []):
+        camera = CameraRecord(
+            camera_id=int(raw["camera_id"]),
+            model=str(raw["model"]),
+            width=int(raw["width"]),
+            height=int(raw["height"]),
+            params=tuple(float(v) for v in raw.get("params", [])),
+        )
+        cameras.append({**camera_canonical_record(camera), "record_sha256": camera_record_hash(camera)})
+    images = []
+    for raw in model.get("images", []):
+        image = ImageRecord(
+            image_id=int(raw["image_id"]),
+            image_name=Path(str(raw["image_name"])).name,
+            camera_id=int(raw["camera_id"]),
+            qvec=tuple(float(v) for v in raw.get("qvec", [])),  # type: ignore[arg-type]
+            tvec=tuple(float(v) for v in raw.get("tvec", [])),  # type: ignore[arg-type]
+        )
+        images.append({**image_pose_canonical_record(image), "record_sha256": image_pose_record_hash(image)})
     return {
         "path": model.get("path", ""),
         "files": [
@@ -522,15 +735,19 @@ def compact_model(model: dict[str, Any]) -> dict[str, Any]:
             for row in model.get("files", [])
             if Path(str(row.get("name", ""))).name in {"cameras.bin", "images.bin", "cameras.txt"}
         ],
-        "cameras": model.get("cameras", []),
-        "images": model.get("images", []),
+        "canonical_record_hash_policy": {
+            "serialization": "UTF-8 no BOM; ensure_ascii=False; sort_keys=True; separators=(',', ':')",
+            "float_format": ".17g",
+        },
+        "cameras": cameras,
+        "images": images,
     }
 
 
-def build_projection_manifest(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def build_projection_manifest(rows: list[dict[str, Any]], mapping_csv_sha: str, mapping_json_sha: str, mapping_root_sha: str) -> dict[str, Any]:
     return {
-        "schema": "ms_gcp_pixel_domain_projection_manifest_v1_2",
-        "release_id": RELEASE_V12_ID,
+        "schema": "ms_gcp_pixel_domain_projection_manifest_v1_2_1",
+        "release_id": RELEASE_ID,
         "source_pixel_domain": "raw_dji_decoded_pixel_matrix_ignore_exif_orientation",
         "target_pixel_domain": "benchmark_colmap_undistorted_pinhole_pixel_domain",
         "pixel_convention": "zero_based_pixel_centers",
@@ -544,17 +761,14 @@ def build_projection_manifest(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "roundtrip_tolerance_px_euclidean": "1e-6",
         },
         "observation_count": len(rows),
-        "mapping_manifest_sha256": canonical_record_sha256(
-            [
-                {
-                    "observation_id": row["observation_id"],
-                    "target_x": row["target_x"],
-                    "target_y": row["target_y"],
-                    "mapping_hash": row["source_target_mapping_record_sha256"],
-                }
-                for row in rows
-            ]
-        ),
+        "mapping_json_file_sha256": mapping_json_sha,
+        "mapping_csv_file_sha256": mapping_csv_sha,
+        "mapping_records_root_sha256": mapping_root_sha,
+        "mapping_records_root_policy": {
+            "sort_keys": ["scene", "source_image_name", "target_image_name", "source_image_id", "target_image_id"],
+            "serialization": "UTF-8 no BOM; ensure_ascii=False; sort_keys=True; separators=(',', ':')",
+            "includes_source_target_mapping_record_sha256": True,
+        },
     }
 
 
@@ -562,9 +776,13 @@ def write_protocol_doc(path: Path) -> None:
     path.write_text(
         "\n".join(
             [
-                "# MS-GCP Release v1.2 Pixel-Domain Protocol",
+                "# MS-GCP Release v1.2.1 Pixel-Domain Protocol",
                 "",
-                "Release v1.2 preserves the v1.1 raw manual annotations but formal evaluation uses verified cached projections into the benchmark undistorted COLMAP camera domain.",
+                "Release v1.2.1 preserves the v1.1 raw manual annotations but formal evaluation uses verified cached projections into the benchmark undistorted COLMAP camera domain.",
+                "",
+                "Release v1.2 is withdrawn before Stage 3 because its camera/pose record hash provenance used inconsistent namespaces across CSV, mapping, and camera provenance manifests.",
+                "",
+                "The legacy v1.1 pointset file manifest is stored under `legacy_v1_1_provenance/` as `provenance_only_not_active_release_manifest`; the only active integrity files are `v1_2_1_release_file_manifest.json` and `v1_2_1_release_root_digest.json`.",
                 "",
                 "Cached target coordinates are not authoritative by themselves. A release-mode evaluator must recompute target coordinates from canonical raw pixels, source camera intrinsics, and mapping records before using them.",
                 "",
@@ -617,7 +835,7 @@ def make_review_package(out_dir: Path, release_dir: Path, package_dir_path: Path
         __import__("subprocess").check_output(["git", "status", "--porcelain"], cwd=REPO_ROOT, text=True) + "\n",
         encoding="utf-8",
     )
-    name = "GPT_GCP_POINTSET_RELEASE_V1_2_PIXEL_DOMAIN_BLOCKER_20260628.zip" if blocker else "GPT_GCP_POINTSET_RELEASE_V1_2_PIXEL_DOMAIN_REVIEW_20260628.zip"
+    name = "GPT_GCP_POINTSET_RELEASE_V1_2_1_PROVENANCE_REPAIR_BLOCKER_20260628.zip" if blocker else "GPT_GCP_POINTSET_RELEASE_V1_2_1_PROVENANCE_REPAIR_REVIEW_20260628.zip"
     return package_dir(out_dir, package_dir_path / name)
 
 
@@ -625,11 +843,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate and freeze MS-GCP v1.2 pixel-domain release.")
     parser.add_argument("--dataset_root", default=str(DEFAULT_DATASET_ROOT))
     parser.add_argument("--release_v11", default=str(DEFAULT_RELEASE_V11))
-    parser.add_argument("--final_dir", default=str(DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2"))
+    parser.add_argument("--final_dir", default=str(DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2_1"))
     parser.add_argument("--project_root", default=str(DEFAULT_PROJECT_ROOT))
     parser.add_argument("--remote_light_manifest", default=str(DEFAULT_REMOTE_MANIFEST))
     parser.add_argument("--stage1_dir", default=str(DEFAULT_STAGE1_DIR))
-    parser.add_argument("--review_out", default=str(DEFAULT_PROJECT_ROOT / "outputs" / "gcp_release_v1_2_pixel_domain_20260628"))
+    parser.add_argument("--review_out", default=str(DEFAULT_PROJECT_ROOT / "outputs" / "gcp_release_v1_2_1_provenance_repair_20260628"))
     parser.add_argument("--package_dir", default=str(DEFAULT_PROJECT_ROOT / "outputs" / "gpt_review_packages"))
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
@@ -662,9 +880,9 @@ def main() -> None:
         diff = compare_dirs(staging, compare)
         if diff:
             raise ValueError(f"byte-identical regeneration failed: {diff[:10]}")
-        root_sha = file_sha256(staging / "v1_2_release_root_digest.json")
-        (review_run / "v1_2_release_root_digest.json.sha256").write_text(
-            f"{root_sha}  v1_2_release_root_digest.json\n",
+        root_sha = file_sha256(staging / "v1_2_1_release_root_digest.json")
+        (review_run / "v1_2_1_release_root_digest.json.sha256").write_text(
+            f"{root_sha}  v1_2_1_release_root_digest.json\n",
             encoding="utf-8",
         )
         shutil.copytree(staging, review_run / "release_snapshot")

@@ -46,7 +46,9 @@ from fit_gcp_sim3 import (  # noqa: E402
     residual_stats,
 )
 from gcp_pixel_domain_v1_2 import (  # noqa: E402
+    PIXEL_DOMAIN_RELEASE_SCHEMAS,
     RELEASE_V12_SCHEMA,
+    RELEASE_V121_SCHEMA,
     validate_release_v12_rows_for_evaluator,
     verify_payload_integrity,
 )
@@ -81,10 +83,7 @@ def file_sha256(path: Path) -> str:
 
 def load_release_config(path: Path) -> Dict[str, Any]:
     config = json.loads(path.read_text(encoding="utf-8"))
-    supported = {
-        "ms_gcp_3dgs_benchmark_release_config_v1_1",
-        RELEASE_V12_SCHEMA,
-    }
+    supported = {"ms_gcp_3dgs_benchmark_release_config_v1_1", *PIXEL_DOMAIN_RELEASE_SCHEMAS}
     if config.get("schema") not in supported:
         raise ValueError(f"Unsupported release config schema: {config.get('schema')}")
     return config
@@ -92,9 +91,10 @@ def load_release_config(path: Path) -> Dict[str, Any]:
 
 def verify_release_files(config_path: Path, config: Dict[str, Any]) -> List[Dict[str, Any]]:
     base = config_path.parent
-    if config.get("schema") == RELEASE_V12_SCHEMA:
-        manifest_path = base / "v1_2_release_file_manifest.json"
-        root_record_path = base / "v1_2_release_root_digest.json"
+    if config.get("schema") in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+        token = "v1_2_1" if config.get("schema") == RELEASE_V121_SCHEMA else "v1_2"
+        manifest_path = base / f"{token}_release_file_manifest.json"
+        root_record_path = base / f"{token}_release_root_digest.json"
         integrity = verify_payload_integrity(base, manifest_path, root_record_path)
         if not integrity["passed"]:
             raise ValueError(f"v1.2 release integrity failed: {integrity}")
@@ -953,7 +953,9 @@ def main() -> None:
         scene_metadata_rows = load_scene_metadata(Path(args.scene_metadata_csv))
         if args.scene not in scene_metadata_rows:
             raise SystemExit(f"Unknown scene for frozen release config: {args.scene}")
-        if release_schema == RELEASE_V12_SCHEMA:
+        if release_schema == RELEASE_V121_SCHEMA:
+            annotation_name = f"{args.scene}_gcp_annotations_pixel_domain_v1_2_1.csv"
+        elif release_schema == RELEASE_V12_SCHEMA:
             annotation_name = f"{args.scene}_gcp_annotations_pixel_domain_v1_2.csv"
         else:
             annotation_name = f"{args.scene}_gcp_annotations_final_good_nadir_v1.csv"
@@ -1062,7 +1064,7 @@ def main() -> None:
             validate_annotation_rows_scene(raw_rows, args.scene)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
-    if release_config and release_config.get("schema") == RELEASE_V12_SCHEMA:
+    if release_config and release_config.get("schema") in PIXEL_DOMAIN_RELEASE_SCHEMAS:
         if depth_manifest is None:
             raise SystemExit("v1.2 release mode requires --depth_manifest")
         try:

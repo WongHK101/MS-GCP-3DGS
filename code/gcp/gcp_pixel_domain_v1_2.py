@@ -35,6 +35,9 @@ SCENES = [
 
 RELEASE_V12_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2"
 RELEASE_V12_ID = "gcp_benchmark_release_v1_2_pixel_domain_20260628"
+RELEASE_V121_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2_1"
+RELEASE_V121_ID = "gcp_benchmark_release_v1_2_1_pixel_domain_20260628"
+PIXEL_DOMAIN_RELEASE_SCHEMAS = {RELEASE_V12_SCHEMA, RELEASE_V121_SCHEMA}
 TRANSFORM_VERSION = "raw_simple_radial_to_benchmark_pinhole_v1"
 SOURCE_PIXEL_DOMAIN = "raw_dji_decoded_pixel_matrix_ignore_exif_orientation"
 TARGET_PIXEL_DOMAIN = "benchmark_colmap_undistorted_pinhole_pixel_domain"
@@ -96,6 +99,14 @@ def canonical_json_bytes(obj: Any) -> bytes:
 
 def canonical_record_sha256(obj: Any) -> str:
     return sha256_bytes(canonical_json_bytes(obj))
+
+
+def canonical_records_root_sha256(
+    rows: Sequence[dict[str, Any]],
+    sort_keys: Sequence[str],
+) -> str:
+    normalized = sorted((dict(row) for row in rows), key=lambda row: tuple(str(row.get(k, "")) for k in sort_keys))
+    return sha256_bytes(canonical_json_bytes(normalized))
 
 
 def observation_id_payload(
@@ -468,6 +479,7 @@ def verify_payload_integrity(root: Path, manifest_path: Path, root_record_path: 
     root_record = json.loads(root_record_path.read_text(encoding="utf-8"))
     entries = manifest["files"]
     problems: list[str] = []
+    excluded = {relative_posix(manifest_path, root), relative_posix(root_record_path, root)}
     listed = {item["path"]: item for item in entries}
     for rel, item in listed.items():
         path = root / rel
@@ -482,7 +494,7 @@ def verify_payload_integrity(root: Path, manifest_path: Path, root_record_path: 
         relative_posix(path, root)
         for path in root.rglob("*")
         if path.is_file()
-        and relative_posix(path, root) not in {"v1_2_release_file_manifest.json", "v1_2_release_root_digest.json"}
+        and relative_posix(path, root) not in excluded
     }
     unregistered = sorted(actual_files - set(listed))
     if unregistered:
@@ -501,6 +513,18 @@ def verify_payload_integrity(root: Path, manifest_path: Path, root_record_path: 
         "payload_manifest_sha256": manifest_hash,
         "payload_root_digest_sha256": digest,
     }
+
+
+def detect_pixel_domain_release_token(release_base: Path) -> str:
+    if (release_base / "v1_2_1_release_file_manifest.json").exists():
+        return "v1_2_1"
+    if (release_base / "v1_2_release_file_manifest.json").exists():
+        return "v1_2"
+    raise FileNotFoundError(f"No v1.2/v1.2.1 release manifest found in {release_base}")
+
+
+def release_sidecar_name(token: str, stem: str, suffix: str) -> str:
+    return f"{stem}_{token}.{suffix}"
 
 
 def colmap_camera_to_record(camera_id: int, camera: Any) -> CameraRecord:
@@ -524,23 +548,44 @@ def colmap_image_to_record(image_id: int, image: Any) -> ImageRecord:
 
 
 def load_release_v12_sidecars(release_base: Path) -> dict[str, Any]:
+    token = detect_pixel_domain_release_token(release_base)
     sidecars = {
-        "projection": json.loads((release_base / "projection_manifest_v1_2.json").read_text(encoding="utf-8")),
-        "orientation": json.loads((release_base / "raw_image_orientation_manifest_v1_2.json").read_text(encoding="utf-8")),
-        "mapping": json.loads((release_base / "source_target_mapping_manifest_v1_2.json").read_text(encoding="utf-8")),
-        "camera": json.loads((release_base / "camera_provenance_manifest_v1_2.json").read_text(encoding="utf-8")),
-        "root_record": json.loads((release_base / "v1_2_release_root_digest.json").read_text(encoding="utf-8")),
-        "payload_manifest": json.loads((release_base / "v1_2_release_file_manifest.json").read_text(encoding="utf-8")),
+        "release_token": token,
+        "projection": json.loads((release_base / release_sidecar_name(token, "projection_manifest", "json")).read_text(encoding="utf-8")),
+        "orientation": json.loads((release_base / release_sidecar_name(token, "raw_image_orientation_manifest", "json")).read_text(encoding="utf-8")),
+        "mapping": json.loads((release_base / release_sidecar_name(token, "source_target_mapping_manifest", "json")).read_text(encoding="utf-8")),
+        "camera": json.loads((release_base / release_sidecar_name(token, "camera_provenance_manifest", "json")).read_text(encoding="utf-8")),
+        "root_record": json.loads((release_base / f"{token}_release_root_digest.json").read_text(encoding="utf-8")),
+        "payload_manifest": json.loads((release_base / f"{token}_release_file_manifest.json").read_text(encoding="utf-8")),
     }
     integrity = verify_payload_integrity(
         release_base,
-        release_base / "v1_2_release_file_manifest.json",
-        release_base / "v1_2_release_root_digest.json",
+        release_base / f"{token}_release_file_manifest.json",
+        release_base / f"{token}_release_root_digest.json",
     )
     if not integrity["passed"]:
         raise ValueError(f"v1.2 release integrity failed: {integrity}")
     sidecars["integrity"] = integrity
     return sidecars
+
+
+def camera_provenance_lookup(camera_manifest: dict[str, Any]) -> tuple[dict[tuple[str, str, int], dict[str, Any]], dict[tuple[str, str, str], dict[str, Any]]]:
+    camera_lookup: dict[tuple[str, str, int], dict[str, Any]] = {}
+    pose_lookup: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for scene, scene_payload in camera_manifest.get("scenes", {}).items():
+        for role, model_key in [("source", "source_model"), ("target", "target_model")]:
+            model = scene_payload.get(model_key, {})
+            for raw in model.get("cameras", []):
+                key = (scene, role, int(raw["camera_id"]))
+                if key in camera_lookup:
+                    raise ValueError(f"duplicate camera provenance record: {key}")
+                camera_lookup[key] = raw
+            for raw in model.get("images", []):
+                key = (scene, role, Path(str(raw["image_name"])).name)
+                if key in pose_lookup:
+                    raise ValueError(f"duplicate pose provenance record: {key}")
+                pose_lookup[key] = raw
+    return camera_lookup, pose_lookup
 
 
 def _rows_by_key(rows: Sequence[dict[str, Any]], keys: Sequence[str]) -> dict[tuple[str, ...], dict[str, Any]]:
@@ -565,6 +610,8 @@ def validate_release_v12_rows_for_evaluator(
     sidecars = load_release_v12_sidecars(release_base)
     orientation = _rows_by_key(sidecars["orientation"], ["scene", "image_name"])
     mapping = _rows_by_key(sidecars["mapping"], ["scene", "source_image_name", "target_image_name"])
+    camera_lookup, pose_lookup = camera_provenance_lookup(sidecars["camera"])
+    strict_provenance = sidecars.get("release_token") == "v1_2_1"
     cameras = {int(cid): colmap_camera_to_record(int(cid), cam) for cid, cam in colmap_cameras.items()}
     images = {Path(str(img.name)).name: colmap_image_to_record(int(iid), img) for iid, img in colmap_images.items()}
     if depth_manifest is not None:
@@ -597,6 +644,8 @@ def validate_release_v12_rows_for_evaluator(
             raise ValueError(f"source RGB pixel-matrix hash mismatch for {scene} {image_name}")
         if orient.get("applied_orientation_policy") != ORIENTATION_POLICY:
             raise ValueError(f"source orientation policy mismatch for {scene} {image_name}")
+        if row.get("source_orientation_policy") != ORIENTATION_POLICY:
+            raise ValueError(f"annotation source orientation policy mismatch for {scene} {image_name}")
         target_image = images.get(image_name)
         if target_image is None:
             raise ValueError(f"target image missing in evaluator COLMAP model: {scene} {image_name}")
@@ -612,13 +661,46 @@ def validate_release_v12_rows_for_evaluator(
             raise ValueError(f"target camera record hash mismatch for {scene} {image_name}")
         if image_pose_record_hash(target_image) != row.get("target_pose_record_sha256"):
             raise ValueError(f"target pose record hash mismatch for {scene} {image_name}")
+        if strict_provenance:
+            source_camera_record = camera_lookup.get((scene, "source", int(row["source_camera_id"])))
+            target_camera_record = camera_lookup.get((scene, "target", int(row["target_camera_id"])))
+            source_pose_record = pose_lookup.get((scene, "source", image_name))
+            target_pose_record = pose_lookup.get((scene, "target", image_name))
+            if source_camera_record is None or target_camera_record is None:
+                raise ValueError(f"camera provenance record missing for {scene} {image_name}")
+            if source_pose_record is None or target_pose_record is None:
+                raise ValueError(f"pose provenance record missing for {scene} {image_name}")
+            if source_camera_record.get("record_sha256") != row.get("source_camera_record_sha256"):
+                raise ValueError(f"source camera provenance hash mismatch for {scene} {image_name}")
+            if target_camera_record.get("record_sha256") != row.get("target_camera_record_sha256"):
+                raise ValueError(f"target camera provenance hash mismatch for {scene} {image_name}")
+            if source_pose_record.get("record_sha256") != row.get("source_pose_record_sha256"):
+                raise ValueError(f"source pose provenance hash mismatch for {scene} {image_name}")
+            if target_pose_record.get("record_sha256") != row.get("target_pose_record_sha256"):
+                raise ValueError(f"target pose provenance hash mismatch for {scene} {image_name}")
         if int(row["target_image_width"]) != int(target_camera.width) or int(row["target_image_height"]) != int(target_camera.height):
             raise ValueError(f"target dimensions mismatch for {scene} {image_name}")
         m = mapping.get((scene, image_name, image_name))
         if m is None:
             raise ValueError(f"missing source-target mapping record for {scene} {image_name}")
+        m_without_hash = dict(m)
+        claimed_mapping_hash = str(m_without_hash.pop("source_target_mapping_record_sha256", ""))
+        if canonical_record_sha256(m_without_hash) != claimed_mapping_hash:
+            raise ValueError(f"mapping record self-hash mismatch for {scene} {image_name}")
         if m.get("source_target_mapping_record_sha256") != row.get("source_target_mapping_record_sha256"):
             raise ValueError(f"source-target mapping hash mismatch for {scene} {image_name}")
+        if str(m.get("source_image_sha256", "")).lower() != str(row.get("source_image_sha256", "")).lower():
+            raise ValueError(f"mapping source image SHA mismatch for {scene} {image_name}")
+        if str(m.get("target_image_sha256", "")).lower() != str(row.get("target_image_sha256", "")).lower():
+            raise ValueError(f"mapping target image SHA mismatch for {scene} {image_name}")
+        for field in [
+            "source_camera_record_sha256",
+            "target_camera_record_sha256",
+            "source_pose_record_sha256",
+            "target_pose_record_sha256",
+        ]:
+            if str(m.get(field, "")) != str(row.get(field, "")):
+                raise ValueError(f"mapping {field} mismatch for {scene} {image_name}")
         if m.get("transform_version") != row.get("transform_version") or row.get("transform_version") != TRANSFORM_VERSION:
             raise ValueError(f"transform version mismatch for {scene} {image_name}")
         if str(m.get("mapping_type")) != str(row.get("mapping_type")):

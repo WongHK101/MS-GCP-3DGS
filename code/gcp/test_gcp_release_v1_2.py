@@ -16,13 +16,16 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     CACHED_TARGET_TOL_PX,
     ORIENTATION_POLICY,
     PIXEL_CONVENTION,
-    RELEASE_V12_ID,
+    RELEASE_V121_ID,
     ROUNDTRIP_TOL_PX,
     TARGET_PIXEL_DOMAIN,
     TRANSFORM_VERSION,
     CameraRecord,
     ImageRecord,
+    camera_canonical_record,
     camera_record_hash,
+    canonical_record_sha256,
+    image_pose_canonical_record,
     image_pose_record_hash,
     observation_id_from_fields,
     payload_manifest_entries,
@@ -41,24 +44,24 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
 def _write_payload_manifests(root: Path) -> None:
     entries = payload_manifest_entries(
         root,
-        exclude={"v1_2_release_file_manifest.json", "v1_2_release_root_digest.json"},
+        exclude={"v1_2_1_release_file_manifest.json", "v1_2_1_release_root_digest.json"},
     )
     write_json_deterministic(
-        root / "v1_2_release_file_manifest.json",
+        root / "v1_2_1_release_file_manifest.json",
         {
             "schema": "ms_gcp_release_payload_manifest_v1",
-            "release_id": RELEASE_V12_ID,
+            "release_id": RELEASE_V121_ID,
             "files": entries,
         },
     )
-    manifest_sha = _sha(root / "v1_2_release_file_manifest.json")
+    manifest_sha = _sha(root / "v1_2_1_release_file_manifest.json")
     write_json_deterministic(
-        root / "v1_2_release_root_digest.json",
+        root / "v1_2_1_release_root_digest.json",
         {
             "schema": "ms_gcp_release_root_digest_v1",
-            "release_id": RELEASE_V12_ID,
+            "release_id": RELEASE_V121_ID,
             "payload_file_count": len(entries),
-            "payload_manifest_path": "v1_2_release_file_manifest.json",
+            "payload_manifest_path": "v1_2_1_release_file_manifest.json",
             "payload_manifest_sha256": manifest_sha,
             "payload_root_digest_sha256": payload_root_digest(entries),
         },
@@ -88,7 +91,25 @@ def _make_release_fixture(root: Path) -> tuple[list[dict[str, str]], dict[int, A
     source_img = ImageRecord(1, image_name, 1, (1.0, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
     target_img = ImageRecord(1, image_name, 2, (1.0, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
     projection = raw_to_target_projection(source_cam, target_cam, 520.0, 410.0)
-    mapping_hash = "d" * 64
+    mapping_payload = {
+        "scene": scene,
+        "source_camera_id": 1,
+        "source_camera_record_sha256": camera_record_hash(source_cam),
+        "source_image_id": 1,
+        "source_image_name": image_name,
+        "source_image_sha256": raw_sha,
+        "source_pose_record_sha256": image_pose_record_hash(source_img),
+        "target_camera_id": 2,
+        "target_camera_record_sha256": camera_record_hash(target_cam),
+        "target_image_id": 1,
+        "target_image_name": image_name,
+        "target_image_sha256": target_sha,
+        "target_pose_record_sha256": image_pose_record_hash(target_img),
+        "transform_version": TRANSFORM_VERSION,
+        "mapping_type": "pose_equivalent_intrinsics_projection",
+        "pose_equivalent": True,
+    }
+    mapping_hash = canonical_record_sha256(mapping_payload)
     obs_id = observation_id_from_fields(
         scene=scene,
         point_name="P1",
@@ -105,6 +126,7 @@ def _make_release_fixture(root: Path) -> tuple[list[dict[str, str]], dict[int, A
         "raw_manual_x": "520.0",
         "raw_manual_y": "410.0",
         "source_image_sha256": raw_sha,
+        "source_orientation_policy": ORIENTATION_POLICY,
         "source_rgb_pixel_matrix_sha256": rgb_sha,
         "source_camera_id": "1",
         "source_camera_model": source_cam.model,
@@ -138,7 +160,7 @@ def _make_release_fixture(root: Path) -> tuple[list[dict[str, str]], dict[int, A
         "roundtrip_error_px": f"{projection['roundtrip_error_px']:.17g}",
     }
     write_json_deterministic(
-        root / "raw_image_orientation_manifest_v1_2.json",
+        root / "raw_image_orientation_manifest_v1_2_1.json",
         [
             {
                 "scene": scene,
@@ -150,21 +172,33 @@ def _make_release_fixture(root: Path) -> tuple[list[dict[str, str]], dict[int, A
         ],
     )
     write_json_deterministic(
-        root / "source_target_mapping_manifest_v1_2.json",
+        root / "source_target_mapping_manifest_v1_2_1.json",
         [
             {
-                "scene": scene,
-                "source_image_name": image_name,
-                "target_image_name": image_name,
-                "mapping_type": row["mapping_type"],
-                "transform_version": TRANSFORM_VERSION,
-                "pose_equivalent": True,
+                **mapping_payload,
                 "source_target_mapping_record_sha256": mapping_hash,
             }
         ],
     )
-    write_json_deterministic(root / "projection_manifest_v1_2.json", {"schema": "fixture"})
-    write_json_deterministic(root / "camera_provenance_manifest_v1_2.json", {"schema": "fixture"})
+    write_json_deterministic(root / "projection_manifest_v1_2_1.json", {"schema": "fixture"})
+    write_json_deterministic(
+        root / "camera_provenance_manifest_v1_2_1.json",
+        {
+            "schema": "fixture",
+            "scenes": {
+                scene: {
+                    "source_model": {
+                        "cameras": [{**camera_canonical_record(source_cam), "record_sha256": camera_record_hash(source_cam)}],
+                        "images": [{**image_pose_canonical_record(source_img), "record_sha256": image_pose_record_hash(source_img)}],
+                    },
+                    "target_model": {
+                        "cameras": [{**camera_canonical_record(target_cam), "record_sha256": camera_record_hash(target_cam)}],
+                        "images": [{**image_pose_canonical_record(target_img), "record_sha256": image_pose_record_hash(target_img)}],
+                    },
+                }
+            },
+        },
+    )
     _write_payload_manifests(root)
     cameras = {
         2: SimpleNamespace(model="PINHOLE", width=1000, height=800, params=np.asarray(target_cam.params)),
@@ -234,14 +268,14 @@ def test_integrity_manifest_rejections() -> dict[str, Any]:
         root = Path(d)
         (root / "payload.txt").write_text("ok\n", encoding="utf-8")
         _write_payload_manifests(root)
-        ok = verify_payload_integrity(root, root / "v1_2_release_file_manifest.json", root / "v1_2_release_root_digest.json")
+        ok = verify_payload_integrity(root, root / "v1_2_1_release_file_manifest.json", root / "v1_2_1_release_root_digest.json")
         if not ok["passed"]:
             raise AssertionError(ok)
         (root / "payload.txt").write_text("changed\n", encoding="utf-8")
-        modified = verify_payload_integrity(root, root / "v1_2_release_file_manifest.json", root / "v1_2_release_root_digest.json")
+        modified = verify_payload_integrity(root, root / "v1_2_1_release_file_manifest.json", root / "v1_2_1_release_root_digest.json")
         (root / "payload.txt").write_text("ok\n", encoding="utf-8")
         (root / "unregistered.txt").write_text("x\n", encoding="utf-8")
-        unregistered = verify_payload_integrity(root, root / "v1_2_release_file_manifest.json", root / "v1_2_release_root_digest.json")
+        unregistered = verify_payload_integrity(root, root / "v1_2_1_release_file_manifest.json", root / "v1_2_1_release_root_digest.json")
     if modified["passed"] or unregistered["passed"]:
         raise AssertionError({"modified": modified, "unregistered": unregistered})
     return {"modified_problem_count": modified["problem_count"], "unregistered_problem_count": unregistered["problem_count"]}
@@ -296,13 +330,123 @@ def test_evaluator_v12_hard_gates() -> dict[str, Any]:
     return {"valid_row_count": len(validated), "negative_failures": failures}
 
 
+def _validate_fixture(
+    root: Path,
+    rows: list[dict[str, str]],
+    cameras: dict[int, Any],
+    images: dict[int, Any],
+    depth_manifest: dict[str, Any],
+) -> list[dict[str, str]]:
+    return validate_release_v12_rows_for_evaluator(
+        release_base=root,
+        scene="scene_a",
+        rows=rows,
+        colmap_cameras=cameras,
+        colmap_images=images,
+        depth_manifest=depth_manifest,
+    )
+
+
+def hard_gate_case(
+    name: str,
+    *,
+    mutate_row: Callable[[dict[str, str]], None] | None = None,
+    mutate_depth_manifest: Callable[[dict[str, Any]], None] | None = None,
+    mutate_cameras: Callable[[dict[int, Any]], None] | None = None,
+    mutate_images: Callable[[dict[int, Any]], None] | None = None,
+    mutate_sidecars: Callable[[Path], None] | None = None,
+    refresh_integrity_after_sidecar_mutation: bool = False,
+) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        rows, cameras, images, depth_manifest = _make_release_fixture(root)
+        if mutate_row:
+            mutate_row(rows[0])
+        if mutate_depth_manifest:
+            mutate_depth_manifest(depth_manifest)
+        if mutate_cameras:
+            mutate_cameras(cameras)
+        if mutate_images:
+            mutate_images(images)
+        if mutate_sidecars:
+            mutate_sidecars(root)
+            if refresh_integrity_after_sidecar_mutation:
+                _write_payload_manifests(root)
+        error_type = _expect_fail(lambda: _validate_fixture(root, rows, cameras, images, depth_manifest))
+    return {"case": name, "rejected_by": error_type}
+
+
+def hard_gate_cases() -> list[tuple[str, Callable[[], dict[str, Any]]]]:
+    return [
+        ("target_x_tamper", lambda: hard_gate_case("target_x_tamper", mutate_row=lambda r: r.__setitem__("target_x", str(float(r["target_x"]) + CACHED_TARGET_TOL_PX * 10)))),
+        ("target_y_tamper", lambda: hard_gate_case("target_y_tamper", mutate_row=lambda r: r.__setitem__("target_y", str(float(r["target_y"]) + CACHED_TARGET_TOL_PX * 10)))),
+        ("coordinates_from_another_image", lambda: hard_gate_case("coordinates_from_another_image", mutate_row=lambda r: (r.__setitem__("target_x", str(float(r["target_x"]) + 2.0)), r.__setitem__("target_y", str(float(r["target_y"]) + 2.0))))),
+        ("canonical_raw_pixel_tamper", lambda: hard_gate_case("canonical_raw_pixel_tamper", mutate_row=lambda r: r.__setitem__("raw_manual_x", "521.0"))),
+        ("observation_id_tamper", lambda: hard_gate_case("observation_id_tamper", mutate_row=lambda r: r.__setitem__("observation_id", "0" * 64))),
+        ("source_image_hash_tamper", lambda: hard_gate_case("source_image_hash_tamper", mutate_row=lambda r: r.__setitem__("source_image_sha256", "1" * 64))),
+        ("source_rgb_matrix_hash_tamper", lambda: hard_gate_case("source_rgb_matrix_hash_tamper", mutate_row=lambda r: r.__setitem__("source_rgb_pixel_matrix_sha256", "1" * 64))),
+        ("source_camera_record_hash_tamper", lambda: hard_gate_case("source_camera_record_hash_tamper", mutate_row=lambda r: r.__setitem__("source_camera_record_sha256", "1" * 64))),
+        ("source_pose_record_hash_tamper", lambda: hard_gate_case("source_pose_record_hash_tamper", mutate_row=lambda r: r.__setitem__("source_pose_record_sha256", "1" * 64))),
+        ("target_image_hash_tamper", lambda: hard_gate_case("target_image_hash_tamper", mutate_row=lambda r: r.__setitem__("target_image_sha256", "1" * 64))),
+        ("target_camera_record_hash_tamper", lambda: hard_gate_case("target_camera_record_hash_tamper", mutate_row=lambda r: r.__setitem__("target_camera_record_sha256", "1" * 64))),
+        ("target_pose_record_hash_tamper", lambda: hard_gate_case("target_pose_record_hash_tamper", mutate_row=lambda r: r.__setitem__("target_pose_record_sha256", "1" * 64))),
+        ("mapping_record_hash_tamper", lambda: hard_gate_case("mapping_record_hash_tamper", mutate_row=lambda r: r.__setitem__("source_target_mapping_record_sha256", "1" * 64))),
+        ("pose_mismatch", lambda: hard_gate_case("pose_mismatch", mutate_images=lambda images: setattr(images[1], "qvec", np.asarray([0.999, 0.001, 0.0, 0.0])))),
+        ("zero_one_based_offset", lambda: hard_gate_case("zero_one_based_offset", mutate_row=lambda r: (r.__setitem__("target_x", str(float(r["target_x"]) + 1.0)), r.__setitem__("target_y", str(float(r["target_y"]) + 1.0))))),
+        ("xy_swap", lambda: hard_gate_case("xy_swap", mutate_row=lambda r: (r.__setitem__("target_x", r["target_y"]), r.__setitem__("target_y", r["target_x"])))),
+        ("resize_dimension_mismatch", lambda: hard_gate_case("resize_dimension_mismatch", mutate_row=lambda r: r.__setitem__("target_image_width", "999"))),
+        ("target_out_of_bounds", lambda: hard_gate_case("target_out_of_bounds", mutate_row=lambda r: (r.__setitem__("target_x", "1001"), r.__setitem__("target_y", "801")))),
+        ("missing_mapping", lambda: hard_gate_case("missing_mapping", mutate_sidecars=lambda root: (root / "source_target_mapping_manifest_v1_2_1.json").write_text("[]\n", encoding="utf-8"), refresh_integrity_after_sidecar_mutation=True)),
+        ("unknown_transform_version", lambda: hard_gate_case("unknown_transform_version", mutate_row=lambda r: r.__setitem__("transform_version", "unknown_transform"))),
+        ("packet_camera_hash_mismatch", lambda: hard_gate_case("packet_camera_hash_mismatch", mutate_depth_manifest=lambda m: m.__setitem__("target_cameras_bin_sha256", "9" * 64))),
+        ("packet_pixel_convention_mismatch", lambda: hard_gate_case("packet_pixel_convention_mismatch", mutate_depth_manifest=lambda m: m.__setitem__("pixel_coordinate_convention", "one_based_pixels"))),
+        ("exif_orientation_policy_mismatch", lambda: hard_gate_case("exif_orientation_policy_mismatch", mutate_row=lambda r: r.__setitem__("source_orientation_policy", "apply_exif_transpose"))),
+        (
+            "camera_provenance_vs_csv_hash_namespace_mismatch",
+            lambda: hard_gate_case(
+                "camera_provenance_vs_csv_hash_namespace_mismatch",
+                mutate_sidecars=lambda root: _tamper_camera_provenance(root, "source_model", "cameras", "record_sha256", "2" * 64),
+                refresh_integrity_after_sidecar_mutation=True,
+            ),
+        ),
+        (
+            "camera_provenance_vs_mapping_hash_namespace_mismatch",
+            lambda: hard_gate_case(
+                "camera_provenance_vs_mapping_hash_namespace_mismatch",
+                mutate_sidecars=lambda root: _tamper_mapping(root, "source_camera_record_sha256", "2" * 64),
+                refresh_integrity_after_sidecar_mutation=True,
+            ),
+        ),
+    ]
+
+
+def _tamper_camera_provenance(root: Path, model_key: str, record_group: str, field: str, value: str) -> None:
+    path = root / "camera_provenance_manifest_v1_2_1.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["scenes"]["scene_a"][model_key][record_group][0][field] = value
+    write_json_deterministic(path, payload)
+
+
+def _tamper_mapping(root: Path, field: str, value: str) -> None:
+    path = root / "source_target_mapping_manifest_v1_2_1.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload[0][field] = value
+    # Make the mapping self-hash valid so the namespace mismatch is specifically
+    # between mapping and camera provenance, not a stale mapping hash.
+    record = dict(payload[0])
+    record.pop("source_target_mapping_record_sha256", None)
+    payload[0]["source_target_mapping_record_sha256"] = canonical_record_sha256(record)
+    write_json_deterministic(path, payload)
+
+
 def run_tests() -> list[dict[str, Any]]:
     tests: list[tuple[str, Callable[[], dict[str, Any]]]] = [
         ("golden_observation_id_serialization", test_golden_serialization),
         ("golden_rgb_pixel_matrix_hash", test_golden_pixel_matrix_hash),
         ("projection_roundtrip_and_model_rejection", test_projection_roundtrip),
         ("release_integrity_rejections", test_integrity_manifest_rejections),
-        ("evaluator_v12_hard_gates", test_evaluator_v12_hard_gates),
+        ("evaluator_v12_positive_control", test_evaluator_v12_hard_gates),
+        *[(f"hard_gate_{name}", fn) for name, fn in hard_gate_cases()],
     ]
     rows = []
     for name, fn in tests:
@@ -316,7 +460,7 @@ def run_tests() -> list[dict[str, Any]]:
 def main() -> None:
     rows = run_tests()
     payload = {
-        "schema": "ms_gcp_release_v1_2_test_matrix_v1",
+        "schema": "ms_gcp_release_v1_2_1_test_matrix_v1",
         "test_count": len(rows),
         "passed": sum(1 for r in rows if r["status"] == "PASS"),
         "failed": sum(1 for r in rows if r["status"] != "PASS"),
