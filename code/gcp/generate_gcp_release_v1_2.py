@@ -570,9 +570,10 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
                 "archived_undistorted_max_error_px": max(archived_errors) if archived_errors else "",
             }
         )
+        used_image_names = {row["raw_image_name"] for row in scene_obs}
         camera_manifest["scenes"][scene] = {
-            "source_model": compact_model(src_model),
-            "target_model": compact_model(tgt_model),
+            "source_model": compact_model(src_model, used_image_names),
+            "target_model": compact_model(tgt_model, used_image_names),
         }
         if archived_errors:
             archived_summary_rows.append(
@@ -707,9 +708,26 @@ def model_file(model: dict[str, Any], name: str) -> str:
     return ""
 
 
-def compact_model(model: dict[str, Any]) -> dict[str, Any]:
+def compact_model(model: dict[str, Any], used_image_names: set[str]) -> dict[str, Any]:
     cameras = []
+    images = []
+    used_camera_ids: set[int] = set()
+    for raw in model.get("images", []):
+        image_name = Path(str(raw["image_name"])).name
+        if image_name not in used_image_names:
+            continue
+        image = ImageRecord(
+            image_id=int(raw["image_id"]),
+            image_name=image_name,
+            camera_id=int(raw["camera_id"]),
+            qvec=tuple(float(v) for v in raw.get("qvec", [])),  # type: ignore[arg-type]
+            tvec=tuple(float(v) for v in raw.get("tvec", [])),  # type: ignore[arg-type]
+        )
+        used_camera_ids.add(image.camera_id)
+        images.append({**image_pose_canonical_record(image), "record_sha256": image_pose_record_hash(image)})
     for raw in model.get("cameras", []):
+        if int(raw["camera_id"]) not in used_camera_ids:
+            continue
         camera = CameraRecord(
             camera_id=int(raw["camera_id"]),
             model=str(raw["model"]),
@@ -718,16 +736,6 @@ def compact_model(model: dict[str, Any]) -> dict[str, Any]:
             params=tuple(float(v) for v in raw.get("params", [])),
         )
         cameras.append({**camera_canonical_record(camera), "record_sha256": camera_record_hash(camera)})
-    images = []
-    for raw in model.get("images", []):
-        image = ImageRecord(
-            image_id=int(raw["image_id"]),
-            image_name=Path(str(raw["image_name"])).name,
-            camera_id=int(raw["camera_id"]),
-            qvec=tuple(float(v) for v in raw.get("qvec", [])),  # type: ignore[arg-type]
-            tvec=tuple(float(v) for v in raw.get("tvec", [])),  # type: ignore[arg-type]
-        )
-        images.append({**image_pose_canonical_record(image), "record_sha256": image_pose_record_hash(image)})
     return {
         "path": model.get("path", ""),
         "files": [
