@@ -37,7 +37,9 @@ RELEASE_V12_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2"
 RELEASE_V12_ID = "gcp_benchmark_release_v1_2_pixel_domain_20260628"
 RELEASE_V121_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2_1"
 RELEASE_V121_ID = "gcp_benchmark_release_v1_2_1_pixel_domain_20260628"
-PIXEL_DOMAIN_RELEASE_SCHEMAS = {RELEASE_V12_SCHEMA, RELEASE_V121_SCHEMA}
+RELEASE_V122_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2_2"
+RELEASE_V122_ID = "gcp_benchmark_release_v1_2_2_pixel_domain_20260628"
+PIXEL_DOMAIN_RELEASE_SCHEMAS = {RELEASE_V12_SCHEMA, RELEASE_V121_SCHEMA, RELEASE_V122_SCHEMA}
 TRANSFORM_VERSION = "raw_simple_radial_to_benchmark_pinhole_v1"
 SOURCE_PIXEL_DOMAIN = "raw_dji_decoded_pixel_matrix_ignore_exif_orientation"
 TARGET_PIXEL_DOMAIN = "benchmark_colmap_undistorted_pinhole_pixel_domain"
@@ -516,11 +518,13 @@ def verify_payload_integrity(root: Path, manifest_path: Path, root_record_path: 
 
 
 def detect_pixel_domain_release_token(release_base: Path) -> str:
+    if (release_base / "v1_2_2_release_file_manifest.json").exists():
+        return "v1_2_2"
     if (release_base / "v1_2_1_release_file_manifest.json").exists():
         return "v1_2_1"
     if (release_base / "v1_2_release_file_manifest.json").exists():
         return "v1_2"
-    raise FileNotFoundError(f"No v1.2/v1.2.1 release manifest found in {release_base}")
+    raise FileNotFoundError(f"No v1.2/v1.2.1/v1.2.2 release manifest found in {release_base}")
 
 
 def release_sidecar_name(token: str, stem: str, suffix: str) -> str:
@@ -611,7 +615,7 @@ def validate_release_v12_rows_for_evaluator(
     orientation = _rows_by_key(sidecars["orientation"], ["scene", "image_name"])
     mapping = _rows_by_key(sidecars["mapping"], ["scene", "source_image_name", "target_image_name"])
     camera_lookup, pose_lookup = camera_provenance_lookup(sidecars["camera"])
-    strict_provenance = sidecars.get("release_token") == "v1_2_1"
+    strict_provenance = sidecars.get("release_token") in {"v1_2_1", "v1_2_2"}
     cameras = {int(cid): colmap_camera_to_record(int(cid), cam) for cid, cam in colmap_cameras.items()}
     images = {Path(str(img.name)).name: colmap_image_to_record(int(iid), img) for iid, img in colmap_images.items()}
     if depth_manifest is not None:
