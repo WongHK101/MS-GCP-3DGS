@@ -32,7 +32,9 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
 )
 
 
-COMPAT_SCHEMA = "ms_gcp_metric_depth_packet_resolution_compatibility_v1"
+COMPAT_SCHEMA = "ms_gcp_metric_depth_packet_resolution_compatibility_v1_1"
+WITHDRAWN_COMPAT_SCHEMA_V1 = "ms_gcp_metric_depth_packet_resolution_compatibility_v1"
+WITHDRAWN_COMPAT_V1_DISPOSITION = "withdrawn_before_stage3_due_to_uncommitted_generator_and_incomplete_runtime_validation"
 COMPAT_TRANSFORM_VERSION = "benchmark_pinhole_to_packet_native_camera_v1"
 PACKET_PIXEL_DOMAIN = "metric_depth_packet_native_render_pixel_domain"
 CANONICAL_PIXEL_CONVENTION = PIXEL_CONVENTION
@@ -47,6 +49,27 @@ RAY_ANGLE_TOL_RAD = 1e-7
 IMPLICIT_MAPPING_GATE_PX = 1e-6
 CAMERA_INTRINSIC_TOL = 1e-9
 MATRIX_EQUIVALENCE_TOL_PX = 1e-9
+POSE_CENTER_TOL_MODEL_UNITS = 1e-8
+POSE_ROTATION_TOL_RAD = 1e-8
+METRIC_PACKET_MANIFEST_SCHEMA = "ms_gcp_metric_depth_packet_manifest_v2"
+METRIC_PACKET_SCHEMA = "ms_gcp_metric_depth_packet_v2"
+PRIMARY_DEPTH_TENSOR = "alpha_normalized_expected_camera_z"
+PRIMARY_DEPTH_SEMANTICS = "camera_z"
+FORMAL_DEPTH_FORMULA = "M1/A"
+PACKET_REF_CONSISTENCY_PROTOCOL = "raw_accumulator_recompute_v2_with_variance_forward_error_bound"
+REQUIRED_TENSOR_DTYPES = {
+    "accumulated_alpha": "float32",
+    "weighted_camera_z_sum": "float32",
+    "weighted_camera_z_second_moment": "float32",
+    "weighted_inverse_camera_z_sum": "float32",
+    "alpha_normalized_expected_camera_z": "float32",
+    "alpha_normalized_expected_inverse_camera_z": "float32",
+    "harmonic_camera_z": "float32",
+    "camera_z_variance": "float32",
+    "metric_depth_valid_mask": "bool",
+    "historical_invalid_unnormalized_inverse_depth": "float32",
+}
+POSE_CONVENTION_VERSION = "cameras_json_c2w_position_to_colmap_w2c_v1"
 
 
 @dataclass(frozen=True)
@@ -84,6 +107,24 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def write_detached_sha256(path: Path) -> Path:
+    sha_path = path.with_suffix(path.suffix + ".sha256")
+    sha_path.write_text(f"{file_sha256(path)}  {path.name}\n", encoding="utf-8")
+    return sha_path
+
+
+def verify_detached_sha256(path: Path) -> dict[str, Any]:
+    sha_path = path.with_suffix(path.suffix + ".sha256")
+    if not sha_path.exists():
+        raise ValueError(f"missing detached sha256 file: {sha_path}")
+    token = sha_path.read_text(encoding="utf-8").strip().split()[0]
+    actual = file_sha256(path)
+    passed = token.lower() == actual.lower()
+    if not passed:
+        raise ValueError(f"detached sha256 mismatch for {path}: {token} vs {actual}")
+    return {"path": str(path), "sha256_path": str(sha_path), "sha256": actual, "passed": True}
+
+
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
@@ -117,6 +158,15 @@ def git_status_porcelain(repo: Path) -> str:
         return subprocess.check_output(["git", "-C", str(repo), "status", "--porcelain=v1"], text=True).strip()
     except Exception as exc:  # noqa: BLE001
         return f"ERROR:{type(exc).__name__}:{exc}"
+
+
+def git_show_file_sha256(repo: Path, rel_path: str) -> str:
+    try:
+        payload = subprocess.check_output(["git", "-C", str(repo), "show", f"HEAD:{rel_path}"])
+        return sha256_bytes(payload)
+    except Exception:
+        path = repo / rel_path
+        return file_sha256(path) if path.exists() else ""
 
 
 def load_json(path: Path) -> Any:
@@ -197,6 +247,152 @@ def ray_angle(a: np.ndarray, b: np.ndarray) -> float:
     return float(math.acos(dot))
 
 
+def qvec_to_rotmat(qvec: Sequence[float]) -> np.ndarray:
+    qw, qx, qy, qz = [float(x) for x in qvec]
+    norm = math.sqrt(qw * qw + qx * qx + qy * qy + qz * qz)
+    if norm == 0.0:
+        raise ValueError("zero quaternion")
+    qw, qx, qy, qz = qw / norm, qx / norm, qy / norm, qz / norm
+    return np.asarray(
+        [
+            [1.0 - 2.0 * qy * qy - 2.0 * qz * qz, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
+            [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx * qx - 2.0 * qz * qz, 2.0 * qy * qz - 2.0 * qx * qw],
+            [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx * qx - 2.0 * qy * qy],
+        ],
+        dtype=np.float64,
+    )
+
+
+def rotmat_to_qvec(rot: np.ndarray) -> tuple[float, float, float, float]:
+    m = np.asarray(rot, dtype=np.float64)
+    q = np.empty(4, dtype=np.float64)
+    trace = float(np.trace(m))
+    if trace > 0.0:
+        s = math.sqrt(trace + 1.0) * 2.0
+        q[0] = 0.25 * s
+        q[1] = (m[2, 1] - m[1, 2]) / s
+        q[2] = (m[0, 2] - m[2, 0]) / s
+        q[3] = (m[1, 0] - m[0, 1]) / s
+    else:
+        i = int(np.argmax(np.diag(m)))
+        if i == 0:
+            s = math.sqrt(1.0 + m[0, 0] - m[1, 1] - m[2, 2]) * 2.0
+            q[0] = (m[2, 1] - m[1, 2]) / s
+            q[1] = 0.25 * s
+            q[2] = (m[0, 1] + m[1, 0]) / s
+            q[3] = (m[0, 2] + m[2, 0]) / s
+        elif i == 1:
+            s = math.sqrt(1.0 + m[1, 1] - m[0, 0] - m[2, 2]) * 2.0
+            q[0] = (m[0, 2] - m[2, 0]) / s
+            q[1] = (m[0, 1] + m[1, 0]) / s
+            q[2] = 0.25 * s
+            q[3] = (m[1, 2] + m[2, 1]) / s
+        else:
+            s = math.sqrt(1.0 + m[2, 2] - m[0, 0] - m[1, 1]) * 2.0
+            q[0] = (m[1, 0] - m[0, 1]) / s
+            q[1] = (m[0, 2] + m[2, 0]) / s
+            q[2] = (m[1, 2] + m[2, 1]) / s
+            q[3] = 0.25 * s
+    q /= np.linalg.norm(q)
+    if q[0] < 0:
+        q *= -1.0
+    return tuple(float(x) for x in q)
+
+
+def camera_center_from_colmap(qvec: Sequence[float], tvec: Sequence[float]) -> np.ndarray:
+    rot = qvec_to_rotmat(qvec)
+    t = np.asarray([float(x) for x in tvec], dtype=np.float64)
+    return -rot.T @ t
+
+
+def rotation_angle_rad(rot_a: np.ndarray, rot_b: np.ndarray) -> float:
+    def _orthonormalize(rot: np.ndarray) -> np.ndarray:
+        u, _s, vh = np.linalg.svd(np.asarray(rot, dtype=np.float64))
+        out = u @ vh
+        if np.linalg.det(out) < 0:
+            u[:, -1] *= -1.0
+            out = u @ vh
+        return out
+
+    delta = _orthonormalize(rot_a) @ _orthonormalize(rot_b).T
+    value = (float(np.trace(delta)) - 1.0) / 2.0
+    if 0.0 <= 1.0 - value <= 8.0 * np.finfo(np.float64).eps:
+        value = 1.0
+    return float(math.acos(max(-1.0, min(1.0, value))))
+
+
+def parse_float_sequence(values: Sequence[Any] | str) -> list[float]:
+    if isinstance(values, str):
+        if ";" in values:
+            return [float(x) for x in values.split(";") if x != ""]
+        return [float(x) for x in values.split() if x != ""]
+    return [float(x) for x in values]
+
+
+def format_float_list(values: Sequence[float]) -> list[str]:
+    return [fmt_float(float(x)) for x in values]
+
+
+def pose_record_hash(record: dict[str, Any]) -> str:
+    return sha256_bytes(canonical_json_bytes(record))
+
+
+def pose_from_cameras_json(model_camera_row: dict[str, Any], target_pose_row: dict[str, Any]) -> dict[str, Any]:
+    rotation_raw = model_camera_row.get("rotation")
+    position_raw = model_camera_row.get("position")
+    if rotation_raw is None or position_raw is None:
+        raise ValueError(f"cameras.json row missing rotation/position for {model_camera_row.get('img_name')}")
+    r_c2w = np.asarray(rotation_raw, dtype=np.float64)
+    if r_c2w.shape != (3, 3):
+        raise ValueError(f"cameras.json rotation is not 3x3 for {model_camera_row.get('img_name')}")
+    center = np.asarray(position_raw, dtype=np.float64)
+    if center.shape != (3,):
+        raise ValueError(f"cameras.json position is not length-3 for {model_camera_row.get('img_name')}")
+    r_w2c = r_c2w.T
+    tvec = -r_w2c @ center
+    qvec = rotmat_to_qvec(r_w2c)
+    target_qvec = parse_float_sequence(target_pose_row["qvec"])
+    target_tvec = parse_float_sequence(target_pose_row["tvec"])
+    target_r_w2c = qvec_to_rotmat(target_qvec)
+    target_center = camera_center_from_colmap(target_qvec, target_tvec)
+    center_diff = float(np.linalg.norm(center - target_center))
+    canonical_r_w2c = qvec_to_rotmat(qvec)
+    angle = rotation_angle_rad(canonical_r_w2c, target_r_w2c)
+    record = {
+        "camera_id": int(target_pose_row["camera_id"]),
+        "camera_center": format_float_list(center),
+        "image_id": int(target_pose_row["image_id"]),
+        "image_name": str(target_pose_row["image_name"]),
+        "pose_convention": POSE_CONVENTION_VERSION,
+        "qvec": format_float_list(qvec),
+        "tvec": format_float_list(tvec),
+    }
+    passed = bool(center_diff <= POSE_CENTER_TOL_MODEL_UNITS and angle <= POSE_ROTATION_TOL_RAD)
+    return {
+        "passed": passed,
+        "pose_convention": POSE_CONVENTION_VERSION,
+        "cameras_json_rotation_semantics": "camera_to_world_row_major_3x3",
+        "cameras_json_position_semantics": "camera_center_model_world_coordinates",
+        "colmap_pose_semantics": "world_to_camera_qvec_qw_qx_qy_qz_and_tvec",
+        "axis_flip_policy": "none",
+        "r_c2w": [[float(x) for x in row] for row in r_c2w.tolist()],
+        "position_camera_center": [float(x) for x in center.tolist()],
+        "r_w2c": [[float(x) for x in row] for row in r_w2c.tolist()],
+        "tvec": [float(x) for x in tvec.tolist()],
+        "qvec": [float(x) for x in qvec],
+        "target_qvec": [float(x) for x in target_qvec],
+        "target_tvec": [float(x) for x in target_tvec],
+        "target_camera_center": [float(x) for x in target_center.tolist()],
+        "center_difference_model_units": center_diff,
+        "center_tolerance_model_units": POSE_CENTER_TOL_MODEL_UNITS,
+        "rotation_angular_difference_rad": angle,
+        "rotation_tolerance_rad": POSE_ROTATION_TOL_RAD,
+        "pose_record": record,
+        "pose_record_sha256": pose_record_hash(record),
+        "target_pose_record_sha256": str(target_pose_row.get("record_sha256", "")),
+    }
+
+
 def renderer_projection_matrix(fovx: float, fovy: float, znear: float = 0.01, zfar: float = 100.0) -> np.ndarray:
     tan_half_y = math.tan(fovy / 2.0)
     tan_half_x = math.tan(fovx / 2.0)
@@ -263,23 +459,72 @@ def projection_matrix_equivalence(camera: PacketCamera) -> dict[str, Any]:
     }
 
 
-def npz_member_shape_header_only(path: Path, preferred_key: str = "alpha_normalized_expected_camera_z") -> tuple[int, int]:
+def npz_member_headers_header_only(path: Path) -> dict[str, dict[str, Any]]:
+    headers: dict[str, dict[str, Any]] = {}
     with zipfile.ZipFile(path, "r") as zf:
-        members = sorted(zf.namelist())
-        member = f"{preferred_key}.npy"
-        if member not in members:
-            member = members[0]
-        with zf.open(member, "r") as f:
-            version = np.lib.format.read_magic(f)
-            if version == (1, 0):
-                shape, _fortran, _dtype = np.lib.format.read_array_header_1_0(f)
-            elif version == (2, 0):
-                shape, _fortran, _dtype = np.lib.format.read_array_header_2_0(f)
-            else:
-                shape, _fortran, _dtype = np.lib.format._read_array_header(f, version)  # type: ignore[attr-defined]
+        members = sorted(name for name in zf.namelist() if name.endswith(".npy"))
+        if not members:
+            raise ValueError(f"NPZ has no .npy members: {path}")
+        for member in members:
+            key = Path(member).stem
+            info = zf.getinfo(member)
+            with zf.open(member, "r") as f:
+                version = np.lib.format.read_magic(f)
+                if version == (1, 0):
+                    shape, fortran, dtype = np.lib.format.read_array_header_1_0(f)
+                elif version == (2, 0):
+                    shape, fortran, dtype = np.lib.format.read_array_header_2_0(f)
+                else:
+                    shape, fortran, dtype = np.lib.format._read_array_header(f, version)  # type: ignore[attr-defined]
+            headers[key] = {
+                "shape": [int(x) for x in shape],
+                "dtype": str(np.dtype(dtype)),
+                "fortran_order": bool(fortran),
+                "zip_member": member,
+                "zip_compressed_size": int(info.compress_size),
+                "zip_file_size": int(info.file_size),
+            }
+    return headers
+
+
+def npz_member_shape_header_only(path: Path, preferred_key: str = PRIMARY_DEPTH_TENSOR) -> tuple[int, int]:
+    headers = npz_member_headers_header_only(path)
+    member = preferred_key if preferred_key in headers else sorted(headers)[0]
+    shape = headers[member]["shape"]
     if len(shape) != 2:
         raise ValueError(f"Expected 2D packet tensor header in {path}, got shape={shape}")
     return int(shape[0]), int(shape[1])
+
+
+def validate_npz_packet_headers(
+    *,
+    path: Path,
+    expected_width: int,
+    expected_height: int,
+    expected_dtype: str,
+) -> dict[str, Any]:
+    headers = npz_member_headers_header_only(path)
+    missing = sorted(set(REQUIRED_TENSOR_DTYPES) - set(headers))
+    if missing:
+        raise ValueError(f"packet required tensor missing in {path.name}: {missing}")
+    shape = [int(expected_height), int(expected_width)]
+    checked: dict[str, dict[str, Any]] = {}
+    for name, dtype in REQUIRED_TENSOR_DTYPES.items():
+        header = headers[name]
+        if header["shape"] != shape:
+            raise ValueError(f"packet tensor shape mismatch {path.name}:{name}: {header['shape']} vs {shape}")
+        if header["dtype"] != dtype:
+            raise ValueError(f"packet tensor dtype mismatch {path.name}:{name}: {header['dtype']} vs {dtype}")
+        if name != "metric_depth_valid_mask" and expected_dtype and header["dtype"] != expected_dtype:
+            raise ValueError(f"packet tensor dtype mismatch against manifest {path.name}:{name}: {header['dtype']} vs {expected_dtype}")
+        checked[name] = header
+    return {
+        "packet_path": str(path),
+        "checked_tensor_count": len(checked),
+        "required_tensors": sorted(REQUIRED_TENSOR_DTYPES),
+        "headers": checked,
+        "depth_tensor_values_read": False,
+    }
 
 
 def resolve_packet_path(packet_path: str, search_roots: Sequence[Path]) -> Path | None:
@@ -410,6 +655,66 @@ def depth_index_by_name(depth_manifest: dict[str, Any]) -> dict[str, dict[str, A
     return result
 
 
+def metric_packet_contract_from_manifest(depth_manifest: dict[str, Any]) -> dict[str, Any]:
+    tensor_names = depth_manifest.get("tensor_names", [])
+    if isinstance(tensor_names, str):
+        tensor_names = [x for x in tensor_names.split("|") if x]
+    return {
+        "manifest_schema": depth_manifest.get("schema", ""),
+        "packet_schema": depth_manifest.get("packet_schema", ""),
+        "primary_depth_tensor": depth_manifest.get("primary_depth_tensor", ""),
+        "primary_depth_semantics": depth_manifest.get("primary_depth_semantics", depth_manifest.get("depth_semantics", "")),
+        "formal_depth_formula": FORMAL_DEPTH_FORMULA,
+        "dtype": depth_manifest.get("dtype", ""),
+        "required_tensors": sorted(REQUIRED_TENSOR_DTYPES),
+        "tensor_names": list(tensor_names),
+        "packet_ref_consistency_protocol": PACKET_REF_CONSISTENCY_PROTOCOL,
+        "packet_ref_consistency_required_fields": [
+            "packet_recompute_passed",
+            "variance_packet_ref_abs_error",
+            "variance_packet_ref_allowed_error",
+            "variance_packet_ref_consistency_ratio",
+            "variance_consistency_fail_count",
+        ],
+    }
+
+
+def validate_depth_manifest_contract(depth_manifest: dict[str, Any]) -> dict[str, Any]:
+    contract = metric_packet_contract_from_manifest(depth_manifest)
+    if contract["manifest_schema"] != METRIC_PACKET_MANIFEST_SCHEMA:
+        raise ValueError(f"metric packet manifest schema mismatch: {contract['manifest_schema']}")
+    if contract["packet_schema"] != METRIC_PACKET_SCHEMA:
+        raise ValueError(f"metric packet schema/version mismatch: {contract['packet_schema']}")
+    if contract["primary_depth_tensor"] != PRIMARY_DEPTH_TENSOR:
+        raise ValueError(f"primary tensor mismatch: {contract['primary_depth_tensor']}")
+    if contract["primary_depth_semantics"] != PRIMARY_DEPTH_SEMANTICS:
+        raise ValueError(f"formal depth semantics mismatch: {contract['primary_depth_semantics']}")
+    tensor_names = set(contract["tensor_names"])
+    missing = sorted(set(REQUIRED_TENSOR_DTYPES) - tensor_names)
+    if missing:
+        raise ValueError(f"depth manifest required tensor declarations missing: {missing}")
+    if str(contract["dtype"]) != "float32":
+        raise ValueError(f"depth manifest dtype mismatch: {contract['dtype']}")
+    return contract
+
+
+def validate_depth_index_row_contract(row: dict[str, Any], expected_width: int, expected_height: int) -> None:
+    if str(row.get("primary_depth_tensor", "")) != PRIMARY_DEPTH_TENSOR:
+        raise ValueError(f"depth index primary tensor mismatch for {row.get('image_name')}: {row.get('primary_depth_tensor')}")
+    if str(row.get("primary_depth_semantics", "")) != PRIMARY_DEPTH_SEMANTICS:
+        raise ValueError(f"depth index semantics mismatch for {row.get('image_name')}: {row.get('primary_depth_semantics')}")
+    if str(row.get("dtype", "")) != "float32":
+        raise ValueError(f"depth index dtype mismatch for {row.get('image_name')}: {row.get('dtype')}")
+    if int(row.get("width", -1)) != int(expected_width) or int(row.get("height", -1)) != int(expected_height):
+        raise ValueError(f"depth index shape mismatch for {row.get('image_name')}")
+    tensor_names = set(str(row.get("tensor_names", "")).split("|"))
+    missing = sorted(set(REQUIRED_TENSOR_DTYPES) - tensor_names)
+    if missing:
+        raise ValueError(f"depth index tensor declarations missing for {row.get('image_name')}: {missing}")
+    if str(row.get("packet_recompute_passed", "")).lower() not in {"true", "1"} and row.get("packet_recompute_passed") is not True:
+        raise ValueError(f"packet/ref consistency did not pass for {row.get('image_name')}")
+
+
 def compatibility_record(
     *,
     scene: str,
@@ -535,6 +840,25 @@ def load_release_root_digest(release_dir: Path) -> dict[str, Any]:
     return root
 
 
+def load_target_pose_records(release_dir: Path, scene: str) -> dict[str, dict[str, Any]]:
+    manifest = load_json(release_dir / "camera_provenance_manifest_v1_2_2.json")
+    try:
+        rows = manifest["scenes"][scene]["target_model"]["images"]
+    except KeyError as exc:
+        raise ValueError(f"camera provenance manifest missing target images for {scene}") from exc
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        name = Path(str(row.get("image_name", ""))).name
+        if not name:
+            continue
+        if name in out:
+            raise ValueError(f"duplicate target pose record in camera provenance: {scene} {name}")
+        out[name] = dict(row)
+    if not out:
+        raise ValueError(f"no target pose records loaded for {scene}")
+    return out
+
+
 def build_wrapper(
     *,
     release_dir: Path,
@@ -549,10 +873,12 @@ def build_wrapper(
     out_dir.mkdir(parents=True, exist_ok=True)
     release_root = load_release_root_digest(release_dir)
     release_rows = load_release_rows(release_dir, scene)
+    target_pose_records = load_target_pose_records(release_dir, scene)
     by_image: dict[str, list[dict[str, str]]] = {}
     for row in release_rows:
         by_image.setdefault(Path(row["target_image_name"]).name, []).append(row)
     depth_manifest = load_json(depth_manifest_path)
+    validate_depth_manifest_contract(depth_manifest)
     depth_index = depth_index_by_name(depth_manifest)
     cfg_path = model_dir / "cfg_args"
     cameras_json_path = model_dir / "cameras.json"
@@ -572,8 +898,15 @@ def build_wrapper(
         model_row = model_cameras.get(image_name)
         if model_row is None:
             raise ValueError(f"model cameras.json missing image {image_name}")
+        target_pose = target_pose_records.get(image_name)
+        if target_pose is None:
+            raise ValueError(f"camera provenance target pose missing {scene} {image_name}")
+        pose_check = pose_from_cameras_json(model_row, target_pose)
+        if not pose_check["passed"]:
+            raise ValueError(f"packet/benchmark pose equivalence failed for {scene} {image_name}: {pose_check}")
         packet_width = int(depth_row["width"])
         packet_height = int(depth_row["height"])
+        validate_depth_index_row_contract(depth_row, packet_width, packet_height)
         packet_camera = recover_packet_camera(
             scene=scene,
             image_name=image_name,
@@ -588,6 +921,18 @@ def build_wrapper(
             "image_name": image_name,
             "packet_camera_record_sha256": packet_camera_hash(packet_camera),
             "packet_camera_record": packet_camera_record(packet_camera),
+            "packet_pose_record_sha256": pose_check["pose_record_sha256"],
+            "packet_pose_record": pose_check["pose_record"],
+            "target_pose_record_sha256": pose_check["target_pose_record_sha256"],
+            "pose_conversion_full": pose_check,
+            "pose_equivalence": {
+                "passed": pose_check["passed"],
+                "center_difference_model_units": pose_check["center_difference_model_units"],
+                "center_tolerance_model_units": POSE_CENTER_TOL_MODEL_UNITS,
+                "rotation_angular_difference_rad": pose_check["rotation_angular_difference_rad"],
+                "rotation_tolerance_rad": POSE_ROTATION_TOL_RAD,
+                "pose_convention": POSE_CONVENTION_VERSION,
+            },
             "projection_matrix_equivalence": projection_matrix_equivalence(packet_camera),
         }
         packet_path = resolve_packet_path(str(depth_row.get("packet_path", depth_row.get("depth_path", ""))), packet_search_roots)
@@ -598,6 +943,12 @@ def build_wrapper(
             expected_sha = str(depth_row.get("packet_sha256") or depth_row.get("sha256") or depth_row.get("file_sha256") or "")
             if expected_sha and file_sha256(packet_path) != expected_sha:
                 raise ValueError(f"local packet SHA mismatch: {packet_path}")
+            validate_npz_packet_headers(
+                path=packet_path,
+                expected_width=packet_width,
+                expected_height=packet_height,
+                expected_dtype=str(depth_row.get("dtype", "float32")),
+            )
         view_record = compatibility_record(
             scene=scene,
             image_name=image_name,
@@ -608,6 +959,19 @@ def build_wrapper(
             release_row=release_row,
             packet_path_local=packet_path,
         )
+        view_record.update(
+            {
+                "packet_pose_record_sha256": pose_check["pose_record_sha256"],
+                "target_pose_record_sha256": pose_check["target_pose_record_sha256"],
+                "pose_center_difference_model_units": fmt_float(pose_check["center_difference_model_units"]),
+                "pose_rotation_angular_difference_rad": fmt_float(pose_check["rotation_angular_difference_rad"]),
+                "pose_convention": POSE_CONVENTION_VERSION,
+                "pose_equivalence_passed": bool(pose_check["passed"]),
+            }
+        )
+        hash_payload = dict(view_record)
+        hash_payload.pop("source_target_packet_mapping_record_sha256", None)
+        view_record["source_target_packet_mapping_record_sha256"] = canonical_record_sha256(hash_payload)
         view_rows.append(view_record)
         for row in by_image[image_name]:
             coord = compatibility_record(
@@ -622,6 +986,10 @@ def build_wrapper(
             )
             coord["observation_id"] = row["observation_id"]
             coord["point_name"] = row["point_name"]
+            coord["packet_pose_record_sha256"] = pose_check["pose_record_sha256"]
+            coord["target_pose_record_sha256"] = pose_check["target_pose_record_sha256"]
+            coord["pose_center_difference_model_units"] = fmt_float(pose_check["center_difference_model_units"])
+            coord["pose_rotation_angular_difference_rad"] = fmt_float(pose_check["rotation_angular_difference_rad"])
             coordinate_rows.append(coord)
     if local_packet_failures:
         raise ValueError(f"local packet files missing: {local_packet_failures[:8]}")
@@ -634,9 +1002,13 @@ def build_wrapper(
     )
     wrapper = {
         "schema": COMPAT_SCHEMA,
+        "supersedes_schema": WITHDRAWN_COMPAT_SCHEMA_V1,
+        "withdrawn_previous_wrapper_disposition": WITHDRAWN_COMPAT_V1_DISPOSITION,
         "created_by": "code/gcp/gcp_packet_camera_compatibility.py",
         "evaluator_repo_commit": git_commit(REPO_ROOT),
         "evaluator_worktree_status_porcelain": git_status_porcelain(REPO_ROOT),
+        "exact_generation_command": " ".join(sys.argv),
+        "generator_source_sha256": file_sha256(Path(__file__).resolve()),
         "release_id": "gcp_benchmark_release_v1_2_2_pixel_domain_20260628",
         "release_root_digest_sha256": release_root.get("payload_root_digest_sha256", ""),
         "release_root_record_sha256": release_root.get("_root_record_sha256", ""),
@@ -644,6 +1016,18 @@ def build_wrapper(
         "ray_coordinate_tolerance": RAY_COORD_TOL,
         "ray_angle_tolerance_rad": RAY_ANGLE_TOL_RAD,
         "accepted_pixel_convention_aliases": ACCEPTED_PIXEL_CONVENTION_ALIASES,
+        "metric_packet_contract": metric_packet_contract_from_manifest(depth_manifest),
+        "pose_conversion_protocol": {
+            "version": POSE_CONVENTION_VERSION,
+            "cameras_json_rotation": "camera_to_world_row_major_3x3",
+            "cameras_json_position": "camera_center_model_world_coordinates",
+            "conversion": "R_w2c=R_c2w^T; t=-R_w2c*C",
+            "colmap_convention": "world_to_camera_qvec_qw_qx_qy_qz_and_tvec",
+            "axis_flip_policy": "none",
+            "center_difference_tolerance_model_units": POSE_CENTER_TOL_MODEL_UNITS,
+            "rotation_angular_difference_tolerance_rad": POSE_ROTATION_TOL_RAD,
+            "pose_hash_serialization": "UTF-8 no BOM, sorted keys, compact separators, .17g float strings",
+        },
         "depth_tensor_values_read": False,
         "patch_sampling_performed": False,
         "residual_generation_performed": False,
@@ -659,11 +1043,16 @@ def build_wrapper(
                 "model_cameras_json_sha256": file_sha256(cameras_json_path),
                 "model_cfg_args_sha256": file_sha256(cfg_path),
                 "renderer_repo": str(renderer_repo),
-                "renderer_commit": depth_manifest.get("renderer_commit", ""),
+                "renderer_commit": git_commit(renderer_repo),
+                "renderer_worktree_status_porcelain": git_status_porcelain(renderer_repo),
+                "renderer_commit_declared_by_depth_manifest": depth_manifest.get("renderer_commit", ""),
+                "rasterizer_tree_hash": depth_manifest.get("rasterizer_tree_hash", ""),
+                "exporter_commit": depth_manifest.get("exporter_commit", ""),
                 "renderer_camera_loader_source": "utils/camera_utils.py::loadCam and scene/cameras.py::Camera",
                 "renderer_projection_source": "utils/graphics_utils.py::getProjectionMatrix symmetric frustum",
                 "renderer_camera_loader_source_sha256": file_sha256(renderer_repo / "utils" / "camera_utils.py") if (renderer_repo / "utils" / "camera_utils.py").exists() else "",
                 "renderer_projection_source_sha256": file_sha256(renderer_repo / "utils" / "graphics_utils.py") if (renderer_repo / "utils" / "graphics_utils.py").exists() else "",
+                "renderer_scene_camera_source_sha256": file_sha256(renderer_repo / "scene" / "cameras.py") if (renderer_repo / "scene" / "cameras.py").exists() else "",
                 "resolution_label": f"R{cfg_args.get('resolution')}",
                 "patch_protocol": PATCH_PROTOCOL,
                 "packet_patch_size": 7,
@@ -677,19 +1066,148 @@ def build_wrapper(
             }
         ],
     }
-    wrapper_path = out_dir / "metric_depth_packet_resolution_compatibility_v1.json"
+    wrapper_path = out_dir / "metric_depth_packet_resolution_compatibility_v1_1.json"
     coordinate_csv = out_dir / f"{scene}_coordinate_only_validation.csv"
     summary_path = out_dir / f"{scene}_coordinate_only_summary.json"
+    golden_pose = camera_records.get("DJI_20260602165038_0001_D.JPG") or next(iter(camera_records.values()))
+    golden_pose_path = out_dir / f"{scene}_golden_pose_conversion.json"
     write_json(wrapper_path, wrapper)
+    sha_path = write_detached_sha256(wrapper_path)
     write_csv(coordinate_csv, coordinate_rows, sorted({k for row in coordinate_rows for k in row.keys()}))
     write_json(summary_path, coordinate_summary)
+    write_json(golden_pose_path, golden_pose)
     return {
         "wrapper_path": str(wrapper_path),
         "wrapper_sha256": file_sha256(wrapper_path),
+        "wrapper_sha256_path": str(sha_path),
         "coordinate_csv": str(coordinate_csv),
         "coordinate_summary": coordinate_summary,
         "coordinate_summary_path": str(summary_path),
+        "golden_pose_path": str(golden_pose_path),
     }
+
+
+def validate_compatibility_wrapper(
+    path: Path,
+    *,
+    depth_manifest: dict[str, Any] | None = None,
+    depth_manifest_path: Path | None = None,
+    release_config: dict[str, Any] | None = None,
+    release_dir: Path | None = None,
+    scene: str | None = None,
+    patch_size: int | None = None,
+    packet_search_roots: Sequence[Path] = (),
+) -> dict[str, Any]:
+    verify_detached_sha256(path)
+    wrapper = load_json(path)
+    if wrapper.get("schema") != COMPAT_SCHEMA:
+        raise ValueError(f"Unsupported packet compatibility schema: {wrapper.get('schema')}")
+    if wrapper.get("evaluator_repo_commit") != git_commit(REPO_ROOT):
+        raise ValueError("wrapper evaluator commit does not match runtime evaluator commit")
+    if wrapper.get("evaluator_worktree_status_porcelain", "") != "":
+        raise ValueError("wrapper was generated from a dirty evaluator worktree")
+    if wrapper.get("depth_tensor_values_read") is not False:
+        raise ValueError("compatibility wrapper must declare depth_tensor_values_read=false")
+    if release_config is not None and wrapper.get("release_id") != release_config.get("release_id"):
+        raise ValueError(f"compatibility release mismatch: {wrapper.get('release_id')} vs {release_config.get('release_id')}")
+    if release_dir is not None:
+        release_root = load_release_root_digest(release_dir)
+        if wrapper.get("release_root_digest_sha256") != release_root.get("payload_root_digest_sha256"):
+            raise ValueError("wrapper release payload root digest mismatch")
+        if wrapper.get("release_root_record_sha256") != release_root.get("_root_record_sha256"):
+            raise ValueError("wrapper release root-record SHA mismatch")
+    if patch_size is not None and int(patch_size) != 7:
+        raise ValueError(f"packet compatibility requires patch_size=7, got {patch_size}")
+    if depth_manifest is not None:
+        contract = validate_depth_manifest_contract(depth_manifest)
+        if wrapper.get("metric_packet_contract", {}) != contract:
+            raise ValueError("wrapper metric packet contract does not match depth manifest")
+    packet_sets = wrapper.get("packet_sets", [])
+    seen_scenes: set[str] = set()
+    validation: dict[str, Any] = {
+        "schema": wrapper.get("schema"),
+        "wrapper_sha256": file_sha256(path),
+        "packet_sets": [],
+        "depth_tensor_values_read": False,
+    }
+    for packet_set in packet_sets:
+        set_scene = str(packet_set.get("scene", ""))
+        if not set_scene:
+            raise ValueError("packet set missing scene")
+        if set_scene in seen_scenes:
+            raise ValueError(f"duplicate packet set scene: {set_scene}")
+        seen_scenes.add(set_scene)
+        if scene is not None and set_scene != scene:
+            continue
+        if packet_set.get("status") != "PASS":
+            raise ValueError(f"packet set status is not PASS for {set_scene}: {packet_set.get('status')}")
+        if packet_set.get("patch_protocol") != PATCH_PROTOCOL:
+            raise ValueError(f"patch protocol mismatch: {packet_set.get('patch_protocol')}")
+        if int(packet_set.get("packet_patch_size", -1)) != 7 or int(packet_set.get("packet_patch_radius", -1)) != 3:
+            raise ValueError("packet patch gate requires packet_patch_size=7 and radius=3")
+        if depth_manifest_path is not None and packet_set.get("original_depth_manifest_sha256") != file_sha256(depth_manifest_path):
+            raise ValueError("wrapper original depth manifest SHA mismatch")
+        if packet_set.get("renderer_worktree_status_porcelain", "") != "":
+            raise ValueError("renderer worktree was not clean when wrapper was generated")
+        if packet_set.get("renderer_commit") != packet_set.get("renderer_commit_declared_by_depth_manifest"):
+            raise ValueError("renderer commit mismatch between wrapper and depth manifest")
+        view_rows = list(packet_set.get("view_mappings", []))
+        if int(packet_set.get("view_count", -1)) != len(view_rows):
+            raise ValueError(f"view_count mismatch for {set_scene}")
+        by_view: dict[str, dict[str, Any]] = {}
+        for row in view_rows:
+            name = Path(str(row.get("image_name", ""))).name
+            if not name:
+                raise ValueError(f"view mapping missing image_name in {set_scene}")
+            if name in by_view:
+                raise ValueError(f"duplicate packet view mapping in wrapper: {set_scene} {name}")
+            by_view[name] = row
+            if row.get("pose_equivalence_passed") is not True:
+                raise ValueError(f"pose equivalence did not pass for {set_scene} {name}")
+            if float(row.get("pose_center_difference_model_units", "inf")) > POSE_CENTER_TOL_MODEL_UNITS:
+                raise ValueError(f"pose center tolerance exceeded for {set_scene} {name}")
+            if float(row.get("pose_rotation_angular_difference_rad", "inf")) > POSE_ROTATION_TOL_RAD:
+                raise ValueError(f"pose rotation tolerance exceeded for {set_scene} {name}")
+            packet_camera = packet_camera_from_view(row)
+            if str(row.get("packet_camera_record_sha256", "")) != camera_record_hash(packet_camera):
+                raise ValueError(f"packet camera hash mismatch for {set_scene} {name}")
+            hash_payload = dict(row)
+            hash_payload.pop("source_target_packet_mapping_record_sha256", None)
+            recomputed = canonical_record_sha256(hash_payload)
+            if str(row.get("source_target_packet_mapping_record_sha256", "")) != recomputed:
+                raise ValueError(f"per-view mapping record hash mismatch for {set_scene} {name}")
+            packet_path = resolve_packet_path(str(row.get("packet_path_original", "")), packet_search_roots)
+            if packet_path is None and row.get("packet_path_local"):
+                packet_path = Path(str(row["packet_path_local"]))
+            if packet_path is not None and packet_path.exists():
+                if row.get("packet_sha256") and file_sha256(packet_path) != row.get("packet_sha256"):
+                    raise ValueError(f"packet SHA mismatch for {set_scene} {name}")
+                validate_npz_packet_headers(
+                    path=packet_path,
+                    expected_width=int(row["packet_width"]),
+                    expected_height=int(row["packet_height"]),
+                    expected_dtype="float32",
+                )
+        records_root = canonical_records_root_sha256(
+            view_rows,
+            ["scene", "image_name", "packet_camera_record_sha256", "packet_sha256"],
+        )
+        if records_root != packet_set.get("compatibility_records_root_sha256"):
+            raise ValueError(f"compatibility records root mismatch for {set_scene}")
+        validation["packet_sets"].append(
+            {
+                "scene": set_scene,
+                "view_count": len(view_rows),
+                "records_root_sha256": records_root,
+                "patch_protocol": packet_set.get("patch_protocol"),
+                "packet_patch_size": packet_set.get("packet_patch_size"),
+                "packet_patch_radius": packet_set.get("packet_patch_radius"),
+                "packet_headers_checked_when_local": True,
+            }
+        )
+    if scene is not None and not validation["packet_sets"]:
+        raise ValueError(f"wrapper has no packet set for scene {scene}")
+    return validation
 
 
 def load_compatibility_wrapper(path: Path) -> dict[str, Any]:

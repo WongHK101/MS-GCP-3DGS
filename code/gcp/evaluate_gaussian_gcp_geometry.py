@@ -60,6 +60,7 @@ from gcp_packet_camera_compatibility import (  # noqa: E402
     packet_projection_for_row,
     packet_set_lookup,
     packet_view_lookup,
+    validate_compatibility_wrapper,
 )
 
 
@@ -1119,6 +1120,19 @@ def main() -> None:
             raise SystemExit("--packet_compatibility_manifest requires --release_config and --scene")
         packet_compatibility_path = Path(args.packet_compatibility_manifest)
         packet_compatibility_sha256 = file_sha256(packet_compatibility_path)
+        try:
+            validate_compatibility_wrapper(
+                packet_compatibility_path,
+                depth_manifest=depth_manifest,
+                depth_manifest_path=depth_manifest_path,
+                release_config=release_config,
+                release_dir=release_config_path.parent if release_config_path else None,
+                scene=args.scene,
+                patch_size=int(args.patch_size),
+                packet_search_roots=[Path(args.depth_dir)] if args.depth_dir else [],
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise SystemExit(f"packet compatibility validation failed before depth load: {type(exc).__name__}: {exc}") from exc
         packet_compatibility = load_compatibility_wrapper(packet_compatibility_path)
         packet_compatibility_set = packet_set_lookup(packet_compatibility, args.scene)
         packet_compatibility_views = packet_view_lookup(packet_compatibility_set)
