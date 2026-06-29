@@ -4,6 +4,7 @@ import json
 import math
 import shutil
 import tempfile
+import copy
 from pathlib import Path
 from typing import Any, Callable
 
@@ -19,6 +20,7 @@ from gcp_packet_camera_compatibility import (
     load_json,
     load_model_cameras,
     load_target_pose_records,
+    metric_packet_contract_from_manifest,
     normalize_pixel_convention,
     packet_projection_for_row,
     packet_camera_hash,
@@ -32,6 +34,7 @@ from gcp_packet_camera_compatibility import (
     validate_npz_packet_headers,
     write_detached_sha256,
 )
+from gcp_pixel_domain_v1_2 import canonical_record_sha256, canonical_records_root_sha256
 from gcp_pixel_domain_v1_2 import CameraRecord
 
 
@@ -46,6 +49,7 @@ if not RENDERER_REPO.exists():
 PACKET_SEARCH_ROOT = Path(
     r"E:\M3M-GCP-3DGS\outputs\gcp_3k_depth_semantics_inputs_20260628\packets\gcp_3000_20260602_full_reused_release"
 )
+_WRAPPER_FIXTURE: dict[str, Any] | None = None
 
 
 def assert_close(actual: float, expected: float, tol: float = 1e-9) -> None:
@@ -63,6 +67,42 @@ def expect_raises(fn: Callable[[], Any]) -> str:
 
 def load_depth_manifest_copy() -> dict[str, Any]:
     return json.loads(DEPTH_MANIFEST_3K.read_text(encoding="utf-8"))
+
+
+def wrapper_fixture() -> dict[str, Any]:
+    global _WRAPPER_FIXTURE
+    if _WRAPPER_FIXTURE is not None:
+        return _WRAPPER_FIXTURE
+    tmp = tempfile.mkdtemp(prefix="gcp_packet_compat_v11_")
+    out_dir = Path(tmp)
+    result = build_wrapper(
+        release_dir=RELEASE_CONFIG.parent,
+        scene="gcp_3000_20260602",
+        depth_manifest_path=DEPTH_MANIFEST_3K,
+        model_dir=MODEL_DIR_3K,
+        renderer_repo=RENDERER_REPO,
+        out_dir=out_dir,
+        packet_search_roots=[PACKET_SEARCH_ROOT],
+        require_local_packets=False,
+    )
+    wrapper_path = Path(result["wrapper_path"])
+    _WRAPPER_FIXTURE = {
+        "tmp": out_dir,
+        "result": result,
+        "wrapper_path": wrapper_path,
+        "wrapper": load_json(wrapper_path),
+        "common": dict(
+            expected_wrapper_sha256=result["wrapper_sha256"],
+            depth_manifest=load_depth_manifest_copy(),
+            depth_manifest_path=DEPTH_MANIFEST_3K,
+            release_config=load_json(RELEASE_CONFIG),
+            release_dir=RELEASE_CONFIG.parent,
+            scene="gcp_3000_20260602",
+            patch_size=7,
+            packet_search_roots=[PACKET_SEARCH_ROOT],
+        ),
+    }
+    return _WRAPPER_FIXTURE
 
 
 def make_target_camera(width: int = 5654, height: int = 4098, focal: float = 3704.175422665665) -> CameraRecord:
@@ -240,7 +280,6 @@ def test_packet_schema_formal_depth_negative_cases() -> dict[str, Any]:
         "packet_schema_version_mismatch": ("packet_schema", "bad_packet_schema"),
         "primary_tensor_mismatch": ("primary_depth_tensor", "harmonic_camera_z"),
         "formal_semantics_mismatch": ("primary_depth_semantics", "ray_distance"),
-        "formal_formula_mismatch": ("tensor_names", ["accumulated_alpha"]),
         "required_tensor_missing": ("tensor_names", ["accumulated_alpha", "weighted_camera_z_sum"]),
         "dtype_metadata_mismatch": ("dtype", "float64"),
     }
@@ -254,6 +293,19 @@ def test_packet_schema_formal_depth_negative_cases() -> dict[str, Any]:
         else:
             manifest[key] = value
         cases[name] = expect_raises(lambda manifest=manifest: validate_depth_manifest_contract(manifest))
+    explicit_formula_bad = load_depth_manifest_copy()
+    explicit_formula_bad["formal_depth_formula"] = "A/M1"
+    cases["formal_formula_mismatch"] = expect_raises(lambda: validate_depth_manifest_contract(explicit_formula_bad))
+    schema_explicit_formula_missing = load_depth_manifest_copy()
+    schema_explicit_formula_missing["packet_schema"] = "ms_gcp_metric_depth_packet_requires_explicit_formula_v1"
+    schema_explicit_formula_missing.pop("tensor_formulas", None)
+    cases["missing_formula_under_explicit_formula_schema"] = expect_raises(
+        lambda: metric_packet_contract_from_manifest(schema_explicit_formula_missing)
+    )
+    unknown_schema_formula = load_depth_manifest_copy()
+    unknown_schema_formula["packet_schema"] = "unknown_metric_packet_schema"
+    unknown_schema_formula.pop("tensor_formulas", None)
+    cases["unknown_schema_formula"] = expect_raises(lambda: metric_packet_contract_from_manifest(unknown_schema_formula))
 
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "bad_packet.npz"
@@ -467,6 +519,196 @@ def test_wrapper_runtime_negative_cases() -> dict[str, Any]:
     return cases
 
 
+def write_mutated_wrapper_case(case_name: str, mutate: Callable[[dict[str, Any]], None], refresh_sha: bool = True) -> Path:
+    fixture = wrapper_fixture()
+    wrapper = copy.deepcopy(fixture["wrapper"])
+    mutate(wrapper)
+    path = fixture["tmp"] / f"{case_name}.json"
+    path.write_text(json.dumps(wrapper, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if refresh_sha:
+        write_detached_sha256(path)
+    else:
+        shutil.copyfile(fixture["wrapper_path"].with_suffix(fixture["wrapper_path"].suffix + ".sha256"), path.with_suffix(path.suffix + ".sha256"))
+    return path
+
+
+def refresh_first_view_and_root(wrapper: dict[str, Any]) -> None:
+    packet_set = wrapper["packet_sets"][0]
+    row = packet_set["view_mappings"][0]
+    row.pop("source_target_packet_mapping_record_sha256", None)
+    row["source_target_packet_mapping_record_sha256"] = canonical_record_sha256(row)
+    packet_set["compatibility_records_root_sha256"] = canonical_records_root_sha256(
+        packet_set["view_mappings"],
+        ["scene", "image_name", "packet_camera_record_sha256", "packet_sha256"],
+    )
+
+
+def validate_fixture_wrapper(path: Path | None = None, **overrides: Any) -> dict[str, Any]:
+    fixture = wrapper_fixture()
+    common = dict(fixture["common"])
+    common.update(overrides)
+    return validate_compatibility_wrapper(path or fixture["wrapper_path"], **common)
+
+
+def completion_negative_test(name: str, mutate_wrapper: Callable[[dict[str, Any]], None] | None = None, **overrides: Any) -> dict[str, Any]:
+    path = write_mutated_wrapper_case(name, mutate_wrapper) if mutate_wrapper else None
+    if path is not None and "expected_wrapper_sha256" not in overrides:
+        overrides["expected_wrapper_sha256"] = file_sha256(path)
+    return {"case": name, "rejected_by": expect_raises(lambda: validate_fixture_wrapper(path, **overrides))}
+
+
+def test_release_root_digest_mismatch() -> dict[str, Any]:
+    return completion_negative_test("release_root_digest_mismatch", lambda w: w.update({"release_root_digest_sha256": "0" * 64}))
+
+
+def test_release_root_record_sha_mismatch() -> dict[str, Any]:
+    return completion_negative_test("release_root_record_sha_mismatch", lambda w: w.update({"release_root_record_sha256": "1" * 64}))
+
+
+def test_depth_manifest_sha_mismatch() -> dict[str, Any]:
+    return completion_negative_test("depth_manifest_sha_mismatch", lambda w: w["packet_sets"][0].update({"original_depth_manifest_sha256": "2" * 64}))
+
+
+def test_packet_sha_mismatch() -> dict[str, Any]:
+    def mutate(w: dict[str, Any]) -> None:
+        w["packet_sets"][0]["view_mappings"][0].update({"packet_sha256": "3" * 64})
+        refresh_first_view_and_root(w)
+    return completion_negative_test("packet_sha_mismatch", mutate)
+
+
+def test_packet_width_height_mismatch() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["depth_index"][0]["width"] = int(manifest["depth_index"][0]["width"]) + 1
+    return completion_negative_test("packet_width_height_mismatch", depth_manifest=manifest)
+
+
+def test_packet_image_list_mismatch() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["depth_index"] = manifest["depth_index"][:-1]
+    return completion_negative_test("packet_image_list_mismatch", depth_manifest=manifest)
+
+
+def test_duplicate_view_rejection() -> dict[str, Any]:
+    return completion_negative_test(
+        "duplicate_view_rejection",
+        lambda w: w["packet_sets"][0]["view_mappings"].append(copy.deepcopy(w["packet_sets"][0]["view_mappings"][0])),
+    )
+
+
+def test_missing_view_rejection() -> dict[str, Any]:
+    return completion_negative_test("missing_view_rejection", lambda w: w["packet_sets"][0]["view_mappings"].pop())
+
+
+def test_wrong_cx_cy_rejection() -> dict[str, Any]:
+    def mutate(w: dict[str, Any]) -> None:
+        rec = w["packet_sets"][0]["view_mappings"][0]["packet_camera_record"]
+        rec["params"][2] = str(float(rec["params"][2]) + 1.0)
+    return completion_negative_test("wrong_cx_cy_rejection", mutate)
+
+
+def test_undeclared_crop_pad_rejection() -> dict[str, Any]:
+    def mutate(w: dict[str, Any]) -> None:
+        w["packet_sets"][0]["view_mappings"][0].update({"crop_pad_policy": "crop_undeclared"})
+        refresh_first_view_and_root(w)
+    return completion_negative_test("undeclared_crop_pad_rejection", mutate)
+
+
+def test_packet_oob_rejection() -> dict[str, Any]:
+    def mutate(w: dict[str, Any]) -> None:
+        w["packet_sets"][0]["view_mappings"][0].update({"packet_x": "999999"})
+        refresh_first_view_and_root(w)
+    return completion_negative_test("packet_oob_rejection", mutate)
+
+
+def test_renderer_head_mismatch() -> dict[str, Any]:
+    return completion_negative_test("renderer_head_mismatch", lambda w: w["packet_sets"][0]["provenance_record"].update({"renderer_commit": "4" * 40}))
+
+
+def test_renderer_dirty_worktree_rejection() -> dict[str, Any]:
+    return completion_negative_test("renderer_dirty_worktree_rejection", lambda w: w["packet_sets"][0]["provenance_record"].update({"renderer_worktree_status_porcelain": " M file"}))
+
+
+def test_renderer_source_hash_mismatch() -> dict[str, Any]:
+    return completion_negative_test("renderer_source_hash_mismatch", lambda w: w["packet_sets"][0]["provenance_record"].update({"renderer_camera_loader_source_sha256": "5" * 64}))
+
+
+def test_rasterizer_provenance_mismatch() -> dict[str, Any]:
+    return completion_negative_test("rasterizer_provenance_mismatch", lambda w: w["packet_sets"][0]["provenance_record"].update({"rasterizer_tree_hash": "6" * 40}))
+
+
+def test_exporter_provenance_mismatch() -> dict[str, Any]:
+    return completion_negative_test("exporter_provenance_mismatch", lambda w: w["packet_sets"][0]["provenance_record"].update({"exporter_commit": "7" * 40}))
+
+
+def test_packet_ref_protocol_mismatch() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["packet_ref_consistency_protocol"] = "bad_protocol"
+    return completion_negative_test("packet_ref_protocol_mismatch", depth_manifest=manifest)
+
+
+def test_packet_ref_missing_required_field() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["depth_index"][0].pop("variance_packet_ref_abs_error", None)
+    return completion_negative_test("packet_ref_missing_required_field", depth_manifest=manifest)
+
+
+def test_packet_ref_recompute_false() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["depth_index"][0]["packet_recompute_passed"] = False
+    return completion_negative_test("packet_ref_recompute_false", depth_manifest=manifest)
+
+
+def test_packet_ref_failure_count_abnormal() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["depth_index"][0]["variance_consistency_fail_count"] = "1"
+    return completion_negative_test("packet_ref_failure_count_abnormal", depth_manifest=manifest)
+
+
+def test_packet_ref_malformed_numeric_field() -> dict[str, Any]:
+    manifest = load_depth_manifest_copy()
+    manifest["depth_index"][0]["variance_packet_ref_allowed_error"] = "not_a_number"
+    return completion_negative_test("packet_ref_malformed_numeric_field", depth_manifest=manifest)
+
+
+def test_evaluator_source_sha_mismatch() -> dict[str, Any]:
+    return completion_negative_test("evaluator_source_sha_mismatch", lambda w: w.update({"evaluator_source_sha256": "8" * 64}))
+
+
+def test_runtime_dirty_worktree_record_rejection() -> dict[str, Any]:
+    return completion_negative_test("runtime_dirty_worktree_record_rejection", lambda w: w.update({"evaluator_worktree_status_porcelain": " M file"}))
+
+
+def test_approved_external_wrapper_sha_mismatch() -> dict[str, Any]:
+    return completion_negative_test("approved_external_wrapper_sha_mismatch", expected_wrapper_sha256="9" * 64)
+
+
+def test_target_pose_hash_mismatch() -> dict[str, Any]:
+    return completion_negative_test("target_pose_hash_mismatch", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"target_pose_record_sha256": "a" * 64}))
+
+
+def test_packet_pose_hash_mismatch() -> dict[str, Any]:
+    return completion_negative_test("packet_pose_hash_mismatch", lambda w: w["packet_sets"][0]["packet_camera_records"][0].update({"packet_pose_record_sha256": "b" * 64}))
+
+
+def test_stored_pose_difference_tamper() -> dict[str, Any]:
+    return completion_negative_test("stored_pose_difference_tamper", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"pose_center_difference_model_units": "999"}))
+
+
+def test_stored_pose_pass_tamper() -> dict[str, Any]:
+    return completion_negative_test("stored_pose_pass_tamper", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"pose_equivalence_passed": False}))
+
+
+def test_wrong_release_pose_reference() -> dict[str, Any]:
+    def mutate(w: dict[str, Any]) -> None:
+        rows = w["packet_sets"][0]["view_mappings"]
+        rows[0]["target_pose_record_sha256"] = rows[1]["target_pose_record_sha256"]
+    return completion_negative_test("wrong_release_pose_reference", mutate)
+
+
+def test_orphan_packet_pose_record() -> dict[str, Any]:
+    return completion_negative_test("orphan_packet_pose_record", lambda w: w["packet_sets"][0]["packet_camera_records"].pop(0))
+
+
 TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("r8_camera_recovery", test_r8_camera_recovery),
     ("rounding_tie_case", test_rounding_tie_case),
@@ -481,6 +723,36 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("pose_conversion_negative_cases", test_pose_conversion_negative_cases),
     ("real_3k_coordinate_only_wrapper", test_real_3k_coordinate_only_wrapper),
     ("wrapper_runtime_negative_cases", test_wrapper_runtime_negative_cases),
+    ("release_root_digest_mismatch", test_release_root_digest_mismatch),
+    ("release_root_record_sha_mismatch", test_release_root_record_sha_mismatch),
+    ("depth_manifest_sha_mismatch", test_depth_manifest_sha_mismatch),
+    ("packet_sha_mismatch", test_packet_sha_mismatch),
+    ("packet_width_height_mismatch", test_packet_width_height_mismatch),
+    ("packet_image_list_mismatch", test_packet_image_list_mismatch),
+    ("duplicate_view_rejection", test_duplicate_view_rejection),
+    ("missing_view_rejection", test_missing_view_rejection),
+    ("wrong_cx_cy_rejection", test_wrong_cx_cy_rejection),
+    ("undeclared_crop_pad_rejection", test_undeclared_crop_pad_rejection),
+    ("packet_oob_rejection", test_packet_oob_rejection),
+    ("renderer_head_mismatch", test_renderer_head_mismatch),
+    ("renderer_dirty_worktree_rejection", test_renderer_dirty_worktree_rejection),
+    ("renderer_source_hash_mismatch", test_renderer_source_hash_mismatch),
+    ("rasterizer_provenance_mismatch", test_rasterizer_provenance_mismatch),
+    ("exporter_provenance_mismatch", test_exporter_provenance_mismatch),
+    ("packet_ref_protocol_mismatch", test_packet_ref_protocol_mismatch),
+    ("packet_ref_missing_required_field", test_packet_ref_missing_required_field),
+    ("packet_ref_recompute_false", test_packet_ref_recompute_false),
+    ("packet_ref_failure_count_abnormal", test_packet_ref_failure_count_abnormal),
+    ("packet_ref_malformed_numeric_field", test_packet_ref_malformed_numeric_field),
+    ("evaluator_source_sha_mismatch", test_evaluator_source_sha_mismatch),
+    ("runtime_dirty_worktree_record_rejection", test_runtime_dirty_worktree_record_rejection),
+    ("approved_external_wrapper_sha_mismatch", test_approved_external_wrapper_sha_mismatch),
+    ("target_pose_hash_mismatch", test_target_pose_hash_mismatch),
+    ("packet_pose_hash_mismatch", test_packet_pose_hash_mismatch),
+    ("stored_pose_difference_tamper", test_stored_pose_difference_tamper),
+    ("stored_pose_pass_tamper", test_stored_pose_pass_tamper),
+    ("wrong_release_pose_reference", test_wrong_release_pose_reference),
+    ("orphan_packet_pose_record", test_orphan_packet_pose_record),
 ]
 
 

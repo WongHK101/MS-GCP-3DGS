@@ -916,6 +916,7 @@ def main() -> None:
     parser.add_argument("--depth_dir")
     parser.add_argument("--depth_manifest")
     parser.add_argument("--packet_compatibility_manifest")
+    parser.add_argument("--packet_compatibility_manifest_sha256", default="")
     parser.add_argument("--annotations_csv")
     parser.add_argument("--gcp_csv")
     parser.add_argument("--split_csv")
@@ -1123,6 +1124,7 @@ def main() -> None:
         try:
             validate_compatibility_wrapper(
                 packet_compatibility_path,
+                expected_wrapper_sha256=str(args.packet_compatibility_manifest_sha256 or ""),
                 depth_manifest=depth_manifest,
                 depth_manifest_path=depth_manifest_path,
                 release_config=release_config,

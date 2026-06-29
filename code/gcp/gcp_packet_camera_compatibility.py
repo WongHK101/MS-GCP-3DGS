@@ -57,6 +57,9 @@ PRIMARY_DEPTH_TENSOR = "alpha_normalized_expected_camera_z"
 PRIMARY_DEPTH_SEMANTICS = "camera_z"
 FORMAL_DEPTH_FORMULA = "M1/A"
 PACKET_REF_CONSISTENCY_PROTOCOL = "raw_accumulator_recompute_v2_with_variance_forward_error_bound"
+FORMULA_SOURCE_EXPLICIT_FIELD = "manifest_explicit_field"
+FORMULA_SOURCE_TENSOR_FORMULAS = "manifest_tensor_formulas"
+FORMULA_SOURCE_SCHEMA_IMPLIED = "packet_schema_implied_contract"
 REQUIRED_TENSOR_DTYPES = {
     "accumulated_alpha": "float32",
     "weighted_camera_z_sum": "float32",
@@ -659,16 +662,21 @@ def metric_packet_contract_from_manifest(depth_manifest: dict[str, Any]) -> dict
     tensor_names = depth_manifest.get("tensor_names", [])
     if isinstance(tensor_names, str):
         tensor_names = [x for x in tensor_names.split("|") if x]
+    formula_source, formula_value, formula_normalized = formal_formula_from_manifest(depth_manifest)
+    protocol_source, protocol_value = packet_ref_protocol_from_manifest(depth_manifest)
     return {
         "manifest_schema": depth_manifest.get("schema", ""),
         "packet_schema": depth_manifest.get("packet_schema", ""),
         "primary_depth_tensor": depth_manifest.get("primary_depth_tensor", ""),
         "primary_depth_semantics": depth_manifest.get("primary_depth_semantics", depth_manifest.get("depth_semantics", "")),
-        "formal_depth_formula": FORMAL_DEPTH_FORMULA,
+        "formal_depth_formula": formula_normalized,
+        "formal_depth_formula_raw": formula_value,
+        "formal_formula_source": formula_source,
         "dtype": depth_manifest.get("dtype", ""),
         "required_tensors": sorted(REQUIRED_TENSOR_DTYPES),
         "tensor_names": list(tensor_names),
-        "packet_ref_consistency_protocol": PACKET_REF_CONSISTENCY_PROTOCOL,
+        "packet_ref_consistency_protocol": protocol_value,
+        "packet_ref_consistency_protocol_source": protocol_source,
         "packet_ref_consistency_required_fields": [
             "packet_recompute_passed",
             "variance_packet_ref_abs_error",
@@ -677,6 +685,44 @@ def metric_packet_contract_from_manifest(depth_manifest: dict[str, Any]) -> dict
             "variance_consistency_fail_count",
         ],
     }
+
+
+def formal_formula_from_manifest(depth_manifest: dict[str, Any]) -> tuple[str, str, str]:
+    explicit_keys = ["formal_depth_formula", "primary_depth_formula", "formal_formula"]
+    for key in explicit_keys:
+        if key in depth_manifest and str(depth_manifest.get(key, "")).strip():
+            value = str(depth_manifest[key]).strip()
+            normalized = normalize_formal_formula(value)
+            return FORMULA_SOURCE_EXPLICIT_FIELD, value, normalized
+    tensor_formulas = depth_manifest.get("tensor_formulas", {})
+    if isinstance(tensor_formulas, dict) and str(tensor_formulas.get(PRIMARY_DEPTH_TENSOR, "")).strip():
+        value = str(tensor_formulas[PRIMARY_DEPTH_TENSOR]).strip()
+        normalized = normalize_formal_formula(value)
+        return FORMULA_SOURCE_TENSOR_FORMULAS, value, normalized
+    if depth_manifest.get("packet_schema") == METRIC_PACKET_SCHEMA:
+        return FORMULA_SOURCE_SCHEMA_IMPLIED, "", FORMAL_DEPTH_FORMULA
+    raise ValueError(f"cannot infer formal formula from unknown packet schema: {depth_manifest.get('packet_schema')}")
+
+
+def normalize_formal_formula(value: str) -> str:
+    compact = str(value).strip().replace(" ", "")
+    if compact == FORMAL_DEPTH_FORMULA:
+        return FORMAL_DEPTH_FORMULA
+    if compact.startswith("M1/A"):
+        return FORMAL_DEPTH_FORMULA
+    raise ValueError(f"formal depth formula mismatch: {value!r}")
+
+
+def packet_ref_protocol_from_manifest(depth_manifest: dict[str, Any]) -> tuple[str, str]:
+    for key in ["packet_ref_consistency_protocol", "packet_recompute_protocol", "ref_consistency_protocol"]:
+        if key in depth_manifest and str(depth_manifest.get(key, "")).strip():
+            value = str(depth_manifest[key]).strip()
+            if value != PACKET_REF_CONSISTENCY_PROTOCOL:
+                raise ValueError(f"packet/ref consistency protocol mismatch: {value}")
+            return "manifest_explicit_field", value
+    if depth_manifest.get("packet_schema") == METRIC_PACKET_SCHEMA:
+        return "packet_schema_implied_contract", PACKET_REF_CONSISTENCY_PROTOCOL
+    raise ValueError(f"cannot infer packet/ref protocol from unknown packet schema: {depth_manifest.get('packet_schema')}")
 
 
 def validate_depth_manifest_contract(depth_manifest: dict[str, Any]) -> dict[str, Any]:
@@ -689,6 +735,10 @@ def validate_depth_manifest_contract(depth_manifest: dict[str, Any]) -> dict[str
         raise ValueError(f"primary tensor mismatch: {contract['primary_depth_tensor']}")
     if contract["primary_depth_semantics"] != PRIMARY_DEPTH_SEMANTICS:
         raise ValueError(f"formal depth semantics mismatch: {contract['primary_depth_semantics']}")
+    if contract["formal_depth_formula"] != FORMAL_DEPTH_FORMULA:
+        raise ValueError(f"formal formula mismatch: {contract['formal_depth_formula']}")
+    if contract["packet_ref_consistency_protocol"] != PACKET_REF_CONSISTENCY_PROTOCOL:
+        raise ValueError(f"packet/ref consistency protocol mismatch: {contract['packet_ref_consistency_protocol']}")
     tensor_names = set(contract["tensor_names"])
     missing = sorted(set(REQUIRED_TENSOR_DTYPES) - tensor_names)
     if missing:
@@ -713,6 +763,31 @@ def validate_depth_index_row_contract(row: dict[str, Any], expected_width: int, 
         raise ValueError(f"depth index tensor declarations missing for {row.get('image_name')}: {missing}")
     if str(row.get("packet_recompute_passed", "")).lower() not in {"true", "1"} and row.get("packet_recompute_passed") is not True:
         raise ValueError(f"packet/ref consistency did not pass for {row.get('image_name')}")
+    required_ref_fields = [
+        "variance_packet_ref_abs_error",
+        "variance_packet_ref_allowed_error",
+        "variance_packet_ref_consistency_ratio",
+        "variance_consistency_fail_count",
+    ]
+    missing = [name for name in required_ref_fields if name not in row or str(row.get(name, "")).strip() == ""]
+    if missing:
+        raise ValueError(f"packet/ref required fields missing for {row.get('image_name')}: {missing}")
+    abs_error = float(row["variance_packet_ref_abs_error"])
+    allowed_error = float(row["variance_packet_ref_allowed_error"])
+    ratio = float(row["variance_packet_ref_consistency_ratio"])
+    fail_count = int(float(row["variance_consistency_fail_count"]))
+    if not all(math.isfinite(v) for v in [abs_error, allowed_error, ratio]):
+        raise ValueError(f"packet/ref numeric field is not finite for {row.get('image_name')}")
+    if allowed_error < 0 or abs_error < 0 or fail_count != 0:
+        raise ValueError(f"packet/ref consistency failure fields invalid for {row.get('image_name')}")
+    expected_ratio = 0.0 if allowed_error == 0.0 and abs_error == 0.0 else abs_error / allowed_error
+    if allowed_error == 0.0 and abs_error != 0.0:
+        raise ValueError(f"packet/ref allowed error is zero with nonzero abs error for {row.get('image_name')}")
+    if abs(expected_ratio - ratio) > max(1e-6, 1e-6 * abs(expected_ratio)):
+        raise ValueError(
+            f"packet/ref consistency ratio mismatch for {row.get('image_name')}: "
+            f"{ratio} vs {expected_ratio}"
+        )
 
 
 def compatibility_record(
@@ -859,6 +934,56 @@ def load_target_pose_records(release_dir: Path, scene: str) -> dict[str, dict[st
     return out
 
 
+def build_provenance_record(
+    *,
+    renderer_repo: Path,
+    depth_manifest: dict[str, Any],
+) -> dict[str, Any]:
+    evaluator_source = REPO_ROOT / "code" / "gcp" / "evaluate_gaussian_gcp_geometry.py"
+    validator_source = Path(__file__).resolve()
+    record = {
+        "schema": "ms_gcp_packet_camera_compatibility_provenance_v1",
+        "generator_commit": git_commit(REPO_ROOT),
+        "evaluator_runtime_commit": git_commit(REPO_ROOT),
+        "evaluator_worktree_status_porcelain": git_status_porcelain(REPO_ROOT),
+        "generator_source_sha256": file_sha256(validator_source),
+        "compatibility_validator_source_sha256": file_sha256(validator_source),
+        "evaluator_source_sha256": file_sha256(evaluator_source),
+        "renderer_repo": str(renderer_repo),
+        "renderer_commit": git_commit(renderer_repo),
+        "renderer_worktree_status_porcelain": git_status_porcelain(renderer_repo),
+        "renderer_commit_declared_by_depth_manifest": depth_manifest.get("renderer_commit", ""),
+        "renderer_camera_loader_source_sha256": file_sha256(renderer_repo / "utils" / "camera_utils.py") if (renderer_repo / "utils" / "camera_utils.py").exists() else "",
+        "renderer_projection_source_sha256": file_sha256(renderer_repo / "utils" / "graphics_utils.py") if (renderer_repo / "utils" / "graphics_utils.py").exists() else "",
+        "renderer_scene_camera_source_sha256": file_sha256(renderer_repo / "scene" / "cameras.py") if (renderer_repo / "scene" / "cameras.py").exists() else "",
+        "rasterizer_tree_hash": depth_manifest.get("rasterizer_tree_hash", ""),
+        "exporter_commit": depth_manifest.get("exporter_commit", ""),
+    }
+    required_nonempty = [
+        "generator_commit",
+        "evaluator_runtime_commit",
+        "generator_source_sha256",
+        "compatibility_validator_source_sha256",
+        "evaluator_source_sha256",
+        "renderer_commit",
+        "renderer_camera_loader_source_sha256",
+        "renderer_projection_source_sha256",
+        "renderer_scene_camera_source_sha256",
+        "rasterizer_tree_hash",
+        "exporter_commit",
+    ]
+    missing = [name for name in required_nonempty if not str(record.get(name, "")).strip()]
+    if missing:
+        raise ValueError(f"provenance record required fields missing: {missing}")
+    if record["renderer_commit"] != record["renderer_commit_declared_by_depth_manifest"]:
+        raise ValueError("renderer commit mismatch between runtime renderer repo and depth manifest")
+    if record["evaluator_worktree_status_porcelain"] != "":
+        raise ValueError("evaluator/generator worktree must be clean to build wrapper")
+    if record["renderer_worktree_status_porcelain"] != "":
+        raise ValueError("renderer worktree must be clean to build wrapper")
+    return record
+
+
 def build_wrapper(
     *,
     release_dir: Path,
@@ -879,6 +1004,8 @@ def build_wrapper(
         by_image.setdefault(Path(row["target_image_name"]).name, []).append(row)
     depth_manifest = load_json(depth_manifest_path)
     validate_depth_manifest_contract(depth_manifest)
+    provenance_record = build_provenance_record(renderer_repo=renderer_repo, depth_manifest=depth_manifest)
+    provenance_record_sha256 = canonical_record_sha256(provenance_record)
     depth_index = depth_index_by_name(depth_manifest)
     cfg_path = model_dir / "cfg_args"
     cameras_json_path = model_dir / "cameras.json"
@@ -967,6 +1094,7 @@ def build_wrapper(
                 "pose_rotation_angular_difference_rad": fmt_float(pose_check["rotation_angular_difference_rad"]),
                 "pose_convention": POSE_CONVENTION_VERSION,
                 "pose_equivalence_passed": bool(pose_check["passed"]),
+                "provenance_record_sha256": provenance_record_sha256,
             }
         )
         hash_payload = dict(view_record)
@@ -990,6 +1118,7 @@ def build_wrapper(
             coord["target_pose_record_sha256"] = pose_check["target_pose_record_sha256"]
             coord["pose_center_difference_model_units"] = fmt_float(pose_check["center_difference_model_units"])
             coord["pose_rotation_angular_difference_rad"] = fmt_float(pose_check["rotation_angular_difference_rad"])
+            coord["provenance_record_sha256"] = provenance_record_sha256
             coordinate_rows.append(coord)
     if local_packet_failures:
         raise ValueError(f"local packet files missing: {local_packet_failures[:8]}")
@@ -1009,6 +1138,10 @@ def build_wrapper(
         "evaluator_worktree_status_porcelain": git_status_porcelain(REPO_ROOT),
         "exact_generation_command": " ".join(sys.argv),
         "generator_source_sha256": file_sha256(Path(__file__).resolve()),
+        "evaluator_source_sha256": provenance_record["evaluator_source_sha256"],
+        "compatibility_validator_source_sha256": provenance_record["compatibility_validator_source_sha256"],
+        "generator_commit": provenance_record["generator_commit"],
+        "evaluator_runtime_commit": provenance_record["evaluator_runtime_commit"],
         "release_id": "gcp_benchmark_release_v1_2_2_pixel_domain_20260628",
         "release_root_digest_sha256": release_root.get("payload_root_digest_sha256", ""),
         "release_root_record_sha256": release_root.get("_root_record_sha256", ""),
@@ -1042,17 +1175,19 @@ def build_wrapper(
                 "model_dir": str(model_dir),
                 "model_cameras_json_sha256": file_sha256(cameras_json_path),
                 "model_cfg_args_sha256": file_sha256(cfg_path),
+                "provenance_record": provenance_record,
+                "provenance_record_sha256": provenance_record_sha256,
                 "renderer_repo": str(renderer_repo),
-                "renderer_commit": git_commit(renderer_repo),
-                "renderer_worktree_status_porcelain": git_status_porcelain(renderer_repo),
-                "renderer_commit_declared_by_depth_manifest": depth_manifest.get("renderer_commit", ""),
-                "rasterizer_tree_hash": depth_manifest.get("rasterizer_tree_hash", ""),
-                "exporter_commit": depth_manifest.get("exporter_commit", ""),
+                "renderer_commit": provenance_record["renderer_commit"],
+                "renderer_worktree_status_porcelain": provenance_record["renderer_worktree_status_porcelain"],
+                "renderer_commit_declared_by_depth_manifest": provenance_record["renderer_commit_declared_by_depth_manifest"],
+                "rasterizer_tree_hash": provenance_record["rasterizer_tree_hash"],
+                "exporter_commit": provenance_record["exporter_commit"],
                 "renderer_camera_loader_source": "utils/camera_utils.py::loadCam and scene/cameras.py::Camera",
                 "renderer_projection_source": "utils/graphics_utils.py::getProjectionMatrix symmetric frustum",
-                "renderer_camera_loader_source_sha256": file_sha256(renderer_repo / "utils" / "camera_utils.py") if (renderer_repo / "utils" / "camera_utils.py").exists() else "",
-                "renderer_projection_source_sha256": file_sha256(renderer_repo / "utils" / "graphics_utils.py") if (renderer_repo / "utils" / "graphics_utils.py").exists() else "",
-                "renderer_scene_camera_source_sha256": file_sha256(renderer_repo / "scene" / "cameras.py") if (renderer_repo / "scene" / "cameras.py").exists() else "",
+                "renderer_camera_loader_source_sha256": provenance_record["renderer_camera_loader_source_sha256"],
+                "renderer_projection_source_sha256": provenance_record["renderer_projection_source_sha256"],
+                "renderer_scene_camera_source_sha256": provenance_record["renderer_scene_camera_source_sha256"],
                 "resolution_label": f"R{cfg_args.get('resolution')}",
                 "patch_protocol": PATCH_PROTOCOL,
                 "packet_patch_size": 7,
@@ -1087,9 +1222,113 @@ def build_wrapper(
     }
 
 
+def validate_provenance_record(record: dict[str, Any]) -> None:
+    required = [
+        "generator_commit",
+        "evaluator_runtime_commit",
+        "generator_source_sha256",
+        "compatibility_validator_source_sha256",
+        "evaluator_source_sha256",
+        "renderer_commit",
+        "renderer_commit_declared_by_depth_manifest",
+        "renderer_camera_loader_source_sha256",
+        "renderer_projection_source_sha256",
+        "renderer_scene_camera_source_sha256",
+        "rasterizer_tree_hash",
+        "exporter_commit",
+    ]
+    missing = [name for name in required if not str(record.get(name, "")).strip()]
+    if missing:
+        raise ValueError(f"provenance required fields missing: {missing}")
+    if record.get("generator_commit") != git_commit(REPO_ROOT):
+        raise ValueError("provenance generator commit mismatch")
+    if record.get("evaluator_runtime_commit") != git_commit(REPO_ROOT):
+        raise ValueError("provenance evaluator runtime commit mismatch")
+    if record.get("evaluator_worktree_status_porcelain", "") != "":
+        raise ValueError("provenance records dirty evaluator worktree")
+    if record.get("renderer_worktree_status_porcelain", "") != "":
+        raise ValueError("provenance records dirty renderer worktree")
+    if record.get("renderer_commit") != record.get("renderer_commit_declared_by_depth_manifest"):
+        raise ValueError("provenance renderer commit mismatch")
+    if record.get("generator_source_sha256") != file_sha256(Path(__file__).resolve()):
+        raise ValueError("provenance generator source SHA mismatch")
+    if record.get("compatibility_validator_source_sha256") != file_sha256(Path(__file__).resolve()):
+        raise ValueError("provenance validator source SHA mismatch")
+    evaluator_source = REPO_ROOT / "code" / "gcp" / "evaluate_gaussian_gcp_geometry.py"
+    if record.get("evaluator_source_sha256") != file_sha256(evaluator_source):
+        raise ValueError("provenance evaluator source SHA mismatch")
+
+
+def compare_view_to_depth_index(wrapper_row: dict[str, Any], depth_row: dict[str, Any]) -> None:
+    name = Path(str(wrapper_row.get("image_name", ""))).name
+    depth_name = Path(str(depth_row.get("image_name", ""))).name
+    if name != depth_name:
+        raise ValueError(f"depth manifest image-name mismatch: {name} vs {depth_name}")
+    wrapper_packet = Path(str(wrapper_row.get("packet_path_original", ""))).name
+    depth_packet = Path(str(depth_row.get("packet_path", depth_row.get("depth_path", "")))).name
+    if wrapper_packet != depth_packet:
+        raise ValueError(f"packet basename/path identity mismatch for {name}: {wrapper_packet} vs {depth_packet}")
+    checks = {
+        "packet_sha256": str(depth_row.get("packet_sha256", depth_row.get("sha256", depth_row.get("file_sha256", "")))),
+        "packet_width": int(depth_row.get("width", -1)),
+        "packet_height": int(depth_row.get("height", -1)),
+        "dtype": str(depth_row.get("dtype", "")),
+        "primary_depth_tensor": str(depth_row.get("primary_depth_tensor", "")),
+        "primary_depth_semantics": str(depth_row.get("primary_depth_semantics", "")),
+    }
+    if str(wrapper_row.get("packet_sha256", "")) != checks["packet_sha256"]:
+        raise ValueError(f"packet SHA mismatch between wrapper and depth manifest for {name}")
+    if int(wrapper_row.get("packet_width", -1)) != checks["packet_width"] or int(wrapper_row.get("packet_height", -1)) != checks["packet_height"]:
+        raise ValueError(f"packet width/height mismatch between wrapper and depth manifest for {name}")
+    if checks["dtype"] != "float32":
+        raise ValueError(f"depth index dtype mismatch for {name}: {checks['dtype']}")
+    if checks["primary_depth_tensor"] != PRIMARY_DEPTH_TENSOR:
+        raise ValueError(f"depth index primary tensor mismatch for {name}: {checks['primary_depth_tensor']}")
+    if checks["primary_depth_semantics"] != PRIMARY_DEPTH_SEMANTICS:
+        raise ValueError(f"depth index primary semantics mismatch for {name}: {checks['primary_depth_semantics']}")
+    wrapper_tensors = set(str(wrapper_row.get("tensor_names", "")).split("|")) if wrapper_row.get("tensor_names") else None
+    depth_tensors = set(str(depth_row.get("tensor_names", "")).split("|"))
+    if wrapper_tensors is not None and wrapper_tensors != depth_tensors:
+        raise ValueError(f"tensor names mismatch between wrapper and depth manifest for {name}")
+
+
+def coordinate_check_for_release_row(release_row: dict[str, str], view_mapping: dict[str, Any]) -> dict[str, Any]:
+    packet_camera = packet_camera_from_view(view_mapping)
+    target_camera = camera_from_release_row(release_row)
+    target_x = float(release_row["target_x"])
+    target_y = float(release_row["target_y"])
+    x_b, y_b = intrinsic_ray(target_camera, target_x, target_y)
+    packet_u, packet_v = project_packet_from_camera_record(packet_camera, x_b, y_b)
+    x_p, y_p = intrinsic_ray(packet_camera, packet_u, packet_v)
+    ray_error = math.hypot(x_p - x_b, y_p - y_b)
+    angle = ray_angle(unit_ray(x_p, y_p), unit_ray(x_b, y_b))
+    if ray_error > RAY_COORD_TOL or angle > RAY_ANGLE_TOL_RAD:
+        raise ValueError(f"runtime ray equivalence failed for {release_row.get('observation_id')}")
+    in_bounds = 0.0 <= packet_u < packet_camera.width and 0.0 <= packet_v < packet_camera.height
+    implicit_u = target_x * (packet_camera.width / target_camera.width)
+    implicit_v = target_y * (packet_camera.height / target_camera.height)
+    implicit_diff = math.hypot(packet_u - implicit_u, packet_v - implicit_v)
+    return {
+        "packet_in_bounds": bool(in_bounds),
+        "packet_x": packet_u,
+        "packet_y": packet_v,
+        "ray_coordinate_error": ray_error,
+        "ray_angle_error_rad": angle,
+        "camera_projection_vs_implicit_mapping_diff_px": implicit_diff,
+    }
+
+
+def project_packet_from_camera_record(camera: CameraRecord, x_norm: float, y_norm: float) -> tuple[float, float]:
+    if camera.model.upper() != "PINHOLE" or len(camera.params) != 4:
+        raise ValueError(f"Expected PINHOLE packet camera, got {camera.model} {camera.params}")
+    fx, fy, cx, cy = [float(x) for x in camera.params]
+    return fx * float(x_norm) + cx, fy * float(y_norm) + cy
+
+
 def validate_compatibility_wrapper(
     path: Path,
     *,
+    expected_wrapper_sha256: str | None = None,
     depth_manifest: dict[str, Any] | None = None,
     depth_manifest_path: Path | None = None,
     release_config: dict[str, Any] | None = None,
@@ -1098,14 +1337,25 @@ def validate_compatibility_wrapper(
     patch_size: int | None = None,
     packet_search_roots: Sequence[Path] = (),
 ) -> dict[str, Any]:
-    verify_detached_sha256(path)
+    detached = verify_detached_sha256(path)
+    actual_wrapper_sha = detached["sha256"]
+    if expected_wrapper_sha256 and actual_wrapper_sha.lower() != expected_wrapper_sha256.lower():
+        raise ValueError(f"approved wrapper SHA mismatch: {actual_wrapper_sha} vs {expected_wrapper_sha256}")
     wrapper = load_json(path)
     if wrapper.get("schema") != COMPAT_SCHEMA:
         raise ValueError(f"Unsupported packet compatibility schema: {wrapper.get('schema')}")
     if wrapper.get("evaluator_repo_commit") != git_commit(REPO_ROOT):
         raise ValueError("wrapper evaluator commit does not match runtime evaluator commit")
+    if git_status_porcelain(REPO_ROOT) != "":
+        raise ValueError("runtime evaluator worktree is dirty")
     if wrapper.get("evaluator_worktree_status_porcelain", "") != "":
         raise ValueError("wrapper was generated from a dirty evaluator worktree")
+    evaluator_source = REPO_ROOT / "code" / "gcp" / "evaluate_gaussian_gcp_geometry.py"
+    validator_source = Path(__file__).resolve()
+    if wrapper.get("evaluator_source_sha256") != file_sha256(evaluator_source):
+        raise ValueError("evaluator source SHA mismatch")
+    if wrapper.get("compatibility_validator_source_sha256") != file_sha256(validator_source):
+        raise ValueError("compatibility validator source SHA mismatch")
     if wrapper.get("depth_tensor_values_read") is not False:
         raise ValueError("compatibility wrapper must declare depth_tensor_values_read=false")
     if release_config is not None and wrapper.get("release_id") != release_config.get("release_id"):
@@ -1122,6 +1372,15 @@ def validate_compatibility_wrapper(
         contract = validate_depth_manifest_contract(depth_manifest)
         if wrapper.get("metric_packet_contract", {}) != contract:
             raise ValueError("wrapper metric packet contract does not match depth manifest")
+        depth_index = depth_index_by_name(depth_manifest)
+    else:
+        depth_index = {}
+    release_rows_by_image: dict[str, list[dict[str, str]]] = {}
+    target_pose_records: dict[str, dict[str, Any]] = {}
+    if release_dir is not None and scene is not None:
+        for row in load_release_rows(release_dir, scene):
+            release_rows_by_image.setdefault(Path(row["target_image_name"]).name, []).append(row)
+        target_pose_records = load_target_pose_records(release_dir, scene)
     packet_sets = wrapper.get("packet_sets", [])
     seen_scenes: set[str] = set()
     validation: dict[str, Any] = {
@@ -1151,10 +1410,24 @@ def validate_compatibility_wrapper(
             raise ValueError("renderer worktree was not clean when wrapper was generated")
         if packet_set.get("renderer_commit") != packet_set.get("renderer_commit_declared_by_depth_manifest"):
             raise ValueError("renderer commit mismatch between wrapper and depth manifest")
+        provenance_record = packet_set.get("provenance_record")
+        if not isinstance(provenance_record, dict):
+            raise ValueError(f"packet set missing provenance record for {set_scene}")
+        provenance_record_sha = canonical_record_sha256(provenance_record)
+        if provenance_record_sha != packet_set.get("provenance_record_sha256"):
+            raise ValueError(f"provenance record hash mismatch for {set_scene}")
+        validate_provenance_record(provenance_record)
         view_rows = list(packet_set.get("view_mappings", []))
         if int(packet_set.get("view_count", -1)) != len(view_rows):
             raise ValueError(f"view_count mismatch for {set_scene}")
         by_view: dict[str, dict[str, Any]] = {}
+        coordinate_counts = {
+            "observation_count": 0,
+            "packet_bounds_pass_count": 0,
+            "max_projection_vs_implicit_diff_px": 0.0,
+            "max_ray_coordinate_error": 0.0,
+            "all_observations_uniquely_mapped": True,
+        }
         for row in view_rows:
             name = Path(str(row.get("image_name", ""))).name
             if not name:
@@ -1162,8 +1435,54 @@ def validate_compatibility_wrapper(
             if name in by_view:
                 raise ValueError(f"duplicate packet view mapping in wrapper: {set_scene} {name}")
             by_view[name] = row
+            if row.get("provenance_record_sha256") != provenance_record_sha:
+                raise ValueError(f"view provenance record hash mismatch for {set_scene} {name}")
+            if row.get("crop_pad_policy") != "none_verified_by_renderer_camera_loader_source":
+                raise ValueError(f"undeclared crop/pad policy for {set_scene} {name}: {row.get('crop_pad_policy')}")
+            if not (0.0 <= float(row.get("packet_x", "nan")) < float(row.get("packet_width", -1))):
+                raise ValueError(f"stored packet_x out of bounds for {set_scene} {name}")
+            if not (0.0 <= float(row.get("packet_y", "nan")) < float(row.get("packet_height", -1))):
+                raise ValueError(f"stored packet_y out of bounds for {set_scene} {name}")
             if row.get("pose_equivalence_passed") is not True:
                 raise ValueError(f"pose equivalence did not pass for {set_scene} {name}")
+            packet_pose_record = None
+            for cam_record in packet_set.get("packet_camera_records", []):
+                if Path(str(cam_record.get("image_name", ""))).name == name:
+                    packet_pose_record = cam_record.get("packet_pose_record")
+                    if pose_record_hash(packet_pose_record) != cam_record.get("packet_pose_record_sha256"):
+                        raise ValueError(f"packet pose record hash mismatch for {set_scene} {name}")
+                    if cam_record.get("packet_pose_record_sha256") != row.get("packet_pose_record_sha256"):
+                        raise ValueError(f"view packet pose reference mismatch for {set_scene} {name}")
+                    break
+            if packet_pose_record is None:
+                raise ValueError(f"orphan/missing packet pose record for {set_scene} {name}")
+            if target_pose_records:
+                target_pose = target_pose_records.get(name)
+                if target_pose is None:
+                    raise ValueError(f"release target pose missing for {set_scene} {name}")
+                target_hash = canonical_record_sha256(
+                    {
+                        "image_id": target_pose["image_id"],
+                        "image_name": target_pose["image_name"],
+                        "camera_id": target_pose["camera_id"],
+                        "qvec": target_pose["qvec"],
+                        "tvec": target_pose["tvec"],
+                    }
+                )
+                if target_hash != target_pose.get("record_sha256"):
+                    raise ValueError(f"release target pose record hash mismatch for {set_scene} {name}")
+                if target_hash != row.get("target_pose_record_sha256"):
+                    raise ValueError(f"view target pose hash mismatch for {set_scene} {name}")
+                center = np.asarray([float(x) for x in packet_pose_record["camera_center"]], dtype=np.float64)
+                target_center = camera_center_from_colmap(target_pose["qvec"], target_pose["tvec"])
+                center_diff = float(np.linalg.norm(center - target_center))
+                angle = rotation_angle_rad(qvec_to_rotmat(packet_pose_record["qvec"]), qvec_to_rotmat(target_pose["qvec"]))
+                if abs(center_diff - float(row.get("pose_center_difference_model_units", "nan"))) > max(1e-12, POSE_CENTER_TOL_MODEL_UNITS):
+                    raise ValueError(f"stored pose center difference tamper/mismatch for {set_scene} {name}")
+                if abs(angle - float(row.get("pose_rotation_angular_difference_rad", "nan"))) > max(1e-12, POSE_ROTATION_TOL_RAD):
+                    raise ValueError(f"stored pose rotation difference tamper/mismatch for {set_scene} {name}")
+                if center_diff > POSE_CENTER_TOL_MODEL_UNITS or angle > POSE_ROTATION_TOL_RAD:
+                    raise ValueError(f"runtime pose equivalence failed for {set_scene} {name}")
             if float(row.get("pose_center_difference_model_units", "inf")) > POSE_CENTER_TOL_MODEL_UNITS:
                 raise ValueError(f"pose center tolerance exceeded for {set_scene} {name}")
             if float(row.get("pose_rotation_angular_difference_rad", "inf")) > POSE_ROTATION_TOL_RAD:
@@ -1176,6 +1495,12 @@ def validate_compatibility_wrapper(
             recomputed = canonical_record_sha256(hash_payload)
             if str(row.get("source_target_packet_mapping_record_sha256", "")) != recomputed:
                 raise ValueError(f"per-view mapping record hash mismatch for {set_scene} {name}")
+            if depth_index:
+                depth_row = depth_index.get(name)
+                if depth_row is None:
+                    raise ValueError(f"wrapper view missing from depth manifest: {set_scene} {name}")
+                validate_depth_index_row_contract(depth_row, int(row["packet_width"]), int(row["packet_height"]))
+                compare_view_to_depth_index(row, depth_row)
             packet_path = resolve_packet_path(str(row.get("packet_path_original", "")), packet_search_roots)
             if packet_path is None and row.get("packet_path_local"):
                 packet_path = Path(str(row["packet_path_local"]))
@@ -1188,6 +1513,50 @@ def validate_compatibility_wrapper(
                     expected_height=int(row["packet_height"]),
                     expected_dtype="float32",
                 )
+            if release_rows_by_image:
+                obs_rows = release_rows_by_image.get(name, [])
+                if not obs_rows:
+                    raise ValueError(f"wrapper view missing release observations: {set_scene} {name}")
+                for release_row in obs_rows:
+                    coord = coordinate_check_for_release_row(release_row, row)
+                    coordinate_counts["observation_count"] += 1
+                    coordinate_counts["packet_bounds_pass_count"] += int(bool(coord["packet_in_bounds"]))
+                    coordinate_counts["max_projection_vs_implicit_diff_px"] = max(
+                        coordinate_counts["max_projection_vs_implicit_diff_px"],
+                        float(coord["camera_projection_vs_implicit_mapping_diff_px"]),
+                    )
+                    coordinate_counts["max_ray_coordinate_error"] = max(
+                        coordinate_counts["max_ray_coordinate_error"],
+                        float(coord["ray_coordinate_error"]),
+                    )
+        if depth_index:
+            depth_names = set(depth_index)
+            view_names = set(by_view)
+            if depth_names != view_names:
+                raise ValueError(
+                    f"wrapper/depth manifest image-list mismatch for {set_scene}: "
+                    f"missing={sorted(depth_names - view_names)[:5]} extra={sorted(view_names - depth_names)[:5]}"
+                )
+        if release_rows_by_image:
+            release_view_names = set(release_rows_by_image)
+            view_names = set(by_view)
+            if release_view_names != view_names:
+                raise ValueError(
+                    f"wrapper/release image-list mismatch for {set_scene}: "
+                    f"missing={sorted(release_view_names - view_names)[:5]} extra={sorted(view_names - release_view_names)[:5]}"
+                )
+            if coordinate_counts["observation_count"] != int(packet_set.get("observation_count", -1)):
+                raise ValueError(f"runtime observation count mismatch for {set_scene}")
+            if coordinate_counts["packet_bounds_pass_count"] != coordinate_counts["observation_count"]:
+                raise ValueError(f"packet coordinate bounds failure for {set_scene}")
+            frozen_summary = packet_set.get("coordinate_summary", {})
+            if coordinate_counts["max_projection_vs_implicit_diff_px"] > min(
+                IMPLICIT_MAPPING_GATE_PX,
+                float(frozen_summary.get("implicit_mapping_gate_px", IMPLICIT_MAPPING_GATE_PX)),
+            ):
+                raise ValueError(f"projection-vs-implicit gate failed for {set_scene}")
+            if coordinate_counts["max_ray_coordinate_error"] > RAY_COORD_TOL:
+                raise ValueError(f"ray coordinate gate failed for {set_scene}")
         records_root = canonical_records_root_sha256(
             view_rows,
             ["scene", "image_name", "packet_camera_record_sha256", "packet_sha256"],
@@ -1203,6 +1572,7 @@ def validate_compatibility_wrapper(
                 "packet_patch_size": packet_set.get("packet_patch_size"),
                 "packet_patch_radius": packet_set.get("packet_patch_radius"),
                 "packet_headers_checked_when_local": True,
+                "runtime_coordinate_gate": coordinate_counts if release_rows_by_image else {},
             }
         )
     if scene is not None and not validation["packet_sets"]:
