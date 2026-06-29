@@ -54,6 +54,13 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     validate_release_v12_rows_for_evaluator,
     verify_payload_integrity,
 )
+from gcp_packet_camera_compatibility import (  # noqa: E402
+    PACKET_PIXEL_DOMAIN,
+    load_compatibility_wrapper,
+    packet_projection_for_row,
+    packet_set_lookup,
+    packet_view_lookup,
+)
 
 
 DEPTH_SUFFIXES = (".npy", ".npz", ".tif", ".tiff", ".png")
@@ -907,6 +914,7 @@ def main() -> None:
     parser.add_argument("--colmap_model")
     parser.add_argument("--depth_dir")
     parser.add_argument("--depth_manifest")
+    parser.add_argument("--packet_compatibility_manifest")
     parser.add_argument("--annotations_csv")
     parser.add_argument("--gcp_csv")
     parser.add_argument("--split_csv")
@@ -961,6 +969,11 @@ def main() -> None:
     depth_manifest_path: Path | None = None
     depth_manifest: Dict[str, Any] | None = None
     depth_manifest_sha256 = ""
+    packet_compatibility_path: Path | None = None
+    packet_compatibility: Dict[str, Any] | None = None
+    packet_compatibility_sha256 = ""
+    packet_compatibility_set: Dict[str, Any] | None = None
+    packet_compatibility_views: Dict[str, Dict[str, Any]] = {}
     depth_index: Dict[str, Dict[str, Any]] = {}
     metric_packet_manifest = False
     metric_packet_numerical_support_floor = 0.0
@@ -1101,6 +1114,25 @@ def main() -> None:
     else:
         raise SystemExit("--depth_semantics is required unless --depth_manifest is supplied")
 
+    if args.packet_compatibility_manifest:
+        if not release_config or not args.scene:
+            raise SystemExit("--packet_compatibility_manifest requires --release_config and --scene")
+        packet_compatibility_path = Path(args.packet_compatibility_manifest)
+        packet_compatibility_sha256 = file_sha256(packet_compatibility_path)
+        packet_compatibility = load_compatibility_wrapper(packet_compatibility_path)
+        packet_compatibility_set = packet_set_lookup(packet_compatibility, args.scene)
+        packet_compatibility_views = packet_view_lookup(packet_compatibility_set)
+        if depth_manifest_path and packet_compatibility_set.get("original_depth_manifest_sha256") != depth_manifest_sha256:
+            raise SystemExit(
+                "packet compatibility wrapper depth-manifest SHA mismatch: "
+                f"{packet_compatibility_set.get('original_depth_manifest_sha256')} vs {depth_manifest_sha256}"
+            )
+        if packet_compatibility.get("release_id") != release_config.get("release_id"):
+            raise SystemExit(
+                f"packet compatibility release mismatch: {packet_compatibility.get('release_id')} "
+                f"vs {release_config.get('release_id')}"
+            )
+
     required = ["colmap_model", "depth_dir", "annotations_csv", "gcp_csv", "out_dir"]
     missing = [name for name in required if not getattr(args, name)]
     if missing:
@@ -1152,7 +1184,7 @@ def main() -> None:
                 rows=raw_rows,
                 colmap_cameras=cameras,
                 colmap_images=images,
-                depth_manifest=depth_manifest,
+                depth_manifest=None if packet_compatibility is not None else depth_manifest,
             )
         except ValueError as exc:
             raise SystemExit(f"v1.2 release pixel-domain validation failed: {exc}") from exc
@@ -1283,7 +1315,21 @@ def main() -> None:
         depth_height = int(depth_meta["depth_height"])
         derived_scale_x = depth_width / max(1, camera_width)
         derived_scale_y = depth_height / max(1, camera_height)
-        if depth_index:
+        packet_projection: Dict[str, Any] | None = None
+        if packet_compatibility_views:
+            view_mapping = packet_compatibility_views.get(Path(image_name).name)
+            if view_mapping is None:
+                raise SystemExit(f"missing packet compatibility view mapping for {image_name}")
+            packet_projection = packet_projection_for_row(row, view_mapping)
+            packet_camera = packet_projection["packet_camera"]
+            if int(packet_camera.width) != depth_width or int(packet_camera.height) != depth_height:
+                raise SystemExit(
+                    f"packet compatibility camera shape mismatch for {image_name}: "
+                    f"camera {packet_camera.width}x{packet_camera.height}, packet {depth_width}x{depth_height}"
+                )
+            depth_pixel_scale_x = float(packet_projection["depth_pixel_scale_x"])
+            depth_pixel_scale_y = float(packet_projection["depth_pixel_scale_y"])
+        elif depth_index:
             depth_pixel_scale_x = derived_scale_x
             depth_pixel_scale_y = derived_scale_y
         else:
@@ -1300,8 +1346,18 @@ def main() -> None:
                 )
         u = float(base_out["u_px"])
         v = float(base_out["v_px"])
-        depth_u = u * depth_pixel_scale_x
-        depth_v = v * depth_pixel_scale_y
+        if packet_projection is not None:
+            depth_u = float(packet_projection["packet_u_px"])
+            depth_v = float(packet_projection["packet_v_px"])
+            sampling_camera = packet_projection["packet_camera"]
+            geometry_u = depth_u
+            geometry_v = depth_v
+        else:
+            depth_u = u * depth_pixel_scale_x
+            depth_v = v * depth_pixel_scale_y
+            sampling_camera = camera
+            geometry_u = u
+            geometry_v = v
         base_out["geometry_u_px"] = u
         base_out["geometry_v_px"] = v
         base_out["depth_u_px"] = depth_u
@@ -1314,13 +1370,20 @@ def main() -> None:
             base_out["depth_packet_schema"] = METRIC_PACKET_MANIFEST_SCHEMA
             base_out["primary_depth_tensor"] = PRIMARY_DEPTH_TENSOR
             base_out["packet_sha256"] = depth_meta.get("packet_sha256", "")
+        if packet_projection is not None:
+            base_out["packet_pixel_domain"] = PACKET_PIXEL_DOMAIN
+            base_out["packet_patch_protocol"] = packet_projection["packet_patch_protocol"]
+            base_out["packet_normalized_x"] = packet_projection["packet_normalized_x"]
+            base_out["packet_normalized_y"] = packet_projection["packet_normalized_y"]
+            base_out["packet_ray_coordinate_error"] = packet_projection["ray_coordinate_error"]
+            base_out["packet_ray_angle_error_rad"] = packet_projection["ray_angle_error_rad"]
         base_out["depth_pixel_scale_x"] = depth_pixel_scale_x
         base_out["depth_pixel_scale_y"] = depth_pixel_scale_y
         valid, patch_stats = robust_depth_patch(
             depth=depth,
-            camera=camera,
-            u=u,
-            v=v,
+            camera=sampling_camera,
+            u=geometry_u,
+            v=geometry_v,
             depth_u=depth_u,
             depth_v=depth_v,
             depth_pixel_scale_x=depth_pixel_scale_x,
@@ -1346,7 +1409,7 @@ def main() -> None:
             failure_counter[reason] += 1
             observation_rows.append(base_out)
             continue
-        xyz = backproject_world(camera, image, u, v, float(patch_stats["camera_z"]))
+        xyz = backproject_world(sampling_camera, image, geometry_u, geometry_v, float(patch_stats["camera_z"]))
         base_out.update(
             {
                 "valid": 1,
@@ -1523,6 +1586,10 @@ def main() -> None:
         "release_verified_files": release_verified_files,
         "depth_manifest": str(depth_manifest_path) if depth_manifest_path else "",
         "depth_manifest_sha256": depth_manifest_sha256,
+        "packet_compatibility_manifest": str(packet_compatibility_path) if packet_compatibility_path else "",
+        "packet_compatibility_manifest_sha256": packet_compatibility_sha256,
+        "packet_compatibility_schema": packet_compatibility.get("schema", "") if packet_compatibility else "",
+        "packet_compatibility_patch_protocol": packet_compatibility_set.get("patch_protocol", "") if packet_compatibility_set else "",
         "depth_manifest_summary": {
             "schema": depth_manifest.get("schema", "") if depth_manifest else "",
             "packet_schema": depth_manifest.get("packet_schema", "") if depth_manifest else "",
