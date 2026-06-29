@@ -60,6 +60,11 @@ PACKET_REF_CONSISTENCY_PROTOCOL = "raw_accumulator_recompute_v2_with_variance_fo
 FORMULA_SOURCE_EXPLICIT_FIELD = "manifest_explicit_field"
 FORMULA_SOURCE_TENSOR_FORMULAS = "manifest_tensor_formulas"
 FORMULA_SOURCE_SCHEMA_IMPLIED = "packet_schema_implied_contract"
+APPROVED_FORMULA_COMPACT_ALLOWLIST = {
+    "M1/A",
+    "M1/AforA>floorelseNaN",
+}
+PACKET_REF_NUMERIC_TOL = 1e-9
 REQUIRED_TENSOR_DTYPES = {
     "accumulated_alpha": "float32",
     "weighted_camera_z_sum": "float32",
@@ -126,6 +131,15 @@ def verify_detached_sha256(path: Path) -> dict[str, Any]:
     if not passed:
         raise ValueError(f"detached sha256 mismatch for {path}: {token} vs {actual}")
     return {"path": str(path), "sha256_path": str(sha_path), "sha256": actual, "passed": True}
+
+
+def validate_approved_sha256(value: str | None) -> str:
+    text = "" if value is None else str(value).strip()
+    if not text:
+        raise ValueError("approved packet compatibility wrapper SHA-256 is required")
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", text):
+        raise ValueError(f"approved packet compatibility wrapper SHA-256 must be 64 hex characters: {text!r}")
+    return text.lower()
 
 
 def sha256_bytes(payload: bytes) -> str:
@@ -706,9 +720,7 @@ def formal_formula_from_manifest(depth_manifest: dict[str, Any]) -> tuple[str, s
 
 def normalize_formal_formula(value: str) -> str:
     compact = str(value).strip().replace(" ", "")
-    if compact == FORMAL_DEPTH_FORMULA:
-        return FORMAL_DEPTH_FORMULA
-    if compact.startswith("M1/A"):
+    if compact in APPROVED_FORMULA_COMPACT_ALLOWLIST:
         return FORMAL_DEPTH_FORMULA
     raise ValueError(f"formal depth formula mismatch: {value!r}")
 
@@ -761,7 +773,8 @@ def validate_depth_index_row_contract(row: dict[str, Any], expected_width: int, 
     missing = sorted(set(REQUIRED_TENSOR_DTYPES) - tensor_names)
     if missing:
         raise ValueError(f"depth index tensor declarations missing for {row.get('image_name')}: {missing}")
-    if str(row.get("packet_recompute_passed", "")).lower() not in {"true", "1"} and row.get("packet_recompute_passed") is not True:
+    packet_recompute = row.get("packet_recompute_passed")
+    if not (packet_recompute is True or (isinstance(packet_recompute, str) and packet_recompute.strip().lower() == "true")):
         raise ValueError(f"packet/ref consistency did not pass for {row.get('image_name')}")
     required_ref_fields = [
         "variance_packet_ref_abs_error",
@@ -775,15 +788,30 @@ def validate_depth_index_row_contract(row: dict[str, Any], expected_width: int, 
     abs_error = float(row["variance_packet_ref_abs_error"])
     allowed_error = float(row["variance_packet_ref_allowed_error"])
     ratio = float(row["variance_packet_ref_consistency_ratio"])
-    fail_count = int(float(row["variance_consistency_fail_count"]))
+    fail_count_raw = row["variance_consistency_fail_count"]
+    if isinstance(fail_count_raw, bool):
+        raise ValueError(f"packet/ref failure count must be integer zero for {row.get('image_name')}: {fail_count_raw!r}")
+    if isinstance(fail_count_raw, int):
+        fail_count = fail_count_raw
+    elif isinstance(fail_count_raw, str) and re.fullmatch(r"[+-]?\d+", fail_count_raw.strip()):
+        fail_count = int(fail_count_raw.strip())
+    else:
+        raise ValueError(f"packet/ref failure count must be strict integer zero for {row.get('image_name')}: {fail_count_raw!r}")
     if not all(math.isfinite(v) for v in [abs_error, allowed_error, ratio]):
         raise ValueError(f"packet/ref numeric field is not finite for {row.get('image_name')}")
     if allowed_error < 0 or abs_error < 0 or fail_count != 0:
         raise ValueError(f"packet/ref consistency failure fields invalid for {row.get('image_name')}")
-    expected_ratio = 0.0 if allowed_error == 0.0 and abs_error == 0.0 else abs_error / allowed_error
     if allowed_error == 0.0 and abs_error != 0.0:
         raise ValueError(f"packet/ref allowed error is zero with nonzero abs error for {row.get('image_name')}")
-    if abs(expected_ratio - ratio) > max(1e-6, 1e-6 * abs(expected_ratio)):
+    if allowed_error > 0.0 and abs_error > allowed_error + PACKET_REF_NUMERIC_TOL:
+        raise ValueError(
+            f"packet/ref abs error exceeds allowed error for {row.get('image_name')}: "
+            f"{abs_error} > {allowed_error}"
+        )
+    if ratio < 0.0 or ratio > 1.0 + PACKET_REF_NUMERIC_TOL:
+        raise ValueError(f"packet/ref consistency ratio outside [0,1] for {row.get('image_name')}: {ratio}")
+    expected_ratio = 0.0 if allowed_error == 0.0 else abs_error / allowed_error
+    if abs(expected_ratio - ratio) > max(PACKET_REF_NUMERIC_TOL, PACKET_REF_NUMERIC_TOL * abs(expected_ratio)):
         raise ValueError(
             f"packet/ref consistency ratio mismatch for {row.get('image_name')}: "
             f"{ratio} vs {expected_ratio}"
@@ -1336,11 +1364,13 @@ def validate_compatibility_wrapper(
     scene: str | None = None,
     patch_size: int | None = None,
     packet_search_roots: Sequence[Path] = (),
+    require_local_packets: bool = True,
 ) -> dict[str, Any]:
     detached = verify_detached_sha256(path)
     actual_wrapper_sha = detached["sha256"]
-    if expected_wrapper_sha256 and actual_wrapper_sha.lower() != expected_wrapper_sha256.lower():
-        raise ValueError(f"approved wrapper SHA mismatch: {actual_wrapper_sha} vs {expected_wrapper_sha256}")
+    approved_wrapper_sha = validate_approved_sha256(expected_wrapper_sha256)
+    if actual_wrapper_sha.lower() != approved_wrapper_sha:
+        raise ValueError(f"approved wrapper SHA mismatch: {actual_wrapper_sha} vs {approved_wrapper_sha}")
     wrapper = load_json(path)
     if wrapper.get("schema") != COMPAT_SCHEMA:
         raise ValueError(f"Unsupported packet compatibility schema: {wrapper.get('schema')}")
@@ -1421,12 +1451,31 @@ def validate_compatibility_wrapper(
         if int(packet_set.get("view_count", -1)) != len(view_rows):
             raise ValueError(f"view_count mismatch for {set_scene}")
         by_view: dict[str, dict[str, Any]] = {}
+        packet_camera_records = packet_set.get("packet_camera_records", [])
+        if not isinstance(packet_camera_records, list):
+            raise ValueError(f"packet_camera_records must be a list for {set_scene}")
+        packet_camera_records_by_name: dict[str, dict[str, Any]] = {}
+        for cam_record in packet_camera_records:
+            rec_name = Path(str(cam_record.get("image_name", ""))).name
+            if not rec_name:
+                raise ValueError(f"packet camera record missing image_name in {set_scene}")
+            if rec_name in packet_camera_records_by_name:
+                raise ValueError(f"duplicate packet camera record in wrapper: {set_scene} {rec_name}")
+            packet_camera_records_by_name[rec_name] = cam_record
         coordinate_counts = {
             "observation_count": 0,
             "packet_bounds_pass_count": 0,
             "max_projection_vs_implicit_diff_px": 0.0,
             "max_ray_coordinate_error": 0.0,
             "all_observations_uniquely_mapped": True,
+        }
+        packet_counts = {
+            "expected_packet_count": len(view_rows),
+            "resolved_packet_count": 0,
+            "sha_verified_packet_count": 0,
+            "header_validated_packet_count": 0,
+            "missing_packet_count": 0,
+            "ambiguous_packet_count": 0,
         }
         for row in view_rows:
             name = Path(str(row.get("image_name", ""))).name
@@ -1445,17 +1494,16 @@ def validate_compatibility_wrapper(
                 raise ValueError(f"stored packet_y out of bounds for {set_scene} {name}")
             if row.get("pose_equivalence_passed") is not True:
                 raise ValueError(f"pose equivalence did not pass for {set_scene} {name}")
-            packet_pose_record = None
-            for cam_record in packet_set.get("packet_camera_records", []):
-                if Path(str(cam_record.get("image_name", ""))).name == name:
-                    packet_pose_record = cam_record.get("packet_pose_record")
-                    if pose_record_hash(packet_pose_record) != cam_record.get("packet_pose_record_sha256"):
-                        raise ValueError(f"packet pose record hash mismatch for {set_scene} {name}")
-                    if cam_record.get("packet_pose_record_sha256") != row.get("packet_pose_record_sha256"):
-                        raise ValueError(f"view packet pose reference mismatch for {set_scene} {name}")
-                    break
-            if packet_pose_record is None:
-                raise ValueError(f"orphan/missing packet pose record for {set_scene} {name}")
+            cam_record = packet_camera_records_by_name.get(name)
+            if cam_record is None:
+                raise ValueError(f"missing packet pose/camera record for {set_scene} {name}")
+            packet_pose_record = cam_record.get("packet_pose_record")
+            if pose_record_hash(packet_pose_record) != cam_record.get("packet_pose_record_sha256"):
+                raise ValueError(f"packet pose record hash mismatch for {set_scene} {name}")
+            if cam_record.get("packet_pose_record_sha256") != row.get("packet_pose_record_sha256"):
+                raise ValueError(f"view packet pose reference mismatch for {set_scene} {name}")
+            if cam_record.get("packet_camera_record_sha256") != row.get("packet_camera_record_sha256"):
+                raise ValueError(f"view packet camera reference mismatch for {set_scene} {name}")
             if target_pose_records:
                 target_pose = target_pose_records.get(name)
                 if target_pose is None:
@@ -1502,17 +1550,22 @@ def validate_compatibility_wrapper(
                 validate_depth_index_row_contract(depth_row, int(row["packet_width"]), int(row["packet_height"]))
                 compare_view_to_depth_index(row, depth_row)
             packet_path = resolve_packet_path(str(row.get("packet_path_original", "")), packet_search_roots)
-            if packet_path is None and row.get("packet_path_local"):
-                packet_path = Path(str(row["packet_path_local"]))
-            if packet_path is not None and packet_path.exists():
+            if packet_path is None:
+                packet_counts["missing_packet_count"] += 1
+                if require_local_packets:
+                    raise ValueError(f"local packet is required but missing for {set_scene} {name}")
+            else:
+                packet_counts["resolved_packet_count"] += 1
                 if row.get("packet_sha256") and file_sha256(packet_path) != row.get("packet_sha256"):
                     raise ValueError(f"packet SHA mismatch for {set_scene} {name}")
+                packet_counts["sha_verified_packet_count"] += 1
                 validate_npz_packet_headers(
                     path=packet_path,
                     expected_width=int(row["packet_width"]),
                     expected_height=int(row["packet_height"]),
                     expected_dtype="float32",
                 )
+                packet_counts["header_validated_packet_count"] += 1
             if release_rows_by_image:
                 obs_rows = release_rows_by_image.get(name, [])
                 if not obs_rows:
@@ -1537,9 +1590,23 @@ def validate_compatibility_wrapper(
                     f"wrapper/depth manifest image-list mismatch for {set_scene}: "
                     f"missing={sorted(depth_names - view_names)[:5]} extra={sorted(view_names - depth_names)[:5]}"
                 )
+        camera_record_names = set(packet_camera_records_by_name)
+        view_names = set(by_view)
+        if camera_record_names != view_names:
+            raise ValueError(
+                f"packet camera record set mismatch for {set_scene}: "
+                f"missing={sorted(view_names - camera_record_names)[:5]} extra={sorted(camera_record_names - view_names)[:5]}"
+            )
+        if require_local_packets and (
+            packet_counts["resolved_packet_count"] != packet_counts["expected_packet_count"]
+            or packet_counts["sha_verified_packet_count"] != packet_counts["expected_packet_count"]
+            or packet_counts["header_validated_packet_count"] != packet_counts["expected_packet_count"]
+            or packet_counts["missing_packet_count"] != 0
+            or packet_counts["ambiguous_packet_count"] != 0
+        ):
+            raise ValueError(f"local packet validation counts incomplete for {set_scene}: {packet_counts}")
         if release_rows_by_image:
             release_view_names = set(release_rows_by_image)
-            view_names = set(by_view)
             if release_view_names != view_names:
                 raise ValueError(
                     f"wrapper/release image-list mismatch for {set_scene}: "
@@ -1571,7 +1638,8 @@ def validate_compatibility_wrapper(
                 "patch_protocol": packet_set.get("patch_protocol"),
                 "packet_patch_size": packet_set.get("packet_patch_size"),
                 "packet_patch_radius": packet_set.get("packet_patch_radius"),
-                "packet_headers_checked_when_local": True,
+                "packet_headers_checked_when_local": bool(packet_counts["header_validated_packet_count"] == packet_counts["expected_packet_count"]),
+                **packet_counts,
                 "runtime_coordinate_gate": coordinate_counts if release_rows_by_image else {},
             }
         )

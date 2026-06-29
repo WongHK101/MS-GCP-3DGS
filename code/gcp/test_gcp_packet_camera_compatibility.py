@@ -14,6 +14,7 @@ from gcp_packet_camera_compatibility import (
     IMPLICIT_MAPPING_GATE_PX,
     MATRIX_EQUIVALENCE_TOL_PX,
     RAY_COORD_TOL,
+    REQUIRED_TENSOR_DTYPES,
     build_wrapper,
     file_sha256,
     focal2fov,
@@ -296,6 +297,19 @@ def test_packet_schema_formal_depth_negative_cases() -> dict[str, Any]:
     explicit_formula_bad = load_depth_manifest_copy()
     explicit_formula_bad["formal_depth_formula"] = "A/M1"
     cases["formal_formula_mismatch"] = expect_raises(lambda: validate_depth_manifest_contract(explicit_formula_bad))
+    for bad_formula in ["M1/A+1", "M1/AA", "M1/A malicious_suffix"]:
+        manifest = load_depth_manifest_copy()
+        manifest["tensor_formulas"]["alpha_normalized_expected_camera_z"] = bad_formula
+        cases[f"formal_formula_reject_{bad_formula.replace('/', '_').replace(' ', '_')}"] = expect_raises(
+            lambda manifest=manifest: validate_depth_manifest_contract(manifest)
+        )
+    approved_tensor_formula = load_depth_manifest_copy()
+    validate_depth_manifest_contract(approved_tensor_formula)
+    cases["approved_tensor_formula_pass"] = "PASS"
+    exact_formula = load_depth_manifest_copy()
+    exact_formula["tensor_formulas"]["alpha_normalized_expected_camera_z"] = "M1/A"
+    validate_depth_manifest_contract(exact_formula)
+    cases["exact_m1_over_a_formula_pass"] = "PASS"
     schema_explicit_formula_missing = load_depth_manifest_copy()
     schema_explicit_formula_missing["packet_schema"] = "ms_gcp_metric_depth_packet_requires_explicit_formula_v1"
     schema_explicit_formula_missing.pop("tensor_formulas", None)
@@ -432,6 +446,7 @@ def test_real_3k_coordinate_only_wrapper() -> dict[str, Any]:
         wrapper = json.loads(Path(result["wrapper_path"]).read_text(encoding="utf-8"))
         validation = validate_compatibility_wrapper(
             Path(result["wrapper_path"]),
+            expected_wrapper_sha256=result["wrapper_sha256"],
             depth_manifest=load_depth_manifest_copy(),
             depth_manifest_path=DEPTH_MANIFEST_3K,
             release_config=load_json(RELEASE_CONFIG),
@@ -489,32 +504,29 @@ def test_wrapper_runtime_negative_cases() -> dict[str, Any]:
             patch_size=7,
             packet_search_roots=[PACKET_SEARCH_ROOT],
         )
+        def validate_local(path: Path, **kwargs: Any) -> dict[str, Any]:
+            expected = kwargs.pop("expected_wrapper_sha256", file_sha256(path))
+            call_args = dict(common)
+            call_args.update(kwargs)
+            return validate_compatibility_wrapper(path, expected_wrapper_sha256=expected, **call_args)
+
         cases["detached_wrapper_sha_mismatch"] = expect_raises(
-            lambda: validate_compatibility_wrapper(write_mutated("sha_bad", lambda w: w.update({"detached_sha_tamper": True}), False), **common)
+            lambda: validate_local(write_mutated("sha_bad", lambda w: w.update({"detached_sha_tamper": True}), False), expected_wrapper_sha256=result["wrapper_sha256"])
         )
         cases["records_root_tamper"] = expect_raises(
-            lambda: validate_compatibility_wrapper(
-                write_mutated("root_bad", lambda w: w["packet_sets"][0].update({"compatibility_records_root_sha256": "0" * 64})),
-                **common,
-            )
+            lambda: validate_local(write_mutated("root_bad", lambda w: w["packet_sets"][0].update({"compatibility_records_root_sha256": "0" * 64})))
         )
         cases["mapping_hash_tamper"] = expect_raises(
-            lambda: validate_compatibility_wrapper(
-                write_mutated("mapping_bad", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"source_target_packet_mapping_record_sha256": "1" * 64})),
-                **common,
-            )
+            lambda: validate_local(write_mutated("mapping_bad", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"source_target_packet_mapping_record_sha256": "1" * 64})))
         )
         cases["packet_camera_hash_tamper"] = expect_raises(
-            lambda: validate_compatibility_wrapper(
-                write_mutated("camera_bad", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"packet_camera_record_sha256": "2" * 64})),
-                **common,
-            )
+            lambda: validate_local(write_mutated("camera_bad", lambda w: w["packet_sets"][0]["view_mappings"][0].update({"packet_camera_record_sha256": "2" * 64})))
         )
-        cases["patch_size_mismatch"] = expect_raises(lambda: validate_compatibility_wrapper(wrapper_path, **{**common, "patch_size": 5}))
+        cases["patch_size_mismatch"] = expect_raises(lambda: validate_local(wrapper_path, patch_size=5, expected_wrapper_sha256=result["wrapper_sha256"]))
         bad_manifest = load_depth_manifest_copy()
         bad_manifest["primary_depth_tensor"] = "harmonic_camera_z"
         cases["wrapper_vs_depth_manifest_tensor_declaration_mismatch"] = expect_raises(
-            lambda: validate_compatibility_wrapper(wrapper_path, **{**common, "depth_manifest": bad_manifest})
+            lambda: validate_local(wrapper_path, depth_manifest=bad_manifest, expected_wrapper_sha256=result["wrapper_sha256"])
         )
     return cases
 
@@ -550,11 +562,36 @@ def validate_fixture_wrapper(path: Path | None = None, **overrides: Any) -> dict
     return validate_compatibility_wrapper(path or fixture["wrapper_path"], **common)
 
 
+def write_synthetic_packet(path: Path, *, width: int, height: int, bad_shape: bool = False) -> None:
+    shape = (height + 1, width) if bad_shape else (height, width)
+    arrays: dict[str, Any] = {}
+    for name, dtype in REQUIRED_TENSOR_DTYPES.items():
+        arrays[name] = np.zeros(shape, dtype=np.dtype(dtype))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, **arrays)
+
+
 def completion_negative_test(name: str, mutate_wrapper: Callable[[dict[str, Any]], None] | None = None, **overrides: Any) -> dict[str, Any]:
     path = write_mutated_wrapper_case(name, mutate_wrapper) if mutate_wrapper else None
     if path is not None and "expected_wrapper_sha256" not in overrides:
         overrides["expected_wrapper_sha256"] = file_sha256(path)
     return {"case": name, "rejected_by": expect_raises(lambda: validate_fixture_wrapper(path, **overrides))}
+
+
+def test_approved_wrapper_sha_runtime_gate() -> dict[str, Any]:
+    fixture = wrapper_fixture()
+    correct = validate_fixture_wrapper()
+    cases = {
+        "missing_approved_sha_rejection": expect_raises(lambda: validate_fixture_wrapper(expected_wrapper_sha256=None)),
+        "empty_approved_sha_rejection": expect_raises(lambda: validate_fixture_wrapper(expected_wrapper_sha256="")),
+        "malformed_length_sha_rejection": expect_raises(lambda: validate_fixture_wrapper(expected_wrapper_sha256="abc")),
+        "non_hex_sha_rejection": expect_raises(lambda: validate_fixture_wrapper(expected_wrapper_sha256="g" * 64)),
+        "correct_approved_sha_pass": correct["wrapper_sha256"] == fixture["result"]["wrapper_sha256"],
+        "wrong_approved_sha_rejection": expect_raises(lambda: validate_fixture_wrapper(expected_wrapper_sha256="9" * 64)),
+    }
+    if cases["correct_approved_sha_pass"] is not True:
+        raise AssertionError(cases)
+    return cases
 
 
 def test_release_root_digest_mismatch() -> dict[str, Any]:
@@ -670,6 +707,112 @@ def test_packet_ref_malformed_numeric_field() -> dict[str, Any]:
     return completion_negative_test("packet_ref_malformed_numeric_field", depth_manifest=manifest)
 
 
+def test_packet_ref_bound_negative_cases() -> dict[str, Any]:
+    cases: dict[str, str] = {}
+
+    def run_case(name: str, **updates: Any) -> None:
+        manifest = load_depth_manifest_copy()
+        manifest["depth_index"][0].update(updates)
+        cases[name] = completion_negative_test(name, depth_manifest=manifest)["rejected_by"]
+
+    run_case(
+        "packet_ref_abs_error_gt_allowed",
+        variance_packet_ref_abs_error="2.0",
+        variance_packet_ref_allowed_error="1.0",
+        variance_packet_ref_consistency_ratio="2.0",
+    )
+    run_case(
+        "packet_ref_ratio_gt_one",
+        variance_packet_ref_abs_error="0.5",
+        variance_packet_ref_allowed_error="1.0",
+        variance_packet_ref_consistency_ratio="1.5",
+    )
+    run_case(
+        "packet_ref_negative_abs_error",
+        variance_packet_ref_abs_error="-0.1",
+        variance_packet_ref_allowed_error="1.0",
+        variance_packet_ref_consistency_ratio="0.0",
+    )
+    run_case(
+        "packet_ref_negative_allowed_error",
+        variance_packet_ref_abs_error="0.0",
+        variance_packet_ref_allowed_error="-1.0",
+        variance_packet_ref_consistency_ratio="0.0",
+    )
+    run_case(
+        "packet_ref_zero_allowed_nonzero_abs",
+        variance_packet_ref_abs_error="0.1",
+        variance_packet_ref_allowed_error="0.0",
+        variance_packet_ref_consistency_ratio="0.0",
+    )
+    run_case(
+        "packet_ref_fractional_failure_count",
+        variance_consistency_fail_count="0.5",
+    )
+    run_case(
+        "packet_ref_inconsistent_ratio",
+        variance_packet_ref_abs_error="0.25",
+        variance_packet_ref_allowed_error="1.0",
+        variance_packet_ref_consistency_ratio="0.1",
+    )
+    return cases
+
+
+def test_local_packet_runtime_header_gate() -> dict[str, Any]:
+    fixture = wrapper_fixture()
+    first = fixture["wrapper"]["packet_sets"][0]["view_mappings"][0]
+    packet_name = Path(first["packet_path_original"]).name
+    width = int(first["packet_width"])
+    height = int(first["packet_height"])
+    cases: dict[str, Any] = {}
+    validation = validate_fixture_wrapper()
+    packet_set = validation["packet_sets"][0]
+    for key, expected in {
+        "expected_packet_count": 24,
+        "resolved_packet_count": 24,
+        "sha_verified_packet_count": 24,
+        "header_validated_packet_count": 24,
+        "missing_packet_count": 0,
+        "ambiguous_packet_count": 0,
+    }.items():
+        if packet_set.get(key) != expected:
+            raise AssertionError({key: packet_set.get(key), "expected": expected})
+    cases["real_3k_24_of_24_packet_header_validation_pass"] = dict(packet_set)
+    cases["missing_local_packet_rejection"] = expect_raises(lambda: validate_fixture_wrapper(packet_search_roots=[]))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_root = Path(tmp)
+        for sub in ["a", "b"]:
+            target = tmp_root / sub / packet_name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(Path(first["packet_path_local"]), target)
+        cases["ambiguous_local_packet_rejection"] = expect_raises(lambda: validate_fixture_wrapper(packet_search_roots=[tmp_root]))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_root = Path(tmp)
+        fake = tmp_root / packet_name
+        fake.write_bytes(b"not a real packet")
+        cases["local_packet_sha_mismatch_rejection"] = expect_raises(lambda: validate_fixture_wrapper(packet_search_roots=[tmp_root]))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_root = Path(tmp)
+        fake = tmp_root / packet_name
+        write_synthetic_packet(fake, width=width, height=height, bad_shape=True)
+        fake_sha = file_sha256(fake)
+
+        def mutate(w: dict[str, Any]) -> None:
+            w["packet_sets"][0]["view_mappings"][0].update({"packet_sha256": fake_sha})
+            refresh_first_view_and_root(w)
+
+        path = write_mutated_wrapper_case("local_packet_header_mismatch", mutate)
+        manifest = load_depth_manifest_copy()
+        manifest["depth_index"][0]["packet_sha256"] = fake_sha
+        cases["local_packet_header_mismatch_rejection"] = expect_raises(
+            lambda: validate_fixture_wrapper(path, expected_wrapper_sha256=file_sha256(path), depth_manifest=manifest, packet_search_roots=[tmp_root])
+        )
+    return cases
+
+
 def test_evaluator_source_sha_mismatch() -> dict[str, Any]:
     return completion_negative_test("evaluator_source_sha_mismatch", lambda w: w.update({"evaluator_source_sha256": "8" * 64}))
 
@@ -709,6 +852,26 @@ def test_orphan_packet_pose_record() -> dict[str, Any]:
     return completion_negative_test("orphan_packet_pose_record", lambda w: w["packet_sets"][0]["packet_camera_records"].pop(0))
 
 
+def test_packet_camera_record_set_negative_cases() -> dict[str, Any]:
+    cases = {
+        "extra_packet_camera_record_rejection": completion_negative_test(
+            "extra_packet_camera_record_rejection",
+            lambda w: w["packet_sets"][0]["packet_camera_records"].append(
+                {**copy.deepcopy(w["packet_sets"][0]["packet_camera_records"][0]), "image_name": "EXTRA_PACKET_CAMERA_RECORD.JPG"}
+            ),
+        )["rejected_by"],
+        "duplicate_packet_camera_record_rejection": completion_negative_test(
+            "duplicate_packet_camera_record_rejection",
+            lambda w: w["packet_sets"][0]["packet_camera_records"].append(copy.deepcopy(w["packet_sets"][0]["packet_camera_records"][0])),
+        )["rejected_by"],
+        "missing_packet_camera_record_rejection": completion_negative_test(
+            "missing_packet_camera_record_rejection",
+            lambda w: w["packet_sets"][0]["packet_camera_records"].pop(0),
+        )["rejected_by"],
+    }
+    return cases
+
+
 TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("r8_camera_recovery", test_r8_camera_recovery),
     ("rounding_tie_case", test_rounding_tie_case),
@@ -723,6 +886,7 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("pose_conversion_negative_cases", test_pose_conversion_negative_cases),
     ("real_3k_coordinate_only_wrapper", test_real_3k_coordinate_only_wrapper),
     ("wrapper_runtime_negative_cases", test_wrapper_runtime_negative_cases),
+    ("approved_wrapper_sha_runtime_gate", test_approved_wrapper_sha_runtime_gate),
     ("release_root_digest_mismatch", test_release_root_digest_mismatch),
     ("release_root_record_sha_mismatch", test_release_root_record_sha_mismatch),
     ("depth_manifest_sha_mismatch", test_depth_manifest_sha_mismatch),
@@ -744,6 +908,8 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("packet_ref_recompute_false", test_packet_ref_recompute_false),
     ("packet_ref_failure_count_abnormal", test_packet_ref_failure_count_abnormal),
     ("packet_ref_malformed_numeric_field", test_packet_ref_malformed_numeric_field),
+    ("packet_ref_bound_negative_cases", test_packet_ref_bound_negative_cases),
+    ("local_packet_runtime_header_gate", test_local_packet_runtime_header_gate),
     ("evaluator_source_sha_mismatch", test_evaluator_source_sha_mismatch),
     ("runtime_dirty_worktree_record_rejection", test_runtime_dirty_worktree_record_rejection),
     ("approved_external_wrapper_sha_mismatch", test_approved_external_wrapper_sha_mismatch),
@@ -753,6 +919,7 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("stored_pose_pass_tamper", test_stored_pose_pass_tamper),
     ("wrong_release_pose_reference", test_wrong_release_pose_reference),
     ("orphan_packet_pose_record", test_orphan_packet_pose_record),
+    ("packet_camera_record_set_negative_cases", test_packet_camera_record_set_negative_cases),
 ]
 
 
