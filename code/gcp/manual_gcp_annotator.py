@@ -62,6 +62,23 @@ def sort_candidates(candidates: List[Dict[str, str]]) -> List[Dict[str, str]]:
     return sorted(candidates, key=key)
 
 
+def candidate_search_radius(cand: Dict[str, str]) -> float:
+    for field in ("projection_uncertainty_px", "search_radius_px"):
+        try:
+            value = float(cand.get(field) or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value) and value > 0:
+            return value
+    return 0.0
+
+
+def candidate_crop_size(cand: Dict[str, str], base_crop_size: int, max_crop_size: int = 2400) -> int:
+    radius = candidate_search_radius(cand)
+    requested = int(math.ceil(radius * 2.0)) if radius > 0 else int(base_crop_size)
+    return max(int(base_crop_size), min(int(max_crop_size), requested))
+
+
 class Annotator:
     def __init__(
         self,
@@ -85,6 +102,8 @@ class Annotator:
         self.point_name_filter = point_name_filter
         self.max_rows = int(max_rows)
         self.crop_size = int(crop_size)
+        self.current_crop_size = self.crop_size
+        self.current_search_radius_px = 0.0
         self.default_canvas_size = int(display_size)
         self.display_size = self.default_canvas_size
         self.view_zoom = 1.0
@@ -465,6 +484,8 @@ class Annotator:
             img = Image.open(image_path).convert("RGB")
         px = float(cand["pixel_x"])
         py = float(cand["pixel_y"])
+        self.current_search_radius_px = candidate_search_radius(cand)
+        self.current_crop_size = candidate_crop_size(cand, self.crop_size)
         correction, correction_info = self.correction_for_candidate(cand)
         ann = self.annotations.get(self.key(cand))
         center_x, center_y = px, py
@@ -474,15 +495,15 @@ class Annotator:
         elif correction is not None:
             center_x = px + correction[0]
             center_y = py + correction[1]
-        half = self.crop_size // 2
+        half = self.current_crop_size // 2
         left = int(round(center_x - half))
         top = int(round(center_y - half))
-        crop = Image.new("RGB", (self.crop_size, self.crop_size), "black")
+        crop = Image.new("RGB", (self.current_crop_size, self.current_crop_size), "black")
         src_box = (
             max(0, left),
             max(0, top),
-            min(img.width, left + self.crop_size),
-            min(img.height, top + self.crop_size),
+            min(img.width, left + self.current_crop_size),
+            min(img.height, top + self.current_crop_size),
         )
         paste_xy = (max(0, -left), max(0, -top))
         if src_box[2] > src_box[0] and src_box[3] > src_box[1]:
@@ -509,7 +530,8 @@ class Annotator:
         self.info.configure(
             text=(
                 f"{self.idx+1}/{len(self.candidates)}  {cand['scene']}  {cand['point_name']}  "
-                f"{cand['image_name']}  rank={cand.get('rank_for_gcp','')} score={cand.get('center_score','')}"
+                f"{cand['image_name']}  rank={cand.get('rank_for_gcp','')} "
+                f"source={cand.get('candidate_source','')} search=+/-{self.current_search_radius_px:.0f}px"
             )
         )
         old = self.annotations.get(self.key(cand))
@@ -524,7 +546,8 @@ class Annotator:
         else:
             self.status.configure(
                 text=(
-                    "Yellow = coarse projection. Magenta = corrected hint. Cyan = manual mark. "
+                    "Yellow = predicted search center/circle, not ground truth. "
+                    "Magenta = corrected hint. Cyan = manual mark. "
                     "Click true GCP center, then press 1/2/3/4/5/6. Arrow keys nudge manual mark by 0.1 px."
                 )
             )
@@ -575,11 +598,21 @@ class Annotator:
             return
         canvas_w, canvas_h = self.canvas_view_size()
         render_size = max(1, int(round(self.canvas_fit_side() * self.view_zoom)))
-        self.render_scale = render_size / self.crop_size
+        self.render_scale = render_size / self.current_crop_size
         rendered = self.current_crop.resize((render_size, render_size), Image.Resampling.LANCZOS)
         draw = ImageDraw.Draw(rendered)
         if self.current_candidate_xy is not None:
             cx, cy = self.current_candidate_xy
+            if self.current_search_radius_px > 0:
+                radius = self.current_search_radius_px * self.render_scale
+                draw.ellipse(
+                    [
+                        (cx * self.render_scale - radius, cy * self.render_scale - radius),
+                        (cx * self.render_scale + radius, cy * self.render_scale + radius),
+                    ],
+                    outline=(255, 230, 0),
+                    width=2,
+                )
             self.draw_cross(draw, cx * self.render_scale, cy * self.render_scale, (255, 230, 0), arm=10, width=2)
         if self.current_corrected_xy is not None:
             px, py = self.current_corrected_xy
@@ -626,7 +659,7 @@ class Annotator:
         left, top = self.crop_origin
         crop_x = (event.x - self.pan_x) / self.render_scale
         crop_y = (event.y - self.pan_y) / self.render_scale
-        if crop_x < 0 or crop_y < 0 or crop_x >= self.crop_size or crop_y >= self.crop_size:
+        if crop_x < 0 or crop_y < 0 or crop_x >= self.current_crop_size or crop_y >= self.current_crop_size:
             self.status.configure(text="Click is outside the image crop; right-drag or zoom to reposition the crop.")
             return
         x = left + crop_x
@@ -824,7 +857,7 @@ class Annotator:
             return
         self.zoom_var.set(f"{self.view_zoom:.2f}")
         render_size = max(1, int(round(self.canvas_fit_side() * self.view_zoom)))
-        new_scale = render_size / self.crop_size
+        new_scale = render_size / self.current_crop_size
         self.pan_x = anchor_x - crop_x * new_scale
         self.pan_y = anchor_y - crop_y * new_scale
         self.render_current_view(center_active=False)
