@@ -25,10 +25,6 @@ from evaluate_gaussian_gcp_geometry import (
 )
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-INPUT_MANIFEST = REPO_ROOT / "configs" / "gcp_v13_release_inputs_v1.json"
-
-
 def check(name: str, fn) -> dict[str, object]:
     try:
         detail = fn()
@@ -45,9 +41,12 @@ def expect_rejected(fn) -> str:
     raise AssertionError("expected ValueError")
 
 
-def load_remote() -> dict:
-    inputs = json.loads(INPUT_MANIFEST.read_text(encoding="utf-8"))
-    return json.loads(Path(inputs["remote_camera_manifest"]).read_text(encoding="utf-8"))
+def load_release_camera_provenance(release: Path) -> dict:
+    config = json.loads((release / "gcp_benchmark_release_v1_3_0.json").read_text(encoding="utf-8"))
+    relative = Path(str(config["camera_provenance_manifest"]))
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"invalid release camera provenance path: {relative}")
+    return json.loads((release / relative).read_text(encoding="utf-8"))
 
 
 def model_for_scene(remote: dict, scene: str):
@@ -79,7 +78,7 @@ def test_integrity(release: Path) -> dict[str, object]:
 
 
 def test_real_release_interface(release: Path) -> dict[str, object]:
-    remote = load_remote()
+    remote = load_release_camera_provenance(release)
     total_all = 0
     total_formal = 0
     scene_all = {}
@@ -143,7 +142,7 @@ def test_real_release_interface(release: Path) -> dict[str, object]:
 
 
 def test_negative_row_gates(release: Path) -> dict[str, object]:
-    remote = load_remote()
+    remote = load_release_camera_provenance(release)
     scene = "gcp_100000_20260610"
     cameras, images = model_for_scene(remote, scene)
     source_rows = read_csv(release / f"{scene}_gcp_annotations_pixel_domain_v1_3_0.csv")
