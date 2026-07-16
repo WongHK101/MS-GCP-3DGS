@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -56,6 +57,31 @@ class GeometryOnlySplitTest(unittest.TestCase):
         first, _ = MODULE.choose_controls(frame, 3)
         second, _ = MODULE.choose_controls(frame, 3)
         self.assertEqual(first, second)
+
+    def test_image_exclusion_is_applied_before_good_view_count(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            annotations = root / "annotations.csv"
+            exclusions = root / "exclusions.csv"
+            pd.DataFrame(
+                [
+                    {"point_name": "G39", "image_name": "keep.JPG", "quality": "Good"},
+                    {"point_name": "G39", "image_name": "drop.JPG", "quality": "Good"},
+                ]
+            ).to_csv(annotations, index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "scene": "scene",
+                        "image_name": "drop.JPG",
+                        "formal_v1_3_include": "false",
+                    }
+                ]
+            ).to_csv(exclusions, index=False)
+            excluded = MODULE.load_image_exclusions(exclusions)
+            summary = MODULE.annotation_summary(annotations, "scene", excluded)
+            self.assertEqual(excluded, {("scene", "drop.JPG")})
+            self.assertEqual(int(summary.iloc[0]["good_view_count"]), 1)
 
 
 if __name__ == "__main__":

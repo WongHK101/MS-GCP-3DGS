@@ -256,10 +256,33 @@ def choose_controls(frame: pd.DataFrame, control_count: int) -> tuple[set[int], 
     return best, split_metrics(frame, best)
 
 
-def annotation_summary(path: Path) -> pd.DataFrame:
+def load_image_exclusions(path: Path | None) -> set[tuple[str, str]]:
+    if path is None:
+        return set()
+    rows = pd.read_csv(path, dtype=str, keep_default_na=False)
+    required = {"scene", "image_name", "formal_v1_3_include"}
+    missing = required - set(rows.columns)
+    if missing:
+        raise ValueError(f"Image exclusion manifest is missing columns: {sorted(missing)}")
+    if rows.duplicated(["scene", "image_name"]).any():
+        raise ValueError("Image exclusion manifest contains duplicate scene/image rows")
+    normalized = rows["formal_v1_3_include"].str.strip().str.lower()
+    if not normalized.isin({"true", "false"}).all():
+        raise ValueError("formal_v1_3_include must contain only true/false")
+    return {
+        (str(row.scene), str(row.image_name))
+        for row in rows.loc[normalized.eq("false"), ["scene", "image_name"]].itertuples(index=False)
+    }
+
+
+def annotation_summary(
+    path: Path, scene: str, image_exclusions: set[tuple[str, str]]
+) -> pd.DataFrame:
     annotations = pd.read_csv(path, dtype=str, keep_default_na=False)
     if "residual" in " ".join(annotations.columns).lower():
         raise ValueError(f"Forbidden residual field in annotation input: {path}")
+    excluded_names = {image for excluded_scene, image in image_exclusions if excluded_scene == scene}
+    annotations = annotations[~annotations["image_name"].isin(excluded_names)].copy()
     good = annotations[annotations["quality"].str.lower() == "good"].copy()
     return good.groupby("point_name", as_index=False).agg(good_view_count=("image_name", "nunique"))
 
@@ -357,6 +380,7 @@ def main() -> int:
     parser.add_argument("--artifact_repo_root", type=Path, required=True)
     parser.add_argument("--release_dir", type=Path, required=True)
     parser.add_argument("--review_coordinate_source", type=Path, required=True)
+    parser.add_argument("--image_exclusion_manifest", type=Path)
     parser.add_argument("--output_root", type=Path, required=True)
     args = parser.parse_args()
 
@@ -366,6 +390,7 @@ def main() -> int:
     coordinates = load_coordinates(args.release_dir, args.review_coordinate_source)
     coordinate_by_name = coordinates.set_index("point_name")
     generator_provenance = generator_git_provenance(Path(__file__).resolve())
+    image_exclusions = load_image_exclusions(args.image_exclusion_manifest)
 
     split_rows = []
     disposition_rows = []
@@ -373,7 +398,7 @@ def main() -> int:
     input_records = []
     for scene, rule in SCENE_RULES.items():
         annotation_path = args.artifact_repo_root / ANNOTATION_RELATIVE_PATHS[scene]
-        counts = annotation_summary(annotation_path)
+        counts = annotation_summary(annotation_path, scene, image_exclusions)
         count_by_name = dict(zip(counts["point_name"], counts["good_view_count"]))
         input_records.append({"scene": scene, "path": str(annotation_path), "sha256": sha256_file(annotation_path)})
         if rule["points"] is None:
@@ -499,6 +524,14 @@ def main() -> int:
         "selection_policy": {
             "forbidden_inputs": ["model residual", "RMSE", "depth", "alpha", "variance", "multiview model scatter"],
             "allowed_inputs": ["surveyed XYZ", "Good view count", "coordinate QC", "user-approved scene boundary"],
+            "image_exclusion_policy": {
+                "selection_basis": "predeclared image-level feature/pose QC independent of GCP residuals",
+                "excluded_scene_image_count": len(image_exclusions),
+                "excluded_scene_images": [
+                    {"scene": scene, "image_name": image}
+                    for scene, image in sorted(image_exclusions)
+                ],
+            },
             "formal_coordinate_statuses": sorted(FORMAL_COORDINATE_STATUSES),
             "full_rtk_coordinate_policy": {
                 "points": ["G07", "G09", "G39"],
@@ -524,7 +557,17 @@ def main() -> int:
         + [
             {"path": str(args.release_dir / "gcp_points_primary_usable_cgcs2000_cm108_v1.csv"), "sha256": sha256_file(args.release_dir / "gcp_points_primary_usable_cgcs2000_cm108_v1.csv")},
             {"path": str(args.review_coordinate_source), "sha256": sha256_file(args.review_coordinate_source)},
-        ],
+        ]
+        + (
+            [
+                {
+                    "path": str(args.image_exclusion_manifest),
+                    "sha256": sha256_file(args.image_exclusion_manifest),
+                }
+            ]
+            if args.image_exclusion_manifest
+            else []
+        ),
     }
     (args.output_root / "split_design_manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -552,6 +595,7 @@ def main() -> int:
         "- 50K dyl2 remains diagnostic-only because it has fewer than four Good views and no corrected nadir coverage.",
         "- 100K G33 now has sufficient multi-view annotations but remains outside the user-approved 25-point formal scene pointset.",
         "- 20K G36 and 100K dyl2 now exceed the six-Good-view control threshold and are no longer forced checkpoints.",
+        "- 50K DJI_20260610161948_0002_D.JPG is excluded before Good-view counting by the predeclared image-level feature/pose QC manifest.",
         "- v1.2.2 remains unchanged.",
     ]
     (args.output_root / "README.md").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
