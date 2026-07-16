@@ -72,6 +72,32 @@ ANNOTATION_RELATIVE_PATHS = {
 }
 
 
+def image_exclusion_policy_payload(image_exclusions: set[tuple[str, str]]) -> dict:
+    return {
+        "selection_basis": (
+            "predeclared image-level QC independent of GCP residuals"
+            if image_exclusions
+            else "none; final formal eligibility uses observation-level Good-only QC"
+        ),
+        "excluded_scene_image_count": len(image_exclusions),
+        "excluded_scene_images": [
+            {"scene": scene, "image_name": image}
+            for scene, image in sorted(image_exclusions)
+        ],
+    }
+
+
+def image_exclusion_report_lines(image_exclusions: set[tuple[str, str]]) -> list[str]:
+    if not image_exclusions:
+        return [
+            "- No image-level exclusion is applied. Training images remain intact; formal rows use observation-level Good-only QC."
+        ]
+    return [
+        f"- Image-level exclusion: `{scene}/{image}` is removed before Good-view counting."
+        for scene, image in sorted(image_exclusions)
+    ]
+
+
 @dataclass(frozen=True)
 class SplitMetrics:
     checkpoint_inside_count: int
@@ -524,14 +550,7 @@ def main() -> int:
         "selection_policy": {
             "forbidden_inputs": ["model residual", "RMSE", "depth", "alpha", "variance", "multiview model scatter"],
             "allowed_inputs": ["surveyed XYZ", "Good view count", "coordinate QC", "user-approved scene boundary"],
-            "image_exclusion_policy": {
-                "selection_basis": "predeclared image-level feature/pose QC independent of GCP residuals",
-                "excluded_scene_image_count": len(image_exclusions),
-                "excluded_scene_images": [
-                    {"scene": scene, "image_name": image}
-                    for scene, image in sorted(image_exclusions)
-                ],
-            },
+            "image_exclusion_policy": image_exclusion_policy_payload(image_exclusions),
             "formal_coordinate_statuses": sorted(FORMAL_COORDINATE_STATUSES),
             "full_rtk_coordinate_policy": {
                 "points": ["G07", "G09", "G39"],
@@ -595,7 +614,7 @@ def main() -> int:
         "- 50K dyl2 remains diagnostic-only because it has fewer than four Good views and no corrected nadir coverage.",
         "- 100K G33 now has sufficient multi-view annotations but remains outside the user-approved 25-point formal scene pointset.",
         "- 20K G36 and 100K dyl2 now exceed the six-Good-view control threshold and are no longer forced checkpoints.",
-        "- 50K DJI_20260610161948_0002_D.JPG is excluded before Good-view counting by the predeclared image-level feature/pose QC manifest.",
+        *image_exclusion_report_lines(image_exclusions),
         "- v1.2.2 remains unchanged.",
     ]
     (args.output_root / "README.md").write_text("\n".join(report_lines) + "\n", encoding="utf-8")

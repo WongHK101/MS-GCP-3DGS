@@ -83,6 +83,15 @@ class GeometryOnlySplitTest(unittest.TestCase):
             self.assertEqual(excluded, {("scene", "drop.JPG")})
             self.assertEqual(int(summary.iloc[0]["good_view_count"]), 1)
 
+    def test_final_no_image_exclusion_report_is_not_stale(self) -> None:
+        policy = MODULE.image_exclusion_policy_payload(set())
+        lines = MODULE.image_exclusion_report_lines(set())
+        self.assertEqual(policy["excluded_scene_image_count"], 0)
+        self.assertEqual(policy["excluded_scene_images"], [])
+        self.assertIn("Good-only", policy["selection_basis"])
+        self.assertIn("No image-level exclusion", lines[0])
+        self.assertNotIn("0002", lines[0])
+
 
 if __name__ == "__main__":
     unittest.main()
