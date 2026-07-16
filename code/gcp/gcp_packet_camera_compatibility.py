@@ -641,11 +641,49 @@ def load_model_cameras(path: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
-def load_release_rows(release_dir: Path, scene: str) -> list[dict[str, str]]:
-    path = release_dir / f"{scene}_gcp_annotations_pixel_domain_v1_2_2.csv"
+def resolve_release_payload_path(release_dir: Path, value: str, label: str) -> Path:
+    relative = Path(str(value))
+    if not str(value).strip() or relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"invalid release-owned {label} path: {value!r}")
+    path = (release_dir / relative).resolve()
+    if path.parent != release_dir.resolve():
+        raise ValueError(f"release-owned {label} must be in the release root: {value!r}")
     if not path.exists():
         raise FileNotFoundError(path)
-    return read_csv(path)
+    return path
+
+
+def resolve_scene_annotation_path(release_dir: Path, release_config: dict[str, Any], scene: str) -> Path:
+    pattern = str(release_config.get("annotation_csv_pattern", "")).strip()
+    if not pattern:
+        raise ValueError("release config has no annotation_csv_pattern")
+    matches = [
+        path
+        for path in release_dir.glob(pattern)
+        if path.is_file() and path.name.startswith(f"{scene}_gcp_annotations_")
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"expected exactly one release annotation for {scene}, found {matches}")
+    return matches[0]
+
+
+def load_release_rows(
+    release_dir: Path,
+    scene: str,
+    release_config: dict[str, Any] | None = None,
+) -> list[dict[str, str]]:
+    if release_config is None:
+        path = release_dir / f"{scene}_gcp_annotations_pixel_domain_v1_2_2.csv"
+    else:
+        path = resolve_scene_annotation_path(release_dir, release_config, scene)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    rows = read_csv(path)
+    if rows and "formal_eligible" in rows[0]:
+        rows = [row for row in rows if str(row.get("formal_eligible", "")).strip().lower() == "true"]
+    if not rows:
+        raise ValueError(f"release has no formal annotation rows for {scene}: {path}")
+    return rows
 
 
 def camera_from_release_row(row: dict[str, str]) -> CameraRecord:
@@ -933,18 +971,47 @@ def summarize_coordinate_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def load_release_root_digest(release_dir: Path) -> dict[str, Any]:
-    root = load_json(release_dir / "v1_2_2_release_root_digest.json")
-    manifest_path = release_dir / "v1_2_2_release_file_manifest.json"
-    integrity = verify_payload_integrity(release_dir, manifest_path, release_dir / "v1_2_2_release_root_digest.json")
+def load_release_root_digest(
+    release_dir: Path,
+    release_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if release_config is None:
+        manifest_path = release_dir / "v1_2_2_release_file_manifest.json"
+        root_path = release_dir / "v1_2_2_release_root_digest.json"
+    else:
+        manifest_path = resolve_release_payload_path(
+            release_dir,
+            str(release_config.get("payload_manifest", "")),
+            "payload manifest",
+        )
+        root_path = resolve_release_payload_path(
+            release_dir,
+            str(release_config.get("root_digest_record", "")),
+            "root digest record",
+        )
+    root = load_json(root_path)
+    integrity = verify_payload_integrity(release_dir, manifest_path, root_path)
     if not integrity["passed"]:
         raise ValueError(f"release integrity failed: {integrity}")
-    root["_root_record_sha256"] = file_sha256(release_dir / "v1_2_2_release_root_digest.json")
+    root["_root_record_sha256"] = file_sha256(root_path)
+    root["_payload_manifest_sha256"] = file_sha256(manifest_path)
     return root
 
 
-def load_target_pose_records(release_dir: Path, scene: str) -> dict[str, dict[str, Any]]:
-    manifest = load_json(release_dir / "camera_provenance_manifest_v1_2_2.json")
+def load_target_pose_records(
+    release_dir: Path,
+    scene: str,
+    release_config: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    if release_config is None:
+        path = release_dir / "camera_provenance_manifest_v1_2_2.json"
+    else:
+        path = resolve_release_payload_path(
+            release_dir,
+            str(release_config.get("camera_provenance_manifest", "")),
+            "camera provenance manifest",
+        )
+    manifest = load_json(path)
     try:
         rows = manifest["scenes"][scene]["target_model"]["images"]
     except KeyError as exc:
@@ -1022,11 +1089,18 @@ def build_wrapper(
     out_dir: Path,
     packet_search_roots: Sequence[Path],
     require_local_packets: bool = False,
+    release_config_path: Path | None = None,
 ) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    release_root = load_release_root_digest(release_dir)
-    release_rows = load_release_rows(release_dir, scene)
-    target_pose_records = load_target_pose_records(release_dir, scene)
+    if release_config_path is None:
+        candidates = sorted(release_dir.glob("gcp_benchmark_release_v*.json"))
+        if len(candidates) != 1:
+            raise ValueError(f"cannot uniquely resolve release config in {release_dir}: {candidates}")
+        release_config_path = candidates[0]
+    release_config = load_json(release_config_path)
+    release_root = load_release_root_digest(release_dir, release_config)
+    release_rows = load_release_rows(release_dir, scene, release_config)
+    target_pose_records = load_target_pose_records(release_dir, scene, release_config)
     by_image: dict[str, list[dict[str, str]]] = {}
     for row in release_rows:
         by_image.setdefault(Path(row["target_image_name"]).name, []).append(row)
@@ -1170,7 +1244,10 @@ def build_wrapper(
         "compatibility_validator_source_sha256": provenance_record["compatibility_validator_source_sha256"],
         "generator_commit": provenance_record["generator_commit"],
         "evaluator_runtime_commit": provenance_record["evaluator_runtime_commit"],
-        "release_id": "gcp_benchmark_release_v1_2_2_pixel_domain_20260628",
+        "release_id": str(release_config.get("release_id", "")),
+        "release_schema": str(release_config.get("schema", "")),
+        "release_config_path": str(release_config_path),
+        "release_config_sha256": file_sha256(release_config_path),
         "release_root_digest_sha256": release_root.get("payload_root_digest_sha256", ""),
         "release_root_record_sha256": release_root.get("_root_record_sha256", ""),
         "projection_tolerance_px": PROJECTION_TOL_PX,
@@ -1391,7 +1468,7 @@ def validate_compatibility_wrapper(
     if release_config is not None and wrapper.get("release_id") != release_config.get("release_id"):
         raise ValueError(f"compatibility release mismatch: {wrapper.get('release_id')} vs {release_config.get('release_id')}")
     if release_dir is not None:
-        release_root = load_release_root_digest(release_dir)
+        release_root = load_release_root_digest(release_dir, release_config)
         if wrapper.get("release_root_digest_sha256") != release_root.get("payload_root_digest_sha256"):
             raise ValueError("wrapper release payload root digest mismatch")
         if wrapper.get("release_root_record_sha256") != release_root.get("_root_record_sha256"):
@@ -1408,9 +1485,9 @@ def validate_compatibility_wrapper(
     release_rows_by_image: dict[str, list[dict[str, str]]] = {}
     target_pose_records: dict[str, dict[str, Any]] = {}
     if release_dir is not None and scene is not None:
-        for row in load_release_rows(release_dir, scene):
+        for row in load_release_rows(release_dir, scene, release_config):
             release_rows_by_image.setdefault(Path(row["target_image_name"]).name, []).append(row)
-        target_pose_records = load_target_pose_records(release_dir, scene)
+        target_pose_records = load_target_pose_records(release_dir, scene, release_config)
     packet_sets = wrapper.get("packet_sets", [])
     seen_scenes: set[str] = set()
     validation: dict[str, Any] = {
@@ -1735,6 +1812,7 @@ def run_cli() -> None:
     release_config = Path(args.release_config)
     packet_roots = [Path(p) for p in args.packet_search_root]
     result = build_wrapper(
+        release_config_path=release_config,
         release_dir=release_config.parent,
         scene=args.scene,
         depth_manifest_path=Path(args.depth_manifest),

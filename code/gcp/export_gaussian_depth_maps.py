@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import inspect
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +40,17 @@ from metric_depth_packet import (  # noqa: E402
 
 DEFAULT_TRAIN_REPO = r"E:\Multispectral" if Path(r"E:\Multispectral").exists() else "/root/autodl-tmp/Multispectral"
 DEFAULT_RASTERIZER_DEPTH_SEMANTICS = "alpha_weighted_unnormalized_inverse_camera_z"
-RASTERIZER_TRACKED_TREE_HASH = "321f28fd8c0bb6d3840468545efbc4c7417332c8"
+
+
+def git_tree_hash(path: Path) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(path), "show", "-s", "--format=%T", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return ""
 
 
 def parse_train_repo(argv: Sequence[str]) -> Path:
@@ -55,8 +67,9 @@ def load_gaussian_runtime(train_repo: Path) -> Dict[str, Any]:
 
     import torch  # noqa: WPS433
     from arguments import ModelParams, PipelineParams, get_combined_args  # noqa: WPS433
-    from gaussian_renderer import GaussianModel, render  # noqa: WPS433
+    from gaussian_renderer import render  # noqa: WPS433
     from scene import Scene  # noqa: WPS433
+    from scene.gaussian_model import GaussianModel  # noqa: WPS433
     from utils.general_utils import safe_state  # noqa: WPS433
 
     try:
@@ -77,6 +90,7 @@ def load_gaussian_runtime(train_repo: Path) -> Dict[str, Any]:
         "Scene": Scene,
         "safe_state": safe_state,
         "sparse_adam_available": sparse_adam_available,
+        "render_parameters": set(inspect.signature(render).parameters),
     }
 
 
@@ -166,6 +180,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
     Scene = runtime["Scene"]
     render = runtime["render"]
     sparse_adam_available = bool(runtime["sparse_adam_available"])
+    render_parameters = set(runtime["render_parameters"])
 
     old_cwd = Path.cwd()
     os.chdir(train_repo)
@@ -180,24 +195,32 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             allowlist = read_allowlist(args)
             views = collect_views(scene, args.camera_sets, allowlist=allowlist)
             for index, (split, view) in enumerate(tqdm(views, desc="Exporting Gaussian depth")):
+                render_kwargs: Dict[str, Any] = {
+                    "return_metric_depth_packet": True,
+                    "numerical_support_floor": float(args.numerical_support_floor),
+                    "normalization_epsilon": float(args.normalization_epsilon),
+                    "variance_clamp_tolerance": float(args.variance_clamp_tolerance),
+                }
+                if "use_trained_exp" in render_parameters:
+                    render_kwargs["use_trained_exp"] = bool(getattr(dataset, "train_test_exp", False))
+                if "separate_sh" in render_parameters:
+                    render_kwargs["separate_sh"] = sparse_adam_available
+                unsupported = sorted(set(render_kwargs) - render_parameters)
+                if unsupported:
+                    raise RuntimeError(
+                        f"renderer does not expose the required metric-depth API: {unsupported}; "
+                        f"available={sorted(render_parameters)}"
+                    )
                 payload = render(
                     view,
                     gaussians,
                     pipeline,
                     background,
-                    use_trained_exp=dataset.train_test_exp,
-                    separate_sh=sparse_adam_available,
-                    return_metric_depth_packet=True,
-                    numerical_support_floor=float(args.numerical_support_floor),
-                    normalization_epsilon=float(args.normalization_epsilon),
-                    variance_clamp_tolerance=float(args.variance_clamp_tolerance),
+                    **render_kwargs,
                 )
-                historical_depth = payload["depth"]
                 metric_packet = payload["metric_depth_packet"]
-                if dataset.train_test_exp:
-                    historical_depth = historical_depth[..., historical_depth.shape[-1] // 2 :]
+                if bool(getattr(dataset, "train_test_exp", False)):
                     metric_packet = metric_packet[..., metric_packet.shape[-1] // 2 :]
-                historical_depth_np = historical_depth.detach().squeeze().cpu().numpy().astype(np.float32)
                 packet_np = metric_packet.detach().squeeze().cpu().numpy().astype(np.float32)
                 if packet_np.shape[0] != len(METRIC_PACKET_TENSOR_NAMES):
                     raise RuntimeError(
@@ -211,7 +234,9 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                     for i, name in enumerate(METRIC_PACKET_TENSOR_NAMES)
                 }
                 packet_payload["metric_depth_valid_mask"] = packet_payload["metric_depth_valid_mask"] > 0.5
-                packet_payload[HISTORICAL_INVALID_TENSOR] = historical_depth_np.astype(np.float32)
+                packet_payload[HISTORICAL_INVALID_TENSOR] = packet_payload[
+                    "weighted_inverse_camera_z_sum"
+                ].copy()
                 np.savez_compressed(packet_path, **packet_payload)
                 packet_hash = file_sha256(packet_path)
                 packet_size = packet_path.stat().st_size
@@ -324,6 +349,10 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         train_repo / "submodules" / "diff-gaussian-rasterization" / "cuda_rasterizer" / "forward.cu",
     ]
     rasterizer_repo = train_repo / "submodules" / "diff-gaussian-rasterization"
+    rasterizer_commit = git_commit(rasterizer_repo)
+    rasterizer_tree_hash = git_tree_hash(rasterizer_repo)
+    if not rasterizer_commit or not rasterizer_tree_hash:
+        raise RuntimeError(f"rasterizer Git provenance is incomplete: {rasterizer_repo}")
     model_tree_hash = directory_tree_hash(Path(dataset.model_path))
     manifest: Dict[str, Any] = {
         "schema": METRIC_PACKET_MANIFEST_SCHEMA,
@@ -334,8 +363,8 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "renderer_repository": str(train_repo),
         "renderer_commit": git_commit(train_repo),
         "rasterizer_repository": str(rasterizer_repo),
-        "rasterizer_commit": git_commit(rasterizer_repo) or "tracked_tree_not_git_submodule",
-        "rasterizer_tree_hash": RASTERIZER_TRACKED_TREE_HASH,
+        "rasterizer_commit": rasterizer_commit,
+        "rasterizer_tree_hash": rasterizer_tree_hash,
         "exporter_repository": str(Path(__file__).resolve().parents[2]),
         "exporter_commit": git_commit(Path(__file__).resolve().parents[2]),
         "source_path": str(dataset.source_path),
@@ -348,6 +377,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "depth_file_format": "compressed numpy .npz metric depth packet",
         "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
         "primary_depth_semantics": PRIMARY_DEPTH_SEMANTICS,
+        "formal_depth_formula": "M1/A",
         "depth_semantics": PRIMARY_DEPTH_SEMANTICS,
         "depth_units": "model_coordinate_units_before_sim3",
         "tensor_names": METRIC_PACKET_TENSOR_NAMES + [HISTORICAL_INVALID_TENSOR],
@@ -399,6 +429,8 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "image_list_status_column": args.image_list_status_column,
         "image_list_status_values": args.image_list_status_values,
         "sparse_adam_available": bool(sparse_adam_available),
+        "renderer_render_parameters": sorted(render_parameters),
+        "historical_invalid_tensor_source": "weighted_inverse_camera_z_sum raw H alias",
         "uses_alpha_map": True,
         "uses_depth_second_moment": True,
         "runtime": {

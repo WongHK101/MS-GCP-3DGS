@@ -20,6 +20,8 @@ from gcp_packet_camera_compatibility import (
     focal2fov,
     load_json,
     load_model_cameras,
+    load_release_root_digest,
+    load_release_rows,
     load_target_pose_records,
     metric_packet_contract_from_manifest,
     normalize_pixel_convention,
@@ -40,6 +42,9 @@ from gcp_pixel_domain_v1_2 import CameraRecord
 
 
 RELEASE_CONFIG = Path(r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations_v1_2_2\gcp_benchmark_release_v1_2_2.json")
+RELEASE_CONFIG_V13 = Path(
+    r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations_v1_3_0\gcp_benchmark_release_v1_3_0.json"
+)
 DEPTH_MANIFEST_3K = Path(
     r"E:\M3M-GCP-3DGS\outputs\stage3_v122_pkt_blocker_20260629_012143\evidence\metric_depth_manifest_gcp_3000_20260602.json"
 )
@@ -872,6 +877,25 @@ def test_packet_camera_record_set_negative_cases() -> dict[str, Any]:
     return cases
 
 
+def test_v13_release_layout_resolution() -> dict[str, Any]:
+    config = load_json(RELEASE_CONFIG_V13)
+    rows = load_release_rows(RELEASE_CONFIG_V13.parent, "gcp_3000_20260602", config)
+    if len(rows) != 147 or any(str(row.get("formal_eligible", "")).lower() != "true" for row in rows):
+        raise AssertionError(f"unexpected v1.3 formal row set: {len(rows)}")
+    root = load_release_root_digest(RELEASE_CONFIG_V13.parent, config)
+    if root.get("release_id") != config.get("release_id"):
+        raise AssertionError("v1.3 release root/config identity mismatch")
+    poses = load_target_pose_records(RELEASE_CONFIG_V13.parent, "gcp_3000_20260602", config)
+    if len(poses) != 94:
+        raise AssertionError(f"unexpected v1.3 target pose count: {len(poses)}")
+    return {
+        "formal_rows": len(rows),
+        "target_poses": len(poses),
+        "release_id": root["release_id"],
+        "payload_root_digest_sha256": root["payload_root_digest_sha256"],
+    }
+
+
 TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("r8_camera_recovery", test_r8_camera_recovery),
     ("rounding_tie_case", test_rounding_tie_case),
@@ -920,6 +944,7 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("wrong_release_pose_reference", test_wrong_release_pose_reference),
     ("orphan_packet_pose_record", test_orphan_packet_pose_record),
     ("packet_camera_record_set_negative_cases", test_packet_camera_record_set_negative_cases),
+    ("v13_release_layout_resolution", test_v13_release_layout_resolution),
 ]
 
 
