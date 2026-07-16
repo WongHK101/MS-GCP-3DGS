@@ -19,6 +19,11 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GeometryOnlySplitTest(unittest.TestCase):
+    def test_user_accepted_full_rtk_points_have_normal_role_eligibility(self) -> None:
+        self.assertTrue(MODULE.coordinate_is_formal_usable(MODULE.USER_ACCEPTED_FULL_RTK_STATUS))
+        self.assertEqual(MODULE.SCENE_RULES["gcp_5000_20260602"]["forced_checkpoints"], {})
+        self.assertEqual(MODULE.SCENE_RULES["gcp_50000_20260610"]["forced_checkpoints"], {})
+
     def test_vertical_extent_is_selected_when_feasible(self) -> None:
         frame = pd.DataFrame(
             [

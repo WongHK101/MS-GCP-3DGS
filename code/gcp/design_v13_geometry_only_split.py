@@ -18,6 +18,8 @@ import pandas as pd
 
 
 CONTROL_HEIGHT_RANGE_TARGET = 0.80
+USER_ACCEPTED_FULL_RTK_STATUS = "full_rtk_27_observation_mean_user_accepted"
+FORMAL_COORDINATE_STATUSES = {"primary_usable", USER_ACCEPTED_FULL_RTK_STATUS}
 
 
 SCENE_RULES = {
@@ -31,10 +33,7 @@ SCENE_RULES = {
         "label": "5K",
         "points": [f"G{i:02d}" for i in range(1, 11)],
         "controls": 6,
-        "forced_checkpoints": {
-            "G07": "rtk_report_coordinate_review_required",
-            "G09": "rtk_report_coordinate_review_required",
-        },
+        "forced_checkpoints": {},
     },
     "gcp_10000_20260610": {
         "label": "10K",
@@ -52,9 +51,7 @@ SCENE_RULES = {
         "label": "50K",
         "points": None,
         "controls": 12,
-        "forced_checkpoints": {
-            "G39": "rtk_report_coordinate_review_required",
-        },
+        "forced_checkpoints": {},
     },
     "gcp_100000_20260610": {
         "label": "100K",
@@ -267,6 +264,10 @@ def annotation_summary(path: Path) -> pd.DataFrame:
     return good.groupby("point_name", as_index=False).agg(good_view_count=("image_name", "nunique"))
 
 
+def coordinate_is_formal_usable(status: str) -> bool:
+    return status in FORMAL_COORDINATE_STATUSES
+
+
 def load_coordinates(release_dir: Path, review_source: Path) -> pd.DataFrame:
     primary = pd.read_csv(release_dir / "gcp_points_primary_usable_cgcs2000_cm108_v1.csv", dtype=str)
     primary = primary.rename(
@@ -282,7 +283,6 @@ def load_coordinates(release_dir: Path, review_source: Path) -> pd.DataFrame:
             columns={"点名": "point_name", "东坐标": "x_m", "北坐标": "y_m", "高程": "z_m"}
         )
         review = review[review["point_name"].isin({"G07", "G09", "G39"})].copy()
-        review["coordinate_status"] = "rtk_report_coordinate_review_required"
     else:
         review = pd.read_csv(review_source, dtype=str).rename(
             columns={
@@ -291,6 +291,8 @@ def load_coordinates(release_dir: Path, review_source: Path) -> pd.DataFrame:
                 "cgcs2000_normal_height_m": "z_m",
             }
         )
+    review = review[review["point_name"].isin({"G07", "G09", "G39"})].copy()
+    review["coordinate_status"] = USER_ACCEPTED_FULL_RTK_STATUS
     review = review[["point_name", "x_m", "y_m", "z_m", "coordinate_status"]]
     if set(review["point_name"]) != {"G07", "G09", "G39"}:
         raise ValueError(f"Review-coordinate source must resolve G07/G09/G39 exactly: {review_source}")
@@ -320,7 +322,7 @@ def render_scene_plot(frame: pd.DataFrame, controls: set[int], output: Path, tit
         ax_xy.fill(closed[:, 0], closed[:, 1], color="#2878b5", alpha=0.10)
         ax_xy.plot(closed[:, 0], closed[:, 1], color="#2878b5", linewidth=1.5, label="control hull")
     ax_xy.scatter(control_frame["x_m"], control_frame["y_m"], marker="^", s=95, c="#2878b5", label="control")
-    colors = ["#d62728" if status != "primary_usable" else "#ef8a17" for status in checkpoint_frame["coordinate_status"]]
+    colors = ["#ef8a17" if coordinate_is_formal_usable(status) else "#d62728" for status in checkpoint_frame["coordinate_status"]]
     ax_xy.scatter(checkpoint_frame["x_m"], checkpoint_frame["y_m"], marker="o", s=70, c=colors, label="checkpoint")
     for _, row in frame.iterrows():
         ax_xy.annotate(row["point_name"], (row["x_m"], row["y_m"]), xytext=(4, 4), textcoords="offset points", fontsize=8)
@@ -388,7 +390,7 @@ def main() -> int:
                 raise ValueError(f"Formal candidate {scene}/{name} has only {good_count} Good views")
             coordinate_status = str(coordinate["coordinate_status"])
             forced_reason = rule["forced_checkpoints"].get(name, "")
-            control_eligible = good_count >= 6 and coordinate_status == "primary_usable" and not forced_reason
+            control_eligible = good_count >= 6 and coordinate_is_formal_usable(coordinate_status) and not forced_reason
             rows.append(
                 {
                     "scene": scene,
@@ -405,13 +407,13 @@ def main() -> int:
         frame = pd.DataFrame(rows)
         controls, metrics = choose_controls(frame, int(rule["controls"]))
         frame["role"] = ["control" if idx in controls else "checkpoint" for idx in frame.index]
-        if any(frame.loc[list(controls), "coordinate_status"] != "primary_usable"):
-            raise AssertionError(f"{scene}: review-only coordinate selected as control")
+        if any(not coordinate_is_formal_usable(status) for status in frame.loc[list(controls), "coordinate_status"]):
+            raise AssertionError(f"{scene}: non-formal coordinate selected as control")
         if any(frame.loc[list(controls), "good_view_count"] < 6):
             raise AssertionError(f"{scene}: low-view point selected as control")
 
         for _, row in frame.iterrows():
-            provisional = row["coordinate_status"] != "primary_usable"
+            provisional = not coordinate_is_formal_usable(str(row["coordinate_status"]))
             split_rows.append(
                 {
                     "scene": scene,
@@ -453,7 +455,9 @@ def main() -> int:
         xy = frame[["x_m", "y_m"]].to_numpy(dtype=np.float64)
         control_xy = frame.loc[sorted(controls), ["x_m", "y_m"]].to_numpy(dtype=np.float64)
         nearest_m = np.min(np.linalg.norm(xy[:, None, :] - control_xy[None, :, :], axis=2), axis=1)
-        review_points = sorted(frame.loc[frame["coordinate_status"] != "primary_usable", "point_name"].tolist())
+        review_points = sorted(
+            frame.loc[~frame["coordinate_status"].map(coordinate_is_formal_usable), "point_name"].tolist()
+        )
         scene_status = "provisional_coordinate_review_required" if review_points else "ready_candidate_not_frozen"
         summaries.append(
             {
@@ -487,6 +491,13 @@ def main() -> int:
         "selection_policy": {
             "forbidden_inputs": ["model residual", "RMSE", "depth", "alpha", "variance", "multiview model scatter"],
             "allowed_inputs": ["surveyed XYZ", "Good view count", "coordinate QC", "user-approved scene boundary"],
+            "formal_coordinate_statuses": sorted(FORMAL_COORDINATE_STATUSES),
+            "full_rtk_coordinate_policy": {
+                "points": ["G07", "G09", "G39"],
+                "status": USER_ACCEPTED_FULL_RTK_STATUS,
+                "decision": "use_normally_without_role_restriction",
+                "basis": "reported dispersion is a repeated-observation range, not evidence of absolute coordinate bias; user accepted the 27-observation means on 2026-07-17",
+            },
             "control_min_good_views": 6,
             "formal_point_min_good_views": 4,
             "control_height_range_target_ratio": CONTROL_HEIGHT_RANGE_TARGET,
@@ -529,7 +540,7 @@ def main() -> int:
         "",
         "## Important eligibility notes",
         "",
-        "- 5K G07/G09 and 50K G39 remain provisional checkpoints because image review does not by itself resolve their RTK coordinate provenance.",
+        "- 5K G07/G09 and 50K G39 use the 27-observation RTK mean coordinates accepted by the user on 2026-07-17. Their report provenance is retained, but they receive no special control/checkpoint restriction.",
         "- 50K dyl2 remains diagnostic-only because it has fewer than four Good views and no corrected nadir coverage.",
         "- 100K G33 now has sufficient multi-view annotations but remains outside the user-approved 25-point formal scene pointset.",
         "- 20K G36 and 100K dyl2 now exceed the six-Good-view control threshold and are no longer forced checkpoints.",
