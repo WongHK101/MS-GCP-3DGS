@@ -278,7 +278,15 @@ def load_coordinates(release_dir: Path, review_source: Path) -> pd.DataFrame:
         }
     )
     primary["coordinate_status"] = "primary_usable"
-    if review_source.suffix.lower() in {".xlsx", ".xls"}:
+    if review_source.suffix.lower() == ".dat":
+        review = pd.read_csv(
+            review_source,
+            header=None,
+            names=["point_name", "unused", "x_m", "y_m", "z_m"],
+            dtype=str,
+            encoding="gb18030",
+        )
+    elif review_source.suffix.lower() in {".xlsx", ".xls"}:
         review = pd.read_excel(review_source, dtype=str).rename(
             columns={"点名": "point_name", "东坐标": "x_m", "北坐标": "y_m", "高程": "z_m"}
         )
@@ -496,7 +504,7 @@ def main() -> int:
                 "points": ["G07", "G09", "G39"],
                 "status": USER_ACCEPTED_FULL_RTK_STATUS,
                 "decision": "use_normally_without_role_restriction",
-                "basis": "reported dispersion is a repeated-observation range, not evidence of absolute coordinate bias; user accepted the 27-observation means on 2026-07-17",
+                "basis": "authoritative corrected DAT coordinates backed by 27 fixed epochs in the corrected CSV; reported dispersion is not evidence of absolute coordinate bias",
             },
             "control_min_good_views": 6,
             "formal_point_min_good_views": 4,
@@ -540,7 +548,7 @@ def main() -> int:
         "",
         "## Important eligibility notes",
         "",
-        "- 5K G07/G09 and 50K G39 use the 27-observation RTK mean coordinates accepted by the user on 2026-07-17. Their report provenance is retained, but they receive no special control/checkpoint restriction.",
+        "- 5K G07/G09 and 50K G39 use the authoritative corrected RTK DAT coordinates, each backed by 27 fixed epochs. Their provenance is retained, but they receive no special control/checkpoint restriction.",
         "- 50K dyl2 remains diagnostic-only because it has fewer than four Good views and no corrected nadir coverage.",
         "- 100K G33 now has sufficient multi-view annotations but remains outside the user-approved 25-point formal scene pointset.",
         "- 20K G36 and 100K dyl2 now exceed the six-Good-view control threshold and are no longer forced checkpoints.",
