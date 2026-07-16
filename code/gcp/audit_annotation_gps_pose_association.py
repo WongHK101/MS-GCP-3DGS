@@ -154,15 +154,20 @@ def add_observation_diagnostics(
 
 def aggregate_points(observations: pd.DataFrame, residuals: pd.DataFrame) -> pd.DataFrame:
     formal = observations[observations["annotation_set"].eq("v1.2.2_frozen")].copy()
+
+    def finite_percentile(values: pd.Series, percentile: float) -> float:
+        finite = pd.to_numeric(values, errors="coerce").dropna()
+        return float(np.percentile(finite, percentile)) if len(finite) else float("nan")
+
     aggregations = formal.groupby(["scene", "point_name"], as_index=False).agg(
         observation_count=("image_name", "size"),
         gps_residual_median_m=("gps_to_colmap_3d_m", "median"),
-        gps_residual_p95_m=("gps_to_colmap_3d_m", lambda values: float(np.percentile(values, 95))),
+        gps_residual_p95_m=("gps_to_colmap_3d_m", lambda values: finite_percentile(values, 95)),
         gps_residual_max_m=("gps_to_colmap_3d_m", "max"),
         max_gps_residual_percentile=("gps_residual_percentile", "max"),
         gps_top_0_5pct_view_count=("gps_residual_percentile", lambda values: int((values >= 99.5).sum())),
         loo_pixel_error_median=("annotation_loo_pixel_error", "median"),
-        loo_pixel_error_p95=("annotation_loo_pixel_error", lambda values: float(np.nanpercentile(values, 95))),
+        loo_pixel_error_p95=("annotation_loo_pixel_error", lambda values: finite_percentile(values, 95)),
         loo_pixel_error_max=("annotation_loo_pixel_error", "max"),
     )
     keep = [
@@ -336,7 +341,12 @@ def main() -> int:
 
     correlations = []
     for scene, group in [("all_scenes", points), *list(points.groupby("scene", sort=True))]:
-        for metric in ["gps_residual_median_m", "gps_residual_p95_m", "gps_residual_max_m"]:
+        for metric in [
+            "gps_residual_median_m",
+            "gps_residual_p95_m",
+            "gps_residual_max_m",
+            "max_gps_residual_percentile",
+        ]:
             correlations.append(
                 {
                     "scene": scene,
@@ -390,6 +400,10 @@ def main() -> int:
     overall_rho = correlation_df[
         correlation_df["scene"].eq("all_scenes") & correlation_df["right"].eq("gps_residual_max_m")
     ].iloc[0]["spearman_rho"]
+    normalized_rho = correlation_df[
+        correlation_df["scene"].eq("all_scenes")
+        & correlation_df["right"].eq("max_gps_residual_percentile")
+    ].iloc[0]["spearman_rho"]
     summary = {
         "schema": "ms_gcp_annotation_gps_pose_association_audit_v1",
         "diagnostic_only": True,
@@ -403,6 +417,9 @@ def main() -> int:
         "point_count_with_old_v1_2_2_residual": int(points["error_3d_m"].notna().sum()),
         "high_error_point_count": int(len(high_error_diagnosis)),
         "all_scene_error_vs_max_gps_spearman_rho": None if pd.isna(overall_rho) else float(overall_rho),
+        "all_scene_error_vs_scene_normalized_max_gps_percentile_spearman_rho": (
+            None if pd.isna(normalized_rho) else float(normalized_rho)
+        ),
         "g39_0002": exclusion.iloc[0].to_dict(),
     }
     write_json(output_root / "summary.json", summary)
@@ -413,7 +430,8 @@ def main() -> int:
 - 旧三维误差来自已有 v1.2.2/旧模型结果；新补标尚未重新评测。
 - `G39/0002` 的建议是保留原始工作标注行，但在未来 v1.3 formal candidate 中按整张影像排除。
 - 该排除由独立影像级证据触发，而不是由 G39 或 G33 的 GCP 残差触发。
-- 全场点误差与最大 GPS-COLMAP 偏差 Spearman rho: {summary['all_scene_error_vs_max_gps_spearman_rho']}
+- 跨场景直接使用米制偏差会混入场景差异，其 Spearman rho: {summary['all_scene_error_vs_max_gps_spearman_rho']}
+- 使用每场景内部偏差百分位后，Spearman rho: {summary['all_scene_error_vs_scene_normalized_max_gps_percentile_spearman_rho']}
 """
     (output_root / "README_zh.md").write_text(readme, encoding="utf-8")
 
