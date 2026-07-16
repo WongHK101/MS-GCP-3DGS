@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import stat
 import shutil
 import sys
 from collections import Counter, defaultdict
@@ -200,6 +201,20 @@ def copy_file_verified(source: Path, destination: Path) -> dict[str, Any]:
         "sha256": source_sha,
         "byte_equal": True,
     }
+
+
+def remove_tree_readonly(path: Path) -> None:
+    """Remove a generated staging tree even when copied evidence is read-only."""
+
+    if not path.exists():
+        return
+    for item in sorted(path.rglob("*"), key=lambda candidate: len(candidate.parts), reverse=True):
+        try:
+            item.chmod(stat.S_IREAD | stat.S_IWRITE)
+        except OSError:
+            pass
+    path.chmod(stat.S_IREAD | stat.S_IWRITE)
+    shutil.rmtree(path)
 
 
 def bool_text(value: bool) -> str:
@@ -1013,8 +1028,9 @@ def main() -> None:
         if differences:
             raise ValueError(f"byte-identical regeneration failed: {differences[:20]}")
         if args.publish:
+            # All validation and cleanup must finish before the formal path appears.
+            remove_tree_readonly(compare)
             staging.rename(final_dir)
-            shutil.rmtree(compare)
             release_dir = final_dir
         else:
             release_dir = staging
@@ -1029,18 +1045,18 @@ def main() -> None:
             write_json_deterministic(Path(args.summary_out), summary)
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     except Exception as exc:  # noqa: BLE001
-        evidence = staging / "BLOCKER.json"
-        write_json_deterministic(
-            evidence,
-            {
-                "status": "BLOCKER",
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-                "formal_release_created": False,
-                "staging_dir": str(staging),
-            },
-        )
-        print(json.dumps(json.loads(evidence.read_text(encoding="utf-8")), ensure_ascii=False, indent=2))
+        blocker = {
+            "status": "BLOCKER",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "formal_release_created": final_dir.exists(),
+            "staging_dir": str(staging) if staging.exists() else "",
+        }
+        if staging.exists():
+            write_json_deterministic(staging / "BLOCKER.json", blocker)
+        if args.summary_out:
+            write_json_deterministic(Path(args.summary_out), blocker)
+        print(json.dumps(blocker, ensure_ascii=False, indent=2))
         raise SystemExit(1) from exc
 
 

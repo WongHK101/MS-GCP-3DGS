@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -13,6 +15,7 @@ from generate_gcp_release_v1_3 import (
     canonical_quality,
     load_input_manifest,
     load_split_rows,
+    remove_tree_readonly,
 )
 
 
@@ -100,11 +103,24 @@ def test_input_manifest_is_complete() -> dict[str, object]:
     return {"scene_count": len(inputs["working_annotations"])}
 
 
+def test_readonly_staging_cleanup() -> dict[str, object]:
+    with tempfile.TemporaryDirectory() as base:
+        root = Path(base) / "compare.staging"
+        root.mkdir()
+        evidence = root / "evidence.txt"
+        evidence.write_text("immutable evidence\n", encoding="utf-8")
+        os.chmod(evidence, 0o444)
+        remove_tree_readonly(root)
+        assert not root.exists()
+    return {"readonly_compare_staging_removed": True}
+
+
 def main() -> None:
     tests = [
         ("frozen_source_counts", test_frozen_source_counts),
         ("source_directories_are_not_output_roots", test_source_directories_are_not_output_roots),
         ("input_manifest_is_complete", test_input_manifest_is_complete),
+        ("readonly_staging_cleanup", test_readonly_staging_cleanup),
     ]
     rows = [check(name, fn) for name, fn in tests]
     payload = {"passed": all(row["passed"] for row in rows), "tests": rows}
@@ -115,4 +131,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
