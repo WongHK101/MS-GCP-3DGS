@@ -72,6 +72,22 @@ def distort_normalized(x: float, y: float, distortion: Sequence[float]) -> tuple
     return xd, yd
 
 
+def simple_radial_principal_branch_is_valid(x: float, y: float, k: float) -> bool:
+    """Return whether SIMPLE_RADIAL forward projection stays on its invertible branch.
+
+    A negative radial coefficient makes ``r * (1 + k*r^2)`` fold back after
+    its derivative reaches zero.  Projecting a far-outside-FOV ray without
+    this gate can therefore create a false in-image pixel near the principal
+    point.
+    """
+    r2 = float(x) * float(x) + float(y) * float(y)
+    scale = 1.0 + float(k) * r2
+    radial_derivative = 1.0 + 3.0 * float(k) * r2
+    return all(math.isfinite(value) for value in (r2, scale, radial_derivative)) and (
+        scale > 0.0 and radial_derivative > 0.0
+    )
+
+
 def undistort_normalized(xd: float, yd: float, distortion: Sequence[float], iterations: int = 8) -> tuple[float, float]:
     if not distortion:
         return xd, yd
@@ -98,6 +114,10 @@ def project_point(camera: Any, image: Any, xyz_world: np.ndarray) -> tuple[float
     x = float(xyz_cam[0] / xyz_cam[2])
     y = float(xyz_cam[1] / xyz_cam[2])
     fx, fy, cx, cy, distortion = camera_params(camera)
+    if camera.model.upper() == "SIMPLE_RADIAL" and not simple_radial_principal_branch_is_valid(
+        x, y, distortion[0]
+    ):
+        return None
     xd, yd = distort_normalized(x, y, distortion)
     return fx * xd + cx, fy * yd + cy
 

@@ -28,6 +28,8 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 
+from triangulate_gcp_points import simple_radial_principal_branch_is_valid
+
 try:
     from PIL import Image, ImageDraw, ImageFont
 except Exception:  # pragma: no cover - surfaced in runtime preflight.
@@ -194,6 +196,8 @@ def project_simple_radial(
     x = float(xyz_cam[0] / z)
     y = float(xyz_cam[1] / z)
     r2 = x * x + y * y
+    if not simple_radial_principal_branch_is_valid(x, y, k):
+        return float("nan"), float("nan"), z
     scale = 1.0 + k * r2
     return f * x * scale + cx, f * y * scale + cy, z
 

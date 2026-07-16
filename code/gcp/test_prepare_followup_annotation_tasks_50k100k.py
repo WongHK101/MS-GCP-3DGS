@@ -8,6 +8,7 @@ from prepare_followup_annotation_tasks_50k100k import (
     rank_per_point,
     visible_good,
 )
+from triangulate_gcp_points import simple_radial_principal_branch_is_valid
 
 
 def test_visible_good() -> None:
@@ -21,6 +22,15 @@ def test_identity_quaternion() -> None:
     assert abs(float(rotation[0, 0]) - 1.0) < 1e-15
     assert abs(float(rotation[1, 1]) - 1.0) < 1e-15
     assert abs(float(rotation[2, 2]) - 1.0) < 1e-15
+
+
+def test_simple_radial_rejects_folded_outside_fov_ray() -> None:
+    k = -0.11493612085570779
+    assert simple_radial_principal_branch_is_valid(0.3, 0.4, k)
+    # Real G33 false candidate DJI_20260610102022_1687_D.JPG had r~=3.012.
+    assert not simple_radial_principal_branch_is_valid(
+        0.6212255966217382, 2.946798890661975, k
+    )
 
 
 def test_rank_order_and_uniqueness() -> None:
@@ -41,7 +51,12 @@ def test_rank_order_and_uniqueness() -> None:
 
 
 def main() -> int:
-    tests = [test_visible_good, test_identity_quaternion, test_rank_order_and_uniqueness]
+    tests = [
+        test_visible_good,
+        test_identity_quaternion,
+        test_simple_radial_rejects_folded_outside_fov_ray,
+        test_rank_order_and_uniqueness,
+    ]
     for test in tests:
         test()
         print(f"PASS {test.__name__}")

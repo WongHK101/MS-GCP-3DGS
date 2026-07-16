@@ -21,6 +21,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from triangulate_gcp_points import simple_radial_principal_branch_is_valid
+
 from prepare_direct_multiview_annotation_tasks import (
     build_broad_spatial_candidates,
     load_camera_metadata,
@@ -125,6 +127,10 @@ def reproject_source_pixel(
     camera_xyz = rotation @ xyz + translation
     normalized_x = camera_xyz[0] / camera_xyz[2]
     normalized_y = camera_xyz[1] / camera_xyz[2]
+    if not simple_radial_principal_branch_is_valid(normalized_x, normalized_y, radial):
+        raise RuntimeError(
+            "SIMPLE_RADIAL projection lies outside the invertible principal branch"
+        )
     scale = 1.0 + radial * (normalized_x * normalized_x + normalized_y * normalized_y)
     return np.asarray(
         [focal * normalized_x * scale + cx, focal * normalized_y * scale + cy],
