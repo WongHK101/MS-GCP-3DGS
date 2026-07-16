@@ -54,6 +54,10 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     validate_release_v12_rows_for_evaluator,
     verify_payload_integrity,
 )
+from gcp_pixel_domain_v1_3 import (  # noqa: E402
+    RELEASE_V130_SCHEMA,
+    validate_release_v13_rows_for_evaluator,
+)
 from gcp_packet_camera_compatibility import (  # noqa: E402
     PACKET_PIXEL_DOMAIN,
     load_compatibility_wrapper,
@@ -117,6 +121,12 @@ PIXEL_DOMAIN_RELEASE_LAYOUTS = {
         "annotation_suffix": "pixel_domain_v1_2_2.csv",
         "payload_manifest": "v1_2_2_release_file_manifest.json",
         "root_digest_record": "v1_2_2_release_root_digest.json",
+    },
+    RELEASE_V130_SCHEMA: {
+        "token": "v1_3_0",
+        "annotation_suffix": "pixel_domain_v1_3_0.csv",
+        "payload_manifest": "v1_3_0_release_file_manifest.json",
+        "root_digest_record": "v1_3_0_release_root_digest.json",
     },
 }
 
@@ -1192,9 +1202,14 @@ def main() -> None:
             raise SystemExit(str(exc)) from exc
     if release_config and release_config.get("schema") in PIXEL_DOMAIN_RELEASE_SCHEMAS:
         if depth_manifest is None:
-            raise SystemExit("v1.2 release mode requires --depth_manifest")
+            raise SystemExit("pixel-domain release mode requires --depth_manifest")
         try:
-            raw_rows = validate_release_v12_rows_for_evaluator(
+            validator = (
+                validate_release_v13_rows_for_evaluator
+                if release_config.get("schema") == RELEASE_V130_SCHEMA
+                else validate_release_v12_rows_for_evaluator
+            )
+            raw_rows = validator(
                 release_base=release_config_path.parent if release_config_path else annotations_csv.parent,
                 scene=args.scene,
                 rows=raw_rows,
@@ -1203,7 +1218,7 @@ def main() -> None:
                 depth_manifest=None if packet_compatibility is not None else depth_manifest,
             )
         except ValueError as exc:
-            raise SystemExit(f"v1.2 release pixel-domain validation failed: {exc}") from exc
+            raise SystemExit(f"pixel-domain release validation failed: {exc}") from exc
     observation_rows: List[Dict[str, Any]] = []
     valid_points_by_gcp: Dict[str, List[np.ndarray]] = defaultdict(list)
     failure_counter: Counter[str] = Counter()

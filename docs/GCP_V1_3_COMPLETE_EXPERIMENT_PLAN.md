@@ -59,7 +59,9 @@ Status: execution plan, not yet a frozen release, 2026-07-17.
 
 - 固定六个 current working annotation CSV 的 SHA-256；
 - 固定 1,383-row canonical spine，保留 Good/Ambiguous/Not visible 全部审核状态；
-- `formal_eligible=true` 仅允许 `visible=1 && quality=good` 且 raw 坐标 finite/in-bounds；
+- `annotation_good=true` 仅允许 `visible=1 && quality=good` 且 raw 坐标 finite/in-bounds；
+- `formal_eligible=true` 还必须要求 `(scene, point_name)` 出现在冻结的 87-point split 中；
+- 当前 1,155 条 annotation Good 中，1,069 条属于 formal pointset；其余 Good 行保留为 diagnostic/provenance，不进入主评测；
 - Ambiguous 与 Not visible 保留为 provenance，禁止静默删除或改写为 Good；
 - 固定 authoritative RTK package、87 个 formal points 和 48/39 split identities；
 - G47 不在正式候选池内，未经坐标纠正不得加入；
@@ -79,7 +81,7 @@ Gate F0：所有输入 hash 唯一、worktree clean、split 两次生成 byte-id
 - point table、split、scene metadata、RTK provenance、low-light metadata 纳入 payload；
 - 生成 payload manifest、root digest、detached hashes；重复 staging 生成必须 byte-identical。
 
-Gate F1：1,383/1,383 rows preserved；1,155 formal-eligible rows；ID duplicate=0；projection/round-trip/camera/orientation/integrity tests 全通过。
+Gate F1：1,383/1,383 rows preserved；1,155 annotation-Good rows；1,069 formal-eligible rows；ID duplicate=0；projection/round-trip/camera/orientation/integrity tests 全通过。
 
 ### F2. evaluator v1.3 release-mode support
 

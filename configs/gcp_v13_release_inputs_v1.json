@@ -1,0 +1,18 @@
+{
+  "schema": "ms_gcp_v1_3_0_release_input_manifest_v1",
+  "working_annotations": {
+    "gcp_100000_20260610": "E:/M3M-GCP-3DGS/outputs/gcp_followup_annotation_tasks_50k100k_20260715_followup_after_map_core_v1/working_annotations/gcp_100000_20260610_followup_v1_3_draft_working.csv",
+    "gcp_10000_20260610": "E:/M3M-GCP-3DGS/outputs/gcp_multiview_direct_annotation_tasks_20260713_annotate_direct_v2/working_annotations/gcp_10000_20260610_manual_annotations_v1_3_draft_working.csv",
+    "gcp_20000_20260602": "E:/M3M-GCP-3DGS/outputs/gcp_multiview_direct_annotation_tasks_20260713_annotate_direct_v2/working_annotations/gcp_20000_20260602_manual_annotations_v1_3_draft_working.csv",
+    "gcp_3000_20260602": "E:/M3M-GCP-3DGS/outputs/gcp_multiview_direct_annotation_tasks_20260713_annotate_direct_v2/working_annotations/gcp_3000_20260602_manual_annotations_v1_3_draft_working.csv",
+    "gcp_50000_20260610": "E:/M3M-GCP-3DGS/outputs/gcp_followup_annotation_tasks_50k100k_20260715_followup_after_map_core_v1/working_annotations/gcp_50000_20260610_followup_v1_3_draft_working.csv",
+    "gcp_5000_20260602": "E:/M3M-GCP-3DGS/outputs/gcp_map_defined_core_annotation_tasks_20260714_map_core_G04_G07_G09_v1/working_annotations/gcp_5000_20260602_map_core_v1_3_draft_working.csv"
+  },
+  "geometry_split_candidate": "E:/M3M-GCP-3DGS/outputs/gcp_v13_geometry_only_split_candidate_20260717_post_0002_ambiguous/gcp_control_checkpoint_split_v1_3_candidate.csv",
+  "final_observation_qc": "E:/M3M-GCP-3DGS/outputs/gcp_v13_uniform_supplement_validation_20260717_final_observation_qc",
+  "remote_camera_manifest": "E:/M3M-GCP-3DGS/outputs/gcp_6scene_annotation_domain_inputs_20260628/gcp_6scene_annotation_domain_jsonlight_20260628/remote_light_manifest.json",
+  "release_v1_2_2": "E:/datasets/M3M-GCP/scenes/gcp_manual_annotations_v1_2_2",
+  "rtk_authoritative_dir": "E:/datasets/M3M-GCP/RTK原始数据/authoritative",
+  "rtk_quality_summary": "E:/M3M-GCP-3DGS/outputs/gcp_rtk_corrected_observation_quality_audit_20260717_authoritative_package/target_point_quality_summary.csv",
+  "review_only_coordinate_table": "E:/M3M-GCP-3DGS/evidence/gcp_coordinates/gcp_points_review_only_map_core_5k_20260714.csv"
+}
