@@ -39,10 +39,9 @@ from prepare_v13_uniform_fixed_candidate_supplement import (
 )
 
 
-IMAGE_LEVEL_FORMAL_EXCLUSIONS = {
-    ("gcp_50000_20260610", "DJI_20260610161948_0002_D.JPG"):
-        "independent_image_pose_quality_outlier",
-}
+# Final manual review keeps every source image in the common training set.
+# Observation eligibility is governed independently by the Good-only rule.
+IMAGE_LEVEL_FORMAL_EXCLUSIONS: dict[tuple[str, str], str] = {}
 
 
 def image_sequence(image_name: str) -> int | None:

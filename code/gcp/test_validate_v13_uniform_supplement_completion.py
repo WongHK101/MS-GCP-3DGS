@@ -11,11 +11,16 @@ import pandas as pd
 
 from manual_gcp_annotator import history_hint_enabled
 from validate_v13_uniform_supplement_completion import (
+    IMAGE_LEVEL_FORMAL_EXCLUSIONS,
     legacy_history_correction,
     same_image_cross_point_collision_qc,
     status_coordinate_qc,
     validate_geometry_review_ack,
 )
+
+
+def test_no_image_level_formal_exclusion() -> None:
+    assert IMAGE_LEVEL_FORMAL_EXCLUSIONS == {}
 
 
 def test_history_hint_disabled_by_default_contract() -> None:
@@ -123,6 +128,7 @@ def test_geometry_review_ack_is_hash_bound() -> None:
 
 def main() -> int:
     tests = [
+        test_no_image_level_formal_exclusion,
         test_history_hint_disabled_by_default_contract,
         test_legacy_history_can_double_shift_corrected_candidate,
         test_status_coordinate_contract,
