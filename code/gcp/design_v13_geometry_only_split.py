@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -111,6 +112,35 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def generator_git_provenance(script_path: Path) -> dict[str, str | bool]:
+    repo_root = subprocess.run(
+        ["git", "-C", str(script_path.parent), "rev-parse", "--show-toplevel"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    def git(*args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", repo_root, *args],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    status = git("status", "--porcelain")
+    if status:
+        raise ValueError("Split candidate generation requires a clean Git worktree")
+    return {
+        "repo_root": repo_root,
+        "commit": git("rev-parse", "HEAD"),
+        "branch": git("branch", "--show-current"),
+        "worktree_clean": True,
+        "script_path": str(script_path),
+        "script_sha256": sha256_file(script_path),
+    }
 
 
 def convex_hull(points: np.ndarray) -> np.ndarray:
@@ -329,6 +359,7 @@ def main() -> int:
     plots_dir.mkdir()
     coordinates = load_coordinates(args.release_dir, args.review_coordinate_source)
     coordinate_by_name = coordinates.set_index("point_name")
+    generator_provenance = generator_git_provenance(Path(__file__).resolve())
 
     split_rows = []
     disposition_rows = []
@@ -456,6 +487,7 @@ def main() -> int:
     manifest = {
         "schema": "ms_gcp_geometry_only_split_candidate_v1",
         "status": "candidate_not_release_frozen",
+        "generator": generator_provenance,
         "selection_policy": {
             "forbidden_inputs": ["model residual", "RMSE", "depth", "alpha", "variance", "multiview model scatter"],
             "allowed_inputs": ["surveyed XYZ", "Good view count", "coordinate QC", "user-approved scene boundary"],
