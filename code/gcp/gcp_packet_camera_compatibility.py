@@ -6,12 +6,13 @@ import csv
 import hashlib
 import json
 import math
+import os
 import re
 import subprocess
 import sys
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Iterable, Sequence
 
 import numpy as np
@@ -545,8 +546,13 @@ def validate_npz_packet_headers(
 
 
 def resolve_packet_path(packet_path: str, search_roots: Sequence[Path]) -> Path | None:
-    candidate = Path(packet_path)
-    if candidate.exists():
+    raw = str(packet_path)
+    candidate = Path(raw)
+    foreign_absolute = (
+        (os.name == "nt" and raw.startswith("/") and not raw.startswith("//"))
+        or (os.name != "nt" and PureWindowsPath(raw).is_absolute())
+    )
+    if not foreign_absolute and candidate.exists():
         return candidate
     name = candidate.name
     for root in search_roots:
