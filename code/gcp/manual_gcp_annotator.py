@@ -79,6 +79,12 @@ def candidate_crop_size(cand: Dict[str, str], base_crop_size: int, max_crop_size
     return max(int(base_crop_size), min(int(max_crop_size), requested))
 
 
+def history_hint_enabled(mode: str) -> bool:
+    if mode not in {"off", "legacy_history"}:
+        raise ValueError(f"Unsupported history hint mode: {mode}")
+    return mode == "legacy_history"
+
+
 class Annotator:
     def __init__(
         self,
@@ -92,6 +98,7 @@ class Annotator:
         image_root: Optional[Path] = None,
         point_name_filter: Optional[str] = None,
         max_rows: int = 0,
+        history_hint_mode: str = "off",
     ):
         self.root = root
         self.candidates = candidates
@@ -101,6 +108,8 @@ class Annotator:
         self.image_root = image_root
         self.point_name_filter = point_name_filter
         self.max_rows = int(max_rows)
+        self.history_hint_mode = history_hint_mode
+        history_hint_enabled(self.history_hint_mode)
         self.crop_size = int(crop_size)
         self.current_crop_size = self.crop_size
         self.current_search_radius_px = 0.0
@@ -486,7 +495,10 @@ class Annotator:
         py = float(cand["pixel_y"])
         self.current_search_radius_px = candidate_search_radius(cand)
         self.current_crop_size = candidate_crop_size(cand, self.crop_size)
-        correction, correction_info = self.correction_for_candidate(cand)
+        if history_hint_enabled(self.history_hint_mode):
+            correction, correction_info = self.correction_for_candidate(cand)
+        else:
+            correction, correction_info = None, "legacy history correction disabled"
         ann = self.annotations.get(self.key(cand))
         center_x, center_y = px, py
         if ann and ann.get("manual_x") and ann.get("manual_y"):
@@ -547,7 +559,7 @@ class Annotator:
             self.status.configure(
                 text=(
                     "Yellow = predicted search center/circle, not ground truth. "
-                    "Magenta = corrected hint. Cyan = manual mark. "
+                    "Magenta = optional legacy-history hint. Cyan = manual mark. "
                     "Click true GCP center, then press 1/2/3/4/5/6. Arrow keys nudge manual mark by 0.1 px."
                 )
             )
@@ -932,6 +944,12 @@ def main() -> None:
     parser.add_argument("--display_size", type=int, default=860)
     parser.add_argument("--annotator", default="user", help="Annotator id written to the output CSV.")
     parser.add_argument("--image_root", default="", help="Optional root used to resolve image_name when candidate image_path is stale.")
+    parser.add_argument(
+        "--history_hint_mode",
+        choices=["off", "legacy_history"],
+        default="off",
+        help="Legacy manual-minus-projection hint. Disabled by default for corrected candidates.",
+    )
     args = parser.parse_args()
     candidates_path = Path(args.candidates_csv)
     candidates = read_csv(candidates_path)
@@ -952,6 +970,7 @@ def main() -> None:
         image_root=Path(args.image_root) if args.image_root else None,
         point_name_filter=args.point_name,
         max_rows=args.max_rows,
+        history_hint_mode=args.history_hint_mode,
     )
     root.mainloop()
 
