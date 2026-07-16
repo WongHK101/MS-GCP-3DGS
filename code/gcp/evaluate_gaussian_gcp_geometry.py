@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import fnmatch
 import hashlib
 import json
 import math
@@ -45,6 +46,22 @@ from fit_gcp_sim3 import (  # noqa: E402
     parse_name_set,
     residual_stats,
 )
+from gcp_pixel_domain_v1_2 import (  # noqa: E402
+    PIXEL_DOMAIN_RELEASE_SCHEMAS,
+    RELEASE_V12_SCHEMA,
+    RELEASE_V121_SCHEMA,
+    RELEASE_V122_SCHEMA,
+    validate_release_v12_rows_for_evaluator,
+    verify_payload_integrity,
+)
+from gcp_packet_camera_compatibility import (  # noqa: E402
+    PACKET_PIXEL_DOMAIN,
+    load_compatibility_wrapper,
+    packet_projection_for_row,
+    packet_set_lookup,
+    packet_view_lookup,
+    validate_compatibility_wrapper,
+)
 
 
 DEPTH_SUFFIXES = (".npy", ".npz", ".tif", ".tiff", ".png")
@@ -76,13 +93,111 @@ def file_sha256(path: Path) -> str:
 
 def load_release_config(path: Path) -> Dict[str, Any]:
     config = json.loads(path.read_text(encoding="utf-8"))
-    if config.get("schema") != "ms_gcp_3dgs_benchmark_release_config_v1_1":
+    supported = {"ms_gcp_3dgs_benchmark_release_config_v1_1", *PIXEL_DOMAIN_RELEASE_SCHEMAS}
+    if config.get("schema") not in supported:
         raise ValueError(f"Unsupported release config schema: {config.get('schema')}")
     return config
 
 
+PIXEL_DOMAIN_RELEASE_LAYOUTS = {
+    RELEASE_V12_SCHEMA: {
+        "token": "v1_2",
+        "annotation_suffix": "pixel_domain_v1_2.csv",
+        "payload_manifest": "v1_2_release_file_manifest.json",
+        "root_digest_record": "v1_2_release_root_digest.json",
+    },
+    RELEASE_V121_SCHEMA: {
+        "token": "v1_2_1",
+        "annotation_suffix": "pixel_domain_v1_2_1.csv",
+        "payload_manifest": "v1_2_1_release_file_manifest.json",
+        "root_digest_record": "v1_2_1_release_root_digest.json",
+    },
+    RELEASE_V122_SCHEMA: {
+        "token": "v1_2_2",
+        "annotation_suffix": "pixel_domain_v1_2_2.csv",
+        "payload_manifest": "v1_2_2_release_file_manifest.json",
+        "root_digest_record": "v1_2_2_release_root_digest.json",
+    },
+}
+
+
+def release_relative_path(value: Any, field_name: str) -> str:
+    rel = str(value or "").strip()
+    if not rel:
+        raise ValueError(f"Missing release layout field: {field_name}")
+    path = Path(rel)
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError(f"Release layout field must be a root-relative path: {field_name}={rel!r}")
+    return rel.replace("\\", "/")
+
+
+def pixel_domain_release_layout(config: Dict[str, Any]) -> Dict[str, str]:
+    schema = str(config.get("schema", ""))
+    if schema not in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+        raise ValueError(f"Not a pixel-domain release schema: {schema}")
+    if schema not in PIXEL_DOMAIN_RELEASE_LAYOUTS:
+        raise ValueError(f"No evaluator release layout mapping for pixel-domain schema: {schema}")
+    layout = dict(PIXEL_DOMAIN_RELEASE_LAYOUTS[schema])
+    if config.get("payload_manifest"):
+        layout["payload_manifest"] = release_relative_path(config["payload_manifest"], "payload_manifest")
+    if config.get("root_digest_record"):
+        layout["root_digest_record"] = release_relative_path(config["root_digest_record"], "root_digest_record")
+    return layout
+
+
+def release_annotation_name_for_scene(config: Dict[str, Any], scene: str) -> str:
+    layout = pixel_domain_release_layout(config)
+    annotation_name = f"{scene}_gcp_annotations_{layout['annotation_suffix']}"
+    pattern = str(config.get("annotation_csv_pattern", "")).strip()
+    if pattern and not fnmatch.fnmatch(annotation_name, pattern):
+        raise ValueError(
+            f"Resolved annotation name does not match release pattern: "
+            f"{annotation_name} vs {pattern}"
+        )
+    return annotation_name
+
+
 def verify_release_files(config_path: Path, config: Dict[str, Any]) -> List[Dict[str, Any]]:
     base = config_path.parent
+    if config.get("schema") in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+        layout = pixel_domain_release_layout(config)
+        manifest_rel = layout["payload_manifest"]
+        root_record_rel = layout["root_digest_record"]
+        manifest_path = base / manifest_rel
+        root_record_path = base / root_record_rel
+        integrity = verify_payload_integrity(base, manifest_path, root_record_path)
+        if not integrity["passed"]:
+            raise ValueError(f"v1.2 release integrity failed: {integrity}")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        verified = []
+        for item in manifest.get("files", []):
+            rel = item.get("path", "")
+            path = base / rel
+            verified.append(
+                {
+                    "path": str(path),
+                    "release_relative_path": rel,
+                    "sha256": item.get("sha256", ""),
+                    "bytes": int(item.get("bytes", 0)),
+                }
+            )
+        verified.extend(
+            [
+                {
+                    "path": str(manifest_path),
+                    "release_relative_path": manifest_rel,
+                    "sha256": file_sha256(manifest_path),
+                    "bytes": manifest_path.stat().st_size,
+                },
+                {
+                    "path": str(root_record_path),
+                    "release_relative_path": root_record_rel,
+                    "sha256": file_sha256(root_record_path),
+                    "bytes": root_record_path.stat().st_size,
+                },
+            ]
+        )
+        return verified
     verified = []
     for item in config.get("files", []):
         rel = item.get("path", "")
@@ -116,6 +231,18 @@ def release_file_registry(verified_files: Sequence[Dict[str, Any]]) -> Dict[str,
         registry[path.name] = dict(item)
         registry[str(item.get("release_relative_path", ""))] = dict(item)
     return registry
+
+
+def require_release_registry_file(
+    release_registry: Dict[str, Dict[str, Any]],
+    release_base: Path,
+    release_relative_path: str,
+    label: str,
+) -> Path:
+    path = release_base / release_relative_path
+    if release_relative_path not in release_registry and str(path.resolve()) not in release_registry:
+        raise ValueError(f"{label} is not in verified release registry: {release_relative_path}")
+    return path
 
 
 def load_scene_metadata(path: Path) -> Dict[str, Dict[str, str]]:
@@ -788,6 +915,8 @@ def main() -> None:
     parser.add_argument("--colmap_model")
     parser.add_argument("--depth_dir")
     parser.add_argument("--depth_manifest")
+    parser.add_argument("--packet_compatibility_manifest")
+    parser.add_argument("--packet_compatibility_manifest_sha256", default="")
     parser.add_argument("--annotations_csv")
     parser.add_argument("--gcp_csv")
     parser.add_argument("--split_csv")
@@ -842,6 +971,11 @@ def main() -> None:
     depth_manifest_path: Path | None = None
     depth_manifest: Dict[str, Any] | None = None
     depth_manifest_sha256 = ""
+    packet_compatibility_path: Path | None = None
+    packet_compatibility: Dict[str, Any] | None = None
+    packet_compatibility_sha256 = ""
+    packet_compatibility_set: Dict[str, Any] | None = None
+    packet_compatibility_views: Dict[str, Dict[str, Any]] = {}
     depth_index: Dict[str, Dict[str, Any]] = {}
     metric_packet_manifest = False
     metric_packet_numerical_support_floor = 0.0
@@ -881,6 +1015,7 @@ def main() -> None:
         release_config_path = Path(args.release_config)
         release_config_sha256 = file_sha256(release_config_path)
         release_config = load_release_config(release_config_path)
+        release_schema = str(release_config.get("schema", ""))
         release_verified_files = verify_release_files(release_config_path, release_config)
         release_registry = release_file_registry(release_verified_files)
         release_base = release_config_path.parent
@@ -907,12 +1042,21 @@ def main() -> None:
         scene_metadata_rows = load_scene_metadata(Path(args.scene_metadata_csv))
         if args.scene not in scene_metadata_rows:
             raise SystemExit(f"Unknown scene for frozen release config: {args.scene}")
-        annotation_name = f"{args.scene}_gcp_annotations_final_good_nadir_v1.csv"
-        annotation_path = release_base / annotation_name
-        if annotation_name not in release_registry and str(annotation_path.resolve()) not in release_registry:
+        if release_schema in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+            annotation_name = release_annotation_name_for_scene(release_config, args.scene)
+        else:
+            annotation_name = f"{args.scene}_gcp_annotations_final_good_nadir_v1.csv"
+        try:
+            annotation_path = require_release_registry_file(
+                release_registry,
+                release_base,
+                annotation_name,
+                "Frozen annotation file",
+            )
+        except ValueError as exc:
             raise SystemExit(
                 f"Frozen annotation file for scene {args.scene} is not in release registry: {annotation_name}"
-            )
+            ) from exc
         args.annotations_csv = str(annotation_path)
 
     if args.depth_manifest:
@@ -972,6 +1116,39 @@ def main() -> None:
     else:
         raise SystemExit("--depth_semantics is required unless --depth_manifest is supplied")
 
+    if args.packet_compatibility_manifest:
+        if not release_config or not args.scene:
+            raise SystemExit("--packet_compatibility_manifest requires --release_config and --scene")
+        packet_compatibility_path = Path(args.packet_compatibility_manifest)
+        packet_compatibility_sha256 = file_sha256(packet_compatibility_path)
+        try:
+            validate_compatibility_wrapper(
+                packet_compatibility_path,
+                expected_wrapper_sha256=str(args.packet_compatibility_manifest_sha256 or ""),
+                depth_manifest=depth_manifest,
+                depth_manifest_path=depth_manifest_path,
+                release_config=release_config,
+                release_dir=release_config_path.parent if release_config_path else None,
+                scene=args.scene,
+                patch_size=int(args.patch_size),
+                packet_search_roots=[Path(args.depth_dir)] if args.depth_dir else [],
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise SystemExit(f"packet compatibility validation failed before depth load: {type(exc).__name__}: {exc}") from exc
+        packet_compatibility = load_compatibility_wrapper(packet_compatibility_path)
+        packet_compatibility_set = packet_set_lookup(packet_compatibility, args.scene)
+        packet_compatibility_views = packet_view_lookup(packet_compatibility_set)
+        if depth_manifest_path and packet_compatibility_set.get("original_depth_manifest_sha256") != depth_manifest_sha256:
+            raise SystemExit(
+                "packet compatibility wrapper depth-manifest SHA mismatch: "
+                f"{packet_compatibility_set.get('original_depth_manifest_sha256')} vs {depth_manifest_sha256}"
+            )
+        if packet_compatibility.get("release_id") != release_config.get("release_id"):
+            raise SystemExit(
+                f"packet compatibility release mismatch: {packet_compatibility.get('release_id')} "
+                f"vs {release_config.get('release_id')}"
+            )
+
     required = ["colmap_model", "depth_dir", "annotations_csv", "gcp_csv", "out_dir"]
     missing = [name for name in required if not getattr(args, name)]
     if missing:
@@ -1013,6 +1190,20 @@ def main() -> None:
             validate_annotation_rows_scene(raw_rows, args.scene)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
+    if release_config and release_config.get("schema") in PIXEL_DOMAIN_RELEASE_SCHEMAS:
+        if depth_manifest is None:
+            raise SystemExit("v1.2 release mode requires --depth_manifest")
+        try:
+            raw_rows = validate_release_v12_rows_for_evaluator(
+                release_base=release_config_path.parent if release_config_path else annotations_csv.parent,
+                scene=args.scene,
+                rows=raw_rows,
+                colmap_cameras=cameras,
+                colmap_images=images,
+                depth_manifest=None if packet_compatibility is not None else depth_manifest,
+            )
+        except ValueError as exc:
+            raise SystemExit(f"v1.2 release pixel-domain validation failed: {exc}") from exc
     observation_rows: List[Dict[str, Any]] = []
     valid_points_by_gcp: Dict[str, List[np.ndarray]] = defaultdict(list)
     failure_counter: Counter[str] = Counter()
@@ -1140,7 +1331,21 @@ def main() -> None:
         depth_height = int(depth_meta["depth_height"])
         derived_scale_x = depth_width / max(1, camera_width)
         derived_scale_y = depth_height / max(1, camera_height)
-        if depth_index:
+        packet_projection: Dict[str, Any] | None = None
+        if packet_compatibility_views:
+            view_mapping = packet_compatibility_views.get(Path(image_name).name)
+            if view_mapping is None:
+                raise SystemExit(f"missing packet compatibility view mapping for {image_name}")
+            packet_projection = packet_projection_for_row(row, view_mapping)
+            packet_camera = packet_projection["packet_camera"]
+            if int(packet_camera.width) != depth_width or int(packet_camera.height) != depth_height:
+                raise SystemExit(
+                    f"packet compatibility camera shape mismatch for {image_name}: "
+                    f"camera {packet_camera.width}x{packet_camera.height}, packet {depth_width}x{depth_height}"
+                )
+            depth_pixel_scale_x = float(packet_projection["depth_pixel_scale_x"])
+            depth_pixel_scale_y = float(packet_projection["depth_pixel_scale_y"])
+        elif depth_index:
             depth_pixel_scale_x = derived_scale_x
             depth_pixel_scale_y = derived_scale_y
         else:
@@ -1157,8 +1362,18 @@ def main() -> None:
                 )
         u = float(base_out["u_px"])
         v = float(base_out["v_px"])
-        depth_u = u * depth_pixel_scale_x
-        depth_v = v * depth_pixel_scale_y
+        if packet_projection is not None:
+            depth_u = float(packet_projection["packet_u_px"])
+            depth_v = float(packet_projection["packet_v_px"])
+            sampling_camera = packet_projection["packet_camera"]
+            geometry_u = depth_u
+            geometry_v = depth_v
+        else:
+            depth_u = u * depth_pixel_scale_x
+            depth_v = v * depth_pixel_scale_y
+            sampling_camera = camera
+            geometry_u = u
+            geometry_v = v
         base_out["geometry_u_px"] = u
         base_out["geometry_v_px"] = v
         base_out["depth_u_px"] = depth_u
@@ -1171,13 +1386,20 @@ def main() -> None:
             base_out["depth_packet_schema"] = METRIC_PACKET_MANIFEST_SCHEMA
             base_out["primary_depth_tensor"] = PRIMARY_DEPTH_TENSOR
             base_out["packet_sha256"] = depth_meta.get("packet_sha256", "")
+        if packet_projection is not None:
+            base_out["packet_pixel_domain"] = PACKET_PIXEL_DOMAIN
+            base_out["packet_patch_protocol"] = packet_projection["packet_patch_protocol"]
+            base_out["packet_normalized_x"] = packet_projection["packet_normalized_x"]
+            base_out["packet_normalized_y"] = packet_projection["packet_normalized_y"]
+            base_out["packet_ray_coordinate_error"] = packet_projection["ray_coordinate_error"]
+            base_out["packet_ray_angle_error_rad"] = packet_projection["ray_angle_error_rad"]
         base_out["depth_pixel_scale_x"] = depth_pixel_scale_x
         base_out["depth_pixel_scale_y"] = depth_pixel_scale_y
         valid, patch_stats = robust_depth_patch(
             depth=depth,
-            camera=camera,
-            u=u,
-            v=v,
+            camera=sampling_camera,
+            u=geometry_u,
+            v=geometry_v,
             depth_u=depth_u,
             depth_v=depth_v,
             depth_pixel_scale_x=depth_pixel_scale_x,
@@ -1203,7 +1425,7 @@ def main() -> None:
             failure_counter[reason] += 1
             observation_rows.append(base_out)
             continue
-        xyz = backproject_world(camera, image, u, v, float(patch_stats["camera_z"]))
+        xyz = backproject_world(sampling_camera, image, geometry_u, geometry_v, float(patch_stats["camera_z"]))
         base_out.update(
             {
                 "valid": 1,
@@ -1373,12 +1595,17 @@ def main() -> None:
         "depth_pixel_scale_y": float(args.depth_pixel_scale_y),
         "release_config": str(release_config_path) if release_config_path else "",
         "release_config_sha256": release_config_sha256,
+        "release_config_schema": release_config.get("schema", "") if release_config else "",
         "canonical_release_config_sha256": canonical_release_config_sha256,
         "relocated_release_config_sha256": relocated_release_config_sha256,
         "release_id": release_config.get("release_id", "") if release_config else "",
         "release_verified_files": release_verified_files,
         "depth_manifest": str(depth_manifest_path) if depth_manifest_path else "",
         "depth_manifest_sha256": depth_manifest_sha256,
+        "packet_compatibility_manifest": str(packet_compatibility_path) if packet_compatibility_path else "",
+        "packet_compatibility_manifest_sha256": packet_compatibility_sha256,
+        "packet_compatibility_schema": packet_compatibility.get("schema", "") if packet_compatibility else "",
+        "packet_compatibility_patch_protocol": packet_compatibility_set.get("patch_protocol", "") if packet_compatibility_set else "",
         "depth_manifest_summary": {
             "schema": depth_manifest.get("schema", "") if depth_manifest else "",
             "packet_schema": depth_manifest.get("packet_schema", "") if depth_manifest else "",
