@@ -46,9 +46,7 @@ SCENE_RULES = {
         "label": "20K",
         "points": ["G28", "G29", "G30", "G31", "G33", "G35", "G36", "G37", "G38", "dyl2"],
         "controls": 6,
-        "forced_checkpoints": {
-            "G36": "good_view_count_below_control_minimum_6",
-        },
+        "forced_checkpoints": {},
     },
     "gcp_50000_20260610": {
         "label": "50K",
@@ -62,9 +60,7 @@ SCENE_RULES = {
         "label": "100K",
         "points": None,
         "controls": 13,
-        "forced_checkpoints": {
-            "dyl2": "good_view_count_below_control_minimum_6",
-        },
+        "forced_checkpoints": {},
     },
 }
 
@@ -533,9 +529,10 @@ def main() -> int:
         "",
         "## Important eligibility notes",
         "",
-        "- 5K G07/G09 and 50K G39 are checkpoints only and remain blocked for formal release until RTK coordinate review is resolved.",
-        "- 50K dyl2 and 100K G33 remain diagnostic-only because they have fewer than four Good views; corrected G33 discovery also found no valid nadir coverage.",
-        "- 100K dyl2 has four consistent Good views and is checkpoint-only; it is not eligible to be a control.",
+        "- 5K G07/G09 and 50K G39 remain provisional checkpoints because image review does not by itself resolve their RTK coordinate provenance.",
+        "- 50K dyl2 remains diagnostic-only because it has fewer than four Good views and no corrected nadir coverage.",
+        "- 100K G33 now has sufficient multi-view annotations but remains outside the user-approved 25-point formal scene pointset.",
+        "- 20K G36 and 100K dyl2 now exceed the six-Good-view control threshold and are no longer forced checkpoints.",
         "- v1.2.2 remains unchanged.",
     ]
     (args.output_root / "README.md").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
