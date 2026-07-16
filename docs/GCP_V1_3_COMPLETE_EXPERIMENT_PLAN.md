@@ -40,6 +40,19 @@ Status: execution plan, not yet a frozen release, 2026-07-17.
 
 在以上六项通过前，不启动多方法六场景批量训练。可以先做 no-GPU adapter/source audit。
 
+## 1.1 方法工作区与原始数据隔离硬约束
+
+- 原始影像、COLMAP sources、RTK、annotations 和正式 release 对算法进程只读；
+- 每个方法使用独立 clean fixed-commit worktree，不在代码目录编译 CUDA 或写日志；
+- 每个方法使用独立锁定环境，不允许 global/user-site `pip` 或复用其他项目环境；
+- 每个 method/run 使用独立 `TORCH_EXTENSIONS_DIR`、build root 和 temp root；
+- 每个 method/scene/run 使用唯一不可覆盖 run root，内部固定分为 preflight、training、checkpoints、packets、evaluation、diagnostics、audit；
+- 训练、模型、packet、评测和临时文件不得写入 dataset/release/code roots；
+- 正式 run 前后核对 source inventory/hash；任何原始输入变化使该 run 失效；
+- 所有 launch 必须先通过 `validate_gcp_v13_workspace_isolation.py`，不能只依赖人工遵守。
+
+完整规则见 `docs/GCP_V1_3_METHOD_WORKSPACE_ISOLATION_POLICY.md`。
+
 ## 2. Phase F: v1.3 协议冻结
 
 ### F0. 冻结输入快照

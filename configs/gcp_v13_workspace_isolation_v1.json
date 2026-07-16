@@ -1,0 +1,70 @@
+{
+  "schema": "ms_gcp_method_workspace_isolation_contract_v1",
+  "dataset_access": "read_only",
+  "release_access": "read_only_during_method_runs",
+  "code_access": "clean_fixed_commit_no_runtime_writes",
+  "overwrite_policy": "fail_if_exists",
+  "global_python_install_allowed": false,
+  "shared_cuda_cache_allowed": false,
+  "hardlink_to_dataset_allowed": false,
+  "source_hash_pre_post_required": true,
+  "required_run_fields": [
+    "schema",
+    "method_id",
+    "scene",
+    "run_id",
+    "code_root",
+    "code_commit",
+    "environment_root",
+    "environment_lock_sha256",
+    "dataset_root",
+    "release_root",
+    "release_root_digest",
+    "build_root",
+    "run_root",
+    "torch_extensions_dir",
+    "temp_root",
+    "output_subdirs",
+    "policies",
+    "env_vars"
+  ],
+  "required_output_subdirs": {
+    "preflight": "00_preflight",
+    "training": "01_training",
+    "checkpoints": "02_checkpoints",
+    "packets": "03_packets",
+    "evaluation": "04_evaluation",
+    "diagnostics": "05_diagnostics",
+    "audit": "06_audit"
+  },
+  "required_policy_values": {
+    "dataset_access": "read_only",
+    "release_access": "read_only",
+    "code_runtime_writes": "forbidden",
+    "overwrite_policy": "fail_if_exists",
+    "global_python_install_allowed": false,
+    "shared_cuda_cache_allowed": false,
+    "hardlink_to_dataset_allowed": false
+  },
+  "required_env_values": {
+    "PYTHONNOUSERSITE": "1"
+  },
+  "recommended_autodl_layout": {
+    "dataset_root": "/root/autodl-tmp/datasets/ms-gcp-v13/<release_root_digest>",
+    "code_root": "/root/autodl-tmp/worktrees/ms-gcp-v13/<method_id>/<code_commit>",
+    "environment_root": "/root/autodl-tmp/envs/ms-gcp-v13/<method_id>/<environment_lock_sha256>",
+    "build_root": "/root/autodl-tmp/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>",
+    "run_root": "/root/autodl-tmp/runs/ms-gcp-v13/<method_id>/<scene>/<run_id>",
+    "torch_extensions_dir": "/root/autodl-tmp/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>/torch_extensions",
+    "temp_root": "/root/autodl-tmp/runs/ms-gcp-v13/<method_id>/<scene>/<run_id>/tmp"
+  },
+  "recommended_windows_layout": {
+    "dataset_root": "E:/datasets/M3M-GCP",
+    "code_root": "E:/worktrees/ms-gcp-v13/<method_id>/<code_commit>",
+    "environment_root": "E:/envs/ms-gcp-v13/<method_id>/<environment_lock_sha256>",
+    "build_root": "E:/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>",
+    "run_root": "E:/M3M-GCP-3DGS/outputs/gcp_v13_runs/<method_id>/<scene>/<run_id>",
+    "torch_extensions_dir": "E:/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>/torch_extensions",
+    "temp_root": "E:/M3M-GCP-3DGS/outputs/gcp_v13_runs/<method_id>/<scene>/<run_id>/tmp"
+  }
+}
