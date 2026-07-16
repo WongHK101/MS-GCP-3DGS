@@ -42,6 +42,7 @@ OBSERVATION_ID_V130_SCHEMA = "ms_gcp_observation_id_v1_3_0"
 ANNOTATION_QUALITY_VALUES = {"good", "ambiguous", "not_visible"}
 PROJECTION_STATUS_VALID = "valid_raw_to_benchmark_projection"
 PROJECTION_STATUS_NO_CLICK = "not_applicable_no_raw_click"
+PROJECTION_STATUS_DIAGNOSTIC_OOB = "diagnostic_projection_out_of_target_bounds"
 
 
 def observation_id_payload_v13(
@@ -336,17 +337,28 @@ def validate_release_v13_rows_for_evaluator(
             for value, field in [(x_text, "raw_manual_x"), (y_text, "raw_manual_y")]:
                 if not math.isfinite(float(value)):
                     raise ValueError(f"non-finite {field} for {key}")
+            raw_in_bounds = 0.0 <= float(x_text) < source_camera.width and 0.0 <= float(y_text) < source_camera.height
+            if parse_release_bool(row.get("raw_coordinate_in_bounds"), "raw_coordinate_in_bounds") != raw_in_bounds:
+                raise ValueError(f"raw_coordinate_in_bounds mismatch for {key}")
+            if formal_eligible and not raw_in_bounds:
+                raise ValueError(f"formal raw coordinates out of bounds for {key}")
             projection = raw_to_target_projection(source_camera, target_camera, float(x_text), float(y_text))
-            if row.get("projection_status") != PROJECTION_STATUS_VALID:
-                raise ValueError(f"projection_status mismatch for clicked row {key}")
             dx = abs(projection["target_x"] - float(row["target_x"]))
             dy = abs(projection["target_y"] - float(row["target_y"]))
             if dx > CACHED_TARGET_TOL_PX or dy > CACHED_TARGET_TOL_PX:
                 raise ValueError(f"cached target projection mismatch for {key}: dx={dx} dy={dy}")
             if projection["roundtrip_error_px"] > ROUNDTRIP_TOL_PX:
                 raise ValueError(f"roundtrip error exceeds tolerance for {key}")
-            if not (0.0 <= float(row["target_x"]) < target_camera.width and 0.0 <= float(row["target_y"]) < target_camera.height):
-                raise ValueError(f"target coordinates out of bounds for {key}")
+            target_in_bounds = 0.0 <= float(row["target_x"]) < target_camera.width and 0.0 <= float(row["target_y"]) < target_camera.height
+            if parse_release_bool(row.get("target_in_bounds"), "target_in_bounds") != target_in_bounds:
+                raise ValueError(f"target_in_bounds mismatch for {key}")
+            expected_projection_status = (
+                PROJECTION_STATUS_VALID if raw_in_bounds and target_in_bounds else PROJECTION_STATUS_DIAGNOSTIC_OOB
+            )
+            if row.get("projection_status") != expected_projection_status:
+                raise ValueError(f"projection_status mismatch for clicked row {key}")
+            if formal_eligible and not target_in_bounds:
+                raise ValueError(f"formal observation projects out of target bounds for {key}")
             if formal_eligible:
                 out["u_px"] = row["target_x"]
                 out["v_px"] = row["target_y"]
@@ -358,6 +370,10 @@ def validate_release_v13_rows_for_evaluator(
                 raise ValueError(f"no-click row has invalid status for {key}")
             if row.get("projection_status") != PROJECTION_STATUS_NO_CLICK:
                 raise ValueError(f"projection_status mismatch for no-click row {key}")
+            if str(row.get("target_in_bounds", "")).strip():
+                raise ValueError(f"no-click row must leave target_in_bounds empty for {key}")
+            if str(row.get("raw_coordinate_in_bounds", "")).strip():
+                raise ValueError(f"no-click row must leave raw_coordinate_in_bounds empty for {key}")
             for field in [
                 "normalized_x",
                 "normalized_y",

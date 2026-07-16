@@ -47,6 +47,7 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
     write_json_deterministic,
 )
 from gcp_pixel_domain_v1_3 import (  # noqa: E402
+    PROJECTION_STATUS_DIAGNOSTIC_OOB,
     PROJECTION_STATUS_NO_CLICK,
     PROJECTION_STATUS_VALID,
     RELEASE_V130_ID,
@@ -83,6 +84,7 @@ EXPECTED_COUNTS = {
     "annotated_image_count": 951,
     "training_view_count": 6187,
     "v1_2_2_preserved_observation_count": 611,
+    "diagnostic_projection_out_of_bounds_count": 2,
 }
 
 OBS_FIELDS = [
@@ -102,6 +104,8 @@ OBS_FIELDS = [
     "formal_eligible",
     "formal_role",
     "projection_status",
+    "raw_coordinate_in_bounds",
+    "target_in_bounds",
     "source_annotation_schema",
     "source_annotation_file_sha256",
     "source_annotation_row_number",
@@ -387,6 +391,11 @@ Rows reviewed as Not visible without a click remain in the release with empty
 projection fields and can never enter formal evaluation. Ambiguous rows and
 Good rows outside the frozen split are diagnostic only.
 
+Two non-formal reviewed rows project outside the raw/benchmark image bounds
+(one Ambiguous and one Not visible stale click). Their original audit values
+are preserved with an explicit diagnostic out-of-bounds status. Any formal
+observation outside either image domain remains a hard failure.
+
 The complete benchmark training-view list is frozen independently from the
 annotation subset. No source image is physically deleted due to annotation QC;
 in particular, reviewed blurry 0002 observations are excluded through row
@@ -628,18 +637,22 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
                 raw_y,
             )
             projection: dict[str, Any] = {}
+            raw_in_bounds: bool | None = None
+            target_in_bounds: bool | None = None
             if has_click:
                 if not all(math.isfinite(float(value)) for value in [raw_x, raw_y]):
                     raise ValueError(f"non-finite raw coordinates for {key}")
-                if not (0.0 <= float(raw_x) < src_cam.width and 0.0 <= float(raw_y) < src_cam.height):
-                    raise ValueError(f"raw coordinates out of bounds for {key}")
+                raw_in_bounds = 0.0 <= float(raw_x) < src_cam.width and 0.0 <= float(raw_y) < src_cam.height
+                if formal_eligible and not raw_in_bounds:
+                    raise ValueError(f"formal raw coordinates out of bounds for {key}")
                 projection = raw_to_target_projection(src_cam, tgt_cam, float(raw_x), float(raw_y))
                 if projection["roundtrip_error_px"] > ROUNDTRIP_TOL_PX:
                     raise ValueError(f"roundtrip error exceeds tolerance for {key}")
-                if not (0.0 <= projection["target_x"] < tgt_cam.width and 0.0 <= projection["target_y"] < tgt_cam.height):
-                    raise ValueError(f"target coordinates out of bounds for {key}")
+                target_in_bounds = 0.0 <= projection["target_x"] < tgt_cam.width and 0.0 <= projection["target_y"] < tgt_cam.height
+                if formal_eligible and not target_in_bounds:
+                    raise ValueError(f"formal target coordinates out of bounds for {key}")
                 clicked_count += 1
-                in_bounds_count += 1
+                in_bounds_count += bool(target_in_bounds)
                 raw_displacements.append(math.hypot(projection["target_x"] - float(raw_x), projection["target_y"] - float(raw_y)))
                 roundtrip_errors.append(float(projection["roundtrip_error_px"]))
             else:
@@ -663,7 +676,15 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
                 "annotation_good": bool_text(annotation_good),
                 "formal_eligible": bool_text(formal_eligible),
                 "formal_role": formal_role if formal_eligible else "not_formal",
-                "projection_status": PROJECTION_STATUS_VALID if has_click else PROJECTION_STATUS_NO_CLICK,
+                "projection_status": (
+                    PROJECTION_STATUS_VALID
+                    if has_click and raw_in_bounds and target_in_bounds
+                    else PROJECTION_STATUS_DIAGNOSTIC_OOB
+                    if has_click
+                    else PROJECTION_STATUS_NO_CLICK
+                ),
+                "raw_coordinate_in_bounds": bool_text(bool(raw_in_bounds)) if has_click else "",
+                "target_in_bounds": bool_text(bool(target_in_bounds)) if has_click else "",
                 "source_annotation_schema": row.get("schema", ""),
                 "source_annotation_file_sha256": source_sha,
                 "source_annotation_row_number": row_number,
@@ -767,7 +788,15 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
         counts["formal_eligible_count"] += row["formal_eligible"] == "true"
         counts["coordinate_row_count"] += bool(row["raw_manual_x"])
         counts["no_coordinate_row_count"] += not bool(row["raw_manual_x"])
-    for key in ["row_count", "annotation_good_count", "formal_eligible_count", "coordinate_row_count", "no_coordinate_row_count"]:
+        counts["diagnostic_projection_out_of_bounds_count"] += row["projection_status"] == PROJECTION_STATUS_DIAGNOSTIC_OOB
+    for key in [
+        "row_count",
+        "annotation_good_count",
+        "formal_eligible_count",
+        "coordinate_row_count",
+        "no_coordinate_row_count",
+        "diagnostic_projection_out_of_bounds_count",
+    ]:
         if int(counts[key]) != EXPECTED_COUNTS[key]:
             raise ValueError(f"frozen count mismatch {key}: {counts[key]} vs {EXPECTED_COUNTS[key]}")
     if len(orientation_by_image) != EXPECTED_COUNTS["annotated_image_count"]:
