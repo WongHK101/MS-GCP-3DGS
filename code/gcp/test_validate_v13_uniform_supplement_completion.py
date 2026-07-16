@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
+from pathlib import Path
+
 import pandas as pd
 
 from manual_gcp_annotator import history_hint_enabled
@@ -10,6 +14,7 @@ from validate_v13_uniform_supplement_completion import (
     legacy_history_correction,
     same_image_cross_point_collision_qc,
     status_coordinate_qc,
+    validate_geometry_review_ack,
 )
 
 
@@ -87,12 +92,42 @@ def test_cross_point_same_marker_collision() -> None:
     assert qc.loc[0, "coordinate_distance_px"] == 5.0
 
 
+def test_geometry_review_ack_is_hash_bound() -> None:
+    warnings = pd.DataFrame(
+        [{"scene": "scene", "point_name": "P", "hidden_image_name": "image.jpg"}]
+    )
+    payload = {
+        "schema": "ms_gcp_manual_geometry_review_ack_v1",
+        "rows": [
+            {
+                "scene": "scene",
+                "point_name": "P",
+                "image_name": "image.jpg",
+                "disposition": "confirmed_correct_point_retain_geometry_warning",
+                "annotation_file_sha256": "abc",
+            }
+        ],
+    }
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "ack.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        acknowledged = validate_geometry_review_ack(path, warnings, {"scene": "abc"})
+        assert acknowledged == {("scene", "P", "image.jpg")}
+        try:
+            validate_geometry_review_ack(path, warnings, {"scene": "different"})
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("annotation hash mismatch must fail")
+
+
 def main() -> int:
     tests = [
         test_history_hint_disabled_by_default_contract,
         test_legacy_history_can_double_shift_corrected_candidate,
         test_status_coordinate_contract,
         test_cross_point_same_marker_collision,
+        test_geometry_review_ack_is_hash_bound,
     ]
     for test in tests:
         test()

@@ -282,6 +282,33 @@ def same_image_cross_point_collision_qc(
     return pd.DataFrame(output)
 
 
+def validate_geometry_review_ack(
+    path: Path,
+    geometry_rechecks: pd.DataFrame,
+    annotation_hash_by_scene: dict[str, str],
+) -> set[tuple[str, str, str]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema") != "ms_gcp_manual_geometry_review_ack_v1":
+        raise ValueError("Unknown geometry review acknowledgement schema")
+    warning_keys = {
+        (str(row.scene), str(row.point_name), str(row.hidden_image_name))
+        for row in geometry_rechecks.itertuples(index=False)
+    }
+    acknowledged: set[tuple[str, str, str]] = set()
+    for row in payload.get("rows", []):
+        key = (str(row["scene"]), str(row["point_name"]), str(row["image_name"]))
+        if key not in warning_keys:
+            raise ValueError(f"Acknowledgement does not match an active geometry warning: {key}")
+        if row.get("disposition") != "confirmed_correct_point_retain_geometry_warning":
+            raise ValueError(f"Unsupported geometry review disposition: {row.get('disposition')}")
+        if row.get("annotation_file_sha256") != annotation_hash_by_scene.get(key[0]):
+            raise ValueError(f"Annotation hash mismatch in geometry review acknowledgement: {key}")
+        if key in acknowledged:
+            raise ValueError(f"Duplicate geometry review acknowledgement: {key}")
+        acknowledged.add(key)
+    return acknowledged
+
+
 def task_validation_rows(
     tasks: pd.DataFrame,
     annotations: pd.DataFrame,
@@ -528,6 +555,7 @@ def main() -> int:
         default=Path(r"E:\M3M-GCP-3DGS\outputs\gcp_annotation_candidates_20260617_all"),
     )
     parser.add_argument("--stamp", default=time.strftime("%Y%m%d_%H%M%S"))
+    parser.add_argument("--geometry_review_ack", type=Path)
     args = parser.parse_args()
 
     output_root = args.repo / "outputs" / f"gcp_v13_uniform_supplement_validation_{args.stamp}"
@@ -543,6 +571,7 @@ def main() -> int:
     collision_frames: list[pd.DataFrame] = []
     annotations_by_scene: dict[str, pd.DataFrame] = {}
     camera_sets: dict[str, tuple[dict[int, dict[str, Any]], dict[str, dict[str, Any]]]] = {}
+    annotation_hash_by_scene: dict[str, str] = {}
 
     for launcher in manifest["launchers"]:
         scene = str(launcher["scene"])
@@ -567,8 +596,10 @@ def main() -> int:
         metadata = image_metadata(args.candidate_root, scene)
         coverage_rows.extend(point_coverage(scene, annotation, cameras, images, metadata))
         geometry_frames.append(geometry_qc(scene, annotation, cameras, images))
+        annotation_sha256 = sha256_file(annotation_path)
+        annotation_hash_by_scene[scene] = annotation_sha256
         input_hashes.append(
-            {"scene": scene, "kind": "completed_working_annotation", "path": str(annotation_path), "sha256": sha256_file(annotation_path)}
+            {"scene": scene, "kind": "completed_working_annotation", "path": str(annotation_path), "sha256": annotation_sha256}
         )
 
     task_qc = pd.concat(task_qc_frames, ignore_index=True)
@@ -619,6 +650,27 @@ def main() -> int:
 
     unselected = task_qc[task_qc["quality"].eq("")]
     geometry_rechecks = geometry[geometry["robust_geometry_recheck_required"]]
+    acknowledged_geometry_keys: set[tuple[str, str, str]] = set()
+    if args.geometry_review_ack is not None:
+        acknowledged_geometry_keys = validate_geometry_review_ack(
+            args.geometry_review_ack,
+            geometry_rechecks,
+            annotation_hash_by_scene,
+        )
+        input_hashes.append(
+            {
+                "kind": "manual_geometry_review_ack",
+                "path": str(args.geometry_review_ack),
+                "sha256": sha256_file(args.geometry_review_ack),
+            }
+        )
+    unacknowledged_geometry_rechecks = geometry_rechecks[
+        [
+            (str(row.scene), str(row.point_name), str(row.hidden_image_name))
+            not in acknowledged_geometry_keys
+            for row in geometry_rechecks.itertuples(index=False)
+        ]
+    ]
     status_coordinate_errors = status_coordinate[status_coordinate["severity"].eq("error")]
     recheck_manifest = []
     recheck_dir = output_root / "recheck"
@@ -626,7 +678,7 @@ def main() -> int:
     recheck_keys = pd.concat(
         [
             unselected[["scene", "point_name", "image_name"]],
-            geometry_rechecks[["scene", "point_name", "hidden_image_name"]].rename(
+            unacknowledged_geometry_rechecks[["scene", "point_name", "hidden_image_name"]].rename(
                 columns={"hidden_image_name": "image_name"}
             ),
             status_coordinate_errors[["scene", "point_name", "image_name"]],
@@ -706,6 +758,8 @@ def main() -> int:
         "task_key_missing_count": int((~task_qc["task_row_found"]).sum()),
         "unselected_status_count": int(task_qc["quality"].eq("").sum()),
         "robust_geometry_recheck_count": int(len(geometry_rechecks)),
+        "acknowledged_geometry_warning_count": int(len(acknowledged_geometry_keys)),
+        "unacknowledged_geometry_recheck_count": int(len(unacknowledged_geometry_rechecks)),
         "status_coordinate_error_count": int(len(status_coordinate_errors)),
         "ambiguous_missing_coordinate_count": int(
             status_coordinate["classification"].eq("ambiguous_missing_coordinate_recheck").sum()
@@ -735,8 +789,15 @@ def main() -> int:
         ],
         "legacy_history_hint_non_authoritative": True,
         "acceptance_status": (
-            "pass"
-            if not len(unselected) and not len(geometry_rechecks) and not len(status_coordinate_errors)
+            "pass_with_reviewed_geometry_warning"
+            if not len(unselected)
+            and not len(unacknowledged_geometry_rechecks)
+            and not len(status_coordinate_errors)
+            and len(acknowledged_geometry_keys)
+            else "pass"
+            if not len(unselected)
+            and not len(unacknowledged_geometry_rechecks)
+            and not len(status_coordinate_errors)
             else "blocked_pending_status_or_geometry_recheck"
         ),
     }
