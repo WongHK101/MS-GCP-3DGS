@@ -103,11 +103,11 @@ def write_csv(path: Path, rows: Iterable[Dict[str, Any]], fieldnames: Sequence[s
             writer.writerow(row)
 
 
-def read_allowlist(args: argparse.Namespace) -> set[str] | None:
+def read_allowlist(args: argparse.Namespace) -> Dict[str, str] | None:
     if not args.image_list_csv:
         return None
     path = Path(args.image_list_csv).expanduser().resolve()
-    names: set[str] = set()
+    names: Dict[str, str] = {}
     accepted_values = {
         value.strip()
         for value in str(args.image_list_status_values).split(",")
@@ -122,8 +122,12 @@ def read_allowlist(args: argparse.Namespace) -> set[str] | None:
                     continue
             name = str(row.get(args.image_name_column, "")).strip()
             if name:
-                names.add(name)
-                names.add(Path(name).name)
+                canonical = Path(name).name
+                for alias in {name, canonical, Path(canonical).stem}:
+                    previous = names.get(alias)
+                    if previous is not None and previous != canonical:
+                        raise ValueError(f"ambiguous image-list alias {alias!r}: {previous!r} vs {canonical!r}")
+                    names[alias] = canonical
     return names
 
 
@@ -148,7 +152,11 @@ def packet_filename(image_name: str) -> str:
     return f"{stem}_metric_depth_packet.npz"
 
 
-def collect_views(scene: Any, camera_sets: str, allowlist: set[str] | None = None) -> List[tuple[str, Any]]:
+def collect_views(
+    scene: Any,
+    camera_sets: str,
+    allowlist: Dict[str, str] | None = None,
+) -> List[tuple[str, Any, str]]:
     views: List[tuple[str, Any]] = []
     if camera_sets in {"train", "all"}:
         views.extend(("train", view) for view in scene.getTrainCameras())
@@ -156,15 +164,27 @@ def collect_views(scene: Any, camera_sets: str, allowlist: set[str] | None = Non
         views.extend(("test", view) for view in scene.getTestCameras())
 
     seen: set[str] = set()
-    unique: List[tuple[str, Any]] = []
+    unique: List[tuple[str, Any, str]] = []
     for split, view in views:
         name = camera_name(view)
-        if allowlist is not None and name not in allowlist and Path(name).name not in allowlist:
+        if allowlist is None:
+            canonical = Path(name).name
+        else:
+            canonical = allowlist.get(name) or allowlist.get(Path(name).name) or allowlist.get(Path(name).stem)
+            if canonical is None:
+                continue
+        if canonical in seen:
             continue
-        if name in seen:
-            continue
-        seen.add(name)
-        unique.append((split, view))
+        seen.add(canonical)
+        unique.append((split, view, canonical))
+    if allowlist is not None:
+        expected = set(allowlist.values())
+        resolved = {canonical for _split, _view, canonical in unique}
+        if resolved != expected:
+            raise ValueError(
+                "renderer camera list does not exactly match requested image list: "
+                f"missing={sorted(expected - resolved)[:12]} extra={sorted(resolved - expected)[:12]}"
+            )
     return unique
 
 
@@ -194,7 +214,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             rows: List[Dict[str, Any]] = []
             allowlist = read_allowlist(args)
             views = collect_views(scene, args.camera_sets, allowlist=allowlist)
-            for index, (split, view) in enumerate(tqdm(views, desc="Exporting Gaussian depth")):
+            for index, (split, view, image_name) in enumerate(tqdm(views, desc="Exporting Gaussian depth")):
                 render_kwargs: Dict[str, Any] = {
                     "return_metric_depth_packet": True,
                     "numerical_support_floor": float(args.numerical_support_floor),
@@ -227,7 +247,6 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                         f"metric_depth_packet expected {len(METRIC_PACKET_TENSOR_NAMES)} tensors, "
                         f"got shape {packet_np.shape}"
                     )
-                image_name = camera_name(view)
                 packet_path = out_dir / packet_filename(image_name)
                 packet_payload = {
                     name: packet_np[i].astype(np.float32)
