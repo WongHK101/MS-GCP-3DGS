@@ -145,6 +145,143 @@ def finite_percentile(values: pd.Series, percentile: float) -> float:
     return float(np.percentile(finite, percentile)) if len(finite) else float("nan")
 
 
+def status_coordinate_qc(
+    scene: str,
+    annotations: pd.DataFrame,
+    cameras: dict[int, dict[str, Any]],
+    images: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    """Classify status/coordinate combinations without mutating annotation rows."""
+    output: list[dict[str, Any]] = []
+    for row in annotations.to_dict("records"):
+        image_name = str(row.get("image_name", ""))
+        image = images.get(image_name)
+        camera = cameras.get(int(image["camera_id"])) if image is not None else None
+        width = int(camera["width"]) if camera is not None else None
+        height = int(camera["height"]) if camera is not None else None
+        raw_x = str(row.get("manual_x", "")).strip()
+        raw_y = str(row.get("manual_y", "")).strip()
+        has_x, has_y = bool(raw_x), bool(raw_y)
+        try:
+            manual_x = float(raw_x) if has_x else float("nan")
+            manual_y = float(raw_y) if has_y else float("nan")
+        except ValueError:
+            manual_x = manual_y = float("nan")
+        coordinate_finite = bool(has_x and has_y and math.isfinite(manual_x) and math.isfinite(manual_y))
+        coordinate_in_bounds = bool(
+            coordinate_finite
+            and width is not None
+            and height is not None
+            and 0 <= manual_x < width
+            and 0 <= manual_y < height
+        )
+        quality = str(row.get("quality", "")).strip().lower()
+        visible = str(row.get("visible", "")).strip()
+        if has_x != has_y:
+            classification = "partial_coordinate_hard_fail"
+            severity = "error"
+        elif quality == "good":
+            if visible != "1":
+                classification = "good_visible_flag_mismatch_hard_fail"
+                severity = "error"
+            elif not coordinate_finite:
+                classification = "good_missing_or_nonfinite_coordinate_hard_fail"
+                severity = "error"
+            elif not coordinate_in_bounds:
+                classification = "good_coordinate_out_of_bounds_hard_fail"
+                severity = "error"
+            else:
+                classification = "good_with_valid_coordinate"
+                severity = "pass"
+        elif quality == "ambiguous":
+            if visible != "1":
+                classification = "ambiguous_visible_flag_mismatch_hard_fail"
+                severity = "error"
+            elif not coordinate_finite:
+                classification = "ambiguous_missing_coordinate_recheck"
+                severity = "error"
+            elif not coordinate_in_bounds:
+                classification = "ambiguous_coordinate_out_of_bounds_hard_fail"
+                severity = "error"
+            else:
+                classification = "ambiguous_with_valid_coordinate"
+                severity = "pass"
+        elif quality == "not_visible":
+            if visible != "0":
+                classification = "not_visible_flag_mismatch_hard_fail"
+                severity = "error"
+            elif coordinate_finite:
+                classification = "not_visible_stale_coordinate_ignored"
+                severity = "warning"
+            else:
+                classification = "not_visible_without_coordinate_expected"
+                severity = "pass"
+        else:
+            classification = "missing_or_unknown_quality_hard_fail"
+            severity = "error"
+        output.append(
+            {
+                "scene": scene,
+                "point_name": str(row.get("point_name", "")),
+                "image_name": image_name,
+                "visible": visible,
+                "quality": quality,
+                "manual_x": raw_x,
+                "manual_y": raw_y,
+                "image_width": width,
+                "image_height": height,
+                "coordinate_finite": coordinate_finite,
+                "coordinate_in_bounds": coordinate_in_bounds,
+                "classification": classification,
+                "severity": severity,
+            }
+        )
+    return pd.DataFrame(output)
+
+
+def same_image_cross_point_collision_qc(
+    scene: str,
+    annotations: pd.DataFrame,
+    threshold_px: float = 10.0,
+) -> pd.DataFrame:
+    """Find different point identities clicked at nearly the same image coordinate."""
+    output: list[dict[str, Any]] = []
+    good = annotations[
+        annotations["quality"].str.lower().eq("good")
+        & annotations["visible"].eq("1")
+    ].copy()
+    good["manual_x_numeric"] = pd.to_numeric(good["manual_x"], errors="coerce")
+    good["manual_y_numeric"] = pd.to_numeric(good["manual_y"], errors="coerce")
+    good = good.dropna(subset=["manual_x_numeric", "manual_y_numeric"])
+    for image_name, group in good.groupby("image_name", sort=True):
+        rows = group.sort_values("point_name").to_dict("records")
+        for left_index, left in enumerate(rows):
+            for right in rows[left_index + 1 :]:
+                if str(left["point_name"]) == str(right["point_name"]):
+                    continue
+                distance = math.hypot(
+                    float(left["manual_x_numeric"]) - float(right["manual_x_numeric"]),
+                    float(left["manual_y_numeric"]) - float(right["manual_y_numeric"]),
+                )
+                if distance <= threshold_px:
+                    output.append(
+                        {
+                            "scene": scene,
+                            "image_name": image_name,
+                            "point_name_a": str(left["point_name"]),
+                            "point_name_b": str(right["point_name"]),
+                            "manual_x_a": float(left["manual_x_numeric"]),
+                            "manual_y_a": float(left["manual_y_numeric"]),
+                            "manual_x_b": float(right["manual_x_numeric"]),
+                            "manual_y_b": float(right["manual_y_numeric"]),
+                            "coordinate_distance_px": distance,
+                            "collision_threshold_px": threshold_px,
+                            "potential_same_marker_mislabel": True,
+                        }
+                    )
+    return pd.DataFrame(output)
+
+
 def task_validation_rows(
     tasks: pd.DataFrame,
     annotations: pd.DataFrame,
@@ -402,6 +539,8 @@ def main() -> int:
     task_qc_frames: list[pd.DataFrame] = []
     coverage_rows: list[dict[str, Any]] = []
     geometry_frames: list[pd.DataFrame] = []
+    status_coordinate_frames: list[pd.DataFrame] = []
+    collision_frames: list[pd.DataFrame] = []
     annotations_by_scene: dict[str, pd.DataFrame] = {}
     camera_sets: dict[str, tuple[dict[int, dict[str, Any]], dict[str, dict[str, Any]]]] = {}
 
@@ -423,6 +562,8 @@ def main() -> int:
         task_qc_frames.append(task_validation_rows(scene_tasks, annotation, initial_history))
         cameras, images = camera_indices(camera_manifest["scenes"][scene])
         camera_sets[scene] = (cameras, images)
+        status_coordinate_frames.append(status_coordinate_qc(scene, annotation, cameras, images))
+        collision_frames.append(same_image_cross_point_collision_qc(scene, annotation))
         metadata = image_metadata(args.candidate_root, scene)
         coverage_rows.extend(point_coverage(scene, annotation, cameras, images, metadata))
         geometry_frames.append(geometry_qc(scene, annotation, cameras, images))
@@ -433,6 +574,20 @@ def main() -> int:
     task_qc = pd.concat(task_qc_frames, ignore_index=True)
     coverage = pd.DataFrame(coverage_rows)
     geometry = pd.concat(geometry_frames, ignore_index=True)
+    status_coordinate = pd.concat(status_coordinate_frames, ignore_index=True)
+    nonempty_collision_frames = [frame for frame in collision_frames if len(frame)]
+    collisions = (
+        pd.concat(nonempty_collision_frames, ignore_index=True)
+        if nonempty_collision_frames
+        else pd.DataFrame(
+            columns=[
+                "scene", "image_name", "point_name_a", "point_name_b",
+                "manual_x_a", "manual_y_a", "manual_x_b", "manual_y_b",
+                "coordinate_distance_px", "collision_threshold_px",
+                "potential_same_marker_mislabel",
+            ]
+        )
+    )
     if len(task_qc) != 450 or task_qc[["scene", "point_name", "image_name"]].duplicated().any():
         raise RuntimeError("Uniform task spine is not exactly 450 unique rows")
 
@@ -464,6 +619,7 @@ def main() -> int:
 
     unselected = task_qc[task_qc["quality"].eq("")]
     geometry_rechecks = geometry[geometry["robust_geometry_recheck_required"]]
+    status_coordinate_errors = status_coordinate[status_coordinate["severity"].eq("error")]
     recheck_manifest = []
     recheck_dir = output_root / "recheck"
     recheck_dir.mkdir()
@@ -473,6 +629,7 @@ def main() -> int:
             geometry_rechecks[["scene", "point_name", "hidden_image_name"]].rename(
                 columns={"hidden_image_name": "image_name"}
             ),
+            status_coordinate_errors[["scene", "point_name", "image_name"]],
         ],
         ignore_index=True,
     ).drop_duplicates()
@@ -537,6 +694,10 @@ def main() -> int:
     hint_summary_df.to_csv(output_root / "hint_accuracy_summary.csv", index=False, encoding="utf-8-sig")
     coverage.to_csv(output_root / "post_supplement_point_coverage.csv", index=False, encoding="utf-8-sig")
     geometry.to_csv(output_root / "post_supplement_leave_one_out_qc.csv", index=False, encoding="utf-8-sig")
+    status_coordinate.to_csv(output_root / "status_coordinate_qc.csv", index=False, encoding="utf-8-sig")
+    collisions.to_csv(
+        output_root / "same_image_cross_point_collision_qc.csv", index=False, encoding="utf-8-sig"
+    )
     pd.DataFrame(input_hashes).to_csv(output_root / "input_annotation_hashes.csv", index=False, encoding="utf-8-sig")
     write_json(output_root / "recheck_manifest.json", recheck_manifest)
     summary = {
@@ -545,6 +706,17 @@ def main() -> int:
         "task_key_missing_count": int((~task_qc["task_row_found"]).sum()),
         "unselected_status_count": int(task_qc["quality"].eq("").sum()),
         "robust_geometry_recheck_count": int(len(geometry_rechecks)),
+        "status_coordinate_error_count": int(len(status_coordinate_errors)),
+        "ambiguous_missing_coordinate_count": int(
+            status_coordinate["classification"].eq("ambiguous_missing_coordinate_recheck").sum()
+        ),
+        "not_visible_without_coordinate_expected_count": int(
+            status_coordinate["classification"].eq("not_visible_without_coordinate_expected").sum()
+        ),
+        "not_visible_stale_coordinate_ignored_count": int(
+            status_coordinate["classification"].eq("not_visible_stale_coordinate_ignored").sum()
+        ),
+        "potential_same_marker_collision_count": int(len(collisions)),
         "good_count": int(task_qc["quality"].eq("good").sum()),
         "not_visible_count": int(task_qc["quality"].eq("not_visible").sum()),
         "ambiguous_count": int(task_qc["quality"].eq("ambiguous").sum()),
@@ -564,7 +736,7 @@ def main() -> int:
         "legacy_history_hint_non_authoritative": True,
         "acceptance_status": (
             "pass"
-            if not len(unselected) and not len(geometry_rechecks)
+            if not len(unselected) and not len(geometry_rechecks) and not len(status_coordinate_errors)
             else "blocked_pending_status_or_geometry_recheck"
         ),
     }
