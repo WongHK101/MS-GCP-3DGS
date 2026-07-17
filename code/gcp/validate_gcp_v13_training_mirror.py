@@ -48,6 +48,8 @@ def validate_mirror(root: Path, recipe: dict[str, Any]) -> tuple[list[str], dict
         errors.append("release id mismatch")
     if manifest.get("hardlinks_used") is not False or manifest.get("independent_inode_verified") is not True:
         errors.append("mirror independence/hardlink policy mismatch")
+    if manifest.get("loader_artifact_policy") != "preexisting_points3D_ply_copied_and_hash_frozen_before_training":
+        errors.append("points3D.ply loader-artifact policy mismatch")
     if manifest.get("image_count") != scene_spec.get("image_count"):
         errors.append("image count mismatch")
     if manifest.get("image_bytes") != scene_spec.get("image_bytes"):
@@ -91,10 +93,13 @@ def validate_mirror(root: Path, recipe: dict[str, Any]) -> tuple[list[str], dict
         "sparse/0/cameras.bin": scene_spec.get("cameras_bin_sha256"),
         "sparse/0/images.bin": scene_spec.get("images_bin_sha256"),
         "sparse/0/points3D.bin": scene_spec.get("points3d_bin_sha256"),
+        "sparse/0/points3D.ply": scene_spec.get("points3d_ply_sha256"),
     }
     for rel, expected_sha in expected_sparse.items():
         if declared.get(rel, {}).get("sha256") != expected_sha:
             errors.append(f"frozen sparse hash mismatch: {rel}")
+    if declared.get("sparse/0/points3D.ply", {}).get("bytes") != scene_spec.get("points3d_ply_bytes"):
+        errors.append("frozen points3D.ply size mismatch")
     details = {
         "scene": scene,
         "source_manifest_sha256": manifest_sha,

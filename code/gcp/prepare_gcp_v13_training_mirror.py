@@ -147,11 +147,14 @@ def build_mirror(
             "cameras.bin": scene_spec["cameras_bin_sha256"],
             "images.bin": scene_spec["images_bin_sha256"],
             "points3D.bin": scene_spec["points3d_bin_sha256"],
+            "points3D.ply": scene_spec["points3d_ply_sha256"],
         }
         for name, expected_sha in sparse_hashes.items():
             source = sparse_source / name
             if source.is_symlink() or not source.is_file() or sha256_file(source) != expected_sha:
                 raise ValueError(f"source sparse file mismatch: {source}")
+            if name == "points3D.ply" and source.stat().st_size != int(scene_spec["points3d_ply_bytes"]):
+                raise ValueError(f"source sparse file size mismatch: {source}")
             target = staging / "sparse" / "0" / name
             strategy = _copy_independent(source, target)
             copy_strategies.add(strategy)
@@ -182,6 +185,7 @@ def build_mirror(
             "independent_inode_verified": True,
             "hardlinks_used": False,
             "source_modified": False,
+            "loader_artifact_policy": "preexisting_points3D_ply_copied_and_hash_frozen_before_training",
             "files": sorted(file_records, key=lambda row: row["relative_path"].encode("utf-8")),
         }
         manifest_path = staging / "SOURCE_MANIFEST.json"

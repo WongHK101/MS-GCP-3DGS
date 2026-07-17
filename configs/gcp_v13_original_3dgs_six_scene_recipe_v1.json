@@ -43,7 +43,9 @@
       "camera_model": "PINHOLE",
       "cameras_bin_sha256": "49cfa412254ff4bfb68473cc1b2262a95362e9542020424c166304a3831962f7",
       "images_bin_sha256": "4929f95d7a68d19820999efc734ff8d892c51508191d0380d00e3ae00b82a5d7",
-      "points3d_bin_sha256": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      "points3d_bin_sha256": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f",
+      "points3d_ply_bytes": 1655387,
+      "points3d_ply_sha256": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d"
     },
     "gcp_5000_20260602": {
       "image_directory": "images",
@@ -53,7 +55,9 @@
       "camera_model": "PINHOLE",
       "cameras_bin_sha256": "67aa45289b4d08ec926874efa9babd40187bb64c1ab3e1bced494bad95809905",
       "images_bin_sha256": "eedccc6f18ca59ecdda34f1b89d8d85c446a10f30c936a071f52bf4c0fab65f2",
-      "points3d_bin_sha256": "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88"
+      "points3d_bin_sha256": "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88",
+      "points3d_ply_bytes": 1087415,
+      "points3d_ply_sha256": "d671050c51ba7e66570721890c69392809636a16b070fa5e7045f00af78c545b"
     },
     "gcp_10000_20260610": {
       "image_directory": "images",
@@ -63,7 +67,9 @@
       "camera_model": "PINHOLE",
       "cameras_bin_sha256": "19afdf4485a35d35a1aeb4e04aa8746807a17510a929e40b30f55e4a16d82a85",
       "images_bin_sha256": "1c26685db1b29f92278d78fbe21ed2b548076c12cdfc1c5e48fe2035048c37c4",
-      "points3d_bin_sha256": "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22"
+      "points3d_bin_sha256": "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22",
+      "points3d_ply_bytes": 9343233,
+      "points3d_ply_sha256": "497ef1d923cdfd906dac1273bc353a7add15bfcaf35c48b5533baf52c5fdf288"
     },
     "gcp_20000_20260602": {
       "image_directory": "images",
@@ -73,7 +79,9 @@
       "camera_model": "PINHOLE",
       "cameras_bin_sha256": "a9491e66e8b7315782350ced4a92f70bedbc60898bdd5d4c168d501fe135832c",
       "images_bin_sha256": "61ece0edc96802b8194aaebe8367bad9e7f01e4cf6bb69187797ce95d8e60d5c",
-      "points3d_bin_sha256": "2bdf219c457871211970a2c543a90d2530f7c888656e75550a03518dbec27435"
+      "points3d_bin_sha256": "2bdf219c457871211970a2c543a90d2530f7c888656e75550a03518dbec27435",
+      "points3d_ply_bytes": 3555945,
+      "points3d_ply_sha256": "86860f4ee80a458931bbb5f3267ad8ec2c6fb0a0602daf7d189b8bf35d523db2"
     },
     "gcp_50000_20260610": {
       "image_directory": "images",
@@ -83,7 +91,9 @@
       "camera_model": "PINHOLE",
       "cameras_bin_sha256": "57d9ee85b27179425b78515d7cc6211793bf25e5a2b49610b73dcd1daad55420",
       "images_bin_sha256": "50af7d00017b49fc5532ea0c389306be5f0a3be742690849e659bc919d6c4d02",
-      "points3d_bin_sha256": "0d98402f86696b475ff85cb4b4c0cc4c7b30d1dfb417a3d9d976f597dd4628ae"
+      "points3d_bin_sha256": "0d98402f86696b475ff85cb4b4c0cc4c7b30d1dfb417a3d9d976f597dd4628ae",
+      "points3d_ply_bytes": 28786015,
+      "points3d_ply_sha256": "17762f2fc4a60eabc23dab8358a9fbea1e99e4406ff60126c70bbb3401a7ceaa"
     },
     "gcp_100000_20260610": {
       "image_directory": "images",
@@ -93,7 +103,9 @@
       "camera_model": "PINHOLE",
       "cameras_bin_sha256": "b7441b8024bc37d8307ab932cab2a072320ad4a22f3f3eae66c138bc6510d7a4",
       "images_bin_sha256": "2311871ffc339b9a1acce5e833e5b5207b2dd74de48e4e88804bfd0e19a0b7f3",
-      "points3d_bin_sha256": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa"
+      "points3d_bin_sha256": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+      "points3d_ply_bytes": 34098427,
+      "points3d_ply_sha256": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
     }
   },
   "training": {

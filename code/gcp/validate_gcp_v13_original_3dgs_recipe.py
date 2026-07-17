@@ -20,12 +20,12 @@ KNN_COMMIT = "44f764299fa305faf6ec5ebd99939e0508331503"
 RELEASE_DIGEST = "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
 ENV_LOCK = "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed"
 SIX_SCENE_SPECS = {
-    "gcp_3000_20260602": (94, 875035671, "49cfa412254ff4bfb68473cc1b2262a95362e9542020424c166304a3831962f7", "4929f95d7a68d19820999efc734ff8d892c51508191d0380d00e3ae00b82a5d7", "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"),
-    "gcp_5000_20260602": (101, 859832717, "67aa45289b4d08ec926874efa9babd40187bb64c1ab3e1bced494bad95809905", "eedccc6f18ca59ecdda34f1b89d8d85c446a10f30c936a071f52bf4c0fab65f2", "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88"),
-    "gcp_10000_20260610": (976, 8810224189, "19afdf4485a35d35a1aeb4e04aa8746807a17510a929e40b30f55e4a16d82a85", "1c26685db1b29f92278d78fbe21ed2b548076c12cdfc1c5e48fe2035048c37c4", "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22"),
-    "gcp_20000_20260602": (298, 3479416169, "a9491e66e8b7315782350ced4a92f70bedbc60898bdd5d4c168d501fe135832c", "61ece0edc96802b8194aaebe8367bad9e7f01e4cf6bb69187797ce95d8e60d5c", "2bdf219c457871211970a2c543a90d2530f7c888656e75550a03518dbec27435"),
-    "gcp_50000_20260610": (2208, 22949781257, "57d9ee85b27179425b78515d7cc6211793bf25e5a2b49610b73dcd1daad55420", "50af7d00017b49fc5532ea0c389306be5f0a3be742690849e659bc919d6c4d02", "0d98402f86696b475ff85cb4b4c0cc4c7b30d1dfb417a3d9d976f597dd4628ae"),
-    "gcp_100000_20260610": (2510, 25605641533, "b7441b8024bc37d8307ab932cab2a072320ad4a22f3f3eae66c138bc6510d7a4", "2311871ffc339b9a1acce5e833e5b5207b2dd74de48e4e88804bfd0e19a0b7f3", "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa"),
+    "gcp_3000_20260602": (94, 875035671, "49cfa412254ff4bfb68473cc1b2262a95362e9542020424c166304a3831962f7", "4929f95d7a68d19820999efc734ff8d892c51508191d0380d00e3ae00b82a5d7", "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f", 1655387, "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d"),
+    "gcp_5000_20260602": (101, 859832717, "67aa45289b4d08ec926874efa9babd40187bb64c1ab3e1bced494bad95809905", "eedccc6f18ca59ecdda34f1b89d8d85c446a10f30c936a071f52bf4c0fab65f2", "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88", 1087415, "d671050c51ba7e66570721890c69392809636a16b070fa5e7045f00af78c545b"),
+    "gcp_10000_20260610": (976, 8810224189, "19afdf4485a35d35a1aeb4e04aa8746807a17510a929e40b30f55e4a16d82a85", "1c26685db1b29f92278d78fbe21ed2b548076c12cdfc1c5e48fe2035048c37c4", "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22", 9343233, "497ef1d923cdfd906dac1273bc353a7add15bfcaf35c48b5533baf52c5fdf288"),
+    "gcp_20000_20260602": (298, 3479416169, "a9491e66e8b7315782350ced4a92f70bedbc60898bdd5d4c168d501fe135832c", "61ece0edc96802b8194aaebe8367bad9e7f01e4cf6bb69187797ce95d8e60d5c", "2bdf219c457871211970a2c543a90d2530f7c888656e75550a03518dbec27435", 3555945, "86860f4ee80a458931bbb5f3267ad8ec2c6fb0a0602daf7d189b8bf35d523db2"),
+    "gcp_50000_20260610": (2208, 22949781257, "57d9ee85b27179425b78515d7cc6211793bf25e5a2b49610b73dcd1daad55420", "50af7d00017b49fc5532ea0c389306be5f0a3be742690849e659bc919d6c4d02", "0d98402f86696b475ff85cb4b4c0cc4c7b30d1dfb417a3d9d976f597dd4628ae", 28786015, "17762f2fc4a60eabc23dab8358a9fbea1e99e4406ff60126c70bbb3401a7ceaa"),
+    "gcp_100000_20260610": (2510, 25605641533, "b7441b8024bc37d8307ab932cab2a072320ad4a22f3f3eae66c138bc6510d7a4", "2311871ffc339b9a1acce5e833e5b5207b2dd74de48e4e88804bfd0e19a0b7f3", "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa", 34098427, "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"),
 }
 
 
@@ -106,7 +106,7 @@ def validate_recipe(recipe: dict[str, Any], *, repo_root: Path, official_source:
             scenes = scenes if isinstance(scenes, dict) else {}
         for scene_id, expected in SIX_SCENE_SPECS.items():
             record = scenes.get(scene_id, {})
-            image_count, image_bytes, cameras_sha, images_sha, points_sha = expected
+            image_count, image_bytes, cameras_sha, images_sha, points_sha, ply_bytes, ply_sha = expected
             required = {
                 "image_directory": "images",
                 "image_count": image_count,
@@ -116,11 +116,13 @@ def validate_recipe(recipe: dict[str, Any], *, repo_root: Path, official_source:
                 "cameras_bin_sha256": cameras_sha,
                 "images_bin_sha256": images_sha,
                 "points3d_bin_sha256": points_sha,
+                "points3d_ply_bytes": ply_bytes,
+                "points3d_ply_sha256": ply_sha,
             }
             for key, value in required.items():
                 if record.get(key) != value:
                     errors.append(f"scenes.{scene_id}.{key} must equal {value!r}")
-            scene_hash_values.extend([cameras_sha, images_sha, points_sha])
+            scene_hash_values.extend([cameras_sha, images_sha, points_sha, ply_sha])
 
     training = recipe.get("training", {})
     expected_training = {

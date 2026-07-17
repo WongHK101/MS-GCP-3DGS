@@ -32,6 +32,7 @@ def _fixture(root: Path) -> dict:
         "sparse/0/cameras.bin": b"camera",
         "sparse/0/images.bin": b"poses",
         "sparse/0/points3D.bin": b"points",
+        "sparse/0/points3D.ply": b"ply",
     }
     for rel, data in payloads.items():
         _write(root / rel, data)
@@ -53,6 +54,8 @@ def _fixture(root: Path) -> dict:
                 "cameras_bin_sha256": records[1]["sha256"],
                 "images_bin_sha256": records[2]["sha256"],
                 "points3d_bin_sha256": records[3]["sha256"],
+                "points3d_ply_bytes": records[4]["bytes"],
+                "points3d_ply_sha256": records[4]["sha256"],
             }
         },
     }
@@ -67,6 +70,7 @@ def _fixture(root: Path) -> dict:
         "copy_strategies": ["full_copy"],
         "independent_inode_verified": True,
         "hardlinks_used": False,
+        "loader_artifact_policy": "preexisting_points3D_ply_copied_and_hash_frozen_before_training",
         "files": records,
     }
     manifest_path = root / "SOURCE_MANIFEST.json"
@@ -120,11 +124,28 @@ def test_rejects_unregistered_file() -> None:
             _chmod_tree(root, writable=True)
 
 
+def test_rejects_missing_precomputed_loader_ply() -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp) / "mirror"
+        root.mkdir()
+        recipe = _fixture(root)
+        try:
+            _chmod_tree(root, writable=True)
+            (root / "sparse" / "0" / "points3D.ply").unlink()
+            _chmod_tree(root, writable=False)
+            errors, _ = validate_mirror(root, recipe)
+            assert any("file set mismatch" in error for error in errors)
+            assert any("points3D.ply" in error for error in errors)
+        finally:
+            _chmod_tree(root, writable=True)
+
+
 def main() -> int:
     tests = [
         test_valid_read_only_mirror_passes,
         test_rejects_writable_file,
         test_rejects_unregistered_file,
+        test_rejects_missing_precomputed_loader_ply,
     ]
     for test in tests:
         test()
