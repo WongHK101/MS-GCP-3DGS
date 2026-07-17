@@ -160,6 +160,7 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
             "remaining_blockers": [
                 "v1.3.0 external GPT PASS not recorded",
                 "GitHub repository rename to GS-GCP-Benchmark pending",
+                "AutoDL-740 selected GPU must pass the frozen idle gate; all devices were externally busy at the Stage 0 capture",
             ],
         },
     )

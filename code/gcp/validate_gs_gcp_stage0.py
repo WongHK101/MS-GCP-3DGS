@@ -6,6 +6,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +36,12 @@ def _component(passed: bool, **details: Any) -> dict[str, Any]:
     return {"passed": bool(passed), **details}
 
 
-def validate_stage0(repo_root: Path, release_root: Path | None, method_id: str | None) -> dict[str, Any]:
+def validate_stage0(
+    repo_root: Path,
+    release_root: Path | None,
+    method_id: str | None,
+    deployment_evidence: Path | None = None,
+) -> dict[str, Any]:
     configs = repo_root / "configs"
     registry_path = configs / "gs_gcp_method_registry_v1.json"
     resource_path = configs / "gs_gcp_resource_probe_contract_v1.json"
@@ -152,6 +160,52 @@ def validate_stage0(repo_root: Path, release_root: Path | None, method_id: str |
         original_3dgs_environment_status=runtime.get("original_3dgs_environment_status"),
     )
 
+    deployment_error = None
+    deployment = None
+    if deployment_evidence is not None:
+        try:
+            deployment = _load(deployment_evidence)
+            git_env = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+            actual_head = subprocess.check_output(
+                ["git", "-C", str(repo_root), "rev-parse", "HEAD"], text=True, env=git_env
+            ).strip()
+            actual_tree = subprocess.check_output(
+                ["git", "-C", str(repo_root), "rev-parse", "HEAD^{tree}"], text=True, env=git_env
+            ).strip()
+            actual_status = subprocess.check_output(
+                ["git", "-C", str(repo_root), "status", "--porcelain"], text=True, env=git_env
+            )
+            writable = [
+                path
+                for path in [repo_root, *repo_root.rglob("*")]
+                if not path.is_symlink() and path.stat().st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
+            ]
+            if deployment.get("schema") != "gs_gcp_stage0_autodl740_deployment_v1":
+                raise ValueError("unknown deployment evidence schema")
+            if deployment.get("status") != "pass":
+                raise ValueError("deployment evidence status is not pass")
+            if deployment.get("commit") != actual_head or deployment.get("tree") != actual_tree:
+                raise ValueError("deployment evidence commit/tree differs from runtime worktree")
+            if Path(deployment.get("target_root", "")).resolve() != repo_root.resolve():
+                raise ValueError("deployment evidence target root differs from runtime worktree")
+            if actual_status:
+                raise ValueError("runtime orchestrator worktree is dirty")
+            if writable:
+                raise ValueError(f"runtime orchestrator worktree is writable: {writable[0]}")
+            deployment_passed = True
+        except Exception as exc:
+            deployment_passed = False
+            deployment_error = f"{type(exc).__name__}: {exc}"
+    else:
+        deployment_passed = False
+        deployment_error = "deployment evidence not provided"
+    components["orchestrator_deployment"] = _component(
+        deployment_passed,
+        evidence_path=str(deployment_evidence) if deployment_evidence else None,
+        evidence=deployment,
+        error=deployment_error,
+    )
+
     if release_root is None:
         components["release_integrity"] = _component(False, status="not_checked")
     else:
@@ -198,8 +252,8 @@ def validate_stage0(repo_root: Path, release_root: Path | None, method_id: str |
         blockers.append("autodl_740_v1.3_data_mirror_not_verified_complete")
     if not components["release_integrity"]["passed"]:
         blockers.append("v1.3.0_release_integrity_not_verified_at_runtime")
-    if runtime.get("orchestrator_deployment_status") != "deployed_clean_fixed_commit":
-        blockers.append("autodl_740_orchestrator_not_deployed_at_fixed_commit")
+    if not deployment_passed:
+        blockers.append("autodl_740_orchestrator_deployment_evidence_missing_or_mismatch")
     if runtime.get("original_3dgs_environment_status") != "verified_frozen_environment":
         blockers.append("autodl_740_original_3dgs_environment_not_verified")
     if not method_gate:
@@ -223,10 +277,16 @@ def main() -> int:
     parser.add_argument("--repo_root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--release_root", type=Path)
     parser.add_argument("--method_id")
+    parser.add_argument("--deployment_evidence", type=Path)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--require_training_ready", action="store_true")
     args = parser.parse_args()
-    result = validate_stage0(args.repo_root.resolve(), args.release_root.resolve() if args.release_root else None, args.method_id)
+    result = validate_stage0(
+        args.repo_root.resolve(),
+        args.release_root.resolve() if args.release_root else None,
+        args.method_id,
+        args.deployment_evidence.resolve() if args.deployment_evidence else None,
+    )
     rendered = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)

@@ -40,8 +40,18 @@ VRAM, utilization, estimated energy, and host maximum RSS. It does not touch
 the loss, autograd graph, or training source. GNU time is extracted under the
 GS-GCP tool namespace without modifying the server's global packages.
 
+Before a GPU child starts, the probe requires three one-second idle samples,
+device utilization at most 5%, device memory use at most 1,024 MiB, and no
+visible compute process. Peak VRAM is the maximum runtime device-memory use
+minus that GPU's idle baseline, not raw whole-device memory. This prevents a
+concurrent job from being attributed to the evaluated method.
+
 Every GPU phase must use this wrapper. An absent GPU probe, duplicate output
 directory, non-zero child exit, or sampler failure makes the phase fail.
+At the 2026-07-17 Stage 0 check, all nine AutoDL-740 devices showed external
+device activity even though container-visible compute-app records were empty.
+No process was interrupted. A formal run must wait for a device that passes the
+idle gate.
 
 ## Current hard blockers
 

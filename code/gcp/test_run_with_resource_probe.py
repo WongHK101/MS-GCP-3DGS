@@ -40,6 +40,7 @@ class ResourceProbeTests(unittest.TestCase):
         rows = [
             {
                 "gpu_index": 0,
+                "sample_phase": "runtime",
                 "monotonic_seconds": 0.0,
                 "memory_used_mib": 100.0,
                 "utilization_gpu_percent": 10.0,
@@ -47,20 +48,28 @@ class ResourceProbeTests(unittest.TestCase):
             },
             {
                 "gpu_index": 0,
+                "sample_phase": "runtime",
                 "monotonic_seconds": 2.0,
                 "memory_used_mib": 300.0,
                 "utilization_gpu_percent": 50.0,
                 "power_draw_watts": 220.0,
             },
         ]
-        summary = summarize_gpu_samples(rows)
-        self.assertEqual(summary["peak_gpu_memory_mib"], 300.0)
+        summary = summarize_gpu_samples(rows, {0: 50.0})
+        self.assertEqual(summary["peak_gpu_memory_mib"], 250.0)
+        self.assertEqual(summary["peak_device_memory_used_mib"], 300.0)
         self.assertEqual(summary["mean_gpu_utilization_percent"], 30.0)
         self.assertTrue(math.isclose(summary["estimated_gpu_energy_wh"], 400.0 / 3600.0))
 
     def test_invasive_contract_rejected(self) -> None:
         contract = json.loads((ROOT / "configs" / "gs_gcp_resource_probe_contract_v1.json").read_text(encoding="utf-8"))
         contract["non_invasive"]["loss_instrumentation_allowed"] = True
+        with self.assertRaises(ValueError):
+            validate_contract(contract)
+
+    def test_short_idle_preflight_rejected(self) -> None:
+        contract = json.loads((ROOT / "configs" / "gs_gcp_resource_probe_contract_v1.json").read_text(encoding="utf-8"))
+        contract["sampling"]["idle_preflight_samples"] = 1
         with self.assertRaises(ValueError):
             validate_contract(contract)
 

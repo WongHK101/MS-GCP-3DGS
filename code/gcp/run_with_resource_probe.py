@@ -22,6 +22,7 @@ from typing import Any, Iterable
 
 GPU_FIELDS = [
     "timestamp_utc",
+    "sample_phase",
     "monotonic_seconds",
     "gpu_index",
     "gpu_uuid",
@@ -86,6 +87,7 @@ def query_nvidia_smi(
     binary: str,
     gpu_indices: list[int],
     monotonic_origin: float,
+    sample_phase: str,
 ) -> list[dict[str, Any]]:
     command = [
         binary,
@@ -104,6 +106,7 @@ def query_nvidia_smi(
         samples.append(
             {
                 "timestamp_utc": timestamp,
+                "sample_phase": sample_phase,
                 "monotonic_seconds": elapsed,
                 "gpu_index": int(row[0].strip()),
                 "gpu_uuid": row[1].strip(),
@@ -120,6 +123,32 @@ def query_nvidia_smi(
     return samples
 
 
+def query_compute_apps(binary: str, selected_gpu_uuids: set[str]) -> list[dict[str, Any]]:
+    command = [
+        binary,
+        "--query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory",
+        "--format=csv,noheader,nounits",
+    ]
+    output = subprocess.check_output(command, text=True, encoding="utf-8", errors="strict")
+    rows: list[dict[str, Any]] = []
+    for row in csv.reader(output.splitlines(), skipinitialspace=True):
+        if not row:
+            continue
+        if len(row) != 4:
+            raise RuntimeError(f"unexpected compute-app column count: {len(row)}")
+        if row[0].strip() not in selected_gpu_uuids:
+            continue
+        rows.append(
+            {
+                "gpu_uuid": row[0].strip(),
+                "pid": int(row[1].strip()),
+                "process_name": row[2].strip(),
+                "used_gpu_memory_mib": _optional_float(row[3]),
+            }
+        )
+    return rows
+
+
 def parse_gnu_time_output(text: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for line in text.splitlines():
@@ -130,8 +159,12 @@ def parse_gnu_time_output(text: str) -> dict[str, str]:
     return parsed
 
 
-def summarize_gpu_samples(samples: Iterable[dict[str, Any]]) -> dict[str, Any]:
-    materialized = list(samples)
+def summarize_gpu_samples(
+    samples: Iterable[dict[str, Any]],
+    baseline_memory_by_gpu: dict[int, float] | None = None,
+) -> dict[str, Any]:
+    materialized = [row for row in samples if row.get("sample_phase", "runtime") == "runtime"]
+    baseline_memory_by_gpu = baseline_memory_by_gpu or {}
     memory = [row["memory_used_mib"] for row in materialized if row.get("memory_used_mib") is not None]
     utilization = [
         row["utilization_gpu_percent"]
@@ -155,7 +188,18 @@ def summarize_gpu_samples(samples: Iterable[dict[str, Any]]) -> dict[str, Any]:
             energy_wh += float(power) * delta_seconds / 3600.0
     return {
         "gpu_sample_count": len(materialized),
-        "peak_gpu_memory_mib": max(memory) if memory else None,
+        "peak_gpu_memory_mib": max(
+            (
+                max(0.0, float(row["memory_used_mib"]) - baseline_memory_by_gpu[int(row["gpu_index"])])
+                for row in materialized
+                if row.get("memory_used_mib") is not None and int(row["gpu_index"]) in baseline_memory_by_gpu
+            ),
+            default=None,
+        ),
+        "peak_device_memory_used_mib": max(memory) if memory else None,
+        "baseline_device_memory_used_mib_by_gpu": {
+            str(index): value for index, value in sorted(baseline_memory_by_gpu.items())
+        },
         "mean_gpu_utilization_percent": sum(utilization) / len(utilization) if utilization else None,
         "max_gpu_utilization_percent": max(utilization) if utilization else None,
         "estimated_gpu_energy_wh": energy_wh if materialized else None,
@@ -168,6 +212,11 @@ def validate_contract(contract: dict[str, Any]) -> None:
     interval = float(contract.get("sampling", {}).get("gpu_interval_seconds", -1))
     if interval != 1.0:
         raise ValueError("formal resource probe interval must be exactly 1.0 second")
+    sampling = contract.get("sampling", {})
+    if sampling.get("idle_preflight_samples") != 3:
+        raise ValueError("formal GPU idle preflight must use exactly three samples")
+    if float(sampling.get("idle_preflight_interval_seconds", -1)) != 1.0:
+        raise ValueError("formal GPU idle preflight interval must be 1.0 second")
     host_tool = contract.get("host_tool", {})
     if len(str(host_tool.get("binary_sha256", ""))) != 64:
         raise ValueError("resource probe host tool SHA-256 is missing")
@@ -202,7 +251,7 @@ def _sampler_loop(
     next_sample = time.monotonic() + interval
     while not stop.wait(max(0.0, next_sample - time.monotonic())):
         try:
-            samples.extend(query_nvidia_smi(binary, indices, origin))
+            samples.extend(query_nvidia_smi(binary, indices, origin, "runtime"))
         except Exception as exc:  # sampler failure is recorded and handled by the parent
             errors.append(f"{type(exc).__name__}: {exc}")
             return
@@ -248,6 +297,7 @@ def run(args: argparse.Namespace) -> int:
     files = contract["output_files"]
     command_path = output_dir / files["command"]
     gpu_path = output_dir / files["gpu_samples"]
+    idle_path = output_dir / files["gpu_idle_preflight"]
     time_path = output_dir / files["gnu_time"]
     stdout_path = output_dir / files["stdout"]
     stderr_path = output_dir / files["stderr"]
@@ -268,29 +318,69 @@ def run(args: argparse.Namespace) -> int:
     }
     command_path.write_text(json.dumps(command_record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
+    preflight_origin = time.monotonic()
+    preflight_samples: list[dict[str, Any]] = []
+    preflight_apps: list[dict[str, Any]] = []
+    baseline_memory_by_gpu: dict[int, float] = {}
+    if gpu_indices:
+        sample_count = int(contract["sampling"]["idle_preflight_samples"])
+        for sample_index in range(sample_count):
+            rows = query_nvidia_smi(nvidia_binary, gpu_indices, preflight_origin, "idle_preflight")
+            preflight_samples.extend(rows)
+            if sample_index + 1 < sample_count:
+                time.sleep(float(contract["sampling"]["idle_preflight_interval_seconds"]))
+        selected_uuids = {str(row["gpu_uuid"]) for row in preflight_samples}
+        preflight_apps = query_compute_apps(nvidia_binary, selected_uuids)
+        utilization_limit = float(contract["sampling"]["idle_max_utilization_percent"])
+        memory_limit = float(contract["sampling"]["idle_max_memory_used_mib"])
+        violations: list[str] = []
+        for row in preflight_samples:
+            if row["utilization_gpu_percent"] is None or row["utilization_gpu_percent"] > utilization_limit:
+                violations.append(
+                    f"gpu {row['gpu_index']} utilization {row['utilization_gpu_percent']} exceeds {utilization_limit}"
+                )
+            if row["memory_used_mib"] is None or row["memory_used_mib"] > memory_limit:
+                violations.append(
+                    f"gpu {row['gpu_index']} memory {row['memory_used_mib']} exceeds {memory_limit} MiB"
+                )
+        if preflight_apps and not contract["sampling"]["visible_foreign_compute_processes_allowed"]:
+            violations.append(f"visible compute processes found before launch: {preflight_apps}")
+        for index in gpu_indices:
+            values = [
+                float(row["memory_used_mib"])
+                for row in preflight_samples
+                if row["gpu_index"] == index and row["memory_used_mib"] is not None
+            ]
+            if len(values) != sample_count:
+                violations.append(f"incomplete baseline memory samples for GPU {index}")
+            else:
+                baseline_memory_by_gpu[index] = sum(values) / len(values)
+        idle_record = {
+            "schema": "gs_gcp_gpu_idle_preflight_v1",
+            "passed": not violations,
+            "samples": preflight_samples,
+            "visible_compute_apps": preflight_apps,
+            "baseline_memory_used_mib_by_gpu": {
+                str(index): value for index, value in sorted(baseline_memory_by_gpu.items())
+            },
+            "violations": violations,
+        }
+        idle_path.write_text(json.dumps(idle_record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        if violations:
+            write_gpu_samples(gpu_path, preflight_samples)
+            raise RuntimeError("GPU idle preflight failed: " + "; ".join(violations))
+    else:
+        idle_path.write_text(
+            json.dumps({"schema": "gs_gcp_gpu_idle_preflight_v1", "passed": True, "not_applicable": True}, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
     origin = time.monotonic()
     started_utc = utc_now()
     samples: list[dict[str, Any]] = []
     sampler_errors: list[str] = []
-    if gpu_indices:
-        samples.extend(query_nvidia_smi(nvidia_binary, gpu_indices, origin))
     stop = threading.Event()
     sampler = None
-    if gpu_indices:
-        sampler = threading.Thread(
-            target=_sampler_loop,
-            args=(
-                stop,
-                samples,
-                sampler_errors,
-                nvidia_binary,
-                gpu_indices,
-                origin,
-                float(contract["sampling"]["gpu_interval_seconds"]),
-            ),
-            daemon=True,
-        )
-        sampler.start()
 
     wrapped_command = [time_binary, "-v", "-o", str(time_path), "--", *command]
     child_exit_code = 127
@@ -298,27 +388,43 @@ def run(args: argparse.Namespace) -> int:
         with stdout_path.open("w", encoding="utf-8") as stdout_handle, stderr_path.open(
             "w", encoding="utf-8"
         ) as stderr_handle:
-            child_exit_code = subprocess.run(
+            child = subprocess.Popen(
                 wrapped_command,
                 cwd=working_directory,
                 stdout=stdout_handle,
                 stderr=stderr_handle,
-                check=False,
-            ).returncode
+            )
+            if gpu_indices:
+                samples.extend(query_nvidia_smi(nvidia_binary, gpu_indices, origin, "runtime"))
+                sampler = threading.Thread(
+                    target=_sampler_loop,
+                    args=(
+                        stop,
+                        samples,
+                        sampler_errors,
+                        nvidia_binary,
+                        gpu_indices,
+                        origin,
+                        float(contract["sampling"]["gpu_interval_seconds"]),
+                    ),
+                    daemon=True,
+                )
+                sampler.start()
+            child_exit_code = child.wait()
     finally:
         stop.set()
         if sampler is not None:
             sampler.join(timeout=5.0)
         if gpu_indices and not sampler_errors:
             try:
-                samples.extend(query_nvidia_smi(nvidia_binary, gpu_indices, origin))
+                samples.extend(query_nvidia_smi(nvidia_binary, gpu_indices, origin, "runtime"))
             except Exception as exc:
                 sampler_errors.append(f"{type(exc).__name__}: {exc}")
 
     wall_seconds = time.monotonic() - origin
-    write_gpu_samples(gpu_path, samples)
+    write_gpu_samples(gpu_path, [*preflight_samples, *samples])
     time_data = parse_gnu_time_output(time_path.read_text(encoding="utf-8", errors="replace") if time_path.exists() else "")
-    gpu_summary = summarize_gpu_samples(samples)
+    gpu_summary = summarize_gpu_samples(samples, baseline_memory_by_gpu)
     probe_complete = not sampler_errors and (not gpu_required or bool(samples))
     summary = {
         "schema": "gs_gcp_resource_probe_summary_v1",
@@ -327,6 +433,8 @@ def run(args: argparse.Namespace) -> int:
         "ended_utc": utc_now(),
         "wall_seconds": wall_seconds,
         "allocated_gpu_count": len(gpu_indices),
+        "gpu_idle_preflight_passed": True,
+        "gpu_idle_preflight_sample_count": len(preflight_samples),
         "gpu_hours": wall_seconds * len(gpu_indices) / 3600.0,
         **gpu_summary,
         "maximum_resident_set_size_kib": int(time_data["Maximum resident set size (kbytes)"])

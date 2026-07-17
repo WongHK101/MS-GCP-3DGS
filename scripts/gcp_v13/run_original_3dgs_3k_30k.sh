@@ -18,6 +18,7 @@ MODEL_ROOT=$RUN_ROOT/02_checkpoints/model
 RECIPE=$ORCH_ROOT/configs/gs_gcp_v13_original_3dgs_recipe_v2.json
 RESOURCE_CONTRACT=$ORCH_ROOT/configs/gs_gcp_resource_probe_contract_v1.json
 GNU_TIME=/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time
+DEPLOYMENT_EVIDENCE=/root/autodl-tmp/transfer_audits/GS_GCP_STAGE0_DEPLOYMENT_CURRENT.json
 
 for path in "$BUILD_ROOT" "$RUN_ROOT"; do
   if test -e "$path"; then
@@ -88,6 +89,7 @@ JSON
   --repo_root "$ORCH_ROOT" \
   --release_root "$RELEASE_ROOT" \
   --method_id 3dgs_original \
+  --deployment_evidence "$DEPLOYMENT_EVIDENCE" \
   --report "$BUILD_ROOT/preflight/stage0_readiness.json" \
   --require_training_ready
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/gs_gcp_resolution.py" \

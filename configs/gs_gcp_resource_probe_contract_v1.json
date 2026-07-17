@@ -7,7 +7,12 @@
     "gpu_interval_tolerance_seconds": 0.25,
     "gpu_source": "nvidia-smi",
     "host_source": "isolated GNU time 1.9 -v",
-    "explicit_gpu_indices_required_for_gpu_phase": true
+    "explicit_gpu_indices_required_for_gpu_phase": true,
+    "idle_preflight_samples": 3,
+    "idle_preflight_interval_seconds": 1.0,
+    "idle_max_utilization_percent": 5.0,
+    "idle_max_memory_used_mib": 1024.0,
+    "visible_foreign_compute_processes_allowed": false
   },
   "host_tool": {
     "installation_mode": "apt_download_and_dpkg_extract_no_global_install",
@@ -31,6 +36,7 @@
   ],
   "required_gpu_query_fields": [
     "timestamp_utc",
+    "sample_phase",
     "monotonic_seconds",
     "gpu_index",
     "gpu_uuid",
@@ -46,6 +52,8 @@
     "allocated_gpu_count",
     "gpu_hours",
     "peak_gpu_memory_mib",
+    "peak_device_memory_used_mib",
+    "baseline_device_memory_used_mib_by_gpu",
     "mean_gpu_utilization_percent",
     "max_gpu_utilization_percent",
     "estimated_gpu_energy_wh",
@@ -53,7 +61,8 @@
     "child_exit_code",
     "probe_complete"
   ],
-  "gpu_hours_formula": "wall_seconds * allocated_gpu_count / 3600",
+  "gpu_hours_formula": "child_wall_seconds * allocated_gpu_count / 3600",
+  "peak_gpu_memory_formula": "max runtime device memory.used minus the same GPU idle-preflight mean; selected GPUs must pass the frozen idle/exclusivity gate",
   "energy_formula": "left_riemann_sum_of_per_gpu_power_watts_over_monotonic_sample_intervals / 3600",
   "non_invasive": {
     "training_source_changes_allowed": false,
@@ -64,6 +73,7 @@
   "output_files": {
     "command": "command.json",
     "gpu_samples": "gpu_samples.csv",
+    "gpu_idle_preflight": "gpu_idle_preflight.json",
     "gnu_time": "gnu_time.txt",
     "stdout": "stdout.log",
     "stderr": "stderr.log",

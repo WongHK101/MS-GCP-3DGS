@@ -8,6 +8,15 @@
   "compute_capability": "12.0",
   "driver_version": "595.71.05",
   "gpu_processes_at_capture": [],
+  "gpu_idle_audit": {
+    "captured_utc": "2026-07-17T15:59:00Z",
+    "status": "blocked_external_device_activity",
+    "visible_compute_apps": [],
+    "minimum_observed_utilization_percent": 48,
+    "maximum_observed_utilization_percent": 100,
+    "idle_gpu_indices": [],
+    "action": "do_not_interrupt_external_jobs; formal probe must reject until an idle GPU is available"
+  },
   "cuda": {
     "nvcc_path": "/usr/local/cuda-12.8/bin/nvcc",
     "nvcc_sha256": "59e4e55f9a38b78c590df1e28a69dad91052958f18a03868ca4a547c043fbba7",
@@ -33,7 +42,7 @@
     "use_percent": 73
   },
   "dataset_mirror_status": "verified_complete_read_only",
-  "orchestrator_deployment_status": "not_deployed",
+  "orchestrator_deployment_status": "runtime_evidence_required",
   "original_3dgs_environment_status": "verified_frozen_environment",
   "original_3dgs_assets": {
     "code_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
