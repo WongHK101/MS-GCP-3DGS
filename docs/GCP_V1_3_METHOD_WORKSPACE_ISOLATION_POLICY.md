@@ -1,4 +1,4 @@
-# MS-GCP v1.3 Method Workspace Isolation Policy
+# GS-GCP v1.3 Method Workspace Isolation Policy
 
 Status: mandatory preflight contract for every training, export, or evaluation run.
 
@@ -15,11 +15,11 @@ Status: mandatory preflight contract for every training, export, or evaluation r
 ## Canonical server layout
 
 ```text
-/root/autodl-tmp/datasets/ms-gcp-v13/<release-digest>/       # read-only mirror
-/root/autodl-tmp/worktrees/ms-gcp-v13/<method>/<commit>/     # clean code
-/root/autodl-tmp/envs/ms-gcp-v13/<method>/<env-hash>/        # isolated env
-/root/autodl-tmp/build/ms-gcp-v13/<method>/<commit>/<run>/   # build/CUDA cache
-/root/autodl-tmp/runs/ms-gcp-v13/<method>/<scene>/<run>/     # all run outputs
+/root/autodl-tmp/datasets/gs-gcp-v13/<release-digest>/       # read-only mirror
+/root/autodl-tmp/worktrees/gs-gcp-v13/<method>/<commit>/     # clean code
+/root/autodl-tmp/envs/gs-gcp-v13/<method>/<env-hash>/        # isolated env
+/root/autodl-tmp/build/gs-gcp-v13/<method>/<commit>/<run>/   # build/CUDA cache
+/root/autodl-tmp/runs/gs-gcp-v13/<method>/<scene>/<run>/     # all run outputs
 ```
 
 Run-root layout:

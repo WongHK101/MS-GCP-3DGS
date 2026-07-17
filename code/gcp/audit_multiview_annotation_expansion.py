@@ -729,7 +729,7 @@ def make_annotation_counts(ann: pd.DataFrame, residual_diag: Path) -> pd.DataFra
         ].copy()
         rd = rd.rename(
             columns={
-                "valid_observation_count": "current_umgs_packet_valid_count",
+                "valid_observation_count": "historical_packet_valid_count",
                 "raw_observation_count": "current_eval_raw_observation_count",
             }
         )
@@ -788,9 +788,9 @@ def build_inventory(
                     "has_current_annotation": key in ann_map,
                     "current_raw_annotation_count": int(ann_info.get("raw_annotation_count", 0) or 0),
                     "annotation_side_usable_count": int(ann_info.get("annotation_side_usable_count", 0) or 0),
-                    "current_umgs_packet_valid_count": (
-                        int(ann_info.get("current_umgs_packet_valid_count"))
-                        if pd.notna(ann_info.get("current_umgs_packet_valid_count", np.nan))
+                    "historical_packet_valid_count": (
+                        int(ann_info.get("historical_packet_valid_count"))
+                        if pd.notna(ann_info.get("historical_packet_valid_count", np.nan))
                         else ""
                     ),
                     "candidate_image_count": int(cand_info.get("candidate_image_count", 0) or 0),
@@ -887,7 +887,7 @@ def classify_low_view_causes(inventory: pd.DataFrame, diversity: pd.DataFrame) -
                 "current_v1_2_2_role": r.current_v1_2_2_role,
                 "has_current_annotation": has_current,
                 "annotation_side_usable_count": current,
-                "current_umgs_packet_valid_count": r.current_umgs_packet_valid_count,
+                "historical_packet_valid_count": r.historical_packet_valid_count,
                 "candidate_image_count": candidate_count,
                 "potential_usable_or_review_views": potential,
                 "potential_new_views": new_views,
@@ -1170,9 +1170,9 @@ def make_contact_sheets(
         )
     index = contact_dir / "index.html"
     html_lines = [
-        "<!doctype html><html><head><meta charset='utf-8'><title>MS-GCP contact sheets</title>",
+        "<!doctype html><html><head><meta charset='utf-8'><title>GS-GCP contact sheets</title>",
         "<style>body{font-family:Arial,sans-serif} img{max-width:100%;border:1px solid #ddd} .card{margin:24px 0}</style></head><body>",
-        "<h1>MS-GCP Multi-view Annotation Audit Contact Sheets</h1>",
+        "<h1>GS-GCP Multi-view Annotation Audit Contact Sheets</h1>",
         "<p>All coordinates are raw decoded-image pixel coordinates. Magenta circles indicate projection/search uncertainty, not ground truth visibility.</p>",
     ]
     for rec in records:
@@ -1196,14 +1196,14 @@ def write_protocol_docs(out_dir: Path, run_meta: dict[str, Any], summary: pd.Dat
         | (low_view["future_formal_primary_disposition"].str.contains("label|review", regex=True))
     ].copy()
     lines = [
-        "# MS-GCP Multi-View Annotation Expansion And Control-Heavy Design Audit",
+        "# GS-GCP Multi-View Annotation Expansion And Control-Heavy Design Audit",
         "",
         "## Scope",
         "",
         "- This package is a design audit only.",
         "- `v1.2.2` remains frozen as the sparse-control diagnostic benchmark.",
         "- No release, split, survey coordinate, packet, evaluator, residual, or formal metric was modified.",
-        "- Candidate discovery deliberately uses multiple evidence paths and does not depend solely on current UMGS/Sim(3).",
+        "- Candidate discovery deliberately uses multiple evidence paths and does not depend solely on a single current model/Sim(3).",
         "",
         "## Candidate Discovery Sources",
         "",
@@ -1238,7 +1238,7 @@ def write_protocol_docs(out_dir: Path, run_meta: dict[str, Any], summary: pd.Dat
         "- Store raw image SHA-256, dimensions, camera identity, raw x/y, and raw-to-target provenance for each new observation.",
         "- Conversion chain: raw pixel -> normalized source-camera ray -> undistorted benchmark target pixel -> packet-native pixel.",
         "- Direct labeling on R8 packets or undistorted render images must not be presented as raw-domain annotation.",
-        "- Primary annotation and independent review passes should be separate; reviewers must not see UMGS residuals or point error.",
+        "- Primary annotation and independent review passes should be separate; reviewers must not see model residuals or point error.",
         "",
         "## Audit Metadata",
         "",
@@ -1253,10 +1253,10 @@ def write_protocol_docs(out_dir: Path, run_meta: dict[str, Any], summary: pd.Dat
         "\n".join(
             [
                 "GPT：",
-                "本包为 MS-GCP 六场景 Multi-View Annotation Expansion and Control-Heavy Benchmark Design Audit。",
+                "本包为 GS-GCP 六场景 Multi-View Annotation Expansion and Control-Heavy Benchmark Design Audit。",
                 "",
                 "请重点审核：",
-                "1. 候选影像发现是否足以避免 current UMGS/Sim(3) transform sensitivity 导致的漏图；",
+                "1. 候选影像发现是否足以避免 a single current model/Sim(3) transform sensitivity 导致的漏图；",
                 "2. 低视图点分类和补标工作清单是否足够支持 v1.3.0 设计；",
                 "3. view-diversity 指标和 control-heavy 候选范围是否适合作为下一步 split 设计依据；",
                 "4. raw-domain annotation + raw→target→packet conversion protocol 是否足以避免 v1.1/v1.2 发生过的 pixel-domain 问题；",
@@ -1333,7 +1333,7 @@ def package_outputs(out_dir: Path, review_root: Path, stamp: str) -> tuple[Path,
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--repo", type=Path, default=Path(r"E:\M3M-GCP-3DGS"))
+    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--dataset", type=Path, default=Path(r"E:\datasets\M3M-GCP"))
     parser.add_argument(
         "--release",

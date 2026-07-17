@@ -720,7 +720,7 @@ def run_tests(real_release_dir: Path | None = None, v121_dir: Path = DEFAULT_REL
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run MS-GCP pixel-domain release protocol tests.")
+    parser = argparse.ArgumentParser(description="Run GS-GCP pixel-domain release protocol tests.")
     parser.add_argument("--real_release_dir", default="", help="Optional v1.2.2 release directory for the real 611-row release-interface smoke test.")
     parser.add_argument("--v121_dir", default=str(DEFAULT_RELEASE_V121))
     parser.add_argument("--remote_manifest", default=str(DEFAULT_REMOTE_MANIFEST))

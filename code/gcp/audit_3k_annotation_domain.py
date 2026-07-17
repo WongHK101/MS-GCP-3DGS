@@ -41,7 +41,7 @@ from triangulate_gcp_points import pixel_to_normalized  # noqa: E402
 
 
 SCENE = "gcp_3000_20260602"
-DEFAULT_PROJECT_ROOT = Path(r"E:\M3M-GCP-3DGS")
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RELEASE_DIR = Path(r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations")
 DEFAULT_OUT_BASE = DEFAULT_PROJECT_ROOT / "outputs"
 DEFAULT_REVIEW_ZIP = (

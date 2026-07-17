@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import shutil
 import tempfile
 import copy
@@ -50,9 +51,7 @@ DEPTH_MANIFEST_3K = Path(
     r"E:\M3M-GCP-3DGS\outputs\stage3_v122_pkt_blocker_20260629_012143\evidence\metric_depth_manifest_gcp_3000_20260602.json"
 )
 MODEL_DIR_3K = Path(r"E:\M3M-GCP-3DGS\outputs\sibr_models_3scenes_20260624\models\gcp_3000_20260602\Model_RGB")
-RENDERER_REPO = Path(r"E:\worktrees\Multispectral_gcp_regression_20260627_37698b4")
-if not RENDERER_REPO.exists():
-    RENDERER_REPO = Path(r"E:\Multispectral")
+RENDERER_REPO = Path(os.environ.get("GS_GCP_TEST_RENDERER_REPO", "__gs_gcp_renderer_repo_not_set__"))
 PACKET_SEARCH_ROOT = Path(
     r"E:\M3M-GCP-3DGS\outputs\gcp_3k_depth_semantics_inputs_20260628\packets\gcp_3000_20260602_full_reused_release"
 )

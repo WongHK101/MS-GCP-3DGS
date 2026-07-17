@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
-from export_gaussian_depth_maps import collect_views, read_allowlist
+from export_gaussian_depth_maps import collect_views, parse_train_repo, read_allowlist
 
 
 def write_list(path: Path, names: list[str]) -> None:
@@ -56,10 +56,26 @@ def test_missing_requested_view_hard_fails() -> None:
             raise AssertionError("missing requested view did not hard fail")
 
 
+def test_train_repository_must_be_explicit() -> None:
+    try:
+        parse_train_repo([])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("missing --train_repo did not fail")
+
+
+def test_explicit_train_repository_is_resolved() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        assert parse_train_repo(["--train_repo", tmp]) == Path(tmp).resolve()
+
+
 def main() -> int:
     tests = [
         test_extensionless_runtime_names_resolve_to_release_names,
         test_missing_requested_view_hard_fails,
+        test_train_repository_must_be_explicit,
+        test_explicit_train_repository_is_resolved,
     ]
     for test in tests:
         test()

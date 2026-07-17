@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable
 import numpy as np
 
 
+# Metric packet v2 is a reviewed wire contract; its historical token is immutable.
 METRIC_PACKET_SCHEMA = "ms_gcp_metric_depth_packet_v2"
 METRIC_PACKET_MANIFEST_SCHEMA = "ms_gcp_metric_depth_packet_manifest_v2"
 METRIC_PACKET_TENSOR_NAMES = [

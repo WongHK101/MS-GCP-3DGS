@@ -33,6 +33,7 @@ SCENES = [
     "gcp_100000_20260610",
 ]
 
+# Frozen v1.2.x/v1.3 wire tokens cannot be renamed without invalidating release hashes.
 RELEASE_V12_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2"
 RELEASE_V12_ID = "gcp_benchmark_release_v1_2_pixel_domain_20260628"
 RELEASE_V121_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_2_1"
@@ -57,7 +58,7 @@ SIMPLE_RADIAL_MAX_ITER = 20
 SIMPLE_RADIAL_CONVERGENCE_ABS = 1e-12
 SIMPLE_RADIAL_CONVERGENCE_REL = 1e-12
 
-RGB_MATRIX_HASH_MAGIC = b"MS_GCP_RGB_MATRIX_HASH_V1\x00"
+RGB_MATRIX_HASH_MAGIC = b"MS_GCP_RGB_MATRIX_HASH_V1\x00"  # Frozen serialized magic.
 OBSERVATION_ID_SCHEMA = "ms_gcp_observation_id_stage1_v1"
 
 

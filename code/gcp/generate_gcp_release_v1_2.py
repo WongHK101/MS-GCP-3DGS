@@ -69,7 +69,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET_ROOT = Path(r"E:\datasets\M3M-GCP")
 DEFAULT_RELEASE_V11 = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations"
 DEFAULT_FINAL_DIR = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2_2"
-DEFAULT_PROJECT_ROOT = Path(r"E:\M3M-GCP-3DGS")
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REMOTE_MANIFEST = (
     DEFAULT_PROJECT_ROOT
     / "outputs"
@@ -843,7 +843,7 @@ def write_protocol_doc(path: Path) -> None:
     path.write_text(
         "\n".join(
             [
-                "# MS-GCP Release v1.2.2 Pixel-Domain Protocol",
+                "# GS-GCP Release v1.2.2 Pixel-Domain Protocol",
                 "",
                 "Release v1.2.2 preserves the v1.1 raw manual annotations but formal evaluation uses verified cached projections into the benchmark undistorted COLMAP camera domain.",
                 "",
@@ -925,7 +925,7 @@ def make_review_package(out_dir: Path, release_dir: Path, package_dir_path: Path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate and freeze MS-GCP v1.2 pixel-domain release.")
+    parser = argparse.ArgumentParser(description="Generate and freeze GS-GCP v1.2 pixel-domain release.")
     parser.add_argument("--dataset_root", default=str(DEFAULT_DATASET_ROOT))
     parser.add_argument("--release_v11", default=str(DEFAULT_RELEASE_V11))
     parser.add_argument("--final_dir", default=str(DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2_2"))

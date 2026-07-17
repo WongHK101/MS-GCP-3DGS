@@ -271,7 +271,7 @@ def main() -> int:
 
     html_text = f"""<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
-<title>MS-GCP 多视角补标目视核查入口</title>
+<title>GS-GCP 多视角补标目视核查入口</title>
 <style>
 body {{ font-family: "Microsoft YaHei", Arial, sans-serif; line-height:1.56; margin:24px; color:#222; }}
 h1,h2,h3 {{ color:#12355b; }}
@@ -287,7 +287,7 @@ code {{ background:#f1f1f1; padding:1px 4px; border-radius:3px; }}
 .small {{ color:#666; font-size:13px; }}
 .nav a {{ display:inline-block; margin:4px 8px 4px 0; }}
 </style></head><body>
-<h1>MS-GCP 多视角补标目视核查入口（中文）</h1>
+<h1>GS-GCP 多视角补标目视核查入口（中文）</h1>
 <div class="warn"><b>先看这里：</b>这个 HTML 不是标注工具。图上的准心对 <code>label/review</code> 候选只是预测/搜索位置，不是像控点真值。只有 <code>source=current_annotation</code> + <code>action=keep_existing</code> 是你之前已经标过的正式标注。</div>
 <div class="notice"><b>你要做的判断：</b>对每个低视图点，判断原始图像里是否还有清晰、可唯一定位、具有不同观察方向的视图可以补标。如果候选准心不在点上但图里能看见点，也可以反馈“可补标，但需人工重新点”。</div>
 
@@ -343,7 +343,7 @@ scene,point_name,image_name,decision,visibility,quality,notes
 
     (out_root / "index_zh.html").write_text(html_text, encoding="utf-8")
     (out_root / "README_review_zh.md").write_text(
-        """# MS-GCP 多视角补标目视核查说明
+        """# GS-GCP 多视角补标目视核查说明
 
 打开 `index_zh.html`。
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SRC_ROOT=${SRC_ROOT:-/root/autodl-tmp/src/ms-gcp-3dgs}
-OPT_ROOT=${OPT_ROOT:-/root/autodl-tmp/opt/ms-gcp-3dgs}
+SRC_ROOT=${SRC_ROOT:-/root/autodl-tmp/src/gs-gcp}
+OPT_ROOT=${OPT_ROOT:-/root/autodl-tmp/opt/gs-gcp}
 CUDA_ROOT=${CUDA_ROOT:-/usr/local/cuda}
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 COLMAP_TAG=${COLMAP_TAG:-4.0.4}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate that an MS-GCP method run cannot write into shared source roots."""
+"""Validate that a GS-GCP method run cannot write into shared source roots."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
-CONTRACT_SCHEMA = "ms_gcp_method_workspace_isolation_contract_v1"
-RUN_SCHEMA = "ms_gcp_method_run_layout_v1"
+CONTRACT_SCHEMA = "gs_gcp_method_workspace_isolation_contract_v1"
+RUN_SCHEMA = "gs_gcp_method_run_layout_v1"
 TOKEN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -195,7 +195,7 @@ def main() -> int:
         check_run_root_absent=args.require_nonexistent_run_root,
     )
     report = {
-        "schema": "ms_gcp_method_workspace_isolation_validation_v1",
+        "schema": "gs_gcp_method_workspace_isolation_validation_v1",
         "status": "pass" if not errors else "fail",
         "error_count": len(errors),
         "errors": errors,

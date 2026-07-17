@@ -1,5 +1,5 @@
 {
-  "schema": "ms_gcp_method_workspace_isolation_contract_v1",
+  "schema": "gs_gcp_method_workspace_isolation_contract_v1",
   "dataset_access": "read_only",
   "release_access": "read_only_during_method_runs",
   "code_access": "clean_fixed_commit_no_runtime_writes",
@@ -50,21 +50,21 @@
     "PYTHONNOUSERSITE": "1"
   },
   "recommended_autodl_layout": {
-    "dataset_root": "/root/autodl-tmp/datasets/ms-gcp-v13/<release_root_digest>",
-    "code_root": "/root/autodl-tmp/worktrees/ms-gcp-v13/<method_id>/<code_commit>",
-    "environment_root": "/root/autodl-tmp/envs/ms-gcp-v13/<method_id>/<environment_lock_sha256>",
-    "build_root": "/root/autodl-tmp/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>",
-    "run_root": "/root/autodl-tmp/runs/ms-gcp-v13/<method_id>/<scene>/<run_id>",
-    "torch_extensions_dir": "/root/autodl-tmp/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>/torch_extensions",
-    "temp_root": "/root/autodl-tmp/runs/ms-gcp-v13/<method_id>/<scene>/<run_id>/tmp"
+    "dataset_root": "/root/autodl-tmp/datasets/gs-gcp-v13/<release_root_digest>",
+    "code_root": "/root/autodl-tmp/worktrees/gs-gcp-v13/<method_id>/<code_commit>",
+    "environment_root": "/root/autodl-tmp/envs/gs-gcp-v13/<method_id>/<environment_lock_sha256>",
+    "build_root": "/root/autodl-tmp/build/gs-gcp-v13/<method_id>/<code_commit>/<run_id>",
+    "run_root": "/root/autodl-tmp/runs/gs-gcp-v13/<method_id>/<scene>/<run_id>",
+    "torch_extensions_dir": "/root/autodl-tmp/build/gs-gcp-v13/<method_id>/<code_commit>/<run_id>/torch_extensions",
+    "temp_root": "/root/autodl-tmp/runs/gs-gcp-v13/<method_id>/<scene>/<run_id>/tmp"
   },
   "recommended_windows_layout": {
     "dataset_root": "E:/datasets/M3M-GCP",
-    "code_root": "E:/worktrees/ms-gcp-v13/<method_id>/<code_commit>",
-    "environment_root": "E:/envs/ms-gcp-v13/<method_id>/<environment_lock_sha256>",
-    "build_root": "E:/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>",
-    "run_root": "E:/M3M-GCP-3DGS/outputs/gcp_v13_runs/<method_id>/<scene>/<run_id>",
-    "torch_extensions_dir": "E:/build/ms-gcp-v13/<method_id>/<code_commit>/<run_id>/torch_extensions",
-    "temp_root": "E:/M3M-GCP-3DGS/outputs/gcp_v13_runs/<method_id>/<scene>/<run_id>/tmp"
+    "code_root": "E:/worktrees/gs-gcp-v13/<method_id>/<code_commit>",
+    "environment_root": "E:/envs/gs-gcp-v13/<method_id>/<environment_lock_sha256>",
+    "build_root": "E:/build/gs-gcp-v13/<method_id>/<code_commit>/<run_id>",
+    "run_root": "E:/GS-GCP/outputs/gs_gcp_v13_runs/<method_id>/<scene>/<run_id>",
+    "torch_extensions_dir": "E:/build/gs-gcp-v13/<method_id>/<code_commit>/<run_id>/torch_extensions",
+    "temp_root": "E:/GS-GCP/outputs/gs_gcp_v13_runs/<method_id>/<scene>/<run_id>/tmp"
   }
 }

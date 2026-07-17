@@ -33,6 +33,7 @@ from gcp_pixel_domain_v1_2 import (  # noqa: E402
 )
 
 
+# Compatibility v1.1 and packet v2 identifiers are frozen wire tokens.
 COMPAT_SCHEMA = "ms_gcp_metric_depth_packet_resolution_compatibility_v1_1"
 WITHDRAWN_COMPAT_SCHEMA_V1 = "ms_gcp_metric_depth_packet_resolution_compatibility_v1"
 WITHDRAWN_COMPAT_V1_DISPOSITION = "withdrawn_before_stage3_due_to_uncommitted_generator_and_incomplete_runtime_validation"
@@ -166,21 +167,29 @@ def write_csv(path: Path, rows: Sequence[dict[str, Any]], fieldnames: Sequence[s
 
 def git_commit(repo: Path) -> str:
     try:
-        return subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+        return subprocess.check_output(
+            ["git", "-c", f"safe.directory={repo.as_posix()}", "-C", str(repo), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
     except Exception:
         return ""
 
 
 def git_status_porcelain(repo: Path) -> str:
     try:
-        return subprocess.check_output(["git", "-C", str(repo), "status", "--porcelain=v1"], text=True).strip()
+        return subprocess.check_output(
+            ["git", "-c", f"safe.directory={repo.as_posix()}", "-C", str(repo), "status", "--porcelain=v1"],
+            text=True,
+        ).strip()
     except Exception as exc:  # noqa: BLE001
         return f"ERROR:{type(exc).__name__}:{exc}"
 
 
 def git_show_file_sha256(repo: Path, rel_path: str) -> str:
     try:
-        payload = subprocess.check_output(["git", "-C", str(repo), "show", f"HEAD:{rel_path}"])
+        payload = subprocess.check_output(
+            ["git", "-c", f"safe.directory={repo.as_posix()}", "-C", str(repo), "show", f"HEAD:{rel_path}"]
+        )
         return sha256_bytes(payload)
     except Exception:
         path = repo / rel_path

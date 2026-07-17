@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COLMAP=${COLMAP:-/root/autodl-tmp/opt/ms-gcp-3dgs/colmap-4.0.4-gpu-ba/bin/colmap}
-BASELINE=${BASELINE:-/root/autodl-tmp/runs/ms-gcp-3dgs/legacy-colmap-3.9.1/gcp_10000_20260610}
-RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/ms-gcp-3dgs/gpu-ba-feasibility-20260615}
+COLMAP=${COLMAP:-/root/autodl-tmp/opt/gs-gcp/colmap-4.0.4-gpu-ba/bin/colmap}
+BASELINE=${BASELINE:-/root/autodl-tmp/runs/gs-gcp/legacy-colmap-3.9.1/gcp_10000_20260610}
+RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/gs-gcp/gpu-ba-feasibility-20260615}
 GPU_ID=${GPU_ID:-0}
 RUN="$RUN_ROOT/gcp_10000_20260610"
 RGB="$RUN/RGB"

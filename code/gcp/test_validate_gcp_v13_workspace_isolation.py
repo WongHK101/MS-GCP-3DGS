@@ -17,19 +17,19 @@ HEX64 = "2" * 64
 
 
 def valid_manifest(prefix: str = "/root/autodl-tmp") -> dict:
-    run = f"{prefix}/runs/ms-gcp-v13/3dgs/gcp_3000_20260602/run_001"
-    build = f"{prefix}/build/ms-gcp-v13/3dgs/{HEX40}/run_001"
+    run = f"{prefix}/runs/gs-gcp-v13/3dgs/gcp_3000_20260602/run_001"
+    build = f"{prefix}/build/gs-gcp-v13/3dgs/{HEX40}/run_001"
     return {
-        "schema": "ms_gcp_method_run_layout_v1",
+        "schema": "gs_gcp_method_run_layout_v1",
         "method_id": "3dgs",
         "scene": "gcp_3000_20260602",
         "run_id": "run_001",
-        "code_root": f"{prefix}/worktrees/ms-gcp-v13/3dgs/{HEX40}",
+        "code_root": f"{prefix}/worktrees/gs-gcp-v13/3dgs/{HEX40}",
         "code_commit": HEX40,
-        "environment_root": f"{prefix}/envs/ms-gcp-v13/3dgs/{HEX64}",
+        "environment_root": f"{prefix}/envs/gs-gcp-v13/3dgs/{HEX64}",
         "environment_lock_sha256": HEX64,
-        "dataset_root": f"{prefix}/datasets/ms-gcp-v13/{HEX64}",
-        "release_root": f"{prefix}/datasets/ms-gcp-v13/{HEX64}/release",
+        "dataset_root": f"{prefix}/datasets/gs-gcp-v13/{HEX64}",
+        "release_root": f"{prefix}/datasets/gs-gcp-v13/{HEX64}/release",
         "release_root_digest": HEX64,
         "build_root": build,
         "run_root": run,
@@ -78,7 +78,7 @@ def test_rejects_shared_cuda_cache() -> None:
 
 def test_rejects_cross_method_run_root() -> None:
     manifest = valid_manifest()
-    manifest["run_root"] = "/root/autodl-tmp/runs/ms-gcp-v13/2dgs/gcp_3000_20260602/run_001"
+    manifest["run_root"] = "/root/autodl-tmp/runs/gs-gcp-v13/2dgs/gcp_3000_20260602/run_001"
     for role, leaf in CONTRACT["required_output_subdirs"].items():
         manifest["output_subdirs"][role] = f"{manifest['run_root']}/{leaf}"
     manifest["temp_root"] = f"{manifest['run_root']}/tmp"

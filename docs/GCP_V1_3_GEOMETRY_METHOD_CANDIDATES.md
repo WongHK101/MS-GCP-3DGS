@@ -1,9 +1,6 @@
-# GCP v1.3 Geometry Method Candidate Set
+# GS-GCP v1.3 Geometry Method Candidate Set
 
 Status: protocol candidate, not yet a frozen experiment matrix.
-
-UMGS is excluded from the paper's method comparison. Its retained artifacts
-are historical implementation and audit evidence only.
 
 ## Admission criteria
 
@@ -65,8 +62,6 @@ passes. Their failure cannot delay the eight-method core matrix.
 - Any method whose only citable record is arXiv is excluded until a publisher
   or official conference-proceedings record exists. Acceptance rumors,
   repository badges, and project-page claims are insufficient by themselves.
-- UMGS is not a paper method or baseline. Existing UMGS artifacts remain only
-  where required to reproduce historical packet/protocol audits.
 
 ## Frozen smoke order
 

@@ -125,7 +125,7 @@ def sim3_exclusion_sensitivity(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, default=Path(r"E:\M3M-GCP-3DGS"))
+    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument(
         "--image_pose_qc_root",
         type=Path,

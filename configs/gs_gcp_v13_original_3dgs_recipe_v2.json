@@ -1,7 +1,7 @@
 {
-  "schema": "ms_gcp_v1_3_method_recipe_v1",
-  "recipe_id": "gcp_v13_original_3dgs_r8_30k_seed0_v1",
-  "status": "frozen_for_3k_reference_smoke",
+  "schema": "gs_gcp_v1_3_method_recipe_v2",
+  "recipe_id": "gs_gcp_v13_original_3dgs_rminus1_30k_seed0_v2",
+  "status": "pre_registered_for_3k_qualification",
   "method": {
     "method_id": "3dgs_original",
     "display_name": "3D Gaussian Splatting",
@@ -44,7 +44,11 @@
     "scene_id": "gcp_3000_20260602",
     "image_directory": "images",
     "image_count": 94,
-    "resolution_argument": 8,
+    "resolution_argument": -1,
+    "resolution_contract": "configs/gs_gcp_training_resolution_v1.json",
+    "resolution_rule_id": "graphdeco_rminus1_1600_width_cap_v1",
+    "loaded_dimension_manifest_required": true,
+    "loaded_tensor_hash_probe_required": true,
     "camera_model": "PINHOLE",
     "source_manifest_sha256": "442c7d74ba0d79f7611b75f9f9155c7d1bf0d09ea71f2985cfb08f68aed24b7d",
     "cameras_bin_sha256": "49cfa412254ff4bfb68473cc1b2262a95362e9542020424c166304a3831962f7",
@@ -99,15 +103,15 @@
     "pytorch": "2.7.1+cu128",
     "torchvision": "0.22.1+cu128",
     "cuda_arch_list": "12.0",
-    "environment_root": "/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1",
+    "environment_root": "/root/autodl-tmp/envs/gs-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1",
     "environment_lock_sha256": "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed"
   },
   "server_roots": {
-    "code_root": "/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train",
-    "dataset_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/gcp_3000_20260602",
-    "release_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
-    "build_root_template": "/root/autodl-tmp/build/ms-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/<run_id>",
-    "run_root_template": "/root/autodl-tmp/runs/ms-gcp-v13/3dgs-original/gcp_3000_20260602/<run_id>"
+    "code_root": "/root/autodl-tmp/worktrees/gs-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train",
+    "dataset_root": "/root/autodl-tmp/datasets/gs-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/gcp_3000_20260602",
+    "release_root": "/root/autodl-tmp/datasets/gs-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "build_root_template": "/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/<run_id>",
+    "run_root_template": "/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/gcp_3000_20260602/<run_id>"
   },
   "isolation": {
     "contract": "configs/gcp_v13_workspace_isolation_v1.json",

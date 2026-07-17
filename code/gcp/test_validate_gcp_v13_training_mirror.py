@@ -60,7 +60,7 @@ def _fixture(root: Path) -> dict:
         },
     }
     manifest = {
-        "schema": "ms_gcp_v1_3_read_only_training_source_manifest_v1",
+        "schema": "gs_gcp_v1_3_read_only_training_source_manifest_v1",
         "scene": "scene",
         "release_id": "release",
         "release_root_digest": "d" * 64,

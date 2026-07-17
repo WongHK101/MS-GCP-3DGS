@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO=${REPO:-/root/autodl-tmp/MS-GCP-3DGS}
-PY=${PY:-/root/autodl-tmp/envs/ms-gcp-3dgs/bin/python}
-COLMAP=${COLMAP:-/root/autodl-tmp/opt/ms-gcp-3dgs/colmap-4.0.4-gpu-ba/bin/colmap}
+REPO=${REPO:-/root/autodl-tmp/GS-GCP}
+PY=${PY:-/root/autodl-tmp/envs/gs-gcp/bin/python}
+COLMAP=${COLMAP:-/root/autodl-tmp/opt/gs-gcp/colmap-4.0.4-gpu-ba/bin/colmap}
 DATA=${DATA:-/root/autodl-tmp/datasets/M3M-GCP/scenes_rgb_20260615}
-RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-global-formal-20260616}
+RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/gs-gcp/colmap-4.0.4-global-formal-20260616}
 GPU_ID=${GPU_ID:-0}
 RESUME_EXISTING_MATCHING=${RESUME_EXISTING_MATCHING:-0}
 SCENE=${1:?scene id required}

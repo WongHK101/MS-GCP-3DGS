@@ -1,0 +1,47 @@
+{
+  "schema": "gs_gcp_training_resolution_contract_v1",
+  "rule_id": "graphdeco_rminus1_1600_width_cap_v1",
+  "reference_method": "original_3dgs",
+  "reference_method_argument": -1,
+  "reference_loader": "utils/camera_utils.py::loadCam",
+  "dimension_source": "decoded_benchmark_undistorted_image_matrix",
+  "max_width": 1600,
+  "small_image_policy": "identity_no_upscale",
+  "large_image_rounding": "python_int_truncation_after_float64_division",
+  "width_height_evaluated_independently": true,
+  "aspect_policy": "preserve_by_common_width_derived_scale",
+  "crop_policy": "none",
+  "pad_policy": "none",
+  "pixel_convention": "zero_based_pixel_centers",
+  "reference_resize_call": "PIL.Image.resize((loaded_width, loaded_height))",
+  "reference_resize_source_hash_required": true,
+  "pillow_version_required_per_run": true,
+  "per_view_loaded_dimension_manifest_required": true,
+  "per_view_loaded_intrinsics_manifest_required": true,
+  "loaded_tensor_hash_probe_required": true,
+  "method_cli_resolution_alias_is_sufficient_evidence": false,
+  "non_reference_method_policy": "match_canonical_dimensions_intrinsics_and_loaded_tensor_probe_or_hard_fail",
+  "golden_cases": [
+    {
+      "name": "real_3k",
+      "original_width": 5654,
+      "original_height": 4098,
+      "loaded_width": 1600,
+      "loaded_height": 1159
+    },
+    {
+      "name": "no_upscale_at_cap",
+      "original_width": 1600,
+      "original_height": 1200,
+      "loaded_width": 1600,
+      "loaded_height": 1200
+    },
+    {
+      "name": "half_pixel_dimension_truncation",
+      "original_width": 3200,
+      "original_height": 2001,
+      "loaded_width": 1600,
+      "loaded_height": 1000
+    }
+  ]
+}

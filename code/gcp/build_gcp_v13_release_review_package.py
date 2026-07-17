@@ -1,4 +1,4 @@
-"""Build the unified MS-GCP v1.3.0 release-freeze review package."""
+"""Build the unified GS-GCP v1.3.0 release-freeze review package."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RELEASE = Path(r"E:\datasets\M3M-GCP\scenes\gcp_manual_annotations_v1_3_0")
-DEFAULT_PROJECT = Path(r"E:\M3M-GCP-3DGS")
+DEFAULT_PROJECT = Path(__file__).resolve().parents[2]
 
 
 def file_sha256(path: Path) -> str:
@@ -174,7 +174,7 @@ removed before atomic publication and adds a dedicated regression test.
     )
     write_text(
         run_root / "REVIEW_BRIEF.md",
-        f"""# MS-GCP v1.3.0 Release Freeze Review
+        f"""# GS-GCP v1.3.0 Release Freeze Review
 
 Status: PASS candidate for external review.
 

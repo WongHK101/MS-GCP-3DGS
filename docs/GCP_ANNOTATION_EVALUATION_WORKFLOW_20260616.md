@@ -11,7 +11,7 @@ checkpoints, or change surveyed GCP coordinates.
 - Raw scene images:
   `E:\datasets\M3M-GCP\scenes\<scene_id>\*_D.JPG`
 - Completed COLMAP sparse models, when available:
-  `/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-global-formal-20260616/<scene_id>/RGB/sparse_aligned/0`
+  `/root/autodl-tmp/runs/gs-gcp/colmap-4.0.4-global-formal-20260616/<scene_id>/RGB/sparse_aligned/0`
 
 ## Stage 1: Coarse Candidate Discovery
 

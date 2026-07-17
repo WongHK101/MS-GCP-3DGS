@@ -536,7 +536,7 @@ def candidate_csv_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, default=Path(r"E:\M3M-GCP-3DGS"))
+    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument(
         "--remote_manifest",
         type=Path,

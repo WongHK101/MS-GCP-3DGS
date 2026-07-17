@@ -5,7 +5,7 @@ This document defines the Stage-1 read-only audit implemented by
 
 The audit checks whether release v1.1 manual annotation pixels, raw COLMAP
 cameras, and training/render metric-depth packet cameras occupy compatible
-pixel domains for the six MS-GCP scenes. It preserves every release v1.1
+pixel domains for the six GS-GCP scenes. It preserves every release v1.1
 observation row and records missing or unresolved artifacts explicitly.
 
 Stage 1 may draft a v1.2 pixel-domain schema, but it does not freeze release

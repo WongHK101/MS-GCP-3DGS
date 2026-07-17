@@ -170,7 +170,7 @@ def build_mirror(
 
         points_count = _read_point_count(staging / "sparse" / "0" / "points3D.bin")
         manifest = {
-            "schema": "ms_gcp_v1_3_read_only_training_source_manifest_v1",
+            "schema": "gs_gcp_v1_3_read_only_training_source_manifest_v1",
             "scene": scene,
             "release_id": recipe["release"]["release_id"],
             "release_root_digest": RELEASE_DIGEST,
@@ -225,7 +225,7 @@ def main() -> int:
     parser.add_argument(
         "--recipe",
         type=Path,
-        default=Path(__file__).resolve().parents[2] / "configs" / "gcp_v13_original_3dgs_six_scene_recipe_v1.json",
+        default=Path(__file__).resolve().parents[2] / "configs" / "gs_gcp_v13_training_source_manifest_v1.json",
     )
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()

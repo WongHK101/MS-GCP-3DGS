@@ -379,8 +379,8 @@ def run_cuda_test(train_repo: Path, out_dir: Path) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Tiny synthetic CUDA test for metric depth packet rasterizer output.")
-    parser.add_argument("--train_repo", default=r"E:\Multispectral")
-    parser.add_argument("--out_dir", default=r"E:\M3M-GCP-3DGS\outputs\metric_depth_packet_20260626\cuda_tiny")
+    parser.add_argument("--train_repo", required=True)
+    parser.add_argument("--out_dir", required=True)
     args = parser.parse_args()
     result = run_cuda_test(Path(args.train_repo).resolve(), Path(args.out_dir).resolve())
     print(

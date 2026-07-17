@@ -26,7 +26,7 @@ else:
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_PROJECT_ROOT = Path(r"E:\M3M-GCP-3DGS")
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET_ROOT = Path(r"E:\datasets\M3M-GCP")
 DEFAULT_RELEASE_DIR = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations"
 DEFAULT_REMOTE_LIGHT_MANIFEST = (

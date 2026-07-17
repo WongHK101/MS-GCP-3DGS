@@ -1,4 +1,4 @@
-"""MS-GCP v1.3.0 pixel-domain release contract and evaluator gates.
+"""GS-GCP v1.3.0 pixel-domain release contract and evaluator gates.
 
 The v1.3 release preserves every reviewed annotation row.  Rows without a
 manual click remain auditable release records, but can never enter formal
@@ -34,6 +34,8 @@ from gcp_pixel_domain_v1_2 import (
 )
 
 
+# Frozen wire identifiers are retained byte-for-byte for reviewed v1.3 artifacts.
+# They are compatibility tokens, not the public benchmark name.
 RELEASE_V130_SCHEMA = "ms_gcp_3dgs_benchmark_release_config_v1_3_0"
 RELEASE_V130_ID = "gcp_benchmark_release_v1_3_0_multiview_control_heavy_20260717"
 RELEASE_V130_TOKEN = "v1_3_0"

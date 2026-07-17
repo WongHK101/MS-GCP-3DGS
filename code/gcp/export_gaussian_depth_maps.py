@@ -38,7 +38,6 @@ from metric_depth_packet import (  # noqa: E402
     variance_validation_manifest_fields,
 )
 
-DEFAULT_TRAIN_REPO = r"E:\Multispectral" if Path(r"E:\Multispectral").exists() else "/root/autodl-tmp/Multispectral"
 DEFAULT_RASTERIZER_DEPTH_SEMANTICS = "alpha_weighted_unnormalized_inverse_camera_z"
 
 
@@ -55,7 +54,7 @@ def git_tree_hash(path: Path) -> str:
 
 def parse_train_repo(argv: Sequence[str]) -> Path:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--train_repo", default=DEFAULT_TRAIN_REPO)
+    parser.add_argument("--train_repo", required=True)
     known, _unknown = parser.parse_known_args(argv)
     return Path(known.train_repo).expanduser().resolve()
 
@@ -471,7 +470,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
 
 
 def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any, Any]:
-    parser = argparse.ArgumentParser(description="Export float Gaussian-rendered depth maps for MS-GCP-3DGS P1 evaluator.")
+    parser = argparse.ArgumentParser(description="Export metric-depth packets for the GS-GCP evaluator.")
     ModelParams = runtime["ModelParams"]
     PipelineParams = runtime["PipelineParams"]
     model = ModelParams(parser, sentinel=True)

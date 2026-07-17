@@ -1,4 +1,4 @@
-# Default COLMAP/SfM Protocol for MS-GCP-3DGS
+# Default COLMAP/SfM Protocol for GS-GCP
 
 This document fixes the default large-scene SfM protocol after the June 2026
 GCP scene diagnostics. It is intended for the six M3M-GCP campus scenes and
@@ -33,7 +33,7 @@ future second-paper runs unless a later protocol change is explicitly approved.
 The default run root is:
 
 ```text
-/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-global-formal-20260616
+/root/autodl-tmp/runs/gs-gcp/colmap-4.0.4-global-formal-20260616
 ```
 
 The default RGB data root is:
@@ -57,13 +57,13 @@ formal protocol:
 Run one scene:
 
 ```bash
-bash /root/autodl-tmp/MS-GCP-3DGS/scripts/run_large_scene_global_colmap_scene.sh gcp_10000_20260610
+bash /root/autodl-tmp/GS-GCP/scripts/run_large_scene_global_colmap_scene.sh gcp_10000_20260610
 ```
 
 Run an explicit queue:
 
 ```bash
-bash /root/autodl-tmp/MS-GCP-3DGS/scripts/run_formal_colmap_gpu_ba_queue.sh \
+bash /root/autodl-tmp/GS-GCP/scripts/run_formal_colmap_gpu_ba_queue.sh \
   gcp_3000_20260602 gcp_5000_20260602 gcp_20000_20260602
 ```
 

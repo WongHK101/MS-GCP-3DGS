@@ -1,8 +1,8 @@
-# MS-GCP-3DGS Protocol Spec
+# GS-GCP Protocol Spec
 
 ## Purpose
 
-MS-GCP-3DGS is an RGB UAV georeferenced geometry benchmark for Gaussian
+GS-GCP is an RGB UAV georeferenced geometry benchmark for Gaussian
 Splatting reconstruction methods. The benchmark estimates method-derived
 surface/support positions at
 manually annotated GCP image locations, registers those positions to surveyed
@@ -72,7 +72,7 @@ low-light challenge scene rather than a pure area-effect sample.
 - Using checkpoint points in the Sim(3) fit.
 - Affine shear, local stretching, TPS, or non-rigid warps.
 - Silent invalid filtering.
-- Selecting the best MS-Splatting branch after seeing the residuals.
+- Selecting a method branch or hyperparameter set after seeing GCP residuals.
 - Reporting COLMAP-camera triangulation as Gaussian method accuracy.
 
 ## Scene Scale Policy

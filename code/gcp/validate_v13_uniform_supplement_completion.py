@@ -532,7 +532,7 @@ def annotation_row_as_candidate(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, default=Path(r"E:\M3M-GCP-3DGS"))
+    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument(
         "--task_root",
         type=Path,

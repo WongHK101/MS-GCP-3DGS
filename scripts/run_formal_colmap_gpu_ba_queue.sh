@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO=${REPO:-/root/autodl-tmp/MS-GCP-3DGS}
-RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/ms-gcp-3dgs/colmap-4.0.4-global-formal-20260616}
+REPO=${REPO:-/root/autodl-tmp/GS-GCP}
+RUN_ROOT=${RUN_ROOT:-/root/autodl-tmp/runs/gs-gcp/colmap-4.0.4-global-formal-20260616}
 DATA=${DATA:-/root/autodl-tmp/datasets/M3M-GCP/scenes_rgb_20260615}
 GPU_ID=${GPU_ID:-0}
 MIN_FREE_GB=${MIN_FREE_GB:-30}

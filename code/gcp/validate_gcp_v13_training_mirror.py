@@ -40,7 +40,7 @@ def validate_mirror(root: Path, recipe: dict[str, Any]) -> tuple[list[str], dict
     if not isinstance(scene_spec, dict):
         errors.append("mirror scene is not present in frozen recipe")
         scene_spec = {}
-    if manifest.get("schema") != "ms_gcp_v1_3_read_only_training_source_manifest_v1":
+    if manifest.get("schema") != "gs_gcp_v1_3_read_only_training_source_manifest_v1":
         errors.append("unknown training source manifest schema")
     if manifest.get("release_root_digest") != recipe.get("release", {}).get("payload_root_digest_sha256"):
         errors.append("release root digest mismatch")
@@ -119,14 +119,14 @@ def main() -> int:
     parser.add_argument(
         "--recipe",
         type=Path,
-        default=Path(__file__).resolve().parents[2] / "configs" / "gcp_v13_original_3dgs_six_scene_recipe_v1.json",
+        default=Path(__file__).resolve().parents[2] / "configs" / "gs_gcp_v13_training_source_manifest_v1.json",
     )
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     recipe = json.loads(args.recipe.read_text(encoding="utf-8"))
     errors, details = validate_mirror(args.root.resolve(), recipe)
     report = {
-        "schema": "ms_gcp_v1_3_training_mirror_validation_v1",
+        "schema": "gs_gcp_v1_3_training_mirror_validation_v1",
         "status": "pass" if not errors else "fail",
         "error_count": len(errors),
         "errors": errors,

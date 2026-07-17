@@ -7,15 +7,15 @@ METHOD_COMMIT=2eee0e26d2d5fd00ec462df47752223952f6bf4e
 ENV_LOCK=29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed
 RELEASE_DIGEST=513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75
 SOURCE_MANIFEST_SHA=442c7d74ba0d79f7611b75f9f9155c7d1bf0d09ea71f2985cfb08f68aed24b7d
-CODE_ROOT=/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/$METHOD_COMMIT/official-train
-ENV_ROOT=/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1
-DATASET_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST/gcp_3000_20260602
-RELEASE_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST/release_v1_3_0
+CODE_ROOT=/root/autodl-tmp/worktrees/gs-gcp-v13/3dgs-original/$METHOD_COMMIT/official-train
+ENV_ROOT=/root/autodl-tmp/envs/gs-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1
+DATASET_ROOT=/root/autodl-tmp/datasets/gs-gcp-v13/$RELEASE_DIGEST/gcp_3000_20260602
+RELEASE_ROOT=/root/autodl-tmp/datasets/gs-gcp-v13/$RELEASE_DIGEST/release_v1_3_0
 ORCH_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-BUILD_ROOT=/root/autodl-tmp/build/ms-gcp-v13/3dgs-original/$METHOD_COMMIT/$RUN_ID
-RUN_ROOT=/root/autodl-tmp/runs/ms-gcp-v13/3dgs-original/gcp_3000_20260602/$RUN_ID
+BUILD_ROOT=/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/$METHOD_COMMIT/$RUN_ID
+RUN_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/gcp_3000_20260602/$RUN_ID
 MODEL_ROOT=$RUN_ROOT/02_checkpoints/model
-RECIPE=$ORCH_ROOT/configs/gcp_v13_original_3dgs_recipe_v1.json
+RECIPE=$ORCH_ROOT/configs/gs_gcp_v13_original_3dgs_recipe_v2.json
 
 for path in "$BUILD_ROOT" "$RUN_ROOT"; do
   if test -e "$path"; then
@@ -31,7 +31,7 @@ export TMPDIR="$BUILD_ROOT/tmp"
 
 cat > "$BUILD_ROOT/preflight/run_layout.json" <<JSON
 {
-  "schema": "ms_gcp_method_run_layout_v1",
+  "schema": "gs_gcp_method_run_layout_v1",
   "method_id": "3dgs-original",
   "scene": "gcp_3000_20260602",
   "run_id": "$RUN_ID",
@@ -76,15 +76,21 @@ JSON
   --manifest "$BUILD_ROOT/preflight/run_layout.json" \
   --require_nonexistent_run_root \
   --report "$BUILD_ROOT/preflight/isolation_validation.json"
-"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_gcp_v13_original_3dgs_recipe.py" \
+"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_gs_gcp_v13_original_3dgs_recipe.py" \
   --recipe "$RECIPE" \
   --official_source "$CODE_ROOT" \
   --report "$BUILD_ROOT/preflight/recipe_validation.json"
+"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/gs_gcp_resolution.py" \
+  --contract "$ORCH_ROOT/configs/gs_gcp_training_resolution_v1.json" \
+  --width 5654 \
+  --height 4098 \
+  > "$BUILD_ROOT/preflight/resolution_contract_validation.json"
 
 mkdir -p "$RUN_ROOT"/{00_preflight,01_training,02_checkpoints,03_packets,04_evaluation,05_diagnostics,06_audit,tmp}
 cp "$BUILD_ROOT/preflight/run_layout.json" "$RUN_ROOT/00_preflight/"
 cp "$BUILD_ROOT/preflight/isolation_validation.json" "$RUN_ROOT/00_preflight/"
 cp "$BUILD_ROOT/preflight/recipe_validation.json" "$RUN_ROOT/00_preflight/"
+cp "$BUILD_ROOT/preflight/resolution_contract_validation.json" "$RUN_ROOT/00_preflight/"
 cp "$RECIPE" "$RUN_ROOT/00_preflight/"
 cp "${BASH_SOURCE[0]}" "$RUN_ROOT/06_audit/exact_launcher.sh"
 
@@ -155,7 +161,7 @@ cd '$CODE_ROOT'
   --source_path '$DATASET_ROOT' \\
   --model_path '$MODEL_ROOT' \\
   --images images \\
-  --resolution 8 \\
+  --resolution -1 \\
   --sh_degree 3 \\
   --data_device cuda \\
   --iterations 30000 \\
@@ -187,7 +193,7 @@ set +e
   --source_path "$DATASET_ROOT" \
   --model_path "$MODEL_ROOT" \
   --images images \
-  --resolution 8 \
+  --resolution -1 \
   --sh_degree 3 \
   --data_device cuda \
   --iterations 30000 \

@@ -1,4 +1,4 @@
-"""Generate the transactional MS-GCP v1.3.0 control-heavy release.
+"""Generate the transactional GS-GCP v1.3.0 control-heavy release.
 
 This program only reads source annotations, source images, camera manifests,
 and audited RTK data.  All derived files are written to a unique staging
@@ -69,7 +69,7 @@ from generate_gcp_release_v1_2 import (  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET_ROOT = Path(r"E:\datasets\M3M-GCP")
-DEFAULT_PROJECT_ROOT = Path(r"E:\M3M-GCP-3DGS")
+DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INPUT_MANIFEST = REPO_ROOT / "configs" / "gcp_v13_release_inputs_v1.json"
 DEFAULT_FINAL_DIR = DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_3_0"
 
@@ -391,7 +391,7 @@ def source_image_path(dataset_root: Path, scene: str, image_name: str) -> Path:
 
 def write_protocol_doc(path: Path) -> None:
     path.write_text(
-        """# MS-GCP v1.3.0 Multi-View Control-Heavy Protocol
+        """# GS-GCP v1.3.0 Multi-View Control-Heavy Protocol
 
 Release v1.3.0 preserves all 1,383 reviewed annotation rows. Annotation quality
 and formal eligibility are separate: only Good observations whose scene/point
@@ -998,7 +998,7 @@ def generate_payload(staging: Path, args: argparse.Namespace, command_manifest: 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate the transactional MS-GCP v1.3.0 release")
+    parser = argparse.ArgumentParser(description="Generate the transactional GS-GCP v1.3.0 release")
     parser.add_argument("--dataset_root", default=str(DEFAULT_DATASET_ROOT))
     parser.add_argument("--project_root", default=str(DEFAULT_PROJECT_ROOT))
     parser.add_argument("--release_v122", default=str(DEFAULT_DATASET_ROOT / "scenes" / "gcp_manual_annotations_v1_2_2"))
