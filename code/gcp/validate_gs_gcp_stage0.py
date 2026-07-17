@@ -154,6 +154,10 @@ def validate_stage0(
         and runtime.get("archive_server") == "AutoDL-740"
         and runtime.get("resource_probe_tool", {}).get("status") == "required_verified_isolated_install"
         and runtime.get("resource_probe_tool", {}).get("binary_sha256") == host_tool.get("binary_sha256")
+        and runtime.get("resource_probe_tool", {}).get("tool_manifest_schema")
+        == host_tool.get("tool_manifest_schema")
+        and runtime.get("resource_probe_tool", {}).get("tool_manifest_sha256")
+        == host_tool.get("tool_manifest_sha256")
         and execution_dataset.get("status") == "verified_full_content_read_only_payload"
         and execution_dataset.get("release_root_digest_sha256") == RELEASE_DIGEST
         and execution_dataset.get("runtime_writes_forbidden") is True
@@ -204,6 +208,8 @@ def validate_stage0(
                 raise ValueError("deployment evidence target root differs from runtime worktree")
             if deployment.get("resource_probe_binary_sha256") != host_tool.get("binary_sha256"):
                 raise ValueError("runtime resource-probe binary SHA mismatch")
+            if deployment.get("resource_probe_manifest_sha256") != host_tool.get("tool_manifest_sha256"):
+                raise ValueError("runtime resource-probe manifest SHA mismatch")
             if deployment.get("execution_dataset_full_verification") != "PASS":
                 raise ValueError("execution dataset runtime verification did not pass")
             if deployment.get("original_3dgs_source_environment_verification") != "PASS":

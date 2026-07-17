@@ -39,6 +39,9 @@ GPUs once per second using `nvidia-smi`. It records wall time, GPU-hours, peak
 VRAM, utilization, estimated energy, and host maximum RSS. It does not touch
 the loss, autograd graph, or training source. GNU time is extracted under the
 GS-GCP tool namespace without modifying the server's global packages.
+The tool manifest records normalized dynamic-library identities but strips
+runtime loader addresses, which are nondeterministic across processes and
+machines; the DEB and executable content hashes remain exact.
 
 Before a GPU child starts, the probe requires three one-second idle samples,
 device utilization at most 5%, device memory use at most 1,024 MiB, and no

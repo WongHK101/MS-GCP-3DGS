@@ -18,7 +18,8 @@
     "status": "required_verified_isolated_install",
     "path": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time",
     "binary_sha256": "7310b9b4c51a8f4d26c1af0da250f03a49ec8a8141033123e79196ad18f6c81b",
-    "tool_manifest_sha256": "122d801b8eb6fd1f6f7c643b566802fb54bf36a578088705e613caa4e450f637",
+    "tool_manifest_schema": "gs_gcp_isolated_gnu_time_tool_v2",
+    "tool_manifest_sha256": "fb61b7634547d90bab24a15ad6c0ad2df720ed1c708821538e1a5a6883a9885c",
     "global_package_modified": false,
     "runtime_evidence_required": true
   },

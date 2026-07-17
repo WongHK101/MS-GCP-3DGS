@@ -73,6 +73,12 @@ class ResourceProbeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_contract(contract)
 
+    def test_nondeterministic_tool_manifest_rejected(self) -> None:
+        contract = json.loads((ROOT / "configs" / "gs_gcp_resource_probe_contract_v1.json").read_text(encoding="utf-8"))
+        contract["host_tool"]["tool_manifest_schema"] = "gs_gcp_isolated_gnu_time_tool_v1"
+        with self.assertRaises(ValueError):
+            validate_contract(contract)
+
 
 if __name__ == "__main__":
     unittest.main()

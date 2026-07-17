@@ -220,6 +220,15 @@ def validate_contract(contract: dict[str, Any]) -> None:
     host_tool = contract.get("host_tool", {})
     if len(str(host_tool.get("binary_sha256", ""))) != 64:
         raise ValueError("resource probe host tool SHA-256 is missing")
+    if host_tool.get("tool_manifest_schema") != "gs_gcp_isolated_gnu_time_tool_v2":
+        raise ValueError("resource probe tool manifest must use deterministic v2 schema")
+    if len(str(host_tool.get("tool_manifest_sha256", ""))) != 64:
+        raise ValueError("resource probe tool manifest SHA-256 is missing")
+    if (
+        host_tool.get("dynamic_dependency_normalization")
+        != "strip_whitespace_and_runtime_load_addresses_v1"
+    ):
+        raise ValueError("resource probe dependency normalization is not frozen")
     if not str(host_tool.get("expected_path", "")).startswith("/"):
         raise ValueError("resource probe host tool path must be absolute")
     non_invasive = contract.get("non_invasive", {})
