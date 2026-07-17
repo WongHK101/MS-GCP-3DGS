@@ -1,0 +1,58 @@
+{
+  "schema": "gs_gcp_autodl_execution_runtime_status_v1",
+  "server": "AutoDL-901",
+  "server_role": "experiment_execution",
+  "captured_utc": "2026-07-17T17:49:00Z",
+  "gpu_count": 1,
+  "gpu_model": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "gpu_memory_mib": 97887,
+  "driver_version": "580.82.09",
+  "gpu_idle_at_capture": true,
+  "gpu_memory_used_mib_at_capture": 0,
+  "gpu_utilization_percent_at_capture": 0,
+  "cuda": {
+    "environment_runtime": "12.8",
+    "pytorch": "2.7.1+cu128"
+  },
+  "resource_probe_tool": {
+    "status": "required_verified_isolated_install",
+    "path": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time",
+    "binary_sha256": "7310b9b4c51a8f4d26c1af0da250f03a49ec8a8141033123e79196ad18f6c81b",
+    "tool_manifest_sha256": "122d801b8eb6fd1f6f7c643b566802fb54bf36a578088705e613caa4e450f637",
+    "global_package_modified": false,
+    "runtime_evidence_required": true
+  },
+  "execution_dataset": {
+    "status": "verified_full_content_read_only_payload",
+    "root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "release_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "file_count": 6267,
+    "total_bytes": 64661981667,
+    "full_content_audit_date": "2026-07-18",
+    "payload_files_and_scene_directories_read_only": true,
+    "dataset_container_mode": "0755",
+    "runtime_writes_forbidden": true
+  },
+  "orchestrator_deployment_status": "runtime_evidence_required",
+  "original_3dgs_environment_status": "verified_frozen_environment",
+  "original_3dgs_assets": {
+    "code_root": "/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train",
+    "code_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "code_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "simple_knn_commit": "44f764299fa305faf6ec5ebd99939e0508331503",
+    "environment_root": "/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1",
+    "environment_lock_sha256": "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed",
+    "runtime_smoke": "torch_2.7.1_cu128_extensions_imported",
+    "training_source_clean": true
+  },
+  "disk_at_capture": {
+    "filesystem": "/dev/md0",
+    "total_bytes": 1165009879040,
+    "used_bytes": 700978483200,
+    "available_bytes": 464031395840
+  },
+  "archive_server": "AutoDL-740",
+  "training_ready": false
+}

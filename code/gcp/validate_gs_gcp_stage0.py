@@ -49,7 +49,7 @@ def validate_stage0(
     review_path = configs / "gs_gcp_v13_release_review_status_v1.json"
     mirror_path = configs / "gs_gcp_v13_data_mirror_v1.json"
     promotion_path = configs / "gs_gcp_repository_promotion_status_v1.json"
-    runtime_path = configs / "gs_gcp_autodl740_runtime_status_v1.json"
+    runtime_path = configs / "gs_gcp_autodl901_runtime_status_v1.json"
 
     registry_data = _load(registry_path)
     registry_result = validate_registry(registry_data)
@@ -121,10 +121,12 @@ def validate_stage0(
         and mirror.get("target_overwrite_allowed") is False
         and mirror.get("atomic_publish_required") is True
     )
-    components["data_mirror"] = _component(
+    components["archive_mirror"] = _component(
         mirror_contract_valid,
         path=str(mirror_path),
         sha256=sha256_file(mirror_path),
+        source_server=mirror.get("source_server"),
+        target_server=mirror.get("target_server"),
         verification_status=mirror.get("verification_status"),
         target_root=mirror.get("target_root"),
     )
@@ -144,18 +146,26 @@ def validate_stage0(
 
     runtime = _load(runtime_path)
     host_tool = resource_data.get("host_tool", {}) if resource_error is None else {}
+    execution_dataset = runtime.get("execution_dataset", {})
     runtime_contract_valid = (
-        runtime.get("schema") == "gs_gcp_autodl_runtime_status_v1"
-        and runtime.get("server") == "AutoDL-740"
-        and runtime.get("resource_probe_tool", {}).get("status") == "verified_isolated_install"
+        runtime.get("schema") == "gs_gcp_autodl_execution_runtime_status_v1"
+        and runtime.get("server") == "AutoDL-901"
+        and runtime.get("server_role") == "experiment_execution"
+        and runtime.get("archive_server") == "AutoDL-740"
+        and runtime.get("resource_probe_tool", {}).get("status") == "required_verified_isolated_install"
         and runtime.get("resource_probe_tool", {}).get("binary_sha256") == host_tool.get("binary_sha256")
-        and runtime.get("dataset_mirror_status") == "verified_complete_read_only"
+        and execution_dataset.get("status") == "verified_full_content_read_only_payload"
+        and execution_dataset.get("release_root_digest_sha256") == RELEASE_DIGEST
+        and execution_dataset.get("runtime_writes_forbidden") is True
     )
-    components["autodl_runtime"] = _component(
+    components["execution_runtime"] = _component(
         runtime_contract_valid,
         path=str(runtime_path),
         sha256=sha256_file(runtime_path),
+        server=runtime.get("server"),
+        server_role=runtime.get("server_role"),
         gpu_count=runtime.get("gpu_count"),
+        execution_dataset_root=execution_dataset.get("root"),
         orchestrator_deployment_status=runtime.get("orchestrator_deployment_status"),
         original_3dgs_environment_status=runtime.get("original_3dgs_environment_status"),
     )
@@ -180,14 +190,24 @@ def validate_stage0(
                 for path in [repo_root, *repo_root.rglob("*")]
                 if not path.is_symlink() and path.stat().st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
             ]
-            if deployment.get("schema") != "gs_gcp_stage0_autodl740_deployment_v1":
+            if deployment.get("schema") != "gs_gcp_stage0_execution_deployment_v2":
                 raise ValueError("unknown deployment evidence schema")
+            if deployment.get("server") != "AutoDL-901":
+                raise ValueError("deployment evidence is not from AutoDL-901")
+            if deployment.get("server_role") != "experiment_execution":
+                raise ValueError("deployment evidence has the wrong server role")
             if deployment.get("status") != "pass":
                 raise ValueError("deployment evidence status is not pass")
             if deployment.get("commit") != actual_head or deployment.get("tree") != actual_tree:
                 raise ValueError("deployment evidence commit/tree differs from runtime worktree")
             if Path(deployment.get("target_root", "")).resolve() != repo_root.resolve():
                 raise ValueError("deployment evidence target root differs from runtime worktree")
+            if deployment.get("resource_probe_binary_sha256") != host_tool.get("binary_sha256"):
+                raise ValueError("runtime resource-probe binary SHA mismatch")
+            if deployment.get("execution_dataset_full_verification") != "PASS":
+                raise ValueError("execution dataset runtime verification did not pass")
+            if deployment.get("original_3dgs_source_environment_verification") != "PASS":
+                raise ValueError("original 3DGS runtime verification did not pass")
             if actual_status:
                 raise ValueError("runtime orchestrator worktree is dirty")
             if writable:
@@ -240,22 +260,22 @@ def validate_stage0(
         "resource_probe_contract",
         "training_resolution",
         "release_review",
-        "data_mirror",
+        "archive_mirror",
         "repository_promotion",
-        "autodl_runtime",
+        "execution_runtime",
     )
     contracts_valid = all(components[name]["passed"] for name in contract_components)
     blockers: list[str] = []
     if not review.get("training_authorized"):
         blockers.append("v1.3.0_external_release_review_pass_not_recorded")
     if mirror.get("verification_status") != "verified_complete_read_only":
-        blockers.append("autodl_740_v1.3_data_mirror_not_verified_complete")
+        blockers.append("autodl_740_v1.3_archive_mirror_not_verified_complete")
     if not components["release_integrity"]["passed"]:
         blockers.append("v1.3.0_release_integrity_not_verified_at_runtime")
     if not deployment_passed:
-        blockers.append("autodl_740_orchestrator_deployment_evidence_missing_or_mismatch")
+        blockers.append("autodl_901_orchestrator_deployment_evidence_missing_or_mismatch")
     if runtime.get("original_3dgs_environment_status") != "verified_frozen_environment":
-        blockers.append("autodl_740_original_3dgs_environment_not_verified")
+        blockers.append("autodl_901_original_3dgs_environment_not_verified")
     if not method_gate:
         blockers.append(f"method_not_pre_registered_for_3k_qualification:{method_id}")
     if not contracts_valid:

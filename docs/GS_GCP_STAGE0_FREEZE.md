@@ -48,10 +48,9 @@ concurrent job from being attributed to the evaluated method.
 
 Every GPU phase must use this wrapper. An absent GPU probe, duplicate output
 directory, non-zero child exit, or sampler failure makes the phase fail.
-At the 2026-07-17 Stage 0 check, all nine AutoDL-740 devices showed external
-device activity even though container-visible compute-app records were empty.
-No process was interrupted. A formal run must wait for a device that passes the
-idle gate.
+AutoDL-901 is the experiment-execution server and must pass the idle gate
+immediately before every GPU child launch. AutoDL-740 is an archive/mirror
+server; its GPU availability does not authorize or block a formal run.
 
 ## Current hard blockers
 
@@ -61,13 +60,16 @@ At implementation time:
   an external GPT PASS is not recorded;
 - the immutable six-scene data mirror has been atomically promoted from
   AutoDL-901 to AutoDL-740: 6,267 files and 64,661,981,667 bytes passed full
-  manifest/hash validation and are read-only;
+  manifest/hash validation and are read-only; 740 is retained as archive
+  storage, not as the execution server;
+- the same 6,267-file source on AutoDL-901 passed a fresh full-content audit on
+  2026-07-18 and is the read-only input for formal experiments;
 - the independent local repository is clean, but the GitHub remote still uses
   the retired `MS-GCP-3DGS` repository name and must be renamed before public
   release;
-- original 3DGS source and its 6.8 GB environment are copied into read-only
-  `gs-gcp-v13` paths on AutoDL-740 and pass Git, package-lock, extension-import,
-  and CUDA smoke checks;
+- original 3DGS source and its 6.8 GB environment remain intact on AutoDL-901
+  and pass Git, package-lock, and extension-import checks; frozen copies on 740
+  are disaster-recovery artifacts only;
 - only original 3DGS has a pre-registered 3K recipe. Other methods cannot start
   until their method-specific recipe and environment are frozen.
 

@@ -7,10 +7,10 @@ METHOD_COMMIT=2eee0e26d2d5fd00ec462df47752223952f6bf4e
 ENV_LOCK=29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed
 RELEASE_DIGEST=513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75
 SOURCE_MANIFEST_SHA=442c7d74ba0d79f7611b75f9f9155c7d1bf0d09ea71f2985cfb08f68aed24b7d
-CODE_ROOT=/root/autodl-tmp/worktrees/gs-gcp-v13/3dgs-original/$METHOD_COMMIT/official-train
-ENV_ROOT=/root/autodl-tmp/envs/gs-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1
-DATASET_ROOT=/root/autodl-tmp/datasets/gs-gcp-v13/$RELEASE_DIGEST/gcp_3000_20260602
-RELEASE_ROOT=/root/autodl-tmp/datasets/gs-gcp-v13/$RELEASE_DIGEST/release_v1_3_0
+CODE_ROOT=/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/$METHOD_COMMIT/official-train
+ENV_ROOT=/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1
+DATASET_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST/gcp_3000_20260602
+RELEASE_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST/release_v1_3_0
 ORCH_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 BUILD_ROOT=/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/$METHOD_COMMIT/$RUN_ID
 RUN_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/gcp_3000_20260602/$RUN_ID
@@ -18,7 +18,7 @@ MODEL_ROOT=$RUN_ROOT/02_checkpoints/model
 RECIPE=$ORCH_ROOT/configs/gs_gcp_v13_original_3dgs_recipe_v2.json
 RESOURCE_CONTRACT=$ORCH_ROOT/configs/gs_gcp_resource_probe_contract_v1.json
 GNU_TIME=/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time
-DEPLOYMENT_EVIDENCE=/root/autodl-tmp/transfer_audits/GS_GCP_STAGE0_DEPLOYMENT_CURRENT.json
+DEPLOYMENT_EVIDENCE=/root/autodl-tmp/transfer_audits/GS_GCP_STAGE0_901_DEPLOYMENT_CURRENT.json
 
 for path in "$BUILD_ROOT" "$RUN_ROOT"; do
   if test -e "$path"; then

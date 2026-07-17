@@ -111,6 +111,7 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
         "configs/gcp_v13_workspace_isolation_v1.json",
         "configs/gs_gcp_v13_release_review_status_v1.json",
         "configs/gs_gcp_v13_data_mirror_v1.json",
+        "configs/gs_gcp_autodl901_runtime_status_v1.json",
         "configs/gs_gcp_autodl740_runtime_status_v1.json",
         "configs/gs_gcp_repository_promotion_status_v1.json",
         "code/gcp/validate_gs_gcp_method_registry.py",
@@ -154,13 +155,14 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
             "conditional_method_count": 2,
             "data_mirror_file_count": 6267,
             "data_mirror_bytes": 64661981667,
+            "execution_server": "AutoDL-901",
+            "archive_server": "AutoDL-740",
             "gpu_used_for_training": False,
             "training_run": False,
             "formal_metrics_computed": False,
             "remaining_blockers": [
                 "v1.3.0 external GPT PASS not recorded",
                 "GitHub repository rename to GS-GCP-Benchmark pending",
-                "AutoDL-740 selected GPU must pass the frozen idle gate; all devices were externally busy at the Stage 0 capture",
             ],
         },
     )
@@ -173,18 +175,20 @@ Status: contracts and instrumentation PASS candidate; training remains blocked.
 - Commit: `{head}`
 - Branch: `{branch}`
 - Release root: `513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75`
-- AutoDL-740 mirror: 6,267 files / 64,661,981,667 bytes, read-only, full-hash verified
+- AutoDL-901 execution source: 6,267 files / 64,661,981,667 bytes, full-hash verified
+- AutoDL-740 archive mirror: read-only, full-hash verified
 - Method registry: 6 formal core, 2 scalability extensions, 2 conditional
 - Training resolution: original 3DGS `-r -1`, 1600-pixel width cap
 - Resource probe: external GNU time plus 1 Hz `nvidia-smi`; no loss/autograd changes
 - Training executed: no
 - Formal metrics computed: no
 
-The launcher now calls the Stage 0 readiness gate before training and runs the
-unchanged child training command through the external resource probe. The gate
-intentionally remains closed because an external GPT PASS for the v1.3.0
-release is not recorded. The local repository is independent and clean, but
-the GitHub repository name still uses the retired MS prefix.
+The launcher now calls the Stage 0 readiness gate on AutoDL-901 before training
+and runs the unchanged child training command through the external resource
+probe. AutoDL-740 is archive storage only. The gate intentionally remains
+closed because an external GPT PASS for the v1.3.0 release is not recorded.
+The local repository is independent and clean, but the GitHub repository name
+still uses the retired MS prefix.
 """,
     )
 
@@ -199,7 +203,7 @@ the GitHub repository name still uses the retired MS prefix.
         },
     )
     args.package_dir.mkdir(parents=True, exist_ok=True)
-    package = unique(args.package_dir.resolve() / "GPT_GS_GCP_STAGE0_PROTOCOL_INSTRUMENTATION_REVIEW_20260717.zip")
+    package = unique(args.package_dir.resolve() / "GPT_GS_GCP_STAGE0_901_EXECUTION_READINESS_REVIEW_20260718.zip")
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for path in sorted(
             (candidate for candidate in review_root.rglob("*") if candidate.is_file()),
