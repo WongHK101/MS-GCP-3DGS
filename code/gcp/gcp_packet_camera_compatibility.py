@@ -647,6 +647,15 @@ def load_model_cameras(path: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
+def model_camera_for_image(model_cameras: dict[str, dict[str, Any]], image_name: str) -> dict[str, Any]:
+    aliases = {str(image_name), Path(str(image_name)).name, Path(str(image_name)).stem}
+    matches = [row for key, row in model_cameras.items() if key in aliases or Path(key).stem in aliases]
+    unique = {id(row): row for row in matches}
+    if len(unique) != 1:
+        raise ValueError(f"cannot uniquely resolve cameras.json image {image_name!r}: {sorted(model_cameras)[:8]}")
+    return next(iter(unique.values()))
+
+
 def resolve_release_payload_path(release_dir: Path, value: str, label: str) -> Path:
     relative = Path(str(value))
     if not str(value).strip() or relative.is_absolute() or ".." in relative.parts:
@@ -1130,9 +1139,7 @@ def build_wrapper(
         depth_row = depth_index[image_name]
         release_row = by_image[image_name][0]
         target_camera = camera_from_release_row(release_row)
-        model_row = model_cameras.get(image_name)
-        if model_row is None:
-            raise ValueError(f"model cameras.json missing image {image_name}")
+        model_row = model_camera_for_image(model_cameras, image_name)
         target_pose = target_pose_records.get(image_name)
         if target_pose is None:
             raise ValueError(f"camera provenance target pose missing {scene} {image_name}")

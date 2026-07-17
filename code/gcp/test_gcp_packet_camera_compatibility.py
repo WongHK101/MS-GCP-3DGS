@@ -24,6 +24,7 @@ from gcp_packet_camera_compatibility import (
     load_release_rows,
     load_target_pose_records,
     metric_packet_contract_from_manifest,
+    model_camera_for_image,
     normalize_pixel_convention,
     packet_projection_for_row,
     packet_camera_hash,
@@ -896,6 +897,27 @@ def test_v13_release_layout_resolution() -> dict[str, Any]:
     }
 
 
+def test_extensionless_model_camera_resolution() -> dict[str, Any]:
+    row = {"img_name": "DJI_20260602165038_0001_D"}
+    resolved = model_camera_for_image(
+        {"DJI_20260602165038_0001_D": row},
+        "DJI_20260602165038_0001_D.JPG",
+    )
+    if resolved is not row:
+        raise AssertionError("extensionless cameras.json record did not resolve")
+    duplicate = {
+        "DJI_20260602165038_0001_D.JPG": row,
+        "DJI_20260602165038_0001_D.png": {"img_name": "DJI_20260602165038_0001_D.png"},
+    }
+    rejected = expect_raises(
+        lambda: model_camera_for_image(duplicate, "DJI_20260602165038_0001_D.JPG")
+    )
+    return {
+        "extensionless_to_release_name": "PASS",
+        "ambiguous_stem_rejected_by": rejected,
+    }
+
+
 TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("r8_camera_recovery", test_r8_camera_recovery),
     ("rounding_tie_case", test_rounding_tie_case),
@@ -945,6 +967,7 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("orphan_packet_pose_record", test_orphan_packet_pose_record),
     ("packet_camera_record_set_negative_cases", test_packet_camera_record_set_negative_cases),
     ("v13_release_layout_resolution", test_v13_release_layout_resolution),
+    ("extensionless_model_camera_resolution", test_extensionless_model_camera_resolution),
 ]
 
 
