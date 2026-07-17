@@ -19,6 +19,14 @@ RASTERIZER_COMMIT = "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d"
 KNN_COMMIT = "44f764299fa305faf6ec5ebd99939e0508331503"
 RELEASE_DIGEST = "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
 ENV_LOCK = "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed"
+SIX_SCENE_SPECS = {
+    "gcp_3000_20260602": (94, 875035671, "49cfa412254ff4bfb68473cc1b2262a95362e9542020424c166304a3831962f7", "4929f95d7a68d19820999efc734ff8d892c51508191d0380d00e3ae00b82a5d7", "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"),
+    "gcp_5000_20260602": (101, 859832717, "67aa45289b4d08ec926874efa9babd40187bb64c1ab3e1bced494bad95809905", "eedccc6f18ca59ecdda34f1b89d8d85c446a10f30c936a071f52bf4c0fab65f2", "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88"),
+    "gcp_10000_20260610": (976, 8810224189, "19afdf4485a35d35a1aeb4e04aa8746807a17510a929e40b30f55e4a16d82a85", "1c26685db1b29f92278d78fbe21ed2b548076c12cdfc1c5e48fe2035048c37c4", "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22"),
+    "gcp_20000_20260602": (298, 3479416169, "a9491e66e8b7315782350ced4a92f70bedbc60898bdd5d4c168d501fe135832c", "61ece0edc96802b8194aaebe8367bad9e7f01e4cf6bb69187797ce95d8e60d5c", "2bdf219c457871211970a2c543a90d2530f7c888656e75550a03518dbec27435"),
+    "gcp_50000_20260610": (2208, 22949781257, "57d9ee85b27179425b78515d7cc6211793bf25e5a2b49610b73dcd1daad55420", "50af7d00017b49fc5532ea0c389306be5f0a3be742690849e659bc919d6c4d02", "0d98402f86696b475ff85cb4b4c0cc4c7b30d1dfb417a3d9d976f597dd4628ae"),
+    "gcp_100000_20260610": (2510, 25605641533, "b7441b8024bc37d8307ab932cab2a072320ad4a22f3f3eae66c138bc6510d7a4", "2311871ffc339b9a1acce5e833e5b5207b2dd74de48e4e88804bfd0e19a0b7f3", "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa"),
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -40,7 +48,8 @@ def validate_recipe(recipe: dict[str, Any], *, repo_root: Path, official_source:
     errors: list[str] = []
     if recipe.get("schema") != SCHEMA:
         errors.append("unknown recipe schema")
-    if recipe.get("status") != "frozen_for_3k_reference_smoke":
+    status = recipe.get("status")
+    if status not in {"frozen_for_3k_reference_smoke", "frozen_for_six_scene_reference"}:
         errors.append("recipe status is not frozen")
 
     source = recipe.get("source_provenance", {})
@@ -69,19 +78,49 @@ def validate_recipe(recipe: dict[str, Any], *, repo_root: Path, official_source:
     if release.get("training_inputs_used_for_selection_or_loss") is not False:
         errors.append("release GCP data must not influence training")
 
-    scene = recipe.get("scene", {})
-    expected_scene = {
-        "scene_id": "gcp_3000_20260602",
-        "image_directory": "images",
-        "image_count": 94,
-        "resolution_argument": 8,
-        "camera_model": "PINHOLE",
-        "initial_point_count": 61302,
-        "data_role": "read_only_training_source_mirror",
-    }
-    for key, expected in expected_scene.items():
-        if scene.get(key) != expected:
-            errors.append(f"scene.{key} must equal {expected!r}")
+    scene_hash_values: list[Any] = []
+    if status == "frozen_for_3k_reference_smoke":
+        scene = recipe.get("scene", {})
+        expected_scene = {
+            "scene_id": "gcp_3000_20260602",
+            "image_directory": "images",
+            "image_count": 94,
+            "resolution_argument": 8,
+            "camera_model": "PINHOLE",
+            "initial_point_count": 61302,
+            "data_role": "read_only_training_source_mirror",
+        }
+        for key, expected in expected_scene.items():
+            if scene.get(key) != expected:
+                errors.append(f"scene.{key} must equal {expected!r}")
+        scene_hash_values.extend([
+            scene.get("source_manifest_sha256"),
+            scene.get("cameras_bin_sha256"),
+            scene.get("images_bin_sha256"),
+            scene.get("points3d_bin_sha256"),
+        ])
+    elif status == "frozen_for_six_scene_reference":
+        scenes = recipe.get("scenes")
+        if not isinstance(scenes, dict) or set(scenes) != set(SIX_SCENE_SPECS):
+            errors.append("six-scene recipe must contain the exact frozen scene set")
+            scenes = scenes if isinstance(scenes, dict) else {}
+        for scene_id, expected in SIX_SCENE_SPECS.items():
+            record = scenes.get(scene_id, {})
+            image_count, image_bytes, cameras_sha, images_sha, points_sha = expected
+            required = {
+                "image_directory": "images",
+                "image_count": image_count,
+                "image_bytes": image_bytes,
+                "resolution_argument": 8,
+                "camera_model": "PINHOLE",
+                "cameras_bin_sha256": cameras_sha,
+                "images_bin_sha256": images_sha,
+                "points3d_bin_sha256": points_sha,
+            }
+            for key, value in required.items():
+                if record.get(key) != value:
+                    errors.append(f"scenes.{scene_id}.{key} must equal {value!r}")
+            scene_hash_values.extend([cameras_sha, images_sha, points_sha])
 
     training = recipe.get("training", {})
     expected_training = {
@@ -145,7 +184,8 @@ def validate_recipe(recipe: dict[str, Any], *, repo_root: Path, official_source:
 
     roots = recipe.get("server_roots", {})
     mutable = " ".join(str(roots.get(k, "")) for k in ("build_root_template", "run_root_template"))
-    for immutable_key in ("code_root", "dataset_root", "release_root"):
+    dataset_key = "dataset_root_template" if status == "frozen_for_six_scene_reference" else "dataset_root"
+    for immutable_key in ("code_root", dataset_key, "release_root"):
         value = str(roots.get(immutable_key, ""))
         if not value.startswith("/root/autodl-tmp/"):
             errors.append(f"server_roots.{immutable_key} is not an isolated absolute path")
@@ -153,10 +193,13 @@ def validate_recipe(recipe: dict[str, Any], *, repo_root: Path, official_source:
             errors.append(f"mutable output template overlaps {immutable_key}")
     if "/build/ms-gcp-v13/3dgs-original/" not in str(roots.get("build_root_template", "")):
         errors.append("build root is not method-isolated")
-    if "/runs/ms-gcp-v13/3dgs-original/gcp_3000_20260602/" not in str(roots.get("run_root_template", "")):
+    expected_run_fragment = "/runs/ms-gcp-v13/3dgs-original/<scene>/" if status == "frozen_for_six_scene_reference" else "/runs/ms-gcp-v13/3dgs-original/gcp_3000_20260602/"
+    if expected_run_fragment not in str(roots.get("run_root_template", "")):
         errors.append("run root is not method/scene-isolated")
+    if status == "frozen_for_six_scene_reference" and "<scene>" not in str(roots.get("build_root_template", "")):
+        errors.append("build root is not scene-isolated")
 
-    for value in [scene.get("source_manifest_sha256"), scene.get("cameras_bin_sha256"), scene.get("images_bin_sha256"), scene.get("points3d_bin_sha256")]:
+    for value in scene_hash_values:
         if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
             errors.append("scene source hashes must be lowercase SHA-256")
 

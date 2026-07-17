@@ -12,6 +12,9 @@ from validate_gcp_v13_original_3dgs_recipe import validate_recipe
 
 ROOT = Path(__file__).resolve().parents[2]
 RECIPE = json.loads((ROOT / "configs" / "gcp_v13_original_3dgs_recipe_v1.json").read_text(encoding="utf-8"))
+SIX_SCENE_RECIPE = json.loads(
+    (ROOT / "configs" / "gcp_v13_original_3dgs_six_scene_recipe_v1.json").read_text(encoding="utf-8")
+)
 
 
 def errors(recipe: dict) -> list[str]:
@@ -20,6 +23,22 @@ def errors(recipe: dict) -> list[str]:
 
 def test_frozen_recipe_passes() -> None:
     assert errors(copy.deepcopy(RECIPE)) == []
+
+
+def test_frozen_six_scene_recipe_passes() -> None:
+    assert errors(copy.deepcopy(SIX_SCENE_RECIPE)) == []
+
+
+def test_rejects_missing_six_scene() -> None:
+    recipe = copy.deepcopy(SIX_SCENE_RECIPE)
+    del recipe["scenes"]["gcp_5000_20260602"]
+    assert any("exact frozen scene set" in item for item in errors(recipe))
+
+
+def test_rejects_six_scene_source_hash_change() -> None:
+    recipe = copy.deepcopy(SIX_SCENE_RECIPE)
+    recipe["scenes"]["gcp_5000_20260602"]["images_bin_sha256"] = "0" * 64
+    assert any("gcp_5000_20260602.images_bin_sha256" in item for item in errors(recipe))
 
 
 def test_rejects_training_parameter_change() -> None:
@@ -67,6 +86,9 @@ def test_rejects_mutable_isolation_policy() -> None:
 def main() -> int:
     tests = [
         test_frozen_recipe_passes,
+        test_frozen_six_scene_recipe_passes,
+        test_rejects_missing_six_scene,
+        test_rejects_six_scene_source_hash_change,
         test_rejects_training_parameter_change,
         test_rejects_gcp_training_leakage,
         test_rejects_mutated_official_commit,
