@@ -16,6 +16,8 @@ BUILD_ROOT=/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/$METHOD_COMMIT/$RUN_I
 RUN_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/gcp_3000_20260602/$RUN_ID
 MODEL_ROOT=$RUN_ROOT/02_checkpoints/model
 RECIPE=$ORCH_ROOT/configs/gs_gcp_v13_original_3dgs_recipe_v2.json
+RESOURCE_CONTRACT=$ORCH_ROOT/configs/gs_gcp_resource_probe_contract_v1.json
+GNU_TIME=/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time
 
 for path in "$BUILD_ROOT" "$RUN_ROOT"; do
   if test -e "$path"; then
@@ -27,6 +29,7 @@ done
 mkdir -p "$BUILD_ROOT"/torch_extensions "$BUILD_ROOT"/preflight "$BUILD_ROOT"/tmp
 export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
+export GIT_OPTIONAL_LOCKS=0
 export TMPDIR="$BUILD_ROOT/tmp"
 
 cat > "$BUILD_ROOT/preflight/run_layout.json" <<JSON
@@ -66,6 +69,7 @@ cat > "$BUILD_ROOT/preflight/run_layout.json" <<JSON
   },
   "env_vars": {
     "PYTHONNOUSERSITE": "1",
+    "GIT_OPTIONAL_LOCKS": "0",
     "TORCH_EXTENSIONS_DIR": "$BUILD_ROOT/torch_extensions",
     "TMPDIR": "$RUN_ROOT/tmp"
   }
@@ -80,6 +84,12 @@ JSON
   --recipe "$RECIPE" \
   --official_source "$CODE_ROOT" \
   --report "$BUILD_ROOT/preflight/recipe_validation.json"
+"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_gs_gcp_stage0.py" \
+  --repo_root "$ORCH_ROOT" \
+  --release_root "$RELEASE_ROOT" \
+  --method_id 3dgs_original \
+  --report "$BUILD_ROOT/preflight/stage0_readiness.json" \
+  --require_training_ready
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/gs_gcp_resolution.py" \
   --contract "$ORCH_ROOT/configs/gs_gcp_training_resolution_v1.json" \
   --width 5654 \
@@ -90,8 +100,10 @@ mkdir -p "$RUN_ROOT"/{00_preflight,01_training,02_checkpoints,03_packets,04_eval
 cp "$BUILD_ROOT/preflight/run_layout.json" "$RUN_ROOT/00_preflight/"
 cp "$BUILD_ROOT/preflight/isolation_validation.json" "$RUN_ROOT/00_preflight/"
 cp "$BUILD_ROOT/preflight/recipe_validation.json" "$RUN_ROOT/00_preflight/"
+cp "$BUILD_ROOT/preflight/stage0_readiness.json" "$RUN_ROOT/00_preflight/"
 cp "$BUILD_ROOT/preflight/resolution_contract_validation.json" "$RUN_ROOT/00_preflight/"
 cp "$RECIPE" "$RUN_ROOT/00_preflight/"
+cp "$RESOURCE_CONTRACT" "$RUN_ROOT/00_preflight/"
 cp "${BASH_SOURCE[0]}" "$RUN_ROOT/06_audit/exact_launcher.sh"
 
 export CUDA_VISIBLE_DEVICES=0
@@ -156,8 +168,15 @@ if not result["passed"]:
 PY
 
 cat > "$RUN_ROOT/06_audit/exact_command.sh" <<COMMAND
-cd '$CODE_ROOT'
-'$ENV_ROOT/bin/python' train.py \\
+'$ENV_ROOT/bin/python' '$ORCH_ROOT/code/gcp/run_with_resource_probe.py' \\
+  --contract '$RESOURCE_CONTRACT' \\
+  --phase train \\
+  --output_dir '$RUN_ROOT/01_training/resource_probe' \\
+  --working_directory '$CODE_ROOT' \\
+  --gpu_indices 0 \\
+  --time_binary '$GNU_TIME' \\
+  -- \\
+  '$ENV_ROOT/bin/python' train.py \\
   --source_path '$DATASET_ROOT' \\
   --model_path '$MODEL_ROOT' \\
   --images images \\
@@ -187,9 +206,16 @@ cd '$CODE_ROOT'
 COMMAND
 
 date -u +%Y-%m-%dT%H:%M:%SZ > "$RUN_ROOT/01_training/start_utc.txt"
-cd "$CODE_ROOT"
 set +e
-"$ENV_ROOT/bin/python" train.py \
+"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/run_with_resource_probe.py" \
+  --contract "$RESOURCE_CONTRACT" \
+  --phase train \
+  --output_dir "$RUN_ROOT/01_training/resource_probe" \
+  --working_directory "$CODE_ROOT" \
+  --gpu_indices 0 \
+  --time_binary "$GNU_TIME" \
+  -- \
+  "$ENV_ROOT/bin/python" train.py \
   --source_path "$DATASET_ROOT" \
   --model_path "$MODEL_ROOT" \
   --images images \
@@ -215,8 +241,7 @@ set +e
   --test_iterations 7000 30000 \
   --save_iterations 7000 30000 \
   --ip 127.0.0.1 \
-  --port 6013 \
-  > "$RUN_ROOT/01_training/console.log" 2> "$RUN_ROOT/01_training/console.stderr.log"
+  --port 6013
 STATUS=$?
 set -e
 date -u +%Y-%m-%dT%H:%M:%SZ > "$RUN_ROOT/01_training/end_utc.txt"

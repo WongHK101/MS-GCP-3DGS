@@ -26,15 +26,16 @@ can support identity checks but cannot independently pass the gate.
 | RaDe-GS | https://doi.org/10.1145/3789201 | ACM TOG 45(2), 2026 | PASS | core geometry method |
 | GOF | https://doi.org/10.1145/3687937 | ACM TOG 43(6), 2024 | PASS | core geometry method |
 | CityGaussianV2 | https://proceedings.iclr.cc/paper_files/paper/2025/hash/d218ec74edbfc494fa7d7a253951c603-Abstract-Conference.html | ICLR 2025 | PASS | core large-scene method |
-| CityGS-X | https://openaccess.thecvf.com/content/ICCV2025/html/Gao_CityGS-X_A_Scalable_Architecture_for_Efficient_and_Geometrically_Accurate_Large-Scale_ICCV_2025_paper.html | ICCV 2025 | PASS | core large-scene method |
-| MetroGS | https://openaccess.thecvf.com/content/CVPR2026/papers/Chen_MetroGS_Efficient_and_Stable_Reconstruction_of_Geometrically_Accurate_High-Fidelity_Large-Scale_CVPR_2026_paper.pdf | CVPR 2026 | PASS | core large-scene method |
-| QGS | https://openaccess.thecvf.com/content/ICCV2025/html/Zhang_Quadratic_Gaussian_Splatting_High_Quality_Surface_Reconstruction_with_Second-order_Geometric_ICCV_2025_paper.html | ICCV 2025 | PASS | conditional 3K feasibility |
+| CityGS-X | https://openaccess.thecvf.com/content/ICCV2025/html/Gao_CityGS-X_A_Scalable_Architecture_for_Efficient_and_Geometrically_Accurate_Large-Scale_ICCV_2025_paper.html | ICCV 2025 | PASS | scalability extension; source license review pending |
+| MetroGS | https://openaccess.thecvf.com/content/CVPR2026/papers/Chen_MetroGS_Efficient_and_Stable_Reconstruction_of_Geometrically_Accurate_High-Fidelity_Large-Scale_CVPR_2026_paper.pdf | CVPR 2026 | PASS | scalability extension |
+| QGS | https://openaccess.thecvf.com/content/ICCV2025/html/Zhang_Quadratic_Gaussian_Splatting_High_Quality_Surface_Reconstruction_with_Second-order_Geometric_ICCV_2025_paper.html | ICCV 2025 | PASS | blocked: no recoverable official public implementation |
 | GFSGS | https://openaccess.thecvf.com/content/CVPR2025/html/Jiang_Geometry_Field_Splatting_with_Gaussian_Surfels_CVPR_2025_paper.html | CVPR 2025 | PASS | conditional 3K feasibility |
 
-All ten listed methods pass the publication gate. QGS and GFSGS remain
-conditional only because their UAV/custom-camera integration and metric-packet
-feasibility have not passed the 3K smoke; their publication status is not in
-question.
+All ten listed methods pass the publication gate. Publication eligibility does
+not imply experiment eligibility: QGS has no recoverable official public
+implementation, CityGS-X lacks a license file at the frozen source commit, and
+all methods other than original 3DGS still need a frozen recipe and 3K
+qualification.
 
 ## Exclusion rule for future additions
 

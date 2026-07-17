@@ -1,0 +1,52 @@
+{
+  "schema": "gs_gcp_autodl_runtime_status_v1",
+  "server": "AutoDL-740",
+  "captured_utc": "2026-07-17T14:36:53.061982Z",
+  "gpu_count": 9,
+  "gpu_model": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "gpu_memory_mib_each": 97887,
+  "compute_capability": "12.0",
+  "driver_version": "595.71.05",
+  "gpu_processes_at_capture": [],
+  "cuda": {
+    "nvcc_path": "/usr/local/cuda-12.8/bin/nvcc",
+    "nvcc_sha256": "59e4e55f9a38b78c590df1e28a69dad91052958f18a03868ca4a547c043fbba7",
+    "toolkit_version": "12.8.93"
+  },
+  "compiler": {
+    "gcc": "11.4.0",
+    "gxx": "11.4.0"
+  },
+  "python_system": "3.10.12",
+  "resource_probe_tool": {
+    "status": "verified_isolated_install",
+    "path": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time",
+    "binary_sha256": "7310b9b4c51a8f4d26c1af0da250f03a49ec8a8141033123e79196ad18f6c81b",
+    "tool_manifest_sha256": "122d801b8eb6fd1f6f7c643b566802fb54bf36a578088705e613caa4e450f637",
+    "global_package_modified": false
+  },
+  "disk_at_capture": {
+    "filesystem": "/dev/md0",
+    "size": "3.8T",
+    "used": "2.7T",
+    "available": "1.1T",
+    "use_percent": 73
+  },
+  "dataset_mirror_status": "verified_complete_read_only",
+  "orchestrator_deployment_status": "not_deployed",
+  "original_3dgs_environment_status": "verified_frozen_environment",
+  "original_3dgs_assets": {
+    "code_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "code_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "simple_knn_commit": "44f764299fa305faf6ec5ebd99939e0508331503",
+    "environment_lock_sha256": "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed",
+    "environment_regular_file_count": 22612,
+    "environment_regular_file_bytes": 6815335809,
+    "runtime_smoke": "torch_2.7.1_cu128_cuda_available",
+    "read_only": true,
+    "audit_path": "/root/autodl-tmp/transfer_audits/GS_GCP_V13_3DGS_ASSET_TRANSFER_20260717.json",
+    "audit_sha256": "e5bb1764d9a363fe5d79bc45e76671861bded29e83cb71c70d43d97e1ff2e42f"
+  },
+  "training_ready": false
+}

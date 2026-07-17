@@ -1,0 +1,267 @@
+{
+  "schema": "gs_gcp_method_registry_v1",
+  "registry_id": "gs_gcp_v13_geometry_methods_20260717",
+  "audit_date": "2026-07-17",
+  "release": {
+    "release_id": "gcp_benchmark_release_v1_3_0_multiview_control_heavy_20260717",
+    "payload_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
+  },
+  "training_resolution": {
+    "contract": "configs/gs_gcp_training_resolution_v1.json",
+    "rule_id": "graphdeco_rminus1_1600_width_cap_v1"
+  },
+  "admission_policy": {
+    "formal_publication_required": true,
+    "official_public_implementation_required": true,
+    "fixed_commit_and_tree_required_before_qualification": true,
+    "three_k_qualification_required_before_full_matrix": true,
+    "gcp_residual_parameter_selection_forbidden": true
+  },
+  "role_counts": {
+    "formal_core": 6,
+    "scalability_extension": 2,
+    "conditional": 2
+  },
+  "methods": [
+    {
+      "method_id": "3dgs_original",
+      "display_name": "3D Gaussian Splatting",
+      "role": "formal_core",
+      "publication": {
+        "venue": "ACM TOG / SIGGRAPH 2023",
+        "record": "https://doi.org/10.1145/3592433",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/graphdeco-inria/gaussian-splatting",
+        "commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+        "tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+        "selection_rule": "last official main commit on the original 2023 implementation line before the 2024 feature release",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {
+          "submodules/diff-gaussian-rasterization": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+          "submodules/simple-knn": "44f764299fa305faf6ec5ebd99939e0508331503"
+        }
+      },
+      "source_status": "pre_registered_for_3k_qualification",
+      "recipe": "configs/gs_gcp_v13_original_3dgs_recipe_v2.json",
+      "three_k_qualification_allowed": true,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "2dgs",
+      "display_name": "2D Gaussian Splatting",
+      "role": "formal_core",
+      "publication": {
+        "venue": "ACM SIGGRAPH 2024 Conference Papers",
+        "record": "https://doi.org/10.1145/3641519.3657428",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/hbb1/2d-gaussian-splatting",
+        "commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
+        "tree": "ad1da88f43447bde046712835db70e271816282e",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {
+          "submodules/diff-surfel-rasterization": "e0ed0207b3e0669960cfad70852200a4a5847f61",
+          "submodules/simple-knn": "f155ec04131cb579f53443a06879d37115f4612f"
+        }
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "pgsr",
+      "display_name": "PGSR",
+      "role": "formal_core",
+      "publication": {
+        "venue": "IEEE Transactions on Visualization and Computer Graphics",
+        "record": "https://doi.org/10.1109/TVCG.2024.3494046",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/zju3dv/PGSR",
+        "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+        "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "2a7d986a3bf78f5eb865d5567cf1d988937faa68",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {}
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "rade_gs",
+      "display_name": "RaDe-GS",
+      "role": "formal_core",
+      "publication": {
+        "venue": "ACM Transactions on Graphics 45(2), 2026",
+        "record": "https://doi.org/10.1145/3789201",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/HKUST-SAIL/RaDe-GS",
+        "commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+        "tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {
+          "submodules/diff-gaussian-rasterization/third_party/glm": "5c46b9c07008ae65cb81ab79cd677ecc1934b903",
+          "submodules/simple-knn": "44f764299fa305faf6ec5ebd99939e0508331503"
+        }
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "gof",
+      "display_name": "Gaussian Opacity Fields",
+      "role": "formal_core",
+      "publication": {
+        "venue": "ACM Transactions on Graphics 43(6), 2024",
+        "record": "https://doi.org/10.1145/3687937",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/autonomousvision/gaussian-opacity-fields",
+        "commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+        "tree": "b398209f5721e3944d4f95477c962a78e2106198",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {}
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "citygaussian_v2",
+      "display_name": "CityGaussianV2",
+      "role": "formal_core",
+      "publication": {
+        "venue": "ICLR 2025",
+        "record": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/d218ec74edbfc494fa7d7a253951c603-Abstract-Conference.html",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/Linketic/CityGaussian",
+        "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+        "tree": "be088977358cb36bac000caec396eff3758c74b2",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "cbe5ad1670406e4402217edfb82d2c56af7e8631",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {}
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "citygs_x",
+      "display_name": "CityGS-X",
+      "role": "scalability_extension",
+      "publication": {
+        "venue": "ICCV 2025",
+        "record": "https://openaccess.thecvf.com/content/ICCV2025/html/Gao_CityGS-X_A_Scalable_Architecture_for_Efficient_and_Geometrically_Accurate_Large-Scale_ICCV_2025_paper.html",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/gyy456/CityGS-X",
+        "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+        "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+        "license_file": null,
+        "license_status": "missing_at_frozen_commit_requires_author_clarification",
+        "gitlinks": {}
+      },
+      "source_status": "frozen_source_pending_license_review",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "metrogs",
+      "display_name": "MetroGS",
+      "role": "scalability_extension",
+      "publication": {
+        "venue": "CVPR 2026",
+        "record": "https://openaccess.thecvf.com/content/CVPR2026/papers/Chen_MetroGS_Efficient_and_Stable_Reconstruction_of_Geometrically_Accurate_High-Fidelity_Large-Scale_CVPR_2026_paper.pdf",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/M3phist0/MetroGS",
+        "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+        "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+        "license_file": "LICENSE",
+        "license_git_blob": "9c87e423d4248463e7840124ef06ac64ee17a148",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {
+          "submodules/clm-submodules/cpu-adam": "f169c36d32aad8226800d7d894ca89807b384e40",
+          "submodules/tiny-cuda-nn": "2e757bbe781db59c4980d389d7dccbf5edc09669"
+        }
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "gfgs",
+      "display_name": "Geometry Field Splatting with Gaussian Surfels",
+      "role": "conditional",
+      "publication": {
+        "venue": "CVPR 2025",
+        "record": "https://openaccess.thecvf.com/content/CVPR2025/html/Jiang_Geometry_Field_Splatting_with_Gaussian_Surfels_CVPR_2025_paper.html",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": "https://github.com/RaymondJiangkw/GFSGS",
+        "commit": "4d96d82520141d2ec2c638dc3371a4ea1d08b9ee",
+        "tree": "3eec59517472036424d173d2579cdfad22a254f2",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+        "license_status": "present_at_frozen_commit",
+        "gitlinks": {}
+      },
+      "source_status": "frozen_source_pending_recipe",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "qgs",
+      "display_name": "Quadratic Gaussian Splatting",
+      "role": "conditional",
+      "publication": {
+        "venue": "ICCV 2025",
+        "record": "https://openaccess.thecvf.com/content/ICCV2025/html/Zhang_Quadratic_Gaussian_Splatting_High_Quality_Surface_Reconstruction_with_Second-order_Geometric_ICCV_2025_paper.html",
+        "gate": "PASS"
+      },
+      "source": {
+        "official_repository": null,
+        "commit": null,
+        "tree": null,
+        "license_file": null,
+        "license_status": "not_applicable_no_public_implementation",
+        "gitlinks": {}
+      },
+      "source_status": "blocked_no_official_public_implementation",
+      "recipe": null,
+      "three_k_qualification_allowed": false,
+      "full_scene_matrix_eligible": false
+    }
+  ]
+}

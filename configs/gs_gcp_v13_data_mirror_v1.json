@@ -1,0 +1,31 @@
+{
+  "schema": "gs_gcp_v13_data_mirror_status_v1",
+  "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "source_server": "AutoDL-901",
+  "source_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "target_server": "AutoDL-740",
+  "target_root": "/root/autodl-tmp/datasets/gs-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "verification_status": "verified_complete_read_only",
+  "atomic_publish_required": true,
+  "target_overwrite_allowed": false,
+  "file_count": 6267,
+  "total_bytes": 64661981667,
+  "scene_source_manifest_sha256": {
+    "gcp_3000_20260602": "442c7d74ba0d79f7611b75f9f9155c7d1bf0d09ea71f2985cfb08f68aed24b7d",
+    "gcp_5000_20260602": "e25b31c47d76d1ded62e2867a871f98a3a5f13d7298cf019256e53b53c449842",
+    "gcp_10000_20260610": "d722c9fe0dd0972fec37f867e74cd47f428d4183b109d9ef90e581638160e50a",
+    "gcp_20000_20260602": "756b61caaa645c34ec474463c97c2625dda3966d59a7f64b23b02cd7ee37d5a0",
+    "gcp_50000_20260610": "3693140f8e41adc302726f16621a59c420cd591c8e44dcb8166b35e6a0818ad1",
+    "gcp_100000_20260610": "4dbd1cfd0b9c2a70e632d950c8ffb71492ad67da5b08cf76ac069fd261ca2e85"
+  },
+  "verification_evidence": {
+    "schema": "gs_gcp_v1_3_server_mirror_transfer_validation_v1",
+    "target_server": "AutoDL-740",
+    "audit_path": "/root/autodl-tmp/datasets/gs-gcp-v13/TRANSFER_AUDIT_513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75.json",
+    "release_root_record_sha256": "52392e365a45a40f9b8b6b7677d9c6c980a5cb4866e62028115f4d1c1637eaea",
+    "payload_manifest_sha256": "92db47933324af195cb7c96bc58de52a1da234851f0c0839bd6c04c85ffcc3bf",
+    "read_only": true,
+    "atomic_publish": true,
+    "gpu_used": false
+  }
+}

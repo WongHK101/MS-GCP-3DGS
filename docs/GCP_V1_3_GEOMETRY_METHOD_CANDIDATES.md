@@ -33,23 +33,31 @@ claim alone is not accepted as publication evidence.
 | RaDe-GS | ACM TOG 45(2), 2026, DOI `10.1145/3789201` | 3D Gaussian depth method | rasterized depth/normal for standard 3D Gaussians and geometry regularization | https://github.com/HKUST-SAIL/RaDe-GS | reconcile its native depth with formal `M1/A` while preserving native diagnostics |
 | Gaussian Opacity Fields (GOF) | ACM TOG 43(6), 2024, DOI `10.1145/3687937` | implicit-surface geometry method | opacity-field regularization and adaptive surface extraction in unbounded scenes | https://github.com/autonomousvision/gaussian-opacity-fields | older CUDA stack and packet adapter |
 | CityGaussianV2 | ICLR 2025 proceedings | large-scene geometry baseline | 2DGS-derived large-scene geometry, depth regression, elongation control, and geometry benchmark | https://github.com/Linketic/CityGaussian | partition/config adaptation to relatively small 3K smoke |
-| CityGS-X | ICCV 2025 proceedings | scalable large-scene geometry method | hierarchical distributed representation and progressive RGB-depth-normal geometry optimization | https://github.com/gyy456/CityGS-X | multi-GPU path, external depth prior provenance, packet export from hierarchy |
-| MetroGS | CVPR 2026 proceedings | recent large-scene geometry method | distributed 2DGS, structured dense initialization, hybrid mono/multi-view geometry optimization | https://github.com/M3phist0/MetroGS | pointmap dependency, distributed checkpoint merge, hardware feasibility |
-
 The formal matrix is not frozen merely by listing these methods. Each row must
 pass the identical 3K smoke gate. A failed method is reported with a concrete
 protocol-compatible failure reason; it is not silently replaced or tuned using
 GCP residuals.
 
+## Scalability extensions
+
+| Method | Formal publication | Geometry relevance | Current gate |
+|---|---|---|---|
+| CityGS-X | ICCV 2025 proceedings | hierarchical distributed representation and progressive RGB-depth-normal geometry optimization | source commit/tree frozen, but the official repository has no license file at that commit; blocked pending license clarification |
+| MetroGS | CVPR 2026 proceedings | distributed 2DGS, structured dense initialization, hybrid mono/multi-view geometry optimization | source commit/tree frozen; recipe, dependencies, and 3K feasibility remain pending |
+
+These methods are scalability extensions rather than members of the six-method
+formal core. They must satisfy the same 3K qualification and metric packet
+contract before any full-scene run.
+
 ## Conditional 3K feasibility candidates
 
 | Method | Formal publication | Reason to test | Promotion gate |
 |---|---|---|---|
-| Quadratic Gaussian Splatting (QGS) | ICCV 2025 proceedings | second-order geometric primitives and strong surface-reconstruction claim | official code must accept the benchmark camera track and expose a validated camera-z packet without changing its representation |
+| Quadratic Gaussian Splatting (QGS) | ICCV 2025 proceedings | second-order geometric primitives and strong surface-reconstruction claim | blocked: no recoverable official public implementation at the audit date |
 | Geometry Field Splatting with Gaussian Surfels (GFSGS) | CVPR 2025 proceedings | explicit geometry-field rendering with Gaussian surfels | must work on unbounded UAV scenes and pass memory/runtime plus metric-packet parity gates |
 
 These methods are not part of the promised formal matrix until the 3K gate
-passes. Their failure cannot delay the eight-method core matrix.
+passes. Their failure cannot delay the six-method core matrix.
 
 ## Excluded from the primary camera-z ranking
 
@@ -71,10 +79,10 @@ passes. Their failure cannot delay the eight-method core matrix.
 4. RaDe-GS
 5. GOF
 6. CityGaussianV2
-7. CityGS-X
-8. MetroGS
-9. QGS (conditional)
-10. GFSGS (conditional)
+7. CityGS-X (scalability extension; currently license-blocked)
+8. MetroGS (scalability extension)
+9. GFSGS (conditional)
+10. QGS (conditional; currently implementation-blocked)
 
 Every method starts with `gcp_3000_20260602`. Full six-scene training is
 allowed only after the method passes source-view identity, training, fixed

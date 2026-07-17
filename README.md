@@ -37,6 +37,9 @@ images are not enlarged.
 Each method must first pass the complete 3K pipeline before any six-scene
 training is allowed. See
 [`docs/GS_GCP_FAIR_EXPERIMENT_PROTOCOL.md`](docs/GS_GCP_FAIR_EXPERIMENT_PROTOCOL.md).
+Stage 0 contracts, current hard blockers, and the non-invasive resource probe
+are documented in
+[`docs/GS_GCP_STAGE0_FREEZE.md`](docs/GS_GCP_STAGE0_FREEZE.md).
 
 ## Repository Layout
 

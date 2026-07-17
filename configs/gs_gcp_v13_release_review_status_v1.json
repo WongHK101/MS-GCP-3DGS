@@ -1,0 +1,12 @@
+{
+  "schema": "gs_gcp_release_review_status_v1",
+  "release_id": "gcp_benchmark_release_v1_3_0_multiview_control_heavy_20260717",
+  "payload_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "local_review_package": "GPT_GCP_POINTSET_RELEASE_V1_3_0_CONTROL_HEAVY_REVIEW_20260717.zip",
+  "local_review_package_sha256": "f87cbd043cc568155c66e641a623ab1711070a82ec42b2933b2b5381746f2a11",
+  "local_package_status": "pass_candidate_for_external_review",
+  "external_review_status": "not_recorded",
+  "training_authorized": false,
+  "blocking_reason": "external_release_review_pass_not_recorded_in_project_evidence",
+  "updated_utc": "2026-07-17T00:00:00Z"
+}

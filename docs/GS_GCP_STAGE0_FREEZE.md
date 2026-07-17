@@ -1,0 +1,65 @@
+# GS-GCP Stage 0 Freeze
+
+Status: implemented contracts; training remains blocked until every readiness gate passes.
+
+## Purpose
+
+Stage 0 freezes the experiment inputs and instrumentation before any method is
+trained. It does not produce benchmark metrics and it does not authorize the
+six-scene matrix.
+
+The frozen components are:
+
+1. GS-GCP v1.3.0 release identity and integrity root;
+2. original 3DGS `-r -1` resolution semantics (1600-pixel width cap);
+3. method admission, publication, source commit/tree, license, and role status;
+4. per-method clean source/environment/build/run isolation;
+5. an external one-Hz GPU and GNU-time resource probe;
+6. a 3K-first qualification gate before any full-scene execution.
+
+## Method roles
+
+- Formal core: 3DGS, 2DGS, PGSR, RaDe-GS, GOF, CityGaussianV2.
+- Scalability extension: CityGS-X and MetroGS.
+- Conditional: GFSGS and QGS.
+
+QGS is formally published but has no recoverable official public
+implementation at the audit date, so it is blocked. CityGS-X has a frozen
+official source commit but no license file at that commit; qualification stays
+blocked pending license clarification. Listing a method never makes it
+full-matrix eligible. Every runnable method needs a frozen recipe and complete
+3K qualification first.
+
+## Non-invasive resource probe
+
+`code/gcp/run_with_resource_probe.py` launches the unchanged method command as
+an argument vector (never through a shell), records host process statistics via
+an isolated, SHA-locked GNU time 1.9 binary, and samples explicitly selected
+GPUs once per second using `nvidia-smi`. It records wall time, GPU-hours, peak
+VRAM, utilization, estimated energy, and host maximum RSS. It does not touch
+the loss, autograd graph, or training source. GNU time is extracted under the
+GS-GCP tool namespace without modifying the server's global packages.
+
+Every GPU phase must use this wrapper. An absent GPU probe, duplicate output
+directory, non-zero child exit, or sampler failure makes the phase fail.
+
+## Current hard blockers
+
+At implementation time:
+
+- the v1.3.0 release package exists and its local integrity is verifiable, but
+  an external GPT PASS is not recorded;
+- the immutable six-scene data mirror has been atomically promoted from
+  AutoDL-901 to AutoDL-740: 6,267 files and 64,661,981,667 bytes passed full
+  manifest/hash validation and are read-only;
+- the independent local repository is clean, but the GitHub remote still uses
+  the retired `MS-GCP-3DGS` repository name and must be renamed before public
+  release;
+- original 3DGS source and its 6.8 GB environment are copied into read-only
+  `gs-gcp-v13` paths on AutoDL-740 and pass Git, package-lock, extension-import,
+  and CUDA smoke checks;
+- only original 3DGS has a pre-registered 3K recipe. Other methods cannot start
+  until their method-specific recipe and environment are frozen.
+
+`validate_gs_gcp_stage0.py --require_training_ready` enforces these blockers.
+No launcher may bypass that command.
