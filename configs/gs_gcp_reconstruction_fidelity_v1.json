@@ -1,0 +1,35 @@
+{
+  "schema": "gs_gcp_reconstruction_fidelity_v1",
+  "protocol_id": "graphdeco_train_view_psnr_ssim_lpips_v1",
+  "role": "secondary_train_view_reconstruction_fidelity",
+  "source_split": "train",
+  "held_out_novel_view_metric": false,
+  "iteration": 30000,
+  "render_entrypoint": "render.py",
+  "metrics_entrypoint": "metrics.py",
+  "metrics_implementation_source": "official_original_3dgs_commit_2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+  "render_source_sha256": "3d3949021947d31138ced30aac73771d7d050ac2229d630e3b0056cb95192b14",
+  "metrics_source_sha256": "bda39191dde1fad93abf56a994d6f799bc02209b8ac5000b038e5ecf3345d6d3",
+  "metrics": [
+    "PSNR",
+    "SSIM",
+    "LPIPS_VGG"
+  ],
+  "image_domain": "benchmark_training_loader_output_rgb",
+  "background": "method_frozen_training_background",
+  "aggregation": "arithmetic_mean_over_all_frozen_training_views",
+  "per_view_results_required": true,
+  "chunk_size": 64,
+  "chunking_semantics": "partition_views_then_run_unmodified_official_metrics_py_and_merge_per_view_values",
+  "autograd": "disabled_for_evaluation_only",
+  "overwrite_policy": "fail_if_output_exists",
+  "required_labels": {
+    "paper_table": "train-view reconstruction fidelity",
+    "forbidden": [
+      "held-out PSNR",
+      "test PSNR",
+      "novel-view synthesis quality"
+    ]
+  },
+  "future_method_rule": "Every method must render the same frozen training-view image list at its frozen benchmark loader resolution and be evaluated by this common metrics implementation. Method-native metric implementations are diagnostic only unless byte/numeric parity is proven."
+}
