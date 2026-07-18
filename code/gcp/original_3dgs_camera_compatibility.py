@@ -40,7 +40,7 @@ def _canonical_rank(scene: str, image_name: str) -> str:
     return hashlib.sha256(f"{scene}\0{image_name}".encode("utf-8")).hexdigest()
 
 
-def freeze_samples(split: dict[str, Any]) -> dict[str, Any]:
+def freeze_samples(split: dict[str, Any], generator_commit: str | None = None) -> dict[str, Any]:
     scenes = []
     for scene_payload in sorted(split["scenes"], key=lambda row: row["scene"].encode("utf-8")):
         scene = scene_payload["scene"]
@@ -97,6 +97,12 @@ def freeze_samples(split: dict[str, Any]) -> dict[str, Any]:
         "schema": "gs_gcp_original_3dgs_camera_parity_sample_manifest_v1",
         "selection_frozen_before_pixel_comparison": True,
         "split_manifest_sha256": split["manifest_sha256"],
+        "generator_provenance": {
+            "git_commit": generator_commit,
+            "script_relative_path": "code/gcp/original_3dgs_camera_compatibility.py",
+            "script_sha256": sha256_file(Path(__file__).resolve()),
+            "working_tree_requirement": "clean committed generator before frozen output",
+        },
         "scenes": scenes,
     }
     payload["manifest_sha256"] = hashlib.sha256(canonical_bytes(payload)).hexdigest()
@@ -208,6 +214,7 @@ def main() -> int:
     freeze = subparsers.add_parser("freeze-samples")
     freeze.add_argument("--split_manifest", type=Path, required=True)
     freeze.add_argument("--output", type=Path, required=True)
+    freeze.add_argument("--generator_commit", required=True)
     audit = subparsers.add_parser("audit-all-images")
     audit.add_argument("--split_manifest", type=Path, required=True)
     audit.add_argument("--data_root", type=Path, required=True)
@@ -219,7 +226,7 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "freeze-samples":
         split = json.loads(args.split_manifest.read_text(encoding="utf-8"))
-        write_json(args.output, freeze_samples(split))
+        write_json(args.output, freeze_samples(split, args.generator_commit))
         return 0
     if args.command == "audit-all-images":
         split = json.loads(args.split_manifest.read_text(encoding="utf-8"))

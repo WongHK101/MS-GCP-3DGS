@@ -29,8 +29,8 @@ def test_freeze_samples_is_deterministic_and_preserves_all_3k() -> None:
         {"scene": "gcp_5000_20260602", "assignments": five_k},
         {"scene": "gcp_3000_20260602", "assignments": three_k},
     ]}
-    first = freeze_samples(split)
-    second = freeze_samples(split)
+    first = freeze_samples(split, "commit")
+    second = freeze_samples(split, "commit")
     assert first == second
     by_scene = {row["scene"]: row for row in first["scenes"]}
     assert by_scene["gcp_3000_20260602"]["selected_image_count"] == 10
@@ -40,7 +40,7 @@ def test_freeze_samples_is_deterministic_and_preserves_all_3k() -> None:
 def test_nonmodal_dimensions_are_always_selected() -> None:
     rows = [assignment("gcp_5000_20260602", index, "test" if index == 0 else "train", "strip_0") for index in range(20)]
     rows[-1]["decoded_width"] = 101
-    result = freeze_samples({"manifest_sha256": "abc", "scenes": [{"scene": "gcp_5000_20260602", "assignments": rows}]})
+    result = freeze_samples({"manifest_sha256": "abc", "scenes": [{"scene": "gcp_5000_20260602", "assignments": rows}]}, "commit")
     names = {row["image_name"] for row in result["scenes"][0]["images"]}
     assert rows[-1]["image_name"] in names
 
