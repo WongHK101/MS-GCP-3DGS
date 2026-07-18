@@ -41,6 +41,7 @@ def validate_stage0(
     release_root: Path | None,
     method_id: str | None,
     deployment_evidence: Path | None = None,
+    require_full_scene_matrix_eligible: bool = False,
 ) -> dict[str, Any]:
     configs = repo_root / "configs"
     registry_path = configs / "gs_gcp_method_registry_v1.json"
@@ -52,7 +53,7 @@ def validate_stage0(
     runtime_path = configs / "gs_gcp_autodl901_runtime_status_v1.json"
 
     registry_data = _load(registry_path)
-    registry_result = validate_registry(registry_data)
+    registry_result = validate_registry(registry_data, repo_root)
     components: dict[str, dict[str, Any]] = {
         "method_registry": _component(
             registry_result["passed"],
@@ -267,12 +268,30 @@ def validate_stage0(
         )
 
     method_gate = True
-    method_details: dict[str, Any] = {"method_id": method_id}
+    method_details: dict[str, Any] = {
+        "method_id": method_id,
+        "required_admission": (
+            "full_scene_matrix_eligible"
+            if require_full_scene_matrix_eligible
+            else "three_k_qualification_allowed"
+        ),
+    }
     if method_id:
         matched = [method for method in registry_data["methods"] if method["method_id"] == method_id]
-        method_gate = len(matched) == 1 and bool(matched[0].get("three_k_qualification_allowed"))
+        qualification_allowed = bool(matched and matched[0].get("three_k_qualification_allowed"))
+        full_scene_eligible = bool(matched and matched[0].get("full_scene_matrix_eligible"))
+        method_gate = len(matched) == 1 and (
+            full_scene_eligible if require_full_scene_matrix_eligible else qualification_allowed
+        )
         method_details["matched_count"] = len(matched)
-        method_details["three_k_qualification_allowed"] = bool(matched and matched[0].get("three_k_qualification_allowed"))
+        method_details["three_k_qualification_allowed"] = qualification_allowed
+        method_details["full_scene_matrix_eligible"] = full_scene_eligible
+        method_details["three_k_qualification_status"] = (
+            matched[0].get("three_k_qualification_status", "not_run") if matched else None
+        )
+        method_details["external_review_status"] = (
+            matched[0].get("external_review_status", "not_recorded") if matched else None
+        )
     components["method_qualification"] = _component(method_gate, **method_details)
 
     contract_components = (
@@ -297,7 +316,10 @@ def validate_stage0(
     if runtime.get("original_3dgs_environment_status") != "verified_frozen_environment":
         blockers.append("autodl_901_original_3dgs_environment_not_verified")
     if not method_gate:
-        blockers.append(f"method_not_pre_registered_for_3k_qualification:{method_id}")
+        if require_full_scene_matrix_eligible:
+            blockers.append(f"method_not_approved_for_full_scene_matrix:{method_id}")
+        else:
+            blockers.append(f"method_not_pre_registered_for_3k_qualification:{method_id}")
     if not contracts_valid:
         blockers.append("stage0_contract_validation_failed")
 
@@ -318,6 +340,7 @@ def main() -> int:
     parser.add_argument("--release_root", type=Path)
     parser.add_argument("--method_id")
     parser.add_argument("--deployment_evidence", type=Path)
+    parser.add_argument("--require_full_scene_matrix_eligible", action="store_true")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--require_training_ready", action="store_true")
     args = parser.parse_args()
@@ -326,6 +349,7 @@ def main() -> int:
         args.release_root.resolve() if args.release_root else None,
         args.method_id,
         args.deployment_evidence.resolve() if args.deployment_evidence else None,
+        args.require_full_scene_matrix_eligible,
     )
     rendered = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.report:

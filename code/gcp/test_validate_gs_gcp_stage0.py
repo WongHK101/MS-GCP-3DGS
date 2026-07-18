@@ -63,6 +63,29 @@ class Stage0ReadinessTests(unittest.TestCase):
         self.assertFalse(result["training_ready"])
         self.assertIn("method_not_pre_registered_for_3k_qualification:2dgs", result["blockers"])
 
+    def test_original_3dgs_is_approved_for_full_scene_matrix(self) -> None:
+        result = validate_stage0(
+            ROOT,
+            None,
+            "3dgs_original",
+            require_full_scene_matrix_eligible=True,
+        )
+        admission = result["components"]["method_qualification"]
+        self.assertTrue(admission["passed"])
+        self.assertTrue(admission["full_scene_matrix_eligible"])
+        self.assertEqual(admission["three_k_qualification_status"], "PASS")
+        self.assertEqual(admission["external_review_status"], "PASS")
+
+    def test_other_method_is_not_approved_for_full_scene_matrix(self) -> None:
+        result = validate_stage0(
+            ROOT,
+            None,
+            "2dgs",
+            require_full_scene_matrix_eligible=True,
+        )
+        self.assertFalse(result["components"]["method_qualification"]["passed"])
+        self.assertIn("method_not_approved_for_full_scene_matrix:2dgs", result["blockers"])
+
     def test_execution_and_archive_server_roles_are_distinct(self) -> None:
         result = validate_stage0(ROOT, None, "3dgs_original")
         self.assertEqual(result["components"]["execution_runtime"]["server"], "AutoDL-901")

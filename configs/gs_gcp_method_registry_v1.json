@@ -44,10 +44,18 @@
           "submodules/simple-knn": "44f764299fa305faf6ec5ebd99939e0508331503"
         }
       },
-      "source_status": "pre_registered_for_3k_qualification",
+      "source_status": "qualified_for_full_scene_matrix",
       "recipe": "configs/gs_gcp_v13_original_3dgs_recipe_v2.json",
       "three_k_qualification_allowed": true,
-      "full_scene_matrix_eligible": false
+      "three_k_qualification_status": "PASS",
+      "full_scene_matrix_eligible": true,
+      "external_review_status": "PASS",
+      "qualification_evidence": {
+        "review_package": "GPT_GS_GCP_ORIGINAL_3DGS_3K_QUALIFICATION_REVIEW_20260718.zip",
+        "review_package_sha256": "1349e1ffde057b4b450e82b6c5b1bd152692cc8288875ef18e1ea6bb0f178bd3",
+        "external_review_evidence_path": "evidence/external_reviews/GS_GCP_ORIGINAL_3DGS_3K_QUALIFICATION_PASS_20260718.md",
+        "external_review_evidence_sha256": "92627dd4fbcb9f6a7aacae0cf3cd855c2f2ff51e6162ac4af4944322612b5f2a"
+      }
     },
     {
       "method_id": "2dgs",

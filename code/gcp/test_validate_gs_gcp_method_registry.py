@@ -16,31 +16,44 @@ REGISTRY = json.loads((ROOT / "configs" / "gs_gcp_method_registry_v1.json").read
 
 class MethodRegistryTests(unittest.TestCase):
     def test_frozen_registry_passes(self) -> None:
-        result = validate_registry(copy.deepcopy(REGISTRY))
+        result = validate_registry(copy.deepcopy(REGISTRY), ROOT)
         self.assertTrue(result["passed"], result["errors"])
         self.assertEqual(result["method_count"], 10)
         self.assertEqual(result["qualification_allowed"], ["3dgs_original"])
+        self.assertEqual(result["full_scene_matrix_eligible"], ["3dgs_original"])
 
     def test_duplicate_method_rejected(self) -> None:
         data = copy.deepcopy(REGISTRY)
         data["methods"][1]["method_id"] = data["methods"][0]["method_id"]
-        self.assertFalse(validate_registry(data)["passed"])
+        self.assertFalse(validate_registry(data, ROOT)["passed"])
 
     def test_unfrozen_commit_rejected(self) -> None:
         data = copy.deepcopy(REGISTRY)
         data["methods"][1]["source"]["commit"] = "main"
-        self.assertFalse(validate_registry(data)["passed"])
+        self.assertFalse(validate_registry(data, ROOT)["passed"])
 
     def test_qgs_fake_repository_rejected(self) -> None:
         data = copy.deepcopy(REGISTRY)
         qgs = next(method for method in data["methods"] if method["method_id"] == "qgs")
         qgs["source"]["official_repository"] = "https://example.invalid/qgs"
-        self.assertFalse(validate_registry(data)["passed"])
+        self.assertFalse(validate_registry(data, ROOT)["passed"])
 
     def test_full_matrix_before_3k_rejected(self) -> None:
         data = copy.deepcopy(REGISTRY)
-        data["methods"][0]["full_scene_matrix_eligible"] = True
-        self.assertFalse(validate_registry(data)["passed"])
+        data["methods"][1]["full_scene_matrix_eligible"] = True
+        self.assertFalse(validate_registry(data, ROOT)["passed"])
+
+    def test_qualification_evidence_hash_mismatch_rejected(self) -> None:
+        data = copy.deepcopy(REGISTRY)
+        data["methods"][0]["qualification_evidence"]["external_review_evidence_sha256"] = "0" * 64
+        result = validate_registry(data, ROOT)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("external review evidence SHA mismatch" in error for error in result["errors"]))
+
+    def test_qualification_status_without_full_matrix_rejected(self) -> None:
+        data = copy.deepcopy(REGISTRY)
+        data["methods"][0]["full_scene_matrix_eligible"] = False
+        self.assertFalse(validate_registry(data, ROOT)["passed"])
 
 
 if __name__ == "__main__":
