@@ -36,6 +36,7 @@ def main() -> int:
         raise FileNotFoundError(f"metrics model path not found: {args.model_path}")
 
     torch.set_grad_enabled(False)
+    sys.path.insert(0, str(script.parent))
     sys.argv = [str(script), "-m", str(args.model_path.resolve())]
     runpy.run_path(str(script), run_name="__main__")
     return 0
