@@ -163,6 +163,18 @@ def validate_contract(contract: dict[str, Any]) -> None:
         raise ValueError("resource probe contract is invasive")
 
 
+def gpu_idle_violations(rows: list[dict[str, Any]], idle: dict[str, Any]) -> list[str]:
+    violations = []
+    for row in rows:
+        utilization = row.get("utilization_gpu_percent")
+        memory = row.get("memory_used_mib")
+        if utilization is None or float(utilization) > float(idle["max_utilization_percent"]):
+            violations.append("GPU utilization is not idle")
+        if memory is None or float(memory) > float(idle["max_memory_used_mib"]):
+            violations.append("GPU memory is not idle")
+    return violations
+
+
 def run(args: argparse.Namespace) -> int:
     contract = json.loads(args.contract.read_text(encoding="utf-8"))
     validate_contract(contract)
@@ -188,12 +200,7 @@ def run(args: argparse.Namespace) -> int:
             time.sleep(float(idle["interval_seconds"]))
     uuids = {str(row["gpu_uuid"]) for row in idle_rows}
     apps = query_compute_apps(args.nvidia_smi_binary, uuids)
-    violations = []
-    for row in idle_rows:
-        if float(row["utilization_gpu_percent"] or math.inf) > float(idle["max_utilization_percent"]):
-            violations.append("GPU utilization is not idle")
-        if float(row["memory_used_mib"] or math.inf) > float(idle["max_memory_used_mib"]):
-            violations.append("GPU memory is not idle")
+    violations = gpu_idle_violations(idle_rows, idle)
     if apps and not bool(idle["foreign_compute_processes_allowed"]):
         violations.append("foreign GPU compute process detected")
     baseline_gpu = {}
