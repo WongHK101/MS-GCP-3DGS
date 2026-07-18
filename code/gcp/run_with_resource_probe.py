@@ -49,6 +49,14 @@ SAFE_ENV_KEYS = (
     "TORCH_EXTENSIONS_DIR",
     "TMPDIR",
 )
+CGROUP_MEMORY_FILES = (
+    "memory.current",
+    "memory.peak",
+    "memory.events",
+    "memory.events.local",
+    "memory.max",
+    "memory.swap.max",
+)
 
 
 def utc_now() -> str:
@@ -157,6 +165,24 @@ def parse_gnu_time_output(text: str) -> dict[str, str]:
         key, value = line.strip().split(":", 1)
         parsed[key.strip()] = value.strip()
     return parsed
+
+
+def capture_cgroup_memory(root: Path = Path("/sys/fs/cgroup")) -> dict[str, Any]:
+    files: dict[str, dict[str, Any]] = {}
+    for name in CGROUP_MEMORY_FILES:
+        path = root / name
+        if path.is_file():
+            try:
+                files[name] = {"available": True, "value": path.read_text(encoding="utf-8").strip()}
+            except OSError as exc:
+                files[name] = {"available": False, "error": f"{type(exc).__name__}: {exc}"}
+        else:
+            files[name] = {"available": False}
+    return {
+        "schema": "gs_gcp_cgroup_memory_snapshot_v1",
+        "root": str(root),
+        "files": files,
+    }
 
 
 def summarize_gpu_samples(
@@ -386,6 +412,7 @@ def run(args: argparse.Namespace) -> int:
 
     origin = time.monotonic()
     started_utc = utc_now()
+    cgroup_before = capture_cgroup_memory()
     samples: list[dict[str, Any]] = []
     sampler_errors: list[str] = []
     stop = threading.Event()
@@ -431,6 +458,20 @@ def run(args: argparse.Namespace) -> int:
                 sampler_errors.append(f"{type(exc).__name__}: {exc}")
 
     wall_seconds = time.monotonic() - origin
+    cgroup_after = capture_cgroup_memory()
+    (output_dir / "cgroup_memory.json").write_text(
+        json.dumps(
+            {
+                "schema": "gs_gcp_cgroup_memory_probe_v1",
+                "before": cgroup_before,
+                "after": cgroup_after,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     write_gpu_samples(gpu_path, [*preflight_samples, *samples])
     time_data = parse_gnu_time_output(time_path.read_text(encoding="utf-8", errors="replace") if time_path.exists() else "")
     gpu_summary = summarize_gpu_samples(samples, baseline_memory_by_gpu)
@@ -452,6 +493,7 @@ def run(args: argparse.Namespace) -> int:
         "child_exit_code": child_exit_code,
         "probe_complete": probe_complete,
         "sampler_errors": sampler_errors,
+        "cgroup_memory_probe": "cgroup_memory.json",
     }
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if child_exit_code != 0:

@@ -10,6 +10,15 @@
     "evidence_path": "evidence/external_reviews/GS_GCP_ORIGINAL_3DGS_3K_QUALIFICATION_PASS_20260718.md",
     "evidence_sha256": "92627dd4fbcb9f6a7aacae0cf3cd855c2f2ff51e6162ac4af4944322612b5f2a"
   },
+  "serializer_compatibility": {
+    "status": "APPROVED_AND_PARITY_VERIFIED",
+    "config_path": "configs/gs_gcp_original_3dgs_serializer_compatibility_v1.json",
+    "config_sha256": "2c7945dbbeeed8b9e04131fd1579cd7d1a1fe4c88fe45f045b900d417fb5b179",
+    "upstream_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "runtime_patch_commit": "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+    "runtime_patch_tree": "bcb9df570c43755ed4cd43b51bafcc3cf180a466",
+    "scope": "serialization_only_memory_safety_compatibility_patch"
+  },
   "release": {
     "release_id": "gcp_benchmark_release_v1_3_0_multiview_control_heavy_20260717",
     "payload_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
@@ -45,7 +54,6 @@
     "other_methods_authorized": false
   },
   "execution_order": [
-    "gcp_5000_20260602",
     "gcp_10000_20260610",
     "gcp_20000_20260602",
     "gcp_50000_20260610",
@@ -71,7 +79,7 @@
     },
     {
       "scene": "gcp_5000_20260602",
-      "status": "approved_pending_execution",
+      "status": "formal_scene_pipeline_pass_frozen_reference",
       "source_manifest_sha256": "e25b31c47d76d1ded62e2867a871f98a3a5f13d7298cf019256e53b53c449842",
       "training_image_count": 101,
       "original_width": 5658,
@@ -82,13 +90,21 @@
       "formal_target_view_count": 65,
       "control_count": 6,
       "checkpoint_count": 4,
+      "frozen_formal_result": {
+        "iteration_30000_ply_sha256": "88df8eb33ccf22d37381ca7200bac8c7eb8225616f319eaac5fdfd8e538024d0",
+        "compatibility_wrapper_sha256": "30036a08df6f6f6a06c08921db460aa7aed67d8a43686e22a8bf7c37fd6f6b64",
+        "checkpoint_rmse_h_m": 0.14050161023076604,
+        "checkpoint_rmse_z_m": 0.3568420666110885,
+        "checkpoint_rmse_3d_m": 0.3835061446453116,
+        "sim3_scale": 0.9961788014707212
+      },
       "cameras_bin_sha256": "67aa45289b4d08ec926874efa9babd40187bb64c1ab3e1bced494bad95809905",
       "images_bin_sha256": "eedccc6f18ca59ecdda34f1b89d8d85c446a10f30c936a071f52bf4c0fab65f2",
       "points3D_bin_sha256": "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88"
     },
     {
       "scene": "gcp_10000_20260610",
-      "status": "approved_pending_execution",
+      "status": "approved_from_scratch_retry_after_serializer_parity",
       "source_manifest_sha256": "d722c9fe0dd0972fec37f867e74cd47f428d4183b109d9ef90e581638160e50a",
       "training_image_count": 976,
       "original_width": 5658,
@@ -99,6 +115,15 @@
       "formal_target_view_count": 138,
       "control_count": 6,
       "checkpoint_count": 4,
+      "previous_failed_attempt": {
+        "status": "training_compute_reached_iteration_30000_but_formal_model_not_materialized",
+        "run_id": "original3dgs_10k_seed0_30k_20260718T101700Z",
+        "exit_code": 137,
+        "iteration_30000_ply_exists": false,
+        "iteration_7000_ply_sha256": "404053545887016ca758789d8830d16acb81c9cea142afa209033982ee6c8c2c",
+        "resume_allowed": false,
+        "formal_metrics_allowed": false
+      },
       "cameras_bin_sha256": "19afdf4485a35d35a1aeb4e04aa8746807a17510a929e40b30f55e4a16d82a85",
       "images_bin_sha256": "1c26685db1b29f92278d78fbe21ed2b548076c12cdfc1c5e48fe2035048c37c4",
       "points3D_bin_sha256": "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22"

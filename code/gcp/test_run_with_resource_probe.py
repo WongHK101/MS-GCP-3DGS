@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import math
+import tempfile
 import unittest
 from pathlib import Path
 
 from run_with_resource_probe import (
+    capture_cgroup_memory,
     parse_gnu_time_output,
     parse_gpu_indices,
     summarize_gpu_samples,
@@ -78,6 +80,16 @@ class ResourceProbeTests(unittest.TestCase):
         contract["host_tool"]["tool_manifest_schema"] = "gs_gcp_isolated_gnu_time_tool_v1"
         with self.assertRaises(ValueError):
             validate_contract(contract)
+
+    def test_cgroup_memory_snapshot_records_available_and_missing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "memory.current").write_text("1234\n", encoding="utf-8")
+            (root / "memory.events").write_text("oom 0\noom_kill 0\n", encoding="utf-8")
+            snapshot = capture_cgroup_memory(root)
+        self.assertEqual(snapshot["files"]["memory.current"]["value"], "1234")
+        self.assertEqual(snapshot["files"]["memory.events"]["value"], "oom 0\noom_kill 0")
+        self.assertFalse(snapshot["files"]["memory.peak"]["available"])
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from typing import Any
 
 from gs_gcp_resolution import RULE_ID, graphdeco_rminus1_dimensions
 from validate_gs_gcp_method_registry import validate_registry
+from validate_gs_gcp_original_3dgs_serializer_compatibility import validate_serializer_compatibility
 
 
 SCHEMA = "gs_gcp_v13_original_3dgs_full_matrix_plan_v1"
@@ -26,7 +27,7 @@ EXPECTED_SCENES = {
     "gcp_50000_20260610",
     "gcp_100000_20260610",
 }
-EXECUTION_SCENES = EXPECTED_SCENES - {"gcp_3000_20260602"}
+EXECUTION_SCENES = EXPECTED_SCENES - {"gcp_3000_20260602", "gcp_5000_20260602"}
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -79,6 +80,34 @@ def validate_plan(
     if evidence.is_file():
         _require(sha256_file(evidence) == review.get("evidence_sha256"), "review evidence SHA mismatch", errors)
 
+    serializer = plan.get("serializer_compatibility", {})
+    _require(serializer.get("status") == "APPROVED_AND_PARITY_VERIFIED", "serializer compatibility is not approved", errors)
+    serializer_config = (repo_root / str(serializer.get("config_path", ""))).resolve()
+    _require(serializer_config.is_relative_to(repo_root.resolve()), "serializer config escapes repository", errors)
+    _require(serializer_config.is_file(), "serializer compatibility config is missing", errors)
+    if serializer_config.is_file():
+        _require(sha256_file(serializer_config) == serializer.get("config_sha256"), "serializer config SHA mismatch", errors)
+        serializer_result = validate_serializer_compatibility(
+            json.loads(serializer_config.read_text(encoding="utf-8")),
+            repo_root=repo_root,
+        )
+        _require(serializer_result["passed"], "serializer compatibility validation failed", errors)
+    _require(
+        serializer.get("upstream_commit") == "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+        "serializer upstream commit mismatch",
+        errors,
+    )
+    _require(
+        serializer.get("runtime_patch_commit") == "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+        "serializer runtime patch commit mismatch",
+        errors,
+    )
+    _require(
+        serializer.get("runtime_patch_tree") == "bcb9df570c43755ed4cd43b51bafcc3cf180a466",
+        "serializer runtime patch tree mismatch",
+        errors,
+    )
+
     identity = plan.get("frozen_method_identity", {})
     expected_identity = {
         "training_source_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
@@ -115,7 +144,11 @@ def validate_plan(
 
     by_scene = {row["scene"]: row for row in scenes if isinstance(row, dict) and row.get("scene")}
     for scene_id, row in by_scene.items():
-        expected_status = "qualified_pass_frozen_reference" if scene_id == "gcp_3000_20260602" else "approved_pending_execution"
+        expected_status = {
+            "gcp_3000_20260602": "qualified_pass_frozen_reference",
+            "gcp_5000_20260602": "formal_scene_pipeline_pass_frozen_reference",
+            "gcp_10000_20260610": "approved_from_scratch_retry_after_serializer_parity",
+        }.get(scene_id, "approved_pending_execution")
         _require(row.get("status") == expected_status, f"{scene_id}: status mismatch", errors)
         for field in (
             "source_manifest_sha256",

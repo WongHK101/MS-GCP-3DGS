@@ -1,0 +1,75 @@
+{
+  "schema": "gs_gcp_original_3dgs_serializer_compatibility_v1",
+  "status": "approved_verified_for_remaining_original_3dgs_matrix",
+  "upstream": {
+    "commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "diff_gaussian_rasterization_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "simple_knn_commit": "44f764299fa305faf6ec5ebd99939e0508331503"
+  },
+  "patch": {
+    "commit": "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+    "tree": "bcb9df570c43755ed4cd43b51bafcc3cf180a466",
+    "parent_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "diff_sha256": "b6ac837fbd1b75d8777f719a193782609c8d917975ff79ab64407479c97b49b3",
+    "patched_source_sha256": "d6f148e7b3f08d55925125bc94c90fd240ce18fcccb5d70f878bab6a7d416970",
+    "allowed_changed_files": [
+      "scene/gaussian_model.py",
+      "tests/compare_ply_parity.py",
+      "tests/save_ply_rss_probe.py",
+      "tests/test_save_ply_memory_safe.py"
+    ],
+    "training_math_changed": false,
+    "training_recipe_changed": false,
+    "serializer_scope": "GaussianModel.save_ply memory implementation only"
+  },
+  "approval": {
+    "blocker_review_package_sha256": "5d646a778754c2846d055b53037f6647b9609cfb159cbd54a9d1ba99ffbb30ef",
+    "evidence_path": "evidence/external_reviews/GS_GCP_ORIGINAL_3DGS_SERIALIZER_FIX_APPROVAL_20260718.md",
+    "evidence_sha256": "8992703a8a9c89b7895c8dbbe635e98be6bd332a54282b5b8fdbf288ba209e3e"
+  },
+  "synthetic_parity": {
+    "status": "PASS",
+    "vertex_count_equal": true,
+    "format_and_endianness_equal": true,
+    "property_schema_equal": true,
+    "float32_fields_bitwise_equal": true,
+    "loaded_gaussian_tensors_bitwise_equal": true,
+    "noncontiguous_tensor_input_covered": true,
+    "atomic_failure_cleanup_passed": true
+  },
+  "real_5k_parity": {
+    "status": "PASS",
+    "evidence_root": "/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/serializer_parity/save_ply_memory_safety_db8deeb_20260718T132100Z",
+    "summary_file": "real_parity_rss_summary.json",
+    "summary_sha256": "d189b1cabd0de11433a30a8a22d2a3945cc62f9658cf823ccd65fc6ce2db75ab",
+    "fixture_sha256": "88df8eb33ccf22d37381ca7200bac8c7eb8225616f319eaac5fdfd8e538024d0",
+    "fixture_bytes": 655243076,
+    "vertex_count": 2642103,
+    "patched_output_byte_identical": true,
+    "fields_bitwise_equal": true,
+    "loaded_gaussian_tensors_bitwise_equal": true,
+    "official_maximum_rss_kib": 9098628,
+    "patched_maximum_rss_kib": 2874636,
+    "rss_reduction_kib": 6223992,
+    "rss_reduction_fraction": 0.6840582997788238,
+    "official_tuple_object_expansion": true,
+    "patched_tuple_object_expansion": false
+  },
+  "formal_invariants": {
+    "release_root_digest": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "seed": 0,
+    "iterations": 30000,
+    "resolution_rule": "graphdeco_rminus1_1600_width_cap_v1",
+    "metric_packet_schema": "ms_gcp_metric_depth_packet_v2",
+    "formal_tensor": "alpha_normalized_expected_camera_z",
+    "formal_formula": "M1/A",
+    "formal_semantics": "camera_z",
+    "patch_protocol": "native_packet_pixel_patch_v1",
+    "patch_size": 7,
+    "patch_radius": 3,
+    "aggregation": "robust_multiview_median",
+    "control_policy": "require_all",
+    "min_valid_observations": 1
+  }
+}

@@ -4,20 +4,25 @@ set -euo pipefail
 : "${SCENE_ID:?Set one approved remaining-five SCENE_ID}"
 : "${RUN_ID:?Set a unique RUN_ID before launch}"
 
-METHOD_COMMIT=2eee0e26d2d5fd00ec462df47752223952f6bf4e
+UPSTREAM_METHOD_COMMIT=2eee0e26d2d5fd00ec462df47752223952f6bf4e
+SERIALIZER_COMMIT=db8deebca67e8d5e1507e67c98de603eca0dfd85
+SERIALIZER_TREE=bcb9df570c43755ed4cd43b51bafcc3cf180a466
 ENV_LOCK=29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed
 RELEASE_DIGEST=513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75
-CODE_ROOT=/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/$METHOD_COMMIT/official-train
+OFFICIAL_SOURCE_ROOT=/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/$UPSTREAM_METHOD_COMMIT/official-train
+CODE_ROOT=/root/autodl-tmp/worktrees/gs-gcp-v13/3dgs-original/$SERIALIZER_COMMIT/serialization-safe
 ENV_ROOT=/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1
 DATASET_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST/$SCENE_ID
 RELEASE_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST/release_v1_3_0
 ORCH_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-BUILD_ROOT=/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/$METHOD_COMMIT/$RUN_ID
+BUILD_ROOT=/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/$SERIALIZER_COMMIT/$RUN_ID
 RUN_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/$SCENE_ID/$RUN_ID
 MODEL_ROOT=$RUN_ROOT/02_checkpoints/model
 RECIPE=$ORCH_ROOT/configs/gs_gcp_v13_original_3dgs_recipe_v2.json
 FULL_MATRIX_PLAN=$ORCH_ROOT/configs/gs_gcp_v13_original_3dgs_full_matrix_v1.json
 RESOURCE_CONTRACT=$ORCH_ROOT/configs/gs_gcp_resource_probe_contract_v1.json
+SERIALIZER_COMPAT=$ORCH_ROOT/configs/gs_gcp_original_3dgs_serializer_compatibility_v1.json
+SERIALIZER_PARITY_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/serializer_parity/save_ply_memory_safety_db8deeb_20260718T132100Z
 GNU_TIME=/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time
 DEPLOYMENT_EVIDENCE=/root/autodl-tmp/transfer_audits/GS_GCP_STAGE0_901_DEPLOYMENT_CURRENT.json
 TRAIN_PORT=${TRAIN_PORT:-6013}
@@ -46,7 +51,9 @@ print(json.dumps({
     "scene": scene,
     "run_id": run_id,
     "code_root": code,
-    "code_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "code_commit": "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+    "upstream_method_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "serializer_compatibility_tree": "bcb9df570c43755ed4cd43b51bafcc3cf180a466",
     "environment_root": env,
     "environment_lock_sha256": "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed",
     "dataset_root": data,
@@ -99,7 +106,9 @@ record = {
     "scene": scene,
     "run_id": run_id,
     "code_root": code,
-    "code_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "code_commit": "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+    "upstream_method_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "serializer_compatibility_tree": "bcb9df570c43755ed4cd43b51bafcc3cf180a466",
     "environment_root": env,
     "environment_lock_sha256": "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed",
     "dataset_root": data,
@@ -121,8 +130,14 @@ PY
 
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_gs_gcp_v13_original_3dgs_recipe.py" \
   --recipe "$RECIPE" \
-  --official_source "$CODE_ROOT" \
+  --official_source "$OFFICIAL_SOURCE_ROOT" \
   --report "$BUILD_ROOT/preflight/recipe_validation.json"
+"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_gs_gcp_original_3dgs_serializer_compatibility.py" \
+  --config "$SERIALIZER_COMPAT" \
+  --upstream_source "$OFFICIAL_SOURCE_ROOT" \
+  --patched_source "$CODE_ROOT" \
+  --parity_evidence_root "$SERIALIZER_PARITY_ROOT" \
+  --report "$BUILD_ROOT/preflight/serializer_compatibility_validation.json"
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_gs_gcp_stage0.py" \
   --repo_root "$ORCH_ROOT" \
   --release_root "$RELEASE_ROOT" \
@@ -159,7 +174,7 @@ PY
 
 mkdir -p "$RUN_ROOT"/{00_preflight,01_training,02_checkpoints,03_packets,04_evaluation,05_diagnostics,06_audit,tmp}
 cp "$BUILD_ROOT/preflight/"*.json "$RUN_ROOT/00_preflight/"
-cp "$RECIPE" "$FULL_MATRIX_PLAN" "$RESOURCE_CONTRACT" "$RUN_ROOT/00_preflight/"
+cp "$RECIPE" "$FULL_MATRIX_PLAN" "$RESOURCE_CONTRACT" "$SERIALIZER_COMPAT" "$RUN_ROOT/00_preflight/"
 cp "${BASH_SOURCE[0]}" "$RUN_ROOT/06_audit/exact_launcher.sh"
 
 export CUDA_VISIBLE_DEVICES=0
@@ -186,24 +201,36 @@ source_digest() {
 }
 
 test -z "$(git -C "$CODE_ROOT" status --porcelain)"
+test -z "$(git -C "$OFFICIAL_SOURCE_ROOT" status --porcelain)"
 test -z "$(git -C "$CODE_ROOT/submodules/diff-gaussian-rasterization" status --porcelain)"
 test -z "$(git -C "$CODE_ROOT/submodules/simple-knn" status --porcelain)"
 test -z "$(git -C "$ORCH_ROOT" status --porcelain)"
-test "$(git -C "$CODE_ROOT" rev-parse HEAD)" = "$METHOD_COMMIT"
+test "$(git -C "$OFFICIAL_SOURCE_ROOT" rev-parse HEAD)" = "$UPSTREAM_METHOD_COMMIT"
+test "$(git -C "$CODE_ROOT" rev-parse HEAD)" = "$SERIALIZER_COMMIT"
+test "$(git -C "$CODE_ROOT" rev-parse 'HEAD^{tree}')" = "$SERIALIZER_TREE"
+test "$(git -C "$CODE_ROOT" rev-parse HEAD^)" = "$UPSTREAM_METHOD_COMMIT"
 test "$(find "$DATASET_ROOT" "$RELEASE_ROOT" -perm /222 -print -quit)" = ""
 
 SOURCE_PRE=$(source_digest "$DATASET_ROOT")
 printf '%s\n' "$SOURCE_PRE" > "$RUN_ROOT/00_preflight/dataset_tree_digest_before.txt"
-sha256sum "$RECIPE" "$FULL_MATRIX_PLAN" > "$RUN_ROOT/00_preflight/frozen_contracts.sha256"
+sha256sum "$RECIPE" "$FULL_MATRIX_PLAN" "$SERIALIZER_COMPAT" > "$RUN_ROOT/00_preflight/frozen_contracts.sha256"
 sha256sum "$RELEASE_ROOT/v1_3_0_release_root_digest.json" > "$RUN_ROOT/00_preflight/release_root_record.sha256"
+git -C "$OFFICIAL_SOURCE_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/upstream_method_commit.txt"
+git -C "$OFFICIAL_SOURCE_ROOT" rev-parse 'HEAD^{tree}' > "$RUN_ROOT/00_preflight/upstream_method_tree.txt"
+git -C "$CODE_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/serializer_patch_commit.txt"
+git -C "$CODE_ROOT" rev-parse 'HEAD^{tree}' > "$RUN_ROOT/00_preflight/serializer_patch_tree.txt"
 git -C "$CODE_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/method_commit.txt"
 git -C "$CODE_ROOT" rev-parse 'HEAD^{tree}' > "$RUN_ROOT/00_preflight/method_tree.txt"
+git -C "$CODE_ROOT" diff --binary "$UPSTREAM_METHOD_COMMIT..$SERIALIZER_COMMIT" > "$RUN_ROOT/00_preflight/serializer_patch.diff"
+sha256sum "$CODE_ROOT/scene/gaussian_model.py" "$RUN_ROOT/00_preflight/serializer_patch.diff" > "$RUN_ROOT/00_preflight/serializer_sources.sha256"
 git -C "$ORCH_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/orchestration_commit.txt"
 "$ENV_ROOT/bin/python" -m pip freeze --all | LC_ALL=C sort > "$RUN_ROOT/00_preflight/environment.freeze.txt"
 echo "$ENV_LOCK  $RUN_ROOT/00_preflight/environment.freeze.txt" | sha256sum -c -
 nvidia-smi --query-gpu=index,name,uuid,driver_version,memory.total --format=csv,noheader > "$RUN_ROOT/00_preflight/gpu.txt"
 nvcc --version > "$RUN_ROOT/00_preflight/nvcc.txt"
 gcc --version > "$RUN_ROOT/00_preflight/gcc.txt"
+"$ENV_ROOT/bin/python" "$CODE_ROOT/tests/test_save_ply_memory_safe.py" \
+  > "$RUN_ROOT/00_preflight/serializer_synthetic_tests.txt" 2>&1
 
 cat > "$RUN_ROOT/06_audit/exact_command.sh" <<COMMAND
 '$ENV_ROOT/bin/python' '$ORCH_ROOT/code/gcp/run_with_resource_probe.py' \
@@ -248,8 +275,10 @@ SOURCE_POST=$(source_digest "$DATASET_ROOT")
 printf '%s\n' "$SOURCE_POST" > "$RUN_ROOT/06_audit/dataset_tree_digest_after.txt"
 test "$SOURCE_PRE" = "$SOURCE_POST"
 git -C "$CODE_ROOT" status --porcelain > "$RUN_ROOT/06_audit/method_status_after.txt"
+git -C "$OFFICIAL_SOURCE_ROOT" status --porcelain > "$RUN_ROOT/06_audit/upstream_method_status_after.txt"
 git -C "$ORCH_ROOT" status --porcelain > "$RUN_ROOT/06_audit/orchestration_status_after.txt"
 test ! -s "$RUN_ROOT/06_audit/method_status_after.txt"
+test ! -s "$RUN_ROOT/06_audit/upstream_method_status_after.txt"
 test ! -s "$RUN_ROOT/06_audit/orchestration_status_after.txt"
 test -z "$(git -C "$CODE_ROOT/submodules/diff-gaussian-rasterization" status --porcelain)"
 test -z "$(git -C "$CODE_ROOT/submodules/simple-knn" status --porcelain)"
