@@ -34,6 +34,7 @@ from gcp_packet_camera_compatibility import (
     projection_matrix_equivalence,
     qvec_to_rotmat,
     recover_packet_camera,
+    resolution_label,
     validate_compatibility_wrapper,
     validate_depth_manifest_contract,
     validate_npz_packet_headers,
@@ -204,6 +205,70 @@ def test_generic_r1_r2_r4_r8_schema() -> dict[str, Any]:
         )
         out[f"R{resolution}"] = {"width": camera.width, "height": camera.height}
     return out
+
+
+def test_graphdeco_rminus1_1600_width_cap() -> dict[str, Any]:
+    target = make_target_camera()
+    camera = recover_packet_camera(
+        scene="unit",
+        image_name="rminus1.jpg",
+        target_camera=target,
+        model_camera_row=make_model_row(),
+        packet_width=1600,
+        packet_height=1159,
+        cfg_args={"resolution": -1},
+        manifest_pixel_convention="zero_based_pixel_centers",
+    )
+    if (camera.width, camera.height) != (1600, 1159):
+        raise AssertionError("real 3K -r -1 golden dimensions were not reproduced")
+    if resolution_label(camera.resolution_value) != "graphdeco_rminus1_1600_width_cap_v1":
+        raise AssertionError("-r -1 resolution label mismatch")
+
+    small_target = make_target_camera(width=1200, height=900, focal=800.0)
+    small = recover_packet_camera(
+        scene="unit",
+        image_name="small.jpg",
+        target_camera=small_target,
+        model_camera_row=make_model_row(width=1200, height=900, focal=800.0),
+        packet_width=1200,
+        packet_height=900,
+        cfg_args={"resolution": -1},
+        manifest_pixel_convention="zero_based_pixel_centers",
+    )
+    if (small.width, small.height) != (1200, 900):
+        raise AssertionError("-r -1 must not upscale images at or below 1600 px width")
+
+    truncated_target = make_target_camera(width=2001, height=1001, focal=1300.0)
+    truncated = recover_packet_camera(
+        scene="unit",
+        image_name="truncated.jpg",
+        target_camera=truncated_target,
+        model_camera_row=make_model_row(width=2001, height=1001, focal=1300.0),
+        packet_width=1599,
+        packet_height=800,
+        cfg_args={"resolution": -1},
+        manifest_pixel_convention="zero_based_pixel_centers",
+    )
+    if (truncated.width, truncated.height) != (1599, 800):
+        raise AssertionError("-r -1 must use Python int truncation with one width-derived scale")
+    rejected = expect_raises(
+        lambda: recover_packet_camera(
+            scene="unit",
+            image_name="wrong-height.jpg",
+            target_camera=target,
+            model_camera_row=make_model_row(),
+            packet_width=1600,
+            packet_height=1160,
+            cfg_args={"resolution": -1},
+            manifest_pixel_convention="zero_based_pixel_centers",
+        )
+    )
+    return {
+        "real_3k": "5654x4098->1600x1159",
+        "small_no_upscale": "1200x900->1200x900",
+        "shared_scale_truncation": "2001x1001->1599x800",
+        "wrong_dimension_rejected_by": rejected,
+    }
 
 
 def test_sx_not_sy() -> dict[str, Any]:
@@ -922,6 +987,7 @@ TESTS: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("rounding_tie_case", test_rounding_tie_case),
     ("projection_matrix_equivalence", test_projection_matrix_equivalence),
     ("generic_r1_r2_r4_r8_schema", test_generic_r1_r2_r4_r8_schema),
+    ("graphdeco_rminus1_1600_width_cap", test_graphdeco_rminus1_1600_width_cap),
     ("sx_not_sy", test_sx_not_sy),
     ("pixel_convention_alias_and_unknown", test_pixel_convention_alias_and_unknown),
     ("half_pixel_formula_distinction", test_half_pixel_formula_distinction),

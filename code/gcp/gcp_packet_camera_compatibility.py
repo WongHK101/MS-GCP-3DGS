@@ -227,6 +227,12 @@ def focal2fov(focal: float, pixels: int) -> float:
     return 2.0 * math.atan(float(pixels) / (2.0 * float(focal)))
 
 
+def resolution_label(resolution: int) -> str:
+    if int(resolution) == -1:
+        return "graphdeco_rminus1_1600_width_cap_v1"
+    return f"R{int(resolution)}"
+
+
 def normalize_pixel_convention(value: str) -> tuple[str, str]:
     original = str(value or "").strip()
     if original not in ACCEPTED_PIXEL_CONVENTION_ALIASES:
@@ -587,13 +593,28 @@ def recover_packet_camera(
     manifest_pixel_convention: str,
 ) -> PacketCamera:
     resolution = cfg_args.get("resolution")
-    if not isinstance(resolution, int) or resolution not in {1, 2, 4, 8}:
-        raise ValueError(f"Only audited integer resolution values [1,2,4,8] are supported, got {resolution!r}")
+    if not isinstance(resolution, int) or resolution not in {-1, 1, 2, 4, 8}:
+        raise ValueError(
+            "Only audited original-3DGS resolution values [-1,1,2,4,8] are "
+            f"supported, got {resolution!r}"
+        )
     resolution_scale = 1.0
     source_width = int(model_camera_row["width"])
     source_height = int(model_camera_row["height"])
-    expected_width = round(source_width / (resolution_scale * resolution))
-    expected_height = round(source_height / (resolution_scale * resolution))
+    if resolution in {1, 2, 4, 8}:
+        expected_width = round(source_width / (resolution_scale * resolution))
+        expected_height = round(source_height / (resolution_scale * resolution))
+        rounding_rule = "python_builtin_round_ties_to_even_on_width_and_height_independently"
+        resize_rule = "utils.camera_utils.loadCam_integer_resolution_round_orig_size_div_resolution"
+    else:
+        global_down = source_width / 1600.0 if source_width > 1600 else 1.0
+        scale = float(global_down) * float(resolution_scale)
+        expected_width = int(source_width / scale)
+        expected_height = int(source_height / scale)
+        rounding_rule = (
+            "python_builtin_int_truncation_toward_zero_after_shared_width_derived_scale"
+        )
+        resize_rule = "utils.camera_utils.loadCam_rminus1_1600_width_cap_no_upscale"
     if (expected_width, expected_height) != (int(packet_width), int(packet_height)):
         raise ValueError(
             f"Packet shape does not match renderer rounding rule for {scene} {image_name}: "
@@ -628,9 +649,9 @@ def recover_packet_camera(
         source_fy=source_fy,
         fovx=float(fovx),
         fovy=float(fovy),
-        rounding_rule="python_builtin_round_ties_to_even_on_width_and_height_independently",
+        rounding_rule=rounding_rule,
         principal_point_rule="renderer_symmetric_projection_matrix_image_center_width_over_2_height_over_2",
-        resize_rule="utils.camera_utils.loadCam_integer_resolution_round_orig_size_div_resolution",
+        resize_rule=resize_rule,
         crop_pad_policy="none_verified_by_renderer_camera_loader_source",
         pixel_convention_original=original_conv,
         pixel_convention_canonical=canonical_conv,
@@ -937,7 +958,7 @@ def compatibility_record(
         "source_fy": fmt_float(packet_camera.source_fy),
         "fovx": fmt_float(packet_camera.fovx),
         "fovy": fmt_float(packet_camera.fovy),
-        "resolution_label": f"R{packet_camera.resolution_value}",
+        "resolution_label": resolution_label(packet_camera.resolution_value),
         "resolution_value": packet_camera.resolution_value,
         "rounding_rule": packet_camera.rounding_rule,
         "principal_point_rule": packet_camera.principal_point_rule,
@@ -1315,7 +1336,7 @@ def build_wrapper(
                 "renderer_camera_loader_source_sha256": provenance_record["renderer_camera_loader_source_sha256"],
                 "renderer_projection_source_sha256": provenance_record["renderer_projection_source_sha256"],
                 "renderer_scene_camera_source_sha256": provenance_record["renderer_scene_camera_source_sha256"],
-                "resolution_label": f"R{cfg_args.get('resolution')}",
+                "resolution_label": resolution_label(int(cfg_args.get("resolution"))),
                 "patch_protocol": PATCH_PROTOCOL,
                 "packet_patch_size": 7,
                 "packet_patch_radius": 3,
