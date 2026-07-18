@@ -91,7 +91,7 @@ PY
 import json
 import sys
 validation, output, scene, run_id, code, env, data, release, build, run = sys.argv[1:]
-if not json.load(open(validation, encoding="utf-8"))["passed"]:
+if json.load(open(validation, encoding="utf-8"))["status"] != "pass":
     raise SystemExit("isolation validation did not pass")
 record = {
     "schema": "gs_gcp_method_run_layout_v1",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -56,6 +57,13 @@ class Original3DGSFullMatrixPlanTests(unittest.TestCase):
             scene="gcp_3000_20260602",
         )
         self.assertFalse(result["passed"])
+
+    def test_launcher_uses_isolation_status_schema(self) -> None:
+        launcher = (ROOT / "scripts/gcp_v13/run_original_3dgs_full_scene_30k.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(launcher, re.escape('["status"] != "pass"'))
+        self.assertNotIn('["passed"]', launcher)
 
 
 if __name__ == "__main__":
