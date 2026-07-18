@@ -19,6 +19,8 @@
   "resolution_argument": 4,
   "resolution_protocol": "graphdeco_quarter_resolution_v1",
   "split_protocol": "gs_gcp_rgb_holdout_split_v1",
+  "split_manifest_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+  "split_manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2",
   "holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
   "shared_sfm_asset_contract": "common_full_sfm_plus_train_and_test_camera_subsets_v1",
   "seed": 0,

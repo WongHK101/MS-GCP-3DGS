@@ -127,6 +127,24 @@ def test_contract_files() -> None:
     assert len(suite["lpips_vgg_linear_weight_sha256"]) == 64
 
 
+def test_frozen_real_split_counts() -> None:
+    root = Path(__file__).resolve().parents[2]
+    path = root / "configs" / "gs_gcp_rgb_holdout_split_manifest_v1.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    validation = validate_split_manifest(manifest)
+    assert validation["passed"]
+    assert validation["scene_counts"] == {
+        "gcp_3000_20260602": {"full": 94, "train": 82, "test": 12},
+        "gcp_5000_20260602": {"full": 101, "train": 88, "test": 13},
+        "gcp_10000_20260610": {"full": 976, "train": 854, "test": 122},
+        "gcp_20000_20260602": {"full": 298, "train": 260, "test": 38},
+        "gcp_50000_20260610": {"full": 2208, "train": 1932, "test": 276},
+        "gcp_100000_20260610": {"full": 2510, "train": 2196, "test": 314},
+    }
+    from gs_gcp_stage0_5 import sha256_file
+    assert sha256_file(path) == "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e"
+
+
 TESTS = [
     test_quarter_resolution_golden_and_ties,
     test_capture_order_and_rejection,
@@ -134,6 +152,7 @@ TESTS = [
     test_zero_length_displacement_is_deterministic,
     test_manifest_hash_and_leakage_rejections,
     test_contract_files,
+    test_frozen_real_split_counts,
 ]
 
 
