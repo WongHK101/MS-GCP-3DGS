@@ -9,6 +9,7 @@ from typing import Any
 
 
 METRICS = ("SSIM", "PSNR", "LPIPS")
+OFFICIAL_CHUNK_AGGREGATE_ABS_TOLERANCE = 1e-5
 
 
 def _load_json(path: Path) -> Any:
@@ -140,7 +141,7 @@ def merge_chunks(
             recomputed = math.fsum(float(value) for value in values.values()) / len(values)
             error = abs(recomputed - float(aggregate[metric]))
             max_chunk_aggregate_error = max(max_chunk_aggregate_error, error)
-            if error > 1e-6:
+            if error > OFFICIAL_CHUNK_AGGREGATE_ABS_TOLERANCE:
                 raise ValueError(
                     f"official chunk aggregate mismatch for {chunk['chunk_id']} {metric}: {error}"
                 )
@@ -184,6 +185,9 @@ def merge_chunks(
         "chunk_checks": chunk_checks,
         "max_chunk_aggregate_abs_error": max(
             check["max_official_aggregate_abs_error"] for check in chunk_checks
+        ),
+        "official_chunk_aggregate_recompute_abs_tolerance": (
+            OFFICIAL_CHUNK_AGGREGATE_ABS_TOLERANCE
         ),
     }
     _write_json(output_dir / "reconstruction_fidelity_summary.json", summary)

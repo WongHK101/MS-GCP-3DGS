@@ -21,6 +21,7 @@
   "per_view_results_required": true,
   "chunk_size": 64,
   "chunking_semantics": "partition_views_then_run_unmodified_official_metrics_py_and_merge_per_view_values",
+  "official_chunk_aggregate_recompute_abs_tolerance": 1e-05,
   "autograd": "disabled_for_evaluation_only",
   "overwrite_policy": "fail_if_output_exists",
   "required_labels": {
