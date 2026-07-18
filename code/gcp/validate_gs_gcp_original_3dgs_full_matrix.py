@@ -148,12 +148,22 @@ def validate_plan(
         _require(scene_root is not None and scene_root.is_dir(), "runtime scene root is missing", errors)
         _require(release_root is not None and release_root.is_dir(), "runtime release root is missing", errors)
         if row is not None and scene_root is not None and scene_root.is_dir():
+            from PIL import Image
+
             manifest = scene_root / "SOURCE_MANIFEST.json"
             _require(manifest.is_file(), "runtime source manifest is missing", errors)
             if manifest.is_file():
                 _require(sha256_file(manifest) == row["source_manifest_sha256"], "runtime source manifest SHA mismatch", errors)
             image_paths = sorted(path for path in (scene_root / "images").iterdir() if path.is_file())
             _require(len(image_paths) == row["training_image_count"], "runtime image count mismatch", errors)
+            decoded_dimensions: Counter[tuple[int, int]] = Counter()
+            for image_path in image_paths:
+                with Image.open(image_path) as image:
+                    decoded_dimensions[(image.width, image.height)] += 1
+            expected_dimensions = Counter(
+                {(row["original_width"], row["original_height"]): row["training_image_count"]}
+            )
+            _require(decoded_dimensions == expected_dimensions, "runtime decoded image dimensions mismatch", errors)
             for name, field in (
                 ("cameras.bin", "cameras_bin_sha256"),
                 ("images.bin", "images_bin_sha256"),
@@ -167,6 +177,10 @@ def validate_plan(
                 "scene": scene,
                 "scene_root": str(scene_root),
                 "training_image_count": len(image_paths),
+                "decoded_dimensions": [
+                    {"width": width, "height": height, "count": count}
+                    for (width, height), count in sorted(decoded_dimensions.items())
+                ],
                 "source_manifest_sha256": sha256_file(manifest) if manifest.is_file() else None,
             }
         if row is not None and release_root is not None and release_root.is_dir():
@@ -179,6 +193,9 @@ def validate_plan(
                 targets = {r[target_field] for r in formal} if target_field else set()
                 _require(len(formal) == row["formal_observation_count"], "runtime formal observation count mismatch", errors)
                 _require(len(targets) == row["formal_target_view_count"], "runtime target-view count mismatch", errors)
+                if scene_root is not None and scene_root.is_dir():
+                    image_names = {path.name for path in (scene_root / "images").iterdir() if path.is_file()}
+                    _require(targets.issubset(image_names), "runtime formal target view is absent from training images", errors)
                 if runtime is not None:
                     runtime["formal_observation_count"] = len(formal)
                     runtime["formal_target_view_count"] = len(targets)
