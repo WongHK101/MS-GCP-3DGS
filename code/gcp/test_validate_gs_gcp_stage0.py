@@ -5,19 +5,53 @@ from __future__ import annotations
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from validate_gs_gcp_stage0 import validate_stage0
+from validate_gs_gcp_stage0 import sha256_file, validate_stage0
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class Stage0ReadinessTests(unittest.TestCase):
-    def test_contracts_valid_but_training_blocked_until_external_review(self) -> None:
+    def test_external_review_pass_is_recorded_but_runtime_evidence_is_still_required(self) -> None:
         result = validate_stage0(ROOT, None, "3dgs_original")
         self.assertTrue(result["contracts_valid"])
         self.assertFalse(result["training_ready"])
-        self.assertIn("v1.3.0_external_release_review_pass_not_recorded", result["blockers"])
+        self.assertEqual(result["components"]["release_review"]["external_review_status"], "PASS")
+        self.assertTrue(result["components"]["release_review"]["training_authorized"])
+        self.assertNotIn("v1.3.0_external_release_review_pass_not_recorded", result["blockers"])
+        self.assertIn("v1.3.0_release_integrity_not_verified_at_runtime", result["blockers"])
+        self.assertIn(
+            "autodl_901_orchestrator_deployment_evidence_missing_or_mismatch",
+            result["blockers"],
+        )
+
+    def test_external_review_evidence_hash_is_bound(self) -> None:
+        review = json.loads(
+            (ROOT / "configs/gs_gcp_v13_release_review_status_v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        evidence = ROOT / review["external_review_evidence_path"]
+        self.assertTrue(evidence.is_file())
+        self.assertEqual(sha256_file(evidence), review["external_review_evidence_sha256"])
+
+    def test_external_review_evidence_hash_mismatch_blocks_contract(self) -> None:
+        actual_sha256_file = sha256_file
+
+        def tampered_evidence_hash(path: Path) -> str:
+            if path.name == "GS_GCP_V13_STAGE0_EXTERNAL_REVIEW_PASS_20260718.md":
+                return "0" * 64
+            return actual_sha256_file(path)
+
+        with patch(
+            "validate_gs_gcp_stage0.sha256_file",
+            side_effect=tampered_evidence_hash,
+        ):
+            result = validate_stage0(ROOT, None, "3dgs_original")
+        self.assertFalse(result["components"]["release_review"]["passed"])
+        self.assertFalse(result["contracts_valid"])
 
     def test_unregistered_method_is_blocked(self) -> None:
         result = validate_stage0(ROOT, None, "unknown_method")

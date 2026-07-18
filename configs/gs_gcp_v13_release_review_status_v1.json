@@ -5,8 +5,11 @@
   "local_review_package": "GPT_GCP_POINTSET_RELEASE_V1_3_0_CONTROL_HEAVY_REVIEW_20260717.zip",
   "local_review_package_sha256": "f87cbd043cc568155c66e641a623ab1711070a82ec42b2933b2b5381746f2a11",
   "local_package_status": "pass_candidate_for_external_review",
-  "external_review_status": "not_recorded",
-  "training_authorized": false,
-  "blocking_reason": "external_release_review_pass_not_recorded_in_project_evidence",
-  "updated_utc": "2026-07-17T00:00:00Z"
+  "external_review_status": "PASS",
+  "external_review_date": "2026-07-18",
+  "external_review_evidence_path": "evidence/external_reviews/GS_GCP_V13_STAGE0_EXTERNAL_REVIEW_PASS_20260718.md",
+  "external_review_evidence_sha256": "399e4a91f9caefe5e87c12956883cefffe8da5f40a8df37e964f72d72e2101ea",
+  "training_authorized": true,
+  "blocking_reason": null,
+  "updated_utc": "2026-07-18T07:10:00Z"
 }

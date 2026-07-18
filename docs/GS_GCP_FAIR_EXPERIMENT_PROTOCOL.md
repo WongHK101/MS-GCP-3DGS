@@ -5,7 +5,7 @@ Status: pre-registered execution contract, 2026-07-17.
 ## 1. 实验目标与阶段顺序
 
 正式比较只回答一个问题：在相同 RGB 影像、相同相机、相同 SfM 初始值、
-相同训练预算与相同 GCP 评测协议下，不同 Gaussian geometry 方法的绝对几何
+预注册的方法原生训练配方与透明报告的资源预算、以及相同 GCP 评测协议下，不同 Gaussian geometry 方法的绝对几何
 精度、稳定性、覆盖率和效率有何差异。
 
 执行顺序固定为：

@@ -1,6 +1,6 @@
 # GS-GCP Stage 0 Freeze
 
-Status: implemented contracts; training remains blocked until every readiness gate passes.
+Status: contracts externally reviewed; live runtime gates remain mandatory.
 
 ## Purpose
 
@@ -55,12 +55,12 @@ AutoDL-901 is the experiment-execution server and must pass the idle gate
 immediately before every GPU child launch. AutoDL-740 is an archive/mirror
 server; its GPU availability does not authorize or block a formal run.
 
-## Current hard blockers
+## Current readiness state
 
-At implementation time:
+As of the external review recorded on 2026-07-18:
 
-- the v1.3.0 release package exists and its local integrity is verifiable, but
-  an external GPT PASS is not recorded;
+- the v1.3.0 release and Stage 0 / AutoDL-901 readiness evidence received an
+  external PASS, and original 3DGS is approved to enter the 3K qualification;
 - the immutable six-scene data mirror has been atomically promoted from
   AutoDL-901 to AutoDL-740: 6,267 files and 64,661,981,667 bytes passed full
   manifest/hash validation and are read-only; 740 is retained as archive
@@ -73,8 +73,12 @@ At implementation time:
 - original 3DGS source and its 6.8 GB environment remain intact on AutoDL-901
   and pass Git, package-lock, and extension-import checks; frozen copies on 740
   are disaster-recovery artifacts only;
+- the existing read-only 901 code, environment, dataset, and release inputs
+  retain their hash-verified legacy `ms-gcp-v13` paths, while all new build and
+  run outputs use `gs-gcp-v13`; the recipe records this path-only binding;
 - only original 3DGS has a pre-registered 3K recipe. Other methods cannot start
   until their method-specific recipe and environment are frozen.
 
-`validate_gs_gcp_stage0.py --require_training_ready` enforces these blockers.
-No launcher may bypass that command.
+`validate_gs_gcp_stage0.py --require_training_ready` still requires live
+release-integrity and deployment evidence. Every GPU child must also pass the
+fresh idle/process/disk/source checks. No launcher may bypass these gates.

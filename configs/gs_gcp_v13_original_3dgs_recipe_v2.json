@@ -113,6 +113,19 @@
     "build_root_template": "/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/<run_id>",
     "run_root_template": "/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original/gcp_3000_20260602/<run_id>"
   },
+  "runtime_path_binding": {
+    "status": "verified_legacy_read_only_inputs_with_canonical_new_outputs",
+    "canonical_namespace": "gs-gcp-v13",
+    "legacy_input_namespace": "ms-gcp-v13",
+    "legacy_inputs_are_identity_bound_by_hash": true,
+    "legacy_inputs_are_read_only": true,
+    "actual_901_code_root": "/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train",
+    "actual_901_environment_root": "/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1",
+    "actual_901_dataset_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/gcp_3000_20260602",
+    "actual_901_release_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "new_build_and_run_outputs_must_use_canonical_namespace": true,
+    "semantic_effect": "none_paths_only"
+  },
   "isolation": {
     "contract": "configs/gcp_v13_workspace_isolation_v1.json",
     "dataset_access": "read_only",

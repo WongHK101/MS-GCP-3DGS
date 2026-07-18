@@ -90,11 +90,23 @@ def validate_stage0(
     )
 
     review = _load(review_path)
+    review_evidence_path = None
+    review_evidence_valid = review.get("external_review_status") != "PASS"
+    if review.get("external_review_status") == "PASS":
+        evidence_rel = review.get("external_review_evidence_path")
+        if isinstance(evidence_rel, str) and evidence_rel:
+            candidate = (repo_root / evidence_rel).resolve()
+            if candidate.is_relative_to(repo_root.resolve()) and candidate.is_file():
+                review_evidence_path = candidate
+                review_evidence_valid = (
+                    sha256_file(candidate) == review.get("external_review_evidence_sha256")
+                )
     review_contract_valid = (
         review.get("schema") == "gs_gcp_release_review_status_v1"
         and review.get("payload_root_digest_sha256") == RELEASE_DIGEST
         and review.get("external_review_status") in {"not_recorded", "PASS", "BLOCKED"}
         and (review.get("external_review_status") == "PASS") == bool(review.get("training_authorized"))
+        and review_evidence_valid
     )
     components["release_review"] = _component(
         review_contract_valid,
@@ -102,6 +114,8 @@ def validate_stage0(
         sha256=sha256_file(review_path),
         external_review_status=review.get("external_review_status"),
         training_authorized=bool(review.get("training_authorized")),
+        external_review_evidence_path=str(review_evidence_path) if review_evidence_path else None,
+        external_review_evidence_sha256=review.get("external_review_evidence_sha256"),
         blocking_reason=review.get("blocking_reason"),
     )
 

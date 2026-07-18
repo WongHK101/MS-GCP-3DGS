@@ -11,8 +11,13 @@
 ## Scene-Adaptive Split
 
 The split depends on available GCP count, spatial coverage, and height variation.
-Large scenes should use approximately 20-30% control points and 70-80%
-checkpoints, with at least 6-8 controls when enough GCPs exist.
+The former 20-30% control / 70-80% checkpoint guideline applies only to the
+legacy sparse-control diagnostic design. It is not the authority for the
+v1.3.0 control-heavy primary release. The v1.3.0 release-specific split is
+frozen at 48 control and 39 checkpoint scene-point assignments, selected
+without model residuals to improve registration coverage while retaining
+independent checkpoints. `V1_3_0_MULTIVIEW_CONTROL_HEAVY_PROTOCOL.md` and the
+release split file are authoritative for that track.
 
 Small scenes such as 3k and 5k may not satisfy this requirement. They still
 enter per-scene formal reporting with their frozen split, but they should not
