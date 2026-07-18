@@ -41,17 +41,17 @@ def test_process_snapshot_current_process() -> None:
     import os, time
     row = sample_process_tree(os.getpid(), time.monotonic())
     if os.name == "posix":
-    assert row["process_count"] >= 1
+        assert row["process_count"] >= 1
+        assert row["rss_kib"] > 0
+        assert row["fd_count"] > 0
+    else:
+        assert set(row) >= {"process_count", "rss_kib", "fd_count"}
 
 
 def test_exact_zero_gpu_state_is_idle() -> None:
     rows = [{"utilization_gpu_percent": 0.0, "memory_used_mib": 0.0} for _ in range(3)]
     idle = {"max_utilization_percent": 5.0, "max_memory_used_mib": 1024.0}
     assert gpu_idle_violations(rows, idle) == []
-        assert row["rss_kib"] > 0
-        assert row["fd_count"] > 0
-    else:
-        assert set(row) >= {"process_count", "rss_kib", "fd_count"}
 
 
 TESTS = [test_contract, test_invasive_contract_rejected, test_memory_events_parser, test_process_snapshot_current_process, test_exact_zero_gpu_state_is_idle]
