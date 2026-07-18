@@ -7,7 +7,13 @@ import json
 import tempfile
 from pathlib import Path
 
-from run_with_resource_probe_v2 import _memory_events, gpu_idle_violations, sample_process_tree, validate_contract
+from run_with_resource_probe_v2 import (
+    _memory_events,
+    frozen_gate_violation,
+    gpu_idle_violations,
+    sample_process_tree,
+    validate_contract,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -54,7 +60,53 @@ def test_exact_zero_gpu_state_is_idle() -> None:
     assert gpu_idle_violations(rows, idle) == []
 
 
-TESTS = [test_contract, test_invasive_contract_rejected, test_memory_events_parser, test_process_snapshot_current_process, test_exact_zero_gpu_state_is_idle]
+def _contract() -> dict:
+    return json.loads((ROOT / "configs" / "gs_gcp_resource_probe_contract_v2.json").read_text(encoding="utf-8"))
+
+
+def test_host_gate_classification() -> None:
+    contract = _contract()
+    limit = 110 * 1024**3
+    row = {"cgroup_memory_current_bytes": 103 * 1024**3, "fd_count": 10}
+    result = frozen_gate_violation(contract, row, [], limit, {}, {})
+    assert result["status"] == "HOST_RAM_BLOCKED"
+    assert result["failure_reason"] == "host_cgroup_peak_exceeded_frozen_gate"
+
+
+def test_gpu_gate_classification() -> None:
+    contract = _contract()
+    row = {"cgroup_memory_current_bytes": 1, "fd_count": 10}
+    gpu = [{"gpu_index": 0, "memory_used_mib": 80000, "memory_total_mib": 97887}]
+    result = frozen_gate_violation(contract, row, gpu, 110 * 1024**3, {}, {})
+    assert result["status"] == "GPU_MEMORY_BLOCKED"
+
+
+def test_fd_gate_classification() -> None:
+    contract = _contract()
+    row = {"cgroup_memory_current_bytes": 1, "fd_count": 4097}
+    result = frozen_gate_violation(contract, row, [], 110 * 1024**3, {}, {})
+    assert result["status"] == "FD_BLOCKED"
+
+
+def test_cgroup_event_classification() -> None:
+    contract = _contract()
+    row = {"cgroup_memory_current_bytes": 1, "fd_count": 10}
+    result = frozen_gate_violation(contract, row, [], 110 * 1024**3, {"oom": 1}, {"oom": 2})
+    assert result["status"] == "HOST_RAM_BLOCKED"
+    assert result["failure_reason"] == "cgroup_memory_event_oom"
+
+
+TESTS = [
+    test_contract,
+    test_invasive_contract_rejected,
+    test_memory_events_parser,
+    test_process_snapshot_current_process,
+    test_exact_zero_gpu_state_is_idle,
+    test_host_gate_classification,
+    test_gpu_gate_classification,
+    test_fd_gate_classification,
+    test_cgroup_event_classification,
+]
 
 
 def main() -> int:

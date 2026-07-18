@@ -9,8 +9,10 @@ import hashlib
 import json
 import math
 import os
+import signal
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -32,6 +34,13 @@ from run_with_resource_probe import (
 
 
 GIB = 1024**3
+
+BLOCKER_EXIT_CODES = {
+    "HOST_RAM_BLOCKED": 80,
+    "GPU_MEMORY_BLOCKED": 81,
+    "FD_BLOCKED": 82,
+    "TIMEOUT": 83,
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -175,6 +184,63 @@ def gpu_idle_violations(rows: list[dict[str, Any]], idle: dict[str, Any]) -> lis
     return violations
 
 
+def frozen_gate_violation(
+    contract: dict[str, Any],
+    process_row: dict[str, Any],
+    gpu_rows: list[dict[str, Any]],
+    cgroup_limit: int | None,
+    events_before: dict[str, int],
+    events_now: dict[str, int],
+) -> dict[str, Any] | None:
+    gates = contract["resource_gates"]
+    cgroup_current = process_row.get("cgroup_memory_current_bytes")
+    if cgroup_limit is not None and cgroup_current is not None:
+        allowed = min(
+            float(gates["host_peak_fraction_of_cgroup_limit"]) * cgroup_limit,
+            cgroup_limit - float(gates["host_minimum_headroom_gib"]) * GIB,
+        )
+        if float(cgroup_current) > allowed:
+            return {
+                "status": "HOST_RAM_BLOCKED",
+                "failure_reason": "host_cgroup_peak_exceeded_frozen_gate",
+                "observed": int(cgroup_current),
+                "allowed": int(allowed),
+            }
+    for key in ("oom", "oom_kill", "max"):
+        if events_now.get(key, 0) > events_before.get(key, 0):
+            return {
+                "status": "HOST_RAM_BLOCKED",
+                "failure_reason": f"cgroup_memory_event_{key}",
+                "observed": events_now.get(key, 0) - events_before.get(key, 0),
+                "allowed": 0,
+            }
+    for row in gpu_rows:
+        used = row.get("memory_used_mib")
+        total = row.get("memory_total_mib")
+        if used is None or total is None:
+            continue
+        allowed = min(
+            float(gates["gpu_peak_fraction_of_total"]) * float(total),
+            float(total) - float(gates["gpu_minimum_headroom_gib"]) * 1024.0,
+        )
+        if float(used) > allowed:
+            return {
+                "status": "GPU_MEMORY_BLOCKED",
+                "failure_reason": "gpu_peak_exceeded_frozen_gate",
+                "observed": float(used),
+                "allowed": allowed,
+                "gpu_index": row.get("gpu_index"),
+            }
+    if int(process_row.get("fd_count", 0)) > int(gates["fd_peak_max"]):
+        return {
+            "status": "FD_BLOCKED",
+            "failure_reason": "fd_peak_exceeded_frozen_gate",
+            "observed": int(process_row["fd_count"]),
+            "allowed": int(gates["fd_peak_max"]),
+        }
+    return None
+
+
 def run(args: argparse.Namespace) -> int:
     contract = json.loads(args.contract.read_text(encoding="utf-8"))
     validate_contract(contract)
@@ -222,6 +288,10 @@ def run(args: argparse.Namespace) -> int:
         "gpu_indices": gpu_indices,
         "rlimit_nofile_soft": contract["rlimit_nofile_soft"],
         "started_utc": utc_now(),
+        "failure_stage": args.failure_stage,
+        "timeout_implementation": "resource_probe_internal_deadline",
+        "timeout_seconds": args.timeout_seconds,
+        "enforce_contract_gates": bool(args.enforce_contract_gates),
     }
     write_json(output / "command.json", command_record)
     wrapped = [str(time_binary), "-v", "-o", str(output / "gnu_time.txt"), "--", *command]
@@ -229,6 +299,8 @@ def run(args: argparse.Namespace) -> int:
     process_rows: list[dict[str, Any]] = []
     sampler_errors: list[str] = []
     stop = threading.Event()
+    termination_lock = threading.Lock()
+    termination: dict[str, Any] = {}
     with (output / "stdout.log").open("w", encoding="utf-8") as stdout, (output / "stderr.log").open("w", encoding="utf-8") as stderr:
         child = subprocess.Popen(
             wrapped,
@@ -236,14 +308,42 @@ def run(args: argparse.Namespace) -> int:
             stdout=stdout,
             stderr=stderr,
             preexec_fn=lambda: _set_nofile(int(contract["rlimit_nofile_soft"])),
+            start_new_session=True,
         )
+
+        def request_termination(payload: dict[str, Any]) -> None:
+            with termination_lock:
+                if termination:
+                    return
+                termination.update({
+                    **payload,
+                    "failure_stage": args.failure_stage,
+                    "controlled_termination_initiator": "run_with_resource_probe_v2",
+                    "controlled_termination_signal": int(signal.SIGTERM),
+                    "requested_monotonic_seconds": time.monotonic() - origin,
+                })
+                try:
+                    os.killpg(child.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
 
         def sampler() -> None:
             next_sample = time.monotonic()
             while not stop.is_set():
                 try:
-                    process_rows.append(sample_process_tree(child.pid, origin))
-                    gpu_rows.extend(query_nvidia_smi(args.nvidia_smi_binary, gpu_indices, origin, "runtime"))
+                    process_row = sample_process_tree(child.pid, origin)
+                    current_gpu = query_nvidia_smi(args.nvidia_smi_binary, gpu_indices, origin, "runtime")
+                    process_rows.append(process_row)
+                    gpu_rows.extend(current_gpu)
+                    if args.timeout_seconds is not None and process_row["monotonic_seconds"] > args.timeout_seconds:
+                        request_termination({"status": "TIMEOUT", "failure_reason": "internal_deadline_exceeded"})
+                    elif args.enforce_contract_gates:
+                        violation = frozen_gate_violation(
+                            contract, process_row, current_gpu, cgroup_limit,
+                            events_before, _memory_events(),
+                        )
+                        if violation is not None:
+                            request_termination(violation)
                 except Exception as exc:  # noqa: BLE001
                     sampler_errors.append(f"{type(exc).__name__}: {exc}")
                     return
@@ -252,13 +352,22 @@ def run(args: argparse.Namespace) -> int:
 
         thread = threading.Thread(target=sampler, daemon=True)
         thread.start()
-        exit_code = child.wait()
+        while child.poll() is None:
+            if termination and time.monotonic() - origin - float(termination["requested_monotonic_seconds"]) > 10.0:
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                    termination["controlled_termination_escalated_to_sigkill"] = True
+                except ProcessLookupError:
+                    pass
+            time.sleep(0.1)
+        exit_code = int(child.returncode)
         stop.set()
         thread.join(timeout=5.0)
     wall_seconds = time.monotonic() - origin
     write_gpu_samples(output / "gpu_samples.csv", [*idle_rows, *gpu_rows])
     _write_process_samples(output / "process_tree_samples.csv", process_rows)
-    time_data = parse_gnu_time_output((output / "gnu_time.txt").read_text(encoding="utf-8", errors="replace"))
+    time_path = output / "gnu_time.txt"
+    time_data = parse_gnu_time_output(time_path.read_text(encoding="utf-8", errors="replace")) if time_path.is_file() else {}
     gpu_summary = summarize_gpu_samples(gpu_rows, baseline_gpu)
     gpu_totals = sorted({
         float(row["memory_total_mib"])
@@ -271,10 +380,33 @@ def run(args: argparse.Namespace) -> int:
     event_delta = {key: events_after.get(key, 0) - events_before.get(key, 0) for key in sorted(set(events_before) | set(events_after))}
     fd_values = [int(row["fd_count"]) for row in process_rows]
     last_ten = fd_values[-10:]
+    if termination:
+        status = str(termination["status"])
+        outer_exit_code = BLOCKER_EXIT_CODES[status]
+        camera_child_exit_code = 128 + int(termination["controlled_termination_signal"])
+    elif exit_code != 0 or sampler_errors:
+        status = "METHOD_FAILURE"
+        outer_exit_code = exit_code if exit_code != 0 else 70
+        camera_child_exit_code = int(time_data.get("Exit status", exit_code) or exit_code)
+    else:
+        status = "PASS"
+        outer_exit_code = 0
+        camera_child_exit_code = int(time_data.get("Exit status", 0) or 0)
     summary = {
         "schema": "gs_gcp_resource_probe_summary_v2",
-        "status": "PASS" if exit_code == 0 and not sampler_errors else "METHOD_FAILURE",
-        "child_exit_code": exit_code,
+        "status": status,
+        "failure_stage": termination.get("failure_stage"),
+        "failure_reason": termination.get("failure_reason"),
+        "outer_probe_exit_code": outer_exit_code,
+        "gnu_time_wrapper_exit_code": exit_code,
+        "camera_load_child_exit_code": camera_child_exit_code,
+        "timeout_implementation": "resource_probe_internal_deadline",
+        "timeout_triggered": status == "TIMEOUT",
+        "usr_bin_timeout_used": False,
+        "usr_bin_timeout_exit_code": None,
+        "controlled_termination_initiator": termination.get("controlled_termination_initiator"),
+        "controlled_termination_signal": termination.get("controlled_termination_signal"),
+        "controlled_termination_details": termination or None,
         "wall_seconds": wall_seconds,
         "probe_complete": not sampler_errors and bool(process_rows) and bool(gpu_rows),
         "sampler_errors": sampler_errors,
@@ -298,7 +430,7 @@ def run(args: argparse.Namespace) -> int:
         "ended_utc": utc_now(),
     }
     write_json(output / "resource_summary.json", summary)
-    return exit_code if exit_code != 0 else (0 if summary["probe_complete"] else 70)
+    return outer_exit_code if outer_exit_code != 0 else (0 if summary["probe_complete"] else 70)
 
 
 def main() -> int:
@@ -309,6 +441,9 @@ def main() -> int:
     parser.add_argument("--gpu_indices", required=True)
     parser.add_argument("--time_binary", required=True)
     parser.add_argument("--nvidia_smi_binary", default="nvidia-smi")
+    parser.add_argument("--timeout_seconds", type=float)
+    parser.add_argument("--enforce_contract_gates", action="store_true")
+    parser.add_argument("--failure_stage", default="unspecified")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     try:
         return run(parser.parse_args())

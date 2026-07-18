@@ -35,9 +35,20 @@ def validate_preflight(
         "status": resource.get("status"), "probe_complete": resource.get("probe_complete"),
     })
     check("camera_loader_pass", camera.get("status") == "PASS", camera.get("status"))
+    check("camera_schema", camera.get("schema") == "gs_gcp_original_3dgs_camera_load_preflight_v2", camera.get("schema"))
     check("camera_resolution", int(camera.get("resolution", -1)) == 4, camera.get("resolution"))
-    check("camera_data_device", camera.get("data_device") == "cuda", camera.get("data_device"))
+    check("camera_data_device", camera.get("data_device") in {"cuda", "cpu"}, camera.get("data_device"))
     check("point_tracks_not_read", camera.get("points3d_tracks_read") is False, camera.get("points3d_tracks_read"))
+    check("camera_materialization_complete", (
+        int(camera.get("camera_count", -1)) > 0
+        and int(camera.get("camera_records_read_count", -2)) == int(camera.get("camera_count", -1))
+        and int(camera.get("camera_tensors_materialized_count", -3)) == int(camera.get("camera_count", -1))
+    ), {
+        "camera_count": camera.get("camera_count"),
+        "records_read": camera.get("camera_records_read_count"),
+        "tensors_materialized": camera.get("camera_tensors_materialized_count"),
+    })
+    check("source_image_backing_closed", int(camera.get("currently_open_source_image_count", -1)) == 0, camera.get("currently_open_source_image_count"))
 
     cgroup_limit = _require_number(resource.get("cgroup_memory_limit_bytes"), "cgroup_memory_limit_bytes")
     cgroup_peak = _require_number(resource.get("cgroup_observed_peak_bytes"), "cgroup_observed_peak_bytes")
@@ -90,12 +101,14 @@ def validate_preflight(
     allocated_delta = max(0, int(camera.get("torch_cuda_allocated_after", 0)) - int(camera.get("torch_cuda_allocated_before", 0)))
     reserved_delta = max(0, int(camera.get("torch_cuda_reserved_after", 0)) - int(camera.get("torch_cuda_reserved_before", 0)))
     gpu_delta_bytes = _require_number(resource.get("peak_gpu_memory_mib"), "peak_gpu_memory_mib") * MIB
-    check("gpu_observed_covers_camera_tensor", gpu_delta_bytes + MIB >= actual, {
+    gpu_covers = gpu_delta_bytes + MIB >= actual if camera.get("data_device") == "cuda" else allocated_delta < actual
+    check("gpu_observed_covers_camera_tensor", gpu_covers, {
         "gpu_observed_delta_bytes": gpu_delta_bytes,
         "camera_tensor_bytes": actual,
         "torch_allocated_delta_bytes": allocated_delta,
         "torch_reserved_delta_bytes": reserved_delta,
         "one_mib_sampling_slack_bytes": MIB,
+        "data_device": camera.get("data_device"),
     })
 
     process_peak = _require_number(resource.get("process_tree_sampled_peak_rss_kib"), "process_tree_sampled_peak_rss_kib") * 1024.0

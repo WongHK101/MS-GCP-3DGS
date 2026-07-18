@@ -36,7 +36,11 @@ class ResourcePreflightTests(unittest.TestCase):
             "process_tree_sampled_peak_rss_kib": 10 * GIB // 1024,
         }
         self.camera = {
+            "schema": "gs_gcp_original_3dgs_camera_load_preflight_v2",
             "status": "PASS", "resolution": 4, "data_device": "cuda",
+            "camera_count": 10, "camera_records_read_count": 10,
+            "camera_tensors_materialized_count": 10,
+            "currently_open_source_image_count": 0,
             "points3d_tracks_read": False, "fd_before": 20, "fd_after": 24,
             "jpeg_fds_after_stabilization": [],
             "theoretical_camera_tensor_bytes": 8 * GIB,

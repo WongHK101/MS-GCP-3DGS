@@ -1,0 +1,43 @@
+{
+  "schema": "gs_gcp_original_3dgs_camera_materialization_compatibility_v1",
+  "status": "approved_for_candidate_a_then_conditional_b_execution",
+  "eager_reference_commit": "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+  "path_backed_candidate_commit": "ac8e622f7347cc01ed2af4e0381a05191025834b",
+  "path_backed_candidate_tree": "8d94a99b5edb17aa049133846af5c335e6b117a5",
+  "candidate_a": {
+    "identity": "path_backed_cuda_resident",
+    "data_device": "cuda",
+    "jpeg_decode_frequency": "once_during_camera_list_materialization",
+    "source_image_close_policy": "immediate_after_current_camera_construction"
+  },
+  "candidate_b": {
+    "identity": "path_backed_cpu_backed_official",
+    "data_device": "cpu",
+    "eligibility": "candidate_a_host_and_all_non_gpu_gates_pass_and_only_gpu_gate_fails",
+    "original_3dgs_data_residency": "cpu_backed_official"
+  },
+  "selection_order": [
+    "candidate_a_50k",
+    "candidate_a_100k_if_50k_passes",
+    "select_a_if_both_pass",
+    "candidate_b_50k_100k_only_if_a_gpu_only_failure",
+    "select_one_contract_before_3k_parity"
+  ],
+  "frozen_inputs": {
+    "release_root_digest": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "split_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+    "resolution_protocol": "graphdeco_quarter_resolution_v1",
+    "resolution_argument": 4,
+    "resource_contract": "gs_gcp_resource_probe_contract_v2"
+  },
+  "forbidden": [
+    "per_iteration_jpeg_decode",
+    "lru_cache",
+    "prefetch",
+    "pinned_memory_pipeline",
+    "multi_worker_loader",
+    "camera_order_change",
+    "resolution_change",
+    "resource_gate_change"
+  ]
+}
