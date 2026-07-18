@@ -23,6 +23,13 @@
     "candidate_b_50k_100k_only_if_a_gpu_only_failure",
     "select_one_contract_before_3k_parity"
   ],
+  "parity_sample_manifest": {
+    "path": "configs/gs_gcp_original_3dgs_camera_parity_samples_v1.json",
+    "file_sha256": "9a001c500bbb0290d78274dec14096a39da7c6b2f79d87b7e1aa3e8651322ee9",
+    "canonical_sha256": "6d054f387dac3267d1c6ff6f3da429156cc97bc89436c06d4a3632bc19a91971",
+    "selected_image_count": 2394,
+    "selection_frozen_before_pixel_comparison": true
+  },
   "frozen_inputs": {
     "release_root_digest": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
     "split_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
