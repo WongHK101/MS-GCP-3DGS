@@ -30,10 +30,10 @@ class ReconstructionFidelityMergeTests(unittest.TestCase):
                     for metric, metric_values in per_view.items()
                 }
                 (model / "results.json").write_text(
-                    json.dumps({str(model): {"ours_30000": aggregate}}), encoding="utf-8"
+                    json.dumps({"ours_30000": aggregate}), encoding="utf-8"
                 )
                 (model / "per_view.json").write_text(
-                    json.dumps({str(model): {"ours_30000": per_view}}), encoding="utf-8"
+                    json.dumps({"ours_30000": per_view}), encoding="utf-8"
                 )
                 manifest_rows.append(
                     {
@@ -72,10 +72,10 @@ class ReconstructionFidelityMergeTests(unittest.TestCase):
                 per_view = {metric: {"00000.png": 1.0} for metric in ("SSIM", "PSNR", "LPIPS")}
                 aggregate = {metric: 1.0 for metric in per_view}
                 (model / "results.json").write_text(
-                    json.dumps({str(model): {"ours_30000": aggregate}}), encoding="utf-8"
+                    json.dumps({"ours_30000": aggregate}), encoding="utf-8"
                 )
                 (model / "per_view.json").write_text(
-                    json.dumps({str(model): {"ours_30000": per_view}}), encoding="utf-8"
+                    json.dumps({"ours_30000": per_view}), encoding="utf-8"
                 )
                 rows.append(
                     {

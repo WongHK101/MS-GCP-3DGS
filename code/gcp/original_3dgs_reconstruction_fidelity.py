@@ -93,12 +93,9 @@ def prepare_chunks(
 
 def _extract_official_payload(path: Path, method_name: str) -> dict[str, Any]:
     payload = _load_json(path)
-    if not isinstance(payload, dict) or len(payload) != 1:
-        raise ValueError(f"expected one scene key in {path}")
-    scene_payload = next(iter(payload.values()))
-    if set(scene_payload) != {method_name}:
-        raise ValueError(f"unexpected method keys in {path}: {sorted(scene_payload)}")
-    return scene_payload[method_name]
+    if not isinstance(payload, dict) or set(payload) != {method_name}:
+        raise ValueError(f"unexpected method keys in {path}: {sorted(payload)}")
+    return payload[method_name]
 
 
 def merge_chunks(

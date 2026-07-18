@@ -108,6 +108,9 @@ PY
 )
 for chunk_path in "${CHUNK_PATHS[@]}"; do
   chunk_id=$(basename "$chunk_path")
+  # The frozen resource probe requires three idle samples. Let CUDA activity
+  # from the preceding chunk settle before starting the next independent probe.
+  sleep 5
   python3 "$PROBE" \
     --contract "$RESOURCE_CONTRACT" \
     --phase evaluation \
