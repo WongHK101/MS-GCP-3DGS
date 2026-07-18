@@ -1,0 +1,36 @@
+{
+  "schema": "gs_gcp_resource_probe_contract_v2",
+  "contract_id": "gs_gcp_external_resource_probe_process_tree_cgroup_1hz_v2",
+  "sampling_interval_seconds": 1.0,
+  "gpu_idle_preflight": {
+    "samples": 3,
+    "interval_seconds": 1.0,
+    "max_utilization_percent": 5.0,
+    "max_memory_used_mib": 1024.0,
+    "foreign_compute_processes_allowed": false
+  },
+  "rlimit_nofile_soft": 65536,
+  "resource_gates": {
+    "host_peak_fraction_of_cgroup_limit": 0.8,
+    "host_minimum_headroom_gib": 24.0,
+    "gpu_peak_fraction_of_total": 0.75,
+    "gpu_minimum_headroom_gib": 24.0,
+    "fd_peak_max": 4096,
+    "fd_stable_absolute_max": 256,
+    "fd_stable_baseline_delta_max": 64,
+    "fd_last_ten_range_max": 8,
+    "process_tree_cgroup_delta_absolute_tolerance_gib": 8.0,
+    "process_tree_cgroup_delta_relative_tolerance": 0.25,
+    "camera_load_timeout_seconds": 3600,
+    "stabilization_seconds": 30
+  },
+  "host_tool": {
+    "expected_path": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time",
+    "binary_sha256": "7310b9b4c51a8f4d26c1af0da250f03a49ec8a8141033123e79196ad18f6c81b"
+  },
+  "non_invasive": {
+    "training_source_changes_allowed": false,
+    "loss_or_autograd_instrumentation_allowed": false,
+    "child_command_shell_allowed": false
+  }
+}

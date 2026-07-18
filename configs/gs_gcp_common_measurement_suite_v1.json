@@ -1,0 +1,40 @@
+{
+  "schema": "gs_gcp_common_measurement_suite_v1",
+  "suite_id": "gs_gcp_common_measurement_suite_v1",
+  "resolution_protocol": "graphdeco_quarter_resolution_v1",
+  "rgb_holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
+  "rgb_domain": "benchmark-owned sRGB PNG decoded to float [0,1]",
+  "rgb_metrics": ["PSNR", "SSIM", "LPIPS_VGG"],
+  "rgb_aggregation": "per-image -> scene mean -> six-scene macro mean",
+  "complete_scene_required_for_primary_rgb_mean": true,
+  "vgg16_weight_sha256": "397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0",
+  "lpips_vgg_linear_weight_sha256": "a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868",
+  "single_gpu_reference_render": {
+    "gpu_uuid": "GPU-b5804bf4-ec7a-06c5-eda6-a896ab721251",
+    "batch_size": 1,
+    "warmup_rounds": 1,
+    "timed_rounds": 5,
+    "model_load_included": false,
+    "disk_io_included": false,
+    "primary_comparable_column": true
+  },
+  "method_native_render": {
+    "allowed": true,
+    "role": "secondary",
+    "gpu_count_and_per_gpu_and_aggregate_vram_required": true
+  },
+  "formal_depth_tensor": "alpha_normalized_expected_camera_z",
+  "formal_depth_semantics": "camera_z",
+  "formal_depth_formula": "M1/A",
+  "formal_gcp_scene_aggregation": "scene macro primary; pooled micro secondary",
+  "failure_statuses": [
+    "PASS", "METHOD_FAILURE", "TRAIN_OOM", "HOST_RAM_BLOCKED", "CAMERA_LOAD_FAILURE",
+    "SERIALIZATION_FAILURE", "RENDER_OOM", "PACKET_EXPORT_FAILURE",
+    "FORMAL_EVALUATOR_FAILURE", "INCOMPLETE_COVERAGE", "SOURCE_UNAVAILABLE",
+    "LICENSE_BLOCKED", "UNSUPPORTED"
+  ],
+  "failure_stages": [
+    "preprocess", "camera_load", "initialization", "optimization", "serialization",
+    "render", "packet_export", "formal_evaluation"
+  ]
+}

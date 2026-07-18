@@ -1,0 +1,28 @@
+{
+  "schema": "gs_gcp_rgb_holdout_split_contract_v1",
+  "split_protocol": "gs_gcp_rgb_holdout_split_v1",
+  "holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
+  "paper_wording": "image-loss-held-out, pose-known benchmark under a shared all-image SfM initialization",
+  "test_count_rule": "ceil(full_view_count / 8)",
+  "shared_sfm_limitation": "shared point RGB and sparse initialization may contain test-view contributions",
+  "common_full_sfm_role": "frozen provenance and shared initialization; not a direct training source",
+  "training_allowlist": [
+    "shared_point_xyz",
+    "shared_point_rgb",
+    "shared_point_error_if_method_admission_requires_it",
+    "train_camera_intrinsics",
+    "train_camera_extrinsics",
+    "train_rgb"
+  ],
+  "training_forbidden": [
+    "test_rgb",
+    "test_learned_features",
+    "test_appearance_or_exposure_embeddings",
+    "test_view_2d_track_coordinates",
+    "test_view_visibility_statistics",
+    "test_rgb_method_specific_priors",
+    "gcp_identity_or_residual",
+    "method_result_or_rgb_metric"
+  ],
+  "future_track_policy": "methods requiring self-consistent tracks need a separately reviewed deterministic sanitized track artifact"
+}

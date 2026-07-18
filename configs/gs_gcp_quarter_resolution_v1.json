@@ -1,0 +1,26 @@
+{
+  "schema": "gs_gcp_resolution_contract_v2",
+  "rule_id": "graphdeco_quarter_resolution_v1",
+  "reference_method": "3dgs_original",
+  "reference_method_argument": 4,
+  "loader_source": "utils/camera_utils.py:loadCam",
+  "loader_source_sha256": "a450a6bcd3630a183f0a6be1b75a89e91444471b12f460613b8beb23a9c3bcef",
+  "dimension_formula": "(round(decoded_width / 4), round(decoded_height / 4))",
+  "rounding": "Python built-in round, ties-to-even, independently per dimension",
+  "image_decode": "PIL.Image.open; decoded matrix orientation; ignore EXIF orientation",
+  "resize_call": "PIL.Image.Image.resize(size), resample omitted",
+  "effective_rgb_resampling_pillow_11_1_0": "BICUBIC",
+  "crop": false,
+  "pad": false,
+  "image_renumbering": false,
+  "pixel_convention": "zero_based_pixel_centers",
+  "projection_tolerance_px": 1e-09,
+  "ray_coordinate_tolerance": 1e-12,
+  "ray_angle_tolerance_rad": 1e-07,
+  "golden_case": {
+    "decoded_width": 5654,
+    "decoded_height": 4098,
+    "loaded_width": 1414,
+    "loaded_height": 1024
+  }
+}

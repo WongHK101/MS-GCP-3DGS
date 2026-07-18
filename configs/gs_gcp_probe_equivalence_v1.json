@@ -1,0 +1,30 @@
+{
+  "schema": "gs_gcp_probe_equivalence_contract_v1",
+  "synthetic_child_requirement": "byte_exact",
+  "micro_scene": "gcp_3000_20260602",
+  "micro_iterations": 100,
+  "seed": 0,
+  "preferred_point_cloud_comparison": "bitwise_identical",
+  "required_exact_identities": [
+    "gaussian_count",
+    "gaussian_order",
+    "property_schema",
+    "checkpoint_iteration",
+    "train_image_order",
+    "seed",
+    "child_argv",
+    "environment_lock",
+    "source_tree",
+    "data_tree",
+    "loss_trace_iterations",
+    "loss_trace_length",
+    "densification_behavior"
+  ],
+  "finite_values_required": true,
+  "conditional_cuda_nondeterminism_tolerance": {
+    "allowed_only_with_independent_causal_proof": true,
+    "max_abs": 1e-07,
+    "max_rel": 1e-06,
+    "cannot_waive_count_order_schema_or_densification_mismatch": true
+  }
+}
