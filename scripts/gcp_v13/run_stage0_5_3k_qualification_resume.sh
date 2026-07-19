@@ -38,6 +38,7 @@ DEPTH_MANIFEST=$RUN_ROOT/05_packets/metric_depth_manifest.json
 DEPTH_MAPPING=$RUN_ROOT/05_packets/depth_mapping.csv
 COMPAT_ROOT=$RUN_ROOT/05_packets/compatibility_v1_1
 FORMAL_ROOT=$RUN_ROOT/06_gcp_evaluation/formal_expected_camera_z
+PARITY_SUMMARY=${PARITY_SUMMARY:-$PARITY_RUN_ROOT/reports/camera_parity_summary.json}
 
 test ! -e "$RUN_ROOT"
 for repo in "$ORCH_ROOT" "$REFERENCE_ROOT" "$CANDIDATE_ROOT" "$ADAPTER_ROOT"; do
@@ -51,7 +52,7 @@ test "$(sha256sum "$GNU_TIME" | awk '{print $1}')" = 7310b9b4c51a8f4d26c1af0da25
 test "$(sha256sum "$VGG16_WEIGHTS" | awk '{print $1}')" = 397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0
 test "$(sha256sum "$LPIPS_WEIGHTS" | awk '{print $1}')" = a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868
 
-"$ENV_ROOT/bin/python" - "$PARITY_RUN_ROOT/reports/camera_parity_summary.json" \
+"$ENV_ROOT/bin/python" - "$PARITY_SUMMARY" \
   "$COMPATIBILITY_RUN_ROOT/preflight/selected_contract.json" > /dev/null <<'PY'
 import json, sys
 parity = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -72,7 +73,7 @@ fi
 mkdir -p "$RUN_ROOT"/{00_preflight,01_micro,02_checkpoints,03_render,04_rgb_metrics,05_packets,06_gcp_evaluation,07_measurement,08_audit,tmp}
 cp "${BASH_SOURCE[0]}" "$RUN_ROOT/08_audit/exact_launcher.sh"
 cp "$SPLIT_MANIFEST" "$RESOURCE_CONTRACT" "$RUN_ROOT/08_audit/"
-cp "$PARITY_RUN_ROOT/reports/camera_parity_summary.json" "$RUN_ROOT/00_preflight/"
+cp "$PARITY_SUMMARY" "$RUN_ROOT/00_preflight/camera_parity_summary.json"
 cp "$COMPATIBILITY_RUN_ROOT/preflight/selected_contract.json" "$RUN_ROOT/00_preflight/"
 printf '%s\n' "$SELECTED_RESIDENCY" > "$RUN_ROOT/00_preflight/original_3dgs_data_residency.txt"
 git -C "$ORCH_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/orchestration_commit.txt"
