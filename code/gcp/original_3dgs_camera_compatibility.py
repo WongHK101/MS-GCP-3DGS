@@ -188,7 +188,9 @@ def audit_all_images(split: dict[str, Any], data_root: Path, output: Path) -> di
 def compare_reports(reference: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
     fields = [
         "image_id", "image_name", "camera_id", "loaded_width", "loaded_height",
-        "channels", "dtype", "tensor_sha256", "R", "T", "FoVx", "FoVy",
+        "channels", "dtype", "device", "tensor_bytes", "tensor_sha256",
+        "loaded_fx", "loaded_fy", "loaded_cx", "loaded_cy",
+        "R", "T", "FoVx", "FoVy",
         "world_view_transform_sha256", "projection_matrix_sha256",
         "full_proj_transform_sha256", "camera_center_sha256",
     ]

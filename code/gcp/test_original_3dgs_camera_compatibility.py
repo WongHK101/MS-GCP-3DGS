@@ -55,7 +55,13 @@ def test_report_comparison_rejects_tensor_or_order_changes() -> None:
         "loaded_height": 8,
         "channels": 3,
         "dtype": "torch.float32",
+        "device": "cuda:0",
+        "tensor_bytes": 960,
         "tensor_sha256": "a",
+        "loaded_fx": "10",
+        "loaded_fy": "10",
+        "loaded_cx": "5",
+        "loaded_cy": "4",
         "R": ["1"],
         "T": ["0"],
         "FoVx": "1",
@@ -69,6 +75,8 @@ def test_report_comparison_rejects_tensor_or_order_changes() -> None:
     assert compare_reports(reference, reference)["status"] == "PASS"
     changed = {"camera_records": [{**row, "tensor_sha256": "x"}], "max_normalized_ray_coordinate_error": 0}
     assert compare_reports(reference, changed)["status"] == "BLOCKER"
+    changed_device = {"camera_records": [{**row, "device": "cpu"}], "max_normalized_ray_coordinate_error": 0}
+    assert compare_reports(reference, changed_device)["status"] == "BLOCKER"
 
 
 def test_micro_argv_normalization_only_masks_declared_option_value() -> None:
