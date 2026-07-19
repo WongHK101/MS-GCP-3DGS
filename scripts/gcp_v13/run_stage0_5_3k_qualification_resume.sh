@@ -79,8 +79,8 @@ printf '%s\n' "$SELECTED_RESIDENCY" > "$RUN_ROOT/00_preflight/original_3dgs_data
 git -C "$ORCH_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/orchestration_commit.txt"
 git -C "$CANDIDATE_ROOT" rev-parse HEAD > "$RUN_ROOT/00_preflight/method_commit.txt"
 git -C "$CANDIDATE_ROOT" rev-parse 'HEAD^{tree}' > "$RUN_ROOT/00_preflight/method_tree.txt"
-git -C "$ORCH_ROOT" bundle create "$RUN_ROOT/08_audit/orchestration.bundle" HEAD
-git -C "$CANDIDATE_ROOT" bundle create "$RUN_ROOT/08_audit/original_3dgs_compatibility.bundle" HEAD
+git -C "$ORCH_ROOT" bundle create "$RUN_ROOT/08_audit/orchestration.bundle" --all
+git -C "$CANDIDATE_ROOT" bundle create "$RUN_ROOT/08_audit/original_3dgs_compatibility.bundle" --all
 
 export CUDA_VISIBLE_DEVICES=0 CUDA_HOME=/usr/local/cuda-12.8
 export PATH="$CUDA_HOME/bin:$ENV_ROOT/bin:$PATH"
