@@ -7,7 +7,11 @@ import json
 import tempfile
 from pathlib import Path
 
+import numpy as np
+
 from gs_gcp_common_measurement import _load_cfg_args, _percentile, inspect_original_3dgs_representation, prepare_original_3dgs_evaluation_model, validate_rgb_image_set
+from gs_gcp_stage0_5 import write_cameras_binary, write_images_binary
+from read_write_model import Camera, Image
 
 
 def test_cfg_args_namespace_parser() -> None:
@@ -26,12 +30,29 @@ def test_evaluation_model_is_read_only_adapter() -> None:
         ply.write_bytes(b"checkpoint")
         (trained / "cfg_args").write_text("Namespace(sh_degree=3, resolution=4)", encoding="utf-8")
         source = root / "source"
-        source.mkdir()
+        sparse = source / "sparse" / "0"
+        sparse.mkdir(parents=True)
+        write_cameras_binary(
+            {1: Camera(id=1, model="PINHOLE", width=100, height=80, params=np.asarray([50.0, 51.0, 50.0, 40.0]))},
+            sparse / "cameras.bin",
+        )
+        write_images_binary(
+            {7: Image(id=7, qvec=np.asarray([1.0, 0.0, 0.0, 0.0]), tvec=np.asarray([1.0, 2.0, 3.0]), camera_id=1, name="image.JPG", xys=np.empty((0, 2)), point3D_ids=np.empty((0,), dtype=np.int64))},
+            sparse / "images.bin",
+        )
         evaluation = root / "evaluation"
         result = prepare_original_3dgs_evaluation_model(trained, evaluation, source)
         assert result["checkpoint_mutated"] is False
         assert (evaluation / "point_cloud" / "iteration_30000" / "point_cloud.ply").read_bytes() == b"checkpoint"
         assert _load_cfg_args(evaluation / "cfg_args")["source_path"] == str(source.resolve())
+        cameras = json.loads((evaluation / "cameras.json").read_text(encoding="utf-8"))
+        assert cameras == [{
+            "id": 0, "img_name": "image", "width": 100, "height": 80,
+            "position": [-1.0, -2.0, -3.0],
+            "rotation": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "fy": 51.0, "fx": 50.0,
+        }]
+        assert result["cameras_json_count"] == 1
 
 
 def test_percentile() -> None:

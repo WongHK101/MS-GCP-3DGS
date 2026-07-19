@@ -19,6 +19,8 @@ from statistics import median
 from types import SimpleNamespace
 from typing import Any, Callable, Iterable
 
+import numpy as np
+
 
 SUITE_ID = "gs_gcp_common_measurement_suite_v1"
 RESOLUTION_PROTOCOL = "graphdeco_quarter_resolution_v1"
@@ -304,6 +306,37 @@ def prepare_original_3dgs_evaluation_model(
     })
     serialized = "Namespace(" + ", ".join(f"{key}={cfg[key]!r}" for key in sorted(cfg)) + ")"
     (evaluation_model / "cfg_args").write_text(serialized, encoding="utf-8", newline="\n")
+    colmap_utils = Path(__file__).resolve().parents[1] / "colmap" / "utils"
+    sys.path.insert(0, str(colmap_utils))
+    from read_write_model import qvec2rotmat, read_cameras_binary, read_images_binary
+
+    sparse = full_source / "sparse" / "0"
+    cameras = read_cameras_binary(sparse / "cameras.bin")
+    images = read_images_binary(sparse / "images.bin")
+    camera_rows = []
+    for index, image in enumerate(sorted(images.values(), key=lambda row: row.name)):
+        camera = cameras[int(image.camera_id)]
+        if camera.model == "PINHOLE":
+            fx, fy = float(camera.params[0]), float(camera.params[1])
+        elif camera.model == "SIMPLE_PINHOLE":
+            fx = fy = float(camera.params[0])
+        else:
+            raise ValueError(f"unsupported evaluation camera model: {camera.model}")
+        rotation_w2c = qvec2rotmat(np.asarray(image.qvec, dtype=np.float64))
+        rotation_c2w = rotation_w2c.T
+        position = -rotation_c2w @ np.asarray(image.tvec, dtype=np.float64)
+        camera_rows.append({
+            "id": index,
+            "img_name": Path(image.name).stem,
+            "width": int(camera.width),
+            "height": int(camera.height),
+            "position": [float(value) for value in position],
+            "rotation": [[float(value) for value in row] for row in rotation_c2w],
+            "fy": fy,
+            "fx": fx,
+        })
+    cameras_json = evaluation_model / "cameras.json"
+    cameras_json.write_text(json.dumps(camera_rows), encoding="utf-8", newline="\n")
     manifest = {
         "schema": "gs_gcp_original_3dgs_read_only_evaluation_model_adapter_v1",
         "trained_model": str(trained_model.resolve()),
@@ -314,7 +347,9 @@ def prepare_original_3dgs_evaluation_model(
         "point_cloud_link_target": str((evaluation_model / "point_cloud").resolve()),
         "point_cloud_materialization": link_mode,
         "checkpoint_mutated": False,
-        "cameras_json_expected_to_be_generated_from_full_source_by_export_adapter": True,
+        "cameras_json_generation": "deterministic_full_colmap_camera_records_without_rgb_access_v1",
+        "cameras_json_count": len(camera_rows),
+        "cameras_json_sha256": sha256_file(cameras_json),
         "cfg_args_sha256": sha256_file(evaluation_model / "cfg_args"),
     }
     write_json(evaluation_model / "EVALUATION_ADAPTER_MANIFEST.json", manifest)
