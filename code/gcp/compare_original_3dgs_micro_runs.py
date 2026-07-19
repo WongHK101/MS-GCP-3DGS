@@ -32,7 +32,21 @@ def _ply_summary(path: Path) -> dict[str, Any]:
     }
 
 
-def compare(direct_root: Path, probed_root: Path, direct_trace: Path, probed_trace: Path) -> dict[str, Any]:
+def _normalized_argv(argv: list[str], allowed_value_options: set[str]) -> list[str]:
+    result = list(argv)
+    for index, value in enumerate(result[:-1]):
+        if value in allowed_value_options:
+            result[index + 1] = f"<{value.lstrip('-')}_compatibility_value>"
+    return result
+
+
+def compare(
+    direct_root: Path,
+    probed_root: Path,
+    direct_trace: Path,
+    probed_trace: Path,
+    allowed_argv_value_options: set[str] | None = None,
+) -> dict[str, Any]:
     direct_payload = json.loads(direct_trace.read_text(encoding="utf-8"))
     probed_payload = json.loads(probed_trace.read_text(encoding="utf-8"))
     checks = []
@@ -41,7 +55,10 @@ def compare(direct_root: Path, probed_root: Path, direct_trace: Path, probed_tra
         checks.append({"name": name, "passed": bool(passed), "evidence": evidence})
 
     check("trace_status", direct_payload.get("status") == probed_payload.get("status") == "PASS", [direct_payload.get("status"), probed_payload.get("status")])
-    check("child_argv", direct_payload.get("official_child_argv") == probed_payload.get("official_child_argv"), None)
+    allowed = allowed_argv_value_options or set()
+    direct_argv = _normalized_argv(direct_payload.get("official_child_argv", []), allowed)
+    probed_argv = _normalized_argv(probed_payload.get("official_child_argv", []), allowed)
+    check("child_argv", direct_argv == probed_argv, {"allowed_value_options": sorted(allowed)})
     check("train_image_order", direct_payload.get("train_image_order") == probed_payload.get("train_image_order"), {
         "direct_length": len(direct_payload.get("train_image_order", [])),
         "probed_length": len(probed_payload.get("train_image_order", [])),
@@ -79,8 +96,12 @@ def main() -> int:
     parser.add_argument("--direct_trace", type=Path, required=True)
     parser.add_argument("--probed_trace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--allowed_argv_value_option", action="append", default=[])
     args = parser.parse_args()
-    result = compare(args.direct_model, args.probed_model, args.direct_trace, args.probed_trace)
+    result = compare(
+        args.direct_model, args.probed_model, args.direct_trace, args.probed_trace,
+        set(args.allowed_argv_value_option),
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2, sort_keys=True))

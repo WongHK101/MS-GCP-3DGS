@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,13 @@ from typing import Any
 import numpy as np
 import torch
 from PIL import Image
+
+from gs_gcp_stage0_5 import (
+    read_cameras_binary,
+    read_images_binary,
+    write_cameras_binary,
+    write_images_binary,
+)
 
 
 THREE_K = "gcp_3000_20260602"
@@ -208,6 +216,51 @@ def compare_reports(reference: dict[str, Any], candidate: dict[str, Any]) -> dic
     }
 
 
+def materialize_parity_subset(samples: dict[str, Any], scene: str, source_root: Path, output_root: Path) -> dict[str, Any]:
+    if output_root.exists():
+        raise FileExistsError(output_root)
+    scene_row = next((row for row in samples["scenes"] if row["scene"] == scene), None)
+    if scene_row is None:
+        raise ValueError(f"scene missing from parity sample manifest: {scene}")
+    sparse = source_root / "sparse" / "0"
+    cameras = read_cameras_binary(sparse / "cameras.bin")
+    images = read_images_binary(sparse / "images.bin")
+    by_name = {row.name: row for row in images.values()}
+    selected_images = {}
+    camera_ids = set()
+    image_root = output_root / "images"
+    model_root = output_root / "sparse" / "0"
+    image_root.mkdir(parents=True)
+    model_root.mkdir(parents=True)
+    for row in scene_row["images"]:
+        image = by_name.get(row["image_name"])
+        if image is None or int(image.id) != int(row["image_id"]):
+            raise ValueError(f"COLMAP image identity mismatch: {row['image_name']}")
+        source_image = source_root / "images" / row["image_name"]
+        if sha256_file(source_image) != row["image_sha256"]:
+            raise ValueError(f"source image SHA mismatch: {row['image_name']}")
+        os.symlink(source_image, image_root / row["image_name"])
+        selected_images[int(image.id)] = image
+        camera_ids.add(int(image.camera_id))
+    selected_cameras = {camera_id: cameras[camera_id] for camera_id in sorted(camera_ids)}
+    write_cameras_binary(selected_cameras, model_root / "cameras.bin")
+    write_images_binary(selected_images, model_root / "images.bin")
+    shutil.copy2(sparse / "points3D.ply", model_root / "points3D.ply")
+    payload = {
+        "schema": "gs_gcp_original_3dgs_camera_parity_subset_v1",
+        "scene": scene,
+        "sample_manifest_sha256": samples["manifest_sha256"],
+        "image_count": len(selected_images),
+        "image_names": [row["image_name"] for row in scene_row["images"]],
+        "cameras_bin_sha256": sha256_file(model_root / "cameras.bin"),
+        "images_bin_sha256": sha256_file(model_root / "images.bin"),
+        "points3d_tracks_present": False,
+    }
+    payload["manifest_sha256"] = hashlib.sha256(canonical_bytes(payload)).hexdigest()
+    write_json(output_root.parent / "CAMERA_SUBSET_MANIFEST.json", payload)
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -223,6 +276,11 @@ def main() -> int:
     compare.add_argument("--reference", type=Path, required=True)
     compare.add_argument("--candidate", type=Path, required=True)
     compare.add_argument("--output", type=Path, required=True)
+    materialize = subparsers.add_parser("materialize-parity-subset")
+    materialize.add_argument("--sample_manifest", type=Path, required=True)
+    materialize.add_argument("--scene", required=True)
+    materialize.add_argument("--source_root", type=Path, required=True)
+    materialize.add_argument("--output_root", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "freeze-samples":
         split = json.loads(args.split_manifest.read_text(encoding="utf-8"))
@@ -231,6 +289,11 @@ def main() -> int:
     if args.command == "audit-all-images":
         split = json.loads(args.split_manifest.read_text(encoding="utf-8"))
         audit_all_images(split, args.data_root.resolve(), args.output)
+        return 0
+    if args.command == "materialize-parity-subset":
+        samples = json.loads(args.sample_manifest.read_text(encoding="utf-8"))
+        result = materialize_parity_subset(samples, args.scene, args.source_root.resolve(), args.output_root.resolve())
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     result = compare_reports(
         json.loads(args.reference.read_text(encoding="utf-8")),

@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -32,7 +34,19 @@ def main() -> int:
         "official_child_argv": official_args,
         "train_image_order": [],
         "iterations": [],
+        "seed": 0,
+        "method_commit": subprocess.check_output(["git", "-C", str(method_root), "rev-parse", "HEAD"], text=True).strip(),
+        "method_tree": subprocess.check_output(["git", "-C", str(method_root), "rev-parse", "HEAD^{tree}"], text=True).strip(),
+        "python_version": sys.version,
+        "torch_version": torch.__version__,
+        "torch_cuda_version": torch.version.cuda,
     }
+    source_index = official_args.index("--source_path") + 1
+    source_root = Path(official_args[source_index]).resolve()
+    subset_manifest = source_root.parent / "CAMERA_SUBSET_MANIFEST.json"
+    if not subset_manifest.is_file():
+        raise FileNotFoundError(subset_manifest)
+    trace["camera_subset_manifest_sha256"] = hashlib.sha256(subset_manifest.read_bytes()).hexdigest()
     original_render = official.render
     original_report = official.training_report
 

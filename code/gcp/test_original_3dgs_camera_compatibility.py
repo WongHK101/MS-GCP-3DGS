@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from compare_original_3dgs_micro_runs import _normalized_argv
 from original_3dgs_camera_compatibility import compare_reports, freeze_samples
 
 
@@ -70,10 +71,20 @@ def test_report_comparison_rejects_tensor_or_order_changes() -> None:
     assert compare_reports(reference, changed)["status"] == "BLOCKER"
 
 
+def test_micro_argv_normalization_only_masks_declared_option_value() -> None:
+    argv = ["--source_path", "/data", "--data_device", "cuda", "--iterations", "100"]
+    assert _normalized_argv(argv, {"--data_device"}) == [
+        "--source_path", "/data", "--data_device", "<data_device_compatibility_value>",
+        "--iterations", "100",
+    ]
+    assert _normalized_argv(argv, set()) == argv
+
+
 TESTS = [
     test_freeze_samples_is_deterministic_and_preserves_all_3k,
     test_nonmodal_dimensions_are_always_selected,
     test_report_comparison_rejects_tensor_or_order_changes,
+    test_micro_argv_normalization_only_masks_declared_option_value,
 ]
 
 
