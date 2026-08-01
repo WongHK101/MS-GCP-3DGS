@@ -145,15 +145,19 @@ def verify_command(args: argparse.Namespace) -> int:
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if report["status"] == "pass":
         save_settings({**settings, "image_root": str(image_root)})
-        messagebox.showinfo(
-            "校验通过",
-            f"已校验 {report['checked_pass_count']} 张任务 RGB 图像。\n报告：{report_path}",
-        )
+        if not args.no_gui:
+            messagebox.showinfo(
+                "校验通过",
+                f"已校验 {report['checked_pass_count']} 张任务 RGB 图像。\n报告：{report_path}",
+            )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
-    messagebox.showerror(
-        "校验失败",
-        f"发现 {report['failure_count']} 个问题。请查看：\n{report_path}",
-    )
+    if not args.no_gui:
+        messagebox.showerror(
+            "校验失败",
+            f"发现 {report['failure_count']} 个问题。请查看：\n{report_path}",
+        )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
     return 2
 
 
@@ -328,6 +332,7 @@ def main() -> int:
     verify = subparsers.add_parser("verify")
     verify.add_argument("--image_root", default="")
     verify.add_argument("--skip_hashes", action="store_true")
+    verify.add_argument("--no_gui", action="store_true")
     subparsers.add_parser("launch")
     subparsers.add_parser("pack")
     args = parser.parse_args()
