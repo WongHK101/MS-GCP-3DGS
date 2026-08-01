@@ -670,7 +670,10 @@ def main() -> int:
         for point in points[benchmark_scene]:
             pool = candidate_pool(cameras, point)
             anchor = KNOWN_VISIBLE_ANCHORS.get((scene, point.name))
-            selected = select_diverse(pool, TARGET_CANDIDATES_PER_POINT, anchor)
+            inside_pool = [row for row in pool if bool(row["inside_image"])]
+            anchor_is_inside = not anchor or any(row["camera"].image_name == anchor for row in inside_pool)
+            selection_pool = inside_pool if len(inside_pool) >= TARGET_CANDIDATES_PER_POINT and anchor_is_inside else pool
+            selected = select_diverse(selection_pool, TARGET_CANDIDATES_PER_POINT, anchor)
             if len(selected) < 8:
                 raise RuntimeError(f"{scene}/{point.name}: only {len(selected)} broad candidates")
             selected_paths = {row["camera"].image_path for row in selected}
@@ -688,7 +691,9 @@ def main() -> int:
                     "point_name": point.name,
                     "point_role": point.role,
                     "broad_candidate_count": len(pool),
+                    "in_bounds_candidate_count": len(inside_pool),
                     "selected_candidate_count": len(records),
+                    "selected_from_in_bounds_only": str(selection_pool is inside_pool).lower(),
                     "selected_unique_strip_count": len({row["flight_strip_id"] for row in records}),
                     "selected_azimuth_bin_count": len({row["azimuth_bin_45deg"] for row in records}),
                     "known_visible_anchor": anchor or "",
