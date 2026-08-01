@@ -18,10 +18,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 ANNOTATION_FIELDS = [
     "schema",
+    "task_id",
     "scene",
     "point_name",
     "image_name",
     "image_path",
+    "source_image_sha256",
+    "source_image_width",
+    "source_image_height",
+    "coordinate_domain",
+    "coordinate_convention",
     "rank_for_gcp",
     "candidate_score",
     "projected_x",
@@ -337,6 +343,7 @@ class Annotator:
         image_name = cand.get("image_name") or raw.name
         if self.image_root:
             candidates = [
+                self.image_root / raw,
                 self.image_root / image_name,
                 self.image_root / raw.name,
                 self.image_root / cand.get("scene", "") / image_name,
@@ -490,7 +497,17 @@ class Annotator:
             messagebox.showerror("Missing image", f"Image does not exist:\n{image_path}\n\nUse Image root to point to the scene folder.")
             img = Image.new("RGB", (self.crop_size, self.crop_size), "black")
         else:
-            img = Image.open(image_path).convert("RGB")
+            with Image.open(image_path) as source:
+                img = source.convert("RGB")
+            expected_width = int(float(cand.get("source_image_width") or cand.get("image_width") or img.width))
+            expected_height = int(float(cand.get("source_image_height") or cand.get("image_height") or img.height))
+            if img.size != (expected_width, expected_height):
+                messagebox.showerror(
+                    "Image dimension mismatch",
+                    f"Candidate expects {expected_width}x{expected_height}, but decoded image is "
+                    f"{img.width}x{img.height}:\n{image_path}",
+                )
+                raise RuntimeError(f"Image dimension mismatch for {image_path}")
         px = float(cand["pixel_x"])
         py = float(cand["pixel_y"])
         self.current_search_radius_px = candidate_search_radius(cand)
@@ -737,11 +754,17 @@ class Annotator:
     def base_annotation(self, cand: Dict[str, str]) -> Dict[str, str]:
         image_path = self.resolve_image_path(cand)
         return {
-            "schema": "m3m_gcp_manual_image_observation_v1",
+            "schema": cand.get("annotation_schema") or "m3m_gcp_manual_image_observation_v1",
+            "task_id": cand.get("task_id", ""),
             "scene": cand["scene"],
             "point_name": cand["point_name"],
             "image_name": cand["image_name"],
             "image_path": str(image_path),
+            "source_image_sha256": cand.get("source_image_sha256", ""),
+            "source_image_width": cand.get("source_image_width") or cand.get("image_width", ""),
+            "source_image_height": cand.get("source_image_height") or cand.get("image_height", ""),
+            "coordinate_domain": cand.get("coordinate_domain", ""),
+            "coordinate_convention": cand.get("coordinate_convention", ""),
             "rank_for_gcp": cand.get("rank_for_gcp", ""),
             "candidate_score": cand.get("center_score", ""),
             "projected_x": f"{float(cand['pixel_x']):.3f}",
@@ -759,6 +782,16 @@ class Annotator:
     def mark(self, visible: str, quality: str, confidence: str) -> None:
         cand = self.candidates[self.idx]
         row = self.annotations.get(self.key(cand), self.base_annotation(cand))
+        if visible == "1" and (not row.get("manual_x") or not row.get("manual_y")):
+            messagebox.showwarning(
+                "Click required",
+                "Good/Ambiguous requires a manual click on the true named GCP. "
+                "Click the target first, then choose the status.",
+            )
+            return
+        if visible == "0":
+            row["manual_x"] = ""
+            row["manual_y"] = ""
         row["visible"] = visible
         row["quality"] = quality
         row["confidence"] = confidence
