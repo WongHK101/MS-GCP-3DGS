@@ -42,7 +42,14 @@ def camera(name: str, order: int, strip: str, e: float = 0.0, n: float = 0.0) ->
 class TgsOutsourcingTests(unittest.TestCase):
     def test_roll_180_projection_orientation(self) -> None:
         cam = camera("0001.jpg", 1, "strip_001")
-        point = Point("P", e=1.0, n=2.0, h_ellipsoid=0.0, role="control")
+        point = Point(
+            "P",
+            e=1.0,
+            n=2.0,
+            h_ellipsoid=0.0,
+            h_ellipsoid_source="test",
+            role="control",
+        )
         result = project(cam, point)
         self.assertIsNotNone(result)
         assert result is not None

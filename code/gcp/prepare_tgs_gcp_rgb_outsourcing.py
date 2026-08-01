@@ -67,6 +67,7 @@ CANDIDATE_FIELDS = [
     "dataset_scene_dir",
     "point_name",
     "point_role",
+    "point_ellipsoid_height_source",
     "image_name",
     "image_path",
     "rank_for_gcp",
@@ -114,6 +115,7 @@ class Point:
     e: float
     n: float
     h_ellipsoid: float
+    h_ellipsoid_source: str
     role: str
 
 
@@ -393,8 +395,35 @@ def select_diverse(pool: list[dict[str, Any]], count: int, mandatory_image: str 
     return selected
 
 
+def corrected_epoch_ellipsoid_heights(point_table: Path) -> dict[str, tuple[float, float, float, float]]:
+    authoritative_dir = point_table.parent / "rtk_authoritative"
+    candidates = sorted(authoritative_dir.glob("*\u6539\u6b63.csv"))
+    if len(candidates) != 1:
+        raise RuntimeError(f"Expected one authoritative corrected epoch CSV, found {candidates}")
+    values: dict[str, list[tuple[float, float, float, float]]] = {}
+    with candidates[0].open("r", encoding="gb18030", newline="") as handle:
+        for row in csv.DictReader(handle):
+            epoch_name = row["\u70b9\u540d"]
+            if "_" not in epoch_name:
+                continue
+            point_name = epoch_name.rsplit("_", 1)[0]
+            values.setdefault(point_name, []).append(
+                (
+                    float(row["\u4e1c\u5750\u6807"]),
+                    float(row["\u5317\u5750\u6807"]),
+                    float(row["\u9ad8\u7a0b"]),
+                    float(row["\u692d\u7403\u9ad8"]),
+                )
+            )
+    return {
+        point_name: tuple(float(value) for value in np.mean(np.asarray(rows, dtype=np.float64), axis=0))
+        for point_name, rows in values.items()
+    }
+
+
 def load_points(point_table: Path, split_csv: Path) -> dict[str, list[Point]]:
     coordinates = {row["point_name"]: row for row in read_csv(point_table)}
+    corrected_epochs = corrected_epoch_ellipsoid_heights(point_table)
     output: dict[str, list[Point]] = {scene: [] for scene in SCENES}
     seen: set[tuple[str, str]] = set()
     for row in read_csv(split_csv):
@@ -403,12 +432,29 @@ def load_points(point_table: Path, split_csv: Path) -> dict[str, list[Point]]:
             raise RuntimeError(f"Duplicate scene-point split row: {key}")
         seen.add(key)
         coord = coordinates[row["point_name"]]
+        ellipsoid_text = coord["wgs84_ellipsoid_height_m"].strip()
+        if ellipsoid_text:
+            ellipsoid_height = float(ellipsoid_text)
+            ellipsoid_source = "frozen_v1_3_0_point_table"
+        else:
+            if row["point_name"] not in corrected_epochs:
+                raise RuntimeError(f"{row['point_name']}: missing ellipsoid height and corrected epoch fallback")
+            epoch_e, epoch_n, epoch_normal_h, ellipsoid_height = corrected_epochs[row["point_name"]]
+            frozen = (
+                float(coord["cgcs2000_gk_cm108_e_m"]),
+                float(coord["cgcs2000_gk_cm108_n_m"]),
+                float(coord["cgcs2000_normal_height_m"]),
+            )
+            if math.dist((epoch_e, epoch_n, epoch_normal_h), frozen) > 0.05:
+                raise RuntimeError(f"{row['point_name']}: corrected epoch mean does not match frozen point table")
+            ellipsoid_source = "authoritative_corrected_epoch_mean_fallback"
         output[row["scene"]].append(
             Point(
                 name=row["point_name"],
                 e=float(coord["cgcs2000_gk_cm108_e_m"]),
                 n=float(coord["cgcs2000_gk_cm108_n_m"]),
-                h_ellipsoid=float(coord["wgs84_ellipsoid_height_m"]),
+                h_ellipsoid=ellipsoid_height,
+                h_ellipsoid_source=ellipsoid_source,
                 role=row["role"],
             )
         )
@@ -437,6 +483,7 @@ def candidate_record(
         "dataset_scene_dir": camera.dataset_scene_dir,
         "point_name": point.name,
         "point_role": point.role,
+        "point_ellipsoid_height_source": point.h_ellipsoid_source,
         "image_name": camera.image_name,
         "image_path": relative_path,
         "rank_for_gcp": rank,
