@@ -26,6 +26,7 @@ RUN_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/stage0-5/$RUN_ID
 SPLIT_MANIFEST=$ORCH_ROOT/configs/gs_gcp_rgb_holdout_split_manifest_v1.json
 RESOURCE_CONTRACT=$ORCH_ROOT/configs/gs_gcp_resource_probe_contract_v2.json
 GNU_TIME=/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time
+STRACE=/root/autodl-tmp/tools/gs-gcp-v13/strace/root/usr/bin/strace
 VGG16_WEIGHTS=/root/.cache/torch/hub/checkpoints/vgg16-397923af.pth
 LPIPS_WEIGHTS=/root/.cache/torch/hub/checkpoints/vgg.pth
 ASSET_ROOT=$RUN_ROOT/assets/$SCENE
@@ -49,6 +50,7 @@ test "$(git -C "$CANDIDATE_ROOT" rev-parse HEAD)" = "$CANDIDATE_COMMIT"
 test "$(git -C "$ADAPTER_ROOT" rev-parse HEAD)" = "$ADAPTER_COMMIT"
 test "$(git -C "$ADAPTER_ROOT/submodules/diff-gaussian-rasterization" rev-parse HEAD)" = "$RASTERIZER_COMMIT"
 test "$(sha256sum "$GNU_TIME" | awk '{print $1}')" = 7310b9b4c51a8f4d26c1af0da250f03a49ec8a8141033123e79196ad18f6c81b
+test "$(sha256sum "$STRACE" | awk '{print $1}')" = 38a5c75cb29dd85ddd7780d54f5bf595554d7a1b5c42524b23065f5dc4c4b01d
 test "$(sha256sum "$VGG16_WEIGHTS" | awk '{print $1}')" = 397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0
 test "$(sha256sum "$LPIPS_WEIGHTS" | awk '{print $1}')" = a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868
 
@@ -73,6 +75,8 @@ fi
 mkdir -p "$RUN_ROOT"/{00_preflight,01_micro,02_checkpoints,03_render,04_rgb_metrics,05_packets,06_gcp_evaluation,07_measurement,08_audit,tmp}
 cp "${BASH_SOURCE[0]}" "$RUN_ROOT/08_audit/exact_launcher.sh"
 cp "$SPLIT_MANIFEST" "$RESOURCE_CONTRACT" "$RUN_ROOT/08_audit/"
+cp /root/autodl-tmp/tools/gs-gcp-v13/strace/version.txt \
+  /root/autodl-tmp/tools/gs-gcp-v13/strace/SHA256SUMS "$RUN_ROOT/08_audit/"
 cp "$PARITY_SUMMARY" "$RUN_ROOT/00_preflight/camera_parity_summary.json"
 cp "$COMPATIBILITY_RUN_ROOT/preflight/selected_contract.json" "$RUN_ROOT/00_preflight/"
 printf '%s\n' "$SELECTED_RESIDENCY" > "$RUN_ROOT/00_preflight/original_3dgs_data_residency.txt"
@@ -116,7 +120,7 @@ JSON
   --split_manifest "$SPLIT_MANIFEST" --scene "$SCENE" --source_root "$SOURCE_ROOT" \
   --output_root "$RUN_ROOT/03_render/benchmark_gt" > "$RUN_ROOT/00_preflight/generate_gt.log"
 
-strace -f -e trace=open,openat,openat2 -o "$RUN_ROOT/00_preflight/camera_access.strace" \
+"$STRACE" -f -e trace=open,openat,openat2 -o "$RUN_ROOT/00_preflight/camera_access.strace" \
   "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/original_3dgs_camera_load_preflight.py" \
     --method_root "$CANDIDATE_ROOT" --source_root "$TRAIN_ROOT" \
     --report "$RUN_ROOT/00_preflight/3k_camera_report.json" --resolution 4 \
