@@ -60,6 +60,8 @@ OBLIQUE_TARGET_PER_POINT = 8
 TOTAL_TARGET_PER_POINT = NADIR_TARGET_PER_POINT + OBLIQUE_TARGET_PER_POINT
 NADIR_PITCH_DEG = -90.0
 PITCH_TOLERANCE_DEG = 1e-6
+MIN_OBLIQUE_AZIMUTH_BINS = 6
+MIN_TOTAL_UNIQUE_STRIPS = 6
 FOCAL_35MM_SENSOR_WIDTH_MM = 36.0
 
 CANDIDATE_FIELDS = [
@@ -478,6 +480,16 @@ def select_stratified_candidates(
             raise AssertionError(
                 f"{label} azimuth coverage mismatch: {len(selected_bins)} != {expected_bins}"
             )
+    oblique_bins = {int(row["azimuth_bin_45deg"]) for row in oblique}
+    if len(oblique_bins) < MIN_OBLIQUE_AZIMUTH_BINS:
+        raise RuntimeError(
+            f"Only {len(oblique_bins)} oblique azimuth bins; require {MIN_OBLIQUE_AZIMUTH_BINS}"
+        )
+    selected_strips = {row["camera"].strip_id for row in selected}
+    if len(selected_strips) < MIN_TOTAL_UNIQUE_STRIPS:
+        raise RuntimeError(
+            f"Only {len(selected_strips)} unique strips; require {MIN_TOTAL_UNIQUE_STRIPS}"
+        )
     return selected
 
 
@@ -862,6 +874,8 @@ def main() -> int:
             "candidate_limit_per_point": TOTAL_TARGET_PER_POINT,
             "nadir_target_per_point": NADIR_TARGET_PER_POINT,
             "oblique_target_per_point": OBLIQUE_TARGET_PER_POINT,
+            "minimum_oblique_azimuth_bins_per_point": MIN_OBLIQUE_AZIMUTH_BINS,
+            "minimum_unique_strips_per_point": MIN_TOTAL_UNIQUE_STRIPS,
             "strict_in_bounds_required": True,
             "reserve_pool_packaged": False,
             "search_radius_px": SEARCH_RADIUS_PX,

@@ -80,15 +80,15 @@ class TgsOutsourcingTests(unittest.TestCase):
                     "center_score": 1.0 - index / 100.0,
                     "edge_margin_px": 500.0,
                     "ground_distance_m": float(index),
-                    "azimuth_bin_45deg": index % 4,
+                    "azimuth_bin_45deg": index % 8,
                 }
             )
         selected = select_stratified_candidates(pool, "0007.jpg")
         self.assertEqual(len(selected), NADIR_TARGET_PER_POINT + OBLIQUE_TARGET_PER_POINT)
         self.assertEqual(sum(row["camera"].gimbal_pitch_deg == -90.0 for row in selected), NADIR_TARGET_PER_POINT)
         self.assertEqual(sum(row["camera"].gimbal_pitch_deg != -90.0 for row in selected), OBLIQUE_TARGET_PER_POINT)
-        self.assertEqual(len({row["azimuth_bin_45deg"] for row in selected[:NADIR_TARGET_PER_POINT]}), 4)
-        self.assertEqual(len({row["azimuth_bin_45deg"] for row in selected[NADIR_TARGET_PER_POINT:]}), 4)
+        self.assertEqual(len({row["azimuth_bin_45deg"] for row in selected[:NADIR_TARGET_PER_POINT]}), 8)
+        self.assertEqual(len({row["azimuth_bin_45deg"] for row in selected[NADIR_TARGET_PER_POINT:]}), 8)
         self.assertIn("0007.jpg", {row["camera"].image_name for row in selected})
 
     def test_center_priority_applies_within_same_strip_azimuth_group(self) -> None:
