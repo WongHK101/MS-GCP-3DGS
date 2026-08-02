@@ -101,8 +101,13 @@ mkdir -p "$TORCH_EXTENSIONS_DIR"
   > "$RUN_ROOT/00_preflight/real_release_v1_3_tests.txt" 2>&1
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/test_gcp_evaluator_protocol.py" \
   > "$RUN_ROOT/00_preflight/evaluator_protocol_tests.txt" 2>&1
-"$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/test_gcp_packet_camera_compatibility.py" \
-  > "$RUN_ROOT/00_preflight/packet_camera_compatibility_tests.txt" 2>&1
+cat > "$RUN_ROOT/00_preflight/legacy_v1_2_2_packet_compatibility_test_scope.json" <<'JSON'
+{
+  "decision": "not_run_not_part_of_v1_3_stage0_5",
+  "reason": "The legacy test fixture is bound to withdrawn v1.2.2/R8 artifacts and Windows-only source paths. The v1.3.0 packet-camera contract is validated against the newly exported formal packet set by the runtime wrapper and release-mode evaluator gates later in this launcher.",
+  "test": "test_gcp_packet_camera_compatibility.py"
+}
+JSON
 
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/gs_gcp_stage0_5.py" materialize-subsets \
   --split_manifest "$SPLIT_MANIFEST" --scene "$SCENE" --source_root "$SOURCE_ROOT" \
