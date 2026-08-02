@@ -2,10 +2,13 @@
   "schema": "gs_gcp_repository_promotion_status_v1",
   "local_repository_role": "independent_gs_gcp_benchmark_orchestration_and_evaluator",
   "umgs_training_code_included": false,
-  "current_github_remote": "https://github.com/WongHK101/MS-GCP-3DGS.git",
+  "gaussian_method_training_code_included": false,
+  "current_github_remote": "https://github.com/WongHK101/GS-GCP-Benchmark.git",
   "desired_github_repository_name": "GS-GCP-Benchmark",
-  "promotion_status": "pending_remote_repository_rename",
+  "promotion_status": "complete",
+  "promotion_completed_date": "2026-08-02",
   "training_blocking": false,
-  "publication_blocking": true,
-  "reason": "local benchmark repository is independent, but the GitHub repository name still carries the retired MS prefix"
+  "publication_blocking": false,
+  "code_boundary_audit": "docs/GS_GCP_REPOSITORY_CODE_BOUNDARY_AUDIT_20260802.md",
+  "reason": "the public repository now uses the GS-GCP Benchmark name and contains benchmark, evaluator, orchestration, and evaluation-only adapter code without vendored Gaussian method training implementations"
 }

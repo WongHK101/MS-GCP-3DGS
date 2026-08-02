@@ -150,6 +150,11 @@ def validate_stage0(
     promotion_contract_valid = (
         promotion.get("schema") == "gs_gcp_repository_promotion_status_v1"
         and promotion.get("umgs_training_code_included") is False
+        and promotion.get("gaussian_method_training_code_included") is False
+        and promotion.get("current_github_remote")
+        == "https://github.com/WongHK101/GS-GCP-Benchmark.git"
+        and promotion.get("promotion_status") == "complete"
+        and promotion.get("publication_blocking") is False
     )
     components["repository_promotion"] = _component(
         promotion_contract_valid,

@@ -96,6 +96,23 @@ class Stage0ReadinessTests(unittest.TestCase):
         self.assertEqual(result["components"]["archive_mirror"]["source_server"], "AutoDL-901")
         self.assertEqual(result["components"]["archive_mirror"]["target_server"], "AutoDL-740")
 
+    def test_repository_rename_and_code_boundary_are_frozen(self) -> None:
+        result = validate_stage0(ROOT, None, "3dgs_original")
+        promotion = json.loads(
+            (ROOT / "configs/gs_gcp_repository_promotion_status_v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertTrue(result["components"]["repository_promotion"]["passed"])
+        self.assertTrue(result["publication_repository_ready"])
+        self.assertEqual(
+            promotion["current_github_remote"],
+            "https://github.com/WongHK101/GS-GCP-Benchmark.git",
+        )
+        self.assertFalse(promotion["umgs_training_code_included"])
+        self.assertFalse(promotion["gaussian_method_training_code_included"])
+        self.assertFalse(promotion["publication_blocking"])
+
     def test_runtime_config_does_not_authorize_training_without_evidence(self) -> None:
         runtime = json.loads(
             (ROOT / "configs/gs_gcp_autodl901_runtime_status_v1.json").read_text(encoding="utf-8")
