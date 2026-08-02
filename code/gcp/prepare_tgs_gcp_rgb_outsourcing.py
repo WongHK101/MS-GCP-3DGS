@@ -3,9 +3,10 @@
 
 The task generator is intentionally independent from any Gaussian model,
 metric, or residual.  It uses surveyed GCP coordinates and DJI RGB EXIF pose
-metadata for broad candidate discovery, then selects camera/strip-diverse
-views.  The predicted pixel is only a search hint in the raw decoded JPEG
-pixel matrix.
+metadata for broad candidate discovery. Every image whose pixel bounds
+intersect the frozen projection-uncertainty region is included without a
+per-point cap. The predicted pixel is only a search hint in the raw decoded
+JPEG pixel matrix.
 """
 
 from __future__ import annotations
@@ -30,32 +31,30 @@ from build_gcp_projection_candidates import latlon_to_cgcs2000_gk_cm108
 
 
 SCENES = {
-    "gcp_3000_20260602": ("InternalRoad", "GCP-3K"),
-    "gcp_5000_20260602": ("Garden", "GCP-5K"),
-    "gcp_10000_20260610": ("Plaza", "GCP-10K"),
-    "gcp_20000_20260602": ("Urban20K", "GCP-20K"),
-    "gcp_50000_20260610": ("Urban50K", "GCP-50K"),
-    "gcp_100000_20260610": ("Urban100K", "GCP-100K"),
+    "gcp_3000_20260602": "GCP-3K",
+    "gcp_5000_20260602": "GCP-5K",
+    "gcp_10000_20260610": "GCP-10K",
+    "gcp_20000_20260602": "GCP-20K",
+    "gcp_50000_20260610": "GCP-50K",
+    "gcp_100000_20260610": "GCP-100K",
 }
 
 KNOWN_VISIBLE_ANCHORS = {
-    ("InternalRoad", "NC94"): "0085.jpg",
-    ("Garden", "G04"): "0102.jpg",
-    ("Plaza", "G25"): "0220.jpg",
-    ("Urban20K", "G31"): "0187.jpg",
-    ("Urban50K", "G39"): "0068.jpg",
-    ("Urban100K", "G42"): "0103.jpg",
+    ("GCP-3K", "NC94"): "0085.jpg",
+    ("GCP-5K", "G04"): "0102.jpg",
+    ("GCP-10K", "G25"): "0220.jpg",
+    ("GCP-20K", "G31"): "0187.jpg",
+    ("GCP-50K", "G39"): "0068.jpg",
+    ("GCP-100K", "G42"): "0103.jpg",
 }
 
-TASK_SCHEMA = "gs_gcp_tgs_rgb_outsourcing_candidate_v1"
+TASK_SCHEMA = "gs_gcp_tgs_rgb_outsourcing_candidate_v2"
 ANNOTATION_SCHEMA = "gs_gcp_tgs_rgb_manual_image_observation_v1"
 COORDINATE_DOMAIN = "raw_dji_decoded_pixel_matrix_ignore_exif_orientation"
 COORDINATE_CONVENTION = "raw_image_zero_based_pixel_centers"
 PROJECTION_METHOD = "dji_exif_gimbal_raw_rgb_coarse_projection_v2"
-SELECTION_METHOD = "broad_projection_strip_azimuth_round_robin_v1"
-TARGET_CANDIDATES_PER_POINT = 20
+SELECTION_METHOD = "all_projection_uncertainty_intersections_v1"
 SEARCH_RADIUS_PX = 900.0
-EXPANDED_IMAGE_MARGIN_PX = 900.0
 FOCAL_35MM_SENSOR_WIDTH_MM = 36.0
 
 CANDIDATE_FIELDS = [
@@ -81,6 +80,7 @@ CANDIDATE_FIELDS = [
     "projection_uncertainty_px",
     "search_radius_px",
     "inside_image",
+    "distance_to_image_bounds_px",
     "edge_margin_px",
     "center_score",
     "ground_distance_m",
@@ -326,6 +326,12 @@ def project(camera: Camera, point: Point) -> dict[str, float | bool] | None:
     }
 
 
+def distance_to_image_bounds_px(u: float, v: float, width: int, height: int) -> float:
+    closest_u = min(max(u, 0.0), float(width))
+    closest_v = min(max(v, 0.0), float(height))
+    return math.hypot(u - closest_u, v - closest_v)
+
+
 def candidate_pool(camera_rows: list[Camera], point: Point) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     for camera in camera_rows:
@@ -333,11 +339,8 @@ def candidate_pool(camera_rows: list[Camera], point: Point) -> list[dict[str, An
         if result is None:
             continue
         u, v = float(result["u"]), float(result["v"])
-        broad_inside = (
-            -EXPANDED_IMAGE_MARGIN_PX <= u < camera.width + EXPANDED_IMAGE_MARGIN_PX
-            and -EXPANDED_IMAGE_MARGIN_PX <= v < camera.height + EXPANDED_IMAGE_MARGIN_PX
-        )
-        if not broad_inside:
+        distance_to_bounds = distance_to_image_bounds_px(u, v, camera.width, camera.height)
+        if distance_to_bounds > SEARCH_RADIUS_PX:
             continue
         output.append(
             {
@@ -345,6 +348,7 @@ def candidate_pool(camera_rows: list[Camera], point: Point) -> list[dict[str, An
                 "pixel_x": u,
                 "pixel_y": v,
                 "inside_image": bool(result["inside"]),
+                "distance_to_image_bounds_px": distance_to_bounds,
                 "edge_margin_px": float(result["edge"]),
                 "center_score": float(result["center_score"]),
                 "ground_distance_m": float(result["ground_distance"]),
@@ -356,43 +360,20 @@ def candidate_pool(camera_rows: list[Camera], point: Point) -> list[dict[str, An
     return output
 
 
-def select_diverse(pool: list[dict[str, Any]], count: int, mandatory_image: str | None) -> list[dict[str, Any]]:
-    by_name = {row["camera"].image_name: row for row in pool}
-    selected: list[dict[str, Any]] = []
-    if mandatory_image:
-        if mandatory_image not in by_name:
-            raise RuntimeError(f"Known-visible anchor {mandatory_image} was not recalled by broad candidate discovery")
-        selected.append(by_name.pop(mandatory_image))
-    groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
-    for row in by_name.values():
-        key = (row["camera"].strip_id, int(row["azimuth_bin_45deg"]))
-        groups.setdefault(key, []).append(row)
-    for rows in groups.values():
-        rows.sort(
-            key=lambda row: (
-                not bool(row["inside_image"]),
-                -float(row["center_score"]),
-                -float(row["edge_margin_px"]),
-                float(row["ground_distance_m"]),
-                row["camera"].image_name,
-            )
-        )
-    group_counts: dict[tuple[str, int], int] = {key: 0 for key in groups}
-    while len(selected) < count and any(groups.values()):
-        available_keys = [key for key, rows in groups.items() if rows]
-        key = min(
-            available_keys,
-            key=lambda item: (
-                group_counts[item],
-                not bool(groups[item][0]["inside_image"]),
-                -float(groups[item][0]["center_score"]),
-                item,
-            ),
-        )
-        row = groups[key].pop(0)
-        selected.append(row)
-        group_counts[key] += 1
-    return selected
+def order_all_candidates(pool: list[dict[str, Any]], mandatory_image: str | None) -> list[dict[str, Any]]:
+    names = [row["camera"].image_name for row in pool]
+    if len(names) != len(set(names)):
+        raise RuntimeError("Candidate pool contains duplicate image names")
+    if mandatory_image and mandatory_image not in set(names):
+        raise RuntimeError(f"Known-visible anchor {mandatory_image} was not recalled by full candidate discovery")
+    return sorted(
+        pool,
+        key=lambda row: (
+            not bool(row["inside_image"]),
+            row["camera"].capture_order,
+            row["camera"].image_name,
+        ),
+    )
 
 
 def corrected_epoch_ellipsoid_heights(point_table: Path) -> dict[str, tuple[float, float, float, float]]:
@@ -487,7 +468,11 @@ def candidate_record(
         "image_name": camera.image_name,
         "image_path": relative_path,
         "rank_for_gcp": rank,
-        "candidate_source": "known_visible_anchor+exif_broad_projection" if camera.image_name == mandatory_image else "exif_broad_projection",
+        "candidate_source": (
+            "known_visible_anchor+exif_projection_uncertainty_intersection"
+            if camera.image_name == mandatory_image
+            else "exif_projection_uncertainty_intersection"
+        ),
         "selection_method": SELECTION_METHOD,
         "projection_method": PROJECTION_METHOD,
         "pixel_x": f"{float(row['pixel_x']):.9f}",
@@ -497,6 +482,7 @@ def candidate_record(
         "projection_uncertainty_px": f"{SEARCH_RADIUS_PX:.1f}",
         "search_radius_px": f"{SEARCH_RADIUS_PX:.1f}",
         "inside_image": str(bool(row["inside_image"])).lower(),
+        "distance_to_image_bounds_px": f"{float(row['distance_to_image_bounds_px']):.6f}",
         "edge_margin_px": f"{float(row['edge_margin_px']):.6f}",
         "center_score": f"{float(row['center_score']):.9f}",
         "ground_distance_m": f"{float(row['ground_distance_m']):.6f}",
@@ -591,7 +577,8 @@ Good/Ambiguous 必须先点击坐标；Not visible 会自动清空坐标。所�
 ## 5. 冻结原则
 
 - 本批只使用 surveyed point、RGB EXIF/GPS/姿态和空间覆盖选图，不读取 3DGS residual、RMSE、depth、alpha 或 variance。
-- 候选按航带和相机中心方位做多样化抽样，避免只选连续近重复图。
+- 每个点不设置候选数量上限；凡预测位置的 900 像素不确定性区域与原始 RGB 图像相交者均纳入。
+- 航带和相机中心方位仅作为候选元数据保留，不用于删除或限额候选图像。
 - 人工标注域始终是 raw RGB；不得在 thermal、CFR crop、undistorted render 或低分辨率 packet 上代替标注。
 """
 
@@ -656,9 +643,11 @@ def main() -> int:
     scene_summaries: list[dict[str, Any]] = []
     all_image_count = 0
     all_selected_images: set[Path] = set()
+    image_hash_cache: dict[Path, str] = {}
     exif_audit: list[dict[str, Any]] = []
 
-    for benchmark_scene, (scene, dataset_scene_dir) in SCENES.items():
+    for benchmark_scene, scene in SCENES.items():
+        dataset_scene_dir = scene
         rgb_dir = args.dataset_root / dataset_scene_dir / "rgb"
         image_paths = sorted(rgb_dir.glob("*.jpg"), key=lambda path: (int(path.stem), path.name))
         if not image_paths:
@@ -671,17 +660,24 @@ def main() -> int:
             pool = candidate_pool(cameras, point)
             anchor = KNOWN_VISIBLE_ANCHORS.get((scene, point.name))
             inside_pool = [row for row in pool if bool(row["inside_image"])]
-            anchor_is_inside = not anchor or any(row["camera"].image_name == anchor for row in inside_pool)
-            selection_pool = inside_pool if len(inside_pool) >= TARGET_CANDIDATES_PER_POINT and anchor_is_inside else pool
-            selected = select_diverse(selection_pool, TARGET_CANDIDATES_PER_POINT, anchor)
-            if len(selected) < 8:
-                raise RuntimeError(f"{scene}/{point.name}: only {len(selected)} broad candidates")
-            selected_paths = {row["camera"].image_path for row in selected}
-            all_selected_images.update(selected_paths)
-            hashes = {path: sha256_file(path) for path in selected_paths}
+            included = order_all_candidates(pool, anchor)
+            if not included:
+                raise RuntimeError(f"{scene}/{point.name}: no projection-uncertainty candidate")
+            included_paths = {row["camera"].image_path for row in included}
+            all_selected_images.update(included_paths)
+            for path in included_paths:
+                if path not in image_hash_cache:
+                    image_hash_cache[path] = sha256_file(path)
             records = [
-                candidate_record(point, row, rank, benchmark_scene, hashes[row["camera"].image_path], anchor)
-                for rank, row in enumerate(selected, 1)
+                candidate_record(
+                    point,
+                    row,
+                    rank,
+                    benchmark_scene,
+                    image_hash_cache[row["camera"].image_path],
+                    anchor,
+                )
+                for rank, row in enumerate(included, 1)
             ]
             selected_scene.extend(records)
             point_summaries.append(
@@ -690,12 +686,12 @@ def main() -> int:
                     "benchmark_scene": benchmark_scene,
                     "point_name": point.name,
                     "point_role": point.role,
-                    "broad_candidate_count": len(pool),
+                    "uncertainty_intersection_candidate_count": len(pool),
                     "in_bounds_candidate_count": len(inside_pool),
-                    "selected_candidate_count": len(records),
-                    "selected_from_in_bounds_only": str(selection_pool is inside_pool).lower(),
-                    "selected_unique_strip_count": len({row["flight_strip_id"] for row in records}),
-                    "selected_azimuth_bin_count": len({row["azimuth_bin_45deg"] for row in records}),
+                    "included_candidate_count": len(records),
+                    "excluded_by_candidate_cap_count": 0,
+                    "included_unique_strip_count": len({row["flight_strip_id"] for row in records}),
+                    "included_azimuth_bin_count": len({row["azimuth_bin_45deg"] for row in records}),
                     "known_visible_anchor": anchor or "",
                     "known_visible_anchor_recalled": str(not anchor or any(row["image_name"] == anchor for row in records)).lower(),
                 }
@@ -733,7 +729,7 @@ def main() -> int:
     for path in sorted(candidate_dir.glob("*.csv"), key=lambda item: item.name.encode("utf-8")):
         candidate_hashes.append({"path": path.relative_to(args.output_root).as_posix(), "size": path.stat().st_size, "sha256": sha256_file(path)})
     manifest = {
-        "schema": "gs_gcp_tgs_rgb_outsourcing_package_v1",
+        "schema": "gs_gcp_tgs_rgb_outsourcing_package_v2",
         "status": "annotation_working_package_not_release",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "generator": {
@@ -756,7 +752,8 @@ def main() -> int:
             "coordinate_convention": COORDINATE_CONVENTION,
             "projection_method": PROJECTION_METHOD,
             "selection_method": SELECTION_METHOD,
-            "target_candidates_per_point": TARGET_CANDIDATES_PER_POINT,
+            "candidate_limit_per_point": None,
+            "all_uncertainty_intersections_included": True,
             "search_radius_px": SEARCH_RADIUS_PX,
             "model_residual_used": False,
             "thermal_used": False,

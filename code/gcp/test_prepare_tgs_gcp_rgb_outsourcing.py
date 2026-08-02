@@ -8,16 +8,18 @@ from manual_gcp_annotator import Annotator
 from prepare_tgs_gcp_rgb_outsourcing import (
     Camera,
     Point,
+    SCENES,
     compact_hash,
+    distance_to_image_bounds_px,
+    order_all_candidates,
     project,
-    select_diverse,
 )
 from tgs_gcp_outsourcing_runtime import validate_result
 
 
 def camera(name: str, order: int, strip: str, e: float = 0.0, n: float = 0.0) -> Camera:
     return Camera(
-        scene="InternalRoad",
+        scene="GCP-3K",
         dataset_scene_dir="GCP-3K",
         image_path=Path(name),
         image_name=name,
@@ -56,7 +58,7 @@ class TgsOutsourcingTests(unittest.TestCase):
         self.assertLess(float(result["u"]), cam.width / 2.0)
         self.assertGreater(float(result["v"]), cam.height / 2.0)
 
-    def test_diverse_selection_keeps_known_anchor(self) -> None:
+    def test_all_candidates_are_retained_and_known_anchor_is_recalled(self) -> None:
         pool = []
         for index in range(12):
             cam = camera(f"{index + 1:04d}.jpg", index + 1, f"strip_{index % 3:03d}")
@@ -70,10 +72,20 @@ class TgsOutsourcingTests(unittest.TestCase):
                     "azimuth_bin_45deg": index % 4,
                 }
             )
-        selected = select_diverse(pool, 8, "0007.jpg")
-        self.assertEqual(selected[0]["camera"].image_name, "0007.jpg")
-        self.assertGreaterEqual(len({row["camera"].strip_id for row in selected}), 3)
-        self.assertGreaterEqual(len({row["azimuth_bin_45deg"] for row in selected}), 4)
+        included = order_all_candidates(pool, "0007.jpg")
+        self.assertEqual(len(included), len(pool))
+        self.assertEqual({row["camera"].image_name for row in included}, {row["camera"].image_name for row in pool})
+
+    def test_uncertainty_disk_intersection_is_not_rectangular_margin(self) -> None:
+        self.assertGreater(distance_to_image_bounds_px(-700.0, -700.0, 4032, 3024), 900.0)
+        self.assertLess(distance_to_image_bounds_px(-600.0, -600.0, 4032, 3024), 900.0)
+        self.assertEqual(distance_to_image_bounds_px(100.0, 200.0, 4032, 3024), 0.0)
+
+    def test_public_scene_names_match_dataset_directories(self) -> None:
+        self.assertEqual(
+            set(SCENES.values()),
+            {"GCP-3K", "GCP-5K", "GCP-10K", "GCP-20K", "GCP-50K", "GCP-100K"},
+        )
 
     def test_task_hash_is_deterministic(self) -> None:
         value = ["schema", "scene", "point", "image", "a" * 64]
@@ -89,13 +101,13 @@ class TgsOutsourcingTests(unittest.TestCase):
             annotator = Annotator.__new__(Annotator)
             annotator.image_root = root
             resolved = annotator.resolve_image_path(
-                {"image_path": "GCP-3K/rgb/0001.jpg", "image_name": "0001.jpg", "scene": "InternalRoad"}
+                {"image_path": "GCP-3K/rgb/0001.jpg", "image_name": "0001.jpg", "scene": "GCP-3K"}
             )
             self.assertEqual(resolved, image)
 
     def test_minimal_return_requires_click_for_good(self) -> None:
         candidate = {
-            "scene": "InternalRoad",
+            "scene": "GCP-3K",
             "point_name": "G11",
             "image_name": "0001.jpg",
             "task_id": "task",
@@ -116,7 +128,7 @@ class TgsOutsourcingTests(unittest.TestCase):
 
     def test_not_visible_minimal_return(self) -> None:
         candidate = {
-            "scene": "InternalRoad",
+            "scene": "GCP-3K",
             "point_name": "G11",
             "image_name": "0001.jpg",
             "task_id": "task",
