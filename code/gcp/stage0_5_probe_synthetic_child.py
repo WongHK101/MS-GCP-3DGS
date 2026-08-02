@@ -14,7 +14,7 @@ def main() -> int:
     payload = b"GS_GCP_STAGE0_5_PROBE_SYNTHETIC_V1\x00" + bytes(range(256))
     if args.output.exists():
         raise FileExistsError(args.output)
-    args.output.parent.mkdir(parents=True)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
     print(json.dumps({"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}, sort_keys=True))
     return 0

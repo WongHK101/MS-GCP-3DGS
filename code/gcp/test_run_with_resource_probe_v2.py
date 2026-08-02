@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -96,6 +98,25 @@ def test_cgroup_event_classification() -> None:
     assert result["failure_reason"] == "cgroup_memory_event_oom"
 
 
+def test_synthetic_child_accepts_existing_parent() -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        parent = Path(temp) / "existing"
+        parent.mkdir()
+        output = parent / "synthetic.bin"
+        subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "code" / "gcp" / "stage0_5_probe_synthetic_child.py"),
+                "--output",
+                str(output),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        assert output.is_file()
+
+
 TESTS = [
     test_contract,
     test_invasive_contract_rejected,
@@ -106,6 +127,7 @@ TESTS = [
     test_gpu_gate_classification,
     test_fd_gate_classification,
     test_cgroup_event_classification,
+    test_synthetic_child_accepts_existing_parent,
 ]
 
 
