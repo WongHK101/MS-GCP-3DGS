@@ -118,6 +118,7 @@ def test_contract_files() -> None:
     resolution = json.loads((root / "configs" / "gs_gcp_quarter_resolution_v1.json").read_text(encoding="utf-8"))
     split = json.loads((root / "configs" / "gs_gcp_rgb_holdout_split_v1.json").read_text(encoding="utf-8"))
     suite = json.loads((root / "configs" / "gs_gcp_common_measurement_suite_v1.json").read_text(encoding="utf-8"))
+    order = json.loads((root / "configs" / "gs_gcp_scene_execution_order_v1.json").read_text(encoding="utf-8"))
     assert resolution["golden_case"] == {
         "decoded_width": 5654, "decoded_height": 4098, "loaded_width": 1414, "loaded_height": 1024
     }
@@ -125,6 +126,17 @@ def test_contract_files() -> None:
     assert suite["formal_depth_formula"] == "M1/A"
     assert len(suite["vgg16_weight_sha256"]) == 64
     assert len(suite["lpips_vgg_linear_weight_sha256"]) == 64
+    assert order["resource_feasibility_order"] == [
+        "gcp_100000_20260610", "gcp_50000_20260610"
+    ]
+    assert order["method_qualification_order"] == ["gcp_3000_20260602"]
+    assert order["full_matrix_order_after_qualification"] == [
+        "gcp_100000_20260610",
+        "gcp_50000_20260610",
+        "gcp_20000_20260602",
+        "gcp_10000_20260610",
+        "gcp_5000_20260602",
+    ]
 
 
 def test_frozen_real_split_counts() -> None:

@@ -28,7 +28,7 @@ pinned-memory pipelines, and resource-gate changes are outside this contract.
 Before large-scene preflight, the implementation freezes the cross-scene parity
 sample manifest, compares all 3K train/test images and the preregistered samples,
 and performs a path-backed identity/dimension/FD-closure audit over all 6,187
-images. Large-scene selection is Candidate A 50K, Candidate A 100K, then
+images. Large-scene selection is Candidate A 100K, Candidate A 50K, then
 Candidate B only under the GPU-only rule. The selected contract must pass the
 frozen 3K synthetic, eager-reference, candidate, and external-probe equivalence
 checks before the 30K Stage 0.5 qualification may start.

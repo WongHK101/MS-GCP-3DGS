@@ -19,7 +19,7 @@ def test_a_gpu_failure_allows_b():
 
 
 def test_b_requires_both_large_scenes():
-    assert decide("GPU_MEMORY_BLOCKED", None, "PASS", None)["status"] == "NEEDS_B100"
+    assert decide("GPU_MEMORY_BLOCKED", None, "PASS", None)["status"] == "NEEDS_B50"
     assert decide("GPU_MEMORY_BLOCKED", None, "PASS", "PASS")["status"] == "SELECTED_B"
 
 
@@ -27,7 +27,19 @@ def test_b_failure_is_blocker():
     assert decide("GPU_MEMORY_BLOCKED", None, "HOST_RAM_BLOCKED", None)["status"] == "BLOCKER"
 
 
-TESTS = [test_a_selected_without_b, test_a_host_failure_blocks_b, test_a_gpu_failure_allows_b, test_b_requires_both_large_scenes, test_b_failure_is_blocker]
+def test_largest_scene_must_pass_before_50k():
+    assert decide("PASS", None, None, None)["status"] == "NEEDS_A50"
+    assert decide("HOST_RAM_BLOCKED", None, None, None)["status"] == "BLOCKER"
+
+
+TESTS = [
+    test_a_selected_without_b,
+    test_a_host_failure_blocks_b,
+    test_a_gpu_failure_allows_b,
+    test_b_requires_both_large_scenes,
+    test_b_failure_is_blocker,
+    test_largest_scene_must_pass_before_50k,
+]
 
 
 def main() -> int:

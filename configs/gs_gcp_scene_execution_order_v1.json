@@ -1,0 +1,26 @@
+{
+  "schema": "gs_gcp_scene_execution_order_v1",
+  "status": "frozen_for_quarter_resolution_primary_track",
+  "resolution_protocol": "graphdeco_quarter_resolution_v1",
+  "resource_feasibility_order": [
+    "gcp_100000_20260610",
+    "gcp_50000_20260610"
+  ],
+  "method_qualification_order": [
+    "gcp_3000_20260602"
+  ],
+  "full_matrix_order_after_qualification": [
+    "gcp_100000_20260610",
+    "gcp_50000_20260610",
+    "gcp_20000_20260602",
+    "gcp_10000_20260610",
+    "gcp_5000_20260602"
+  ],
+  "qualified_3k_result_policy": "reuse_exact_accepted_qualification_result_without_rerun",
+  "resource_failure_policy": {
+    "largest_scene_preflight_failure": "stop_smaller_scene_formal_execution_until_failure_is_resolved",
+    "shared_protocol_failure": "stop_all_scenes",
+    "independent_scene_method_failure_after_qualification": "record_failure_and_continue_in_frozen_descending_order"
+  },
+  "rationale": "surface maximum memory and scale limits before spending compute on smaller full-matrix scenes while retaining mandatory low-cost end-to-end method qualification"
+}

@@ -85,3 +85,15 @@ The formal geometry remains metric packet v2
 `alpha_normalized_expected_camera_z = M1/A`, camera-z semantics, patch 7
 (radius 3), frozen multiview aggregation, and frozen control-only Sim(3).
 Legacy 1600-width results are `high_resolution_1600_diagnostic_track` only.
+
+## Execution Order
+
+The quarter-resolution primary track separates scale feasibility from method
+qualification. Camera/resource feasibility runs largest-first (`100K`, then
+`50K`) so an oversized configuration is rejected before smaller formal runs
+consume compute. Every method still completes the low-cost 3K end-to-end
+qualification before any full-matrix training. After qualification, formal
+scene execution is `100K`, `50K`, `20K`, `10K`, `5K`; the exact accepted 3K
+qualification result is reused without retraining. This ordering is an
+operational fail-fast policy and does not change any image, camera, split,
+metric, or method recipe.
