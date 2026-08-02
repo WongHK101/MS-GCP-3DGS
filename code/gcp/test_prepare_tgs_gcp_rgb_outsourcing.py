@@ -7,17 +7,27 @@ from pathlib import Path
 from manual_gcp_annotator import Annotator
 from prepare_tgs_gcp_rgb_outsourcing import (
     Camera,
+    NADIR_TARGET_PER_POINT,
+    OBLIQUE_TARGET_PER_POINT,
     Point,
     SCENES,
     compact_hash,
     distance_to_image_bounds_px,
-    order_all_candidates,
     project,
+    select_diverse_class,
+    select_stratified_candidates,
 )
 from tgs_gcp_outsourcing_runtime import validate_result
 
 
-def camera(name: str, order: int, strip: str, e: float = 0.0, n: float = 0.0) -> Camera:
+def camera(
+    name: str,
+    order: int,
+    strip: str,
+    e: float = 0.0,
+    n: float = 0.0,
+    pitch: float = -90.0,
+) -> Camera:
     return Camera(
         scene="GCP-3K",
         dataset_scene_dir="GCP-3K",
@@ -32,7 +42,7 @@ def camera(name: str, order: int, strip: str, e: float = 0.0, n: float = 0.0) ->
         h_ellipsoid=30.0,
         flight_yaw_deg=0.0,
         gimbal_yaw_deg=0.0,
-        gimbal_pitch_deg=-90.0,
+        gimbal_pitch_deg=pitch,
         gimbal_roll_deg=180.0,
         focal_length_mm=6.72,
         focal_35mm_mm=24.0,
@@ -58,10 +68,11 @@ class TgsOutsourcingTests(unittest.TestCase):
         self.assertLess(float(result["u"]), cam.width / 2.0)
         self.assertGreater(float(result["v"]), cam.height / 2.0)
 
-    def test_all_candidates_are_retained_and_known_anchor_is_recalled(self) -> None:
+    def test_stratified_selection_freezes_nadir_oblique_quotas(self) -> None:
         pool = []
-        for index in range(12):
-            cam = camera(f"{index + 1:04d}.jpg", index + 1, f"strip_{index % 3:03d}")
+        for index in range(40):
+            pitch = -90.0 if index < 20 else -45.0
+            cam = camera(f"{index + 1:04d}.jpg", index + 1, f"strip_{index % 10:03d}", pitch=pitch)
             pool.append(
                 {
                     "camera": cam,
@@ -72,9 +83,46 @@ class TgsOutsourcingTests(unittest.TestCase):
                     "azimuth_bin_45deg": index % 4,
                 }
             )
-        included = order_all_candidates(pool, "0007.jpg")
-        self.assertEqual(len(included), len(pool))
-        self.assertEqual({row["camera"].image_name for row in included}, {row["camera"].image_name for row in pool})
+        selected = select_stratified_candidates(pool, "0007.jpg")
+        self.assertEqual(len(selected), NADIR_TARGET_PER_POINT + OBLIQUE_TARGET_PER_POINT)
+        self.assertEqual(sum(row["camera"].gimbal_pitch_deg == -90.0 for row in selected), NADIR_TARGET_PER_POINT)
+        self.assertEqual(sum(row["camera"].gimbal_pitch_deg != -90.0 for row in selected), OBLIQUE_TARGET_PER_POINT)
+        self.assertEqual(len({row["azimuth_bin_45deg"] for row in selected[:NADIR_TARGET_PER_POINT]}), 4)
+        self.assertEqual(len({row["azimuth_bin_45deg"] for row in selected[NADIR_TARGET_PER_POINT:]}), 4)
+        self.assertIn("0007.jpg", {row["camera"].image_name for row in selected})
+
+    def test_center_priority_applies_within_same_strip_azimuth_group(self) -> None:
+        pool = []
+        for index, score in enumerate([0.2, 0.9, 0.5], 1):
+            pool.append(
+                {
+                    "camera": camera(f"{index:04d}.jpg", index, "strip_001"),
+                    "inside_image": True,
+                    "center_score": score,
+                    "edge_margin_px": 500.0,
+                    "ground_distance_m": 10.0,
+                    "azimuth_bin_45deg": 0,
+                }
+            )
+        selected = select_diverse_class(pool, 1, None)
+        self.assertEqual(selected[0]["camera"].image_name, "0002.jpg")
+
+    def test_insufficient_view_class_is_rejected(self) -> None:
+        pool = []
+        for index in range(19):
+            pitch = -90.0 if index < 12 else -45.0
+            pool.append(
+                {
+                    "camera": camera(f"{index + 1:04d}.jpg", index + 1, f"strip_{index:03d}", pitch=pitch),
+                    "inside_image": True,
+                    "center_score": 1.0,
+                    "edge_margin_px": 500.0,
+                    "ground_distance_m": 10.0,
+                    "azimuth_bin_45deg": index % 8,
+                }
+            )
+        with self.assertRaisesRegex(RuntimeError, "class quota"):
+            select_stratified_candidates(pool, None)
 
     def test_uncertainty_disk_intersection_is_not_rectangular_margin(self) -> None:
         self.assertGreater(distance_to_image_bounds_px(-700.0, -700.0, 4032, 3024), 900.0)

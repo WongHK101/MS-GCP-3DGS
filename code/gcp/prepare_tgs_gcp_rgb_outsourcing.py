@@ -3,10 +3,10 @@
 
 The task generator is intentionally independent from any Gaussian model,
 metric, or residual.  It uses surveyed GCP coordinates and DJI RGB EXIF pose
-metadata for broad candidate discovery. Every image whose pixel bounds
-intersect the frozen projection-uncertainty region is included without a
-per-point cap. The predicted pixel is only a search hint in the raw decoded
-JPEG pixel matrix.
+metadata for broad candidate discovery. It then freezes 12 nadir and 8
+multi-direction oblique views per point using strip/azimuth diversity and
+center-priority ranking. The predicted pixel is only a search hint in the raw
+decoded JPEG pixel matrix.
 """
 
 from __future__ import annotations
@@ -48,13 +48,18 @@ KNOWN_VISIBLE_ANCHORS = {
     ("GCP-100K", "G42"): "0103.jpg",
 }
 
-TASK_SCHEMA = "gs_gcp_tgs_rgb_outsourcing_candidate_v2"
+TASK_SCHEMA = "gs_gcp_tgs_rgb_outsourcing_candidate_v3"
 ANNOTATION_SCHEMA = "gs_gcp_tgs_rgb_manual_image_observation_v1"
 COORDINATE_DOMAIN = "raw_dji_decoded_pixel_matrix_ignore_exif_orientation"
 COORDINATE_CONVENTION = "raw_image_zero_based_pixel_centers"
 PROJECTION_METHOD = "dji_exif_gimbal_raw_rgb_coarse_projection_v2"
-SELECTION_METHOD = "all_projection_uncertainty_intersections_v1"
+SELECTION_METHOD = "stratified_12_nadir_8_oblique_strip_azimuth_center_priority_v1"
 SEARCH_RADIUS_PX = 900.0
+NADIR_TARGET_PER_POINT = 12
+OBLIQUE_TARGET_PER_POINT = 8
+TOTAL_TARGET_PER_POINT = NADIR_TARGET_PER_POINT + OBLIQUE_TARGET_PER_POINT
+NADIR_PITCH_DEG = -90.0
+PITCH_TOLERANCE_DEG = 1e-6
 FOCAL_35MM_SENSOR_WIDTH_MM = 36.0
 
 CANDIDATE_FIELDS = [
@@ -72,6 +77,7 @@ CANDIDATE_FIELDS = [
     "rank_for_gcp",
     "candidate_source",
     "selection_method",
+    "view_class",
     "projection_method",
     "pixel_x",
     "pixel_y",
@@ -360,20 +366,119 @@ def candidate_pool(camera_rows: list[Camera], point: Point) -> list[dict[str, An
     return output
 
 
-def order_all_candidates(pool: list[dict[str, Any]], mandatory_image: str | None) -> list[dict[str, Any]]:
+def view_class(camera: Camera) -> str:
+    pitch = float(camera.gimbal_pitch_deg)
+    if abs(pitch - NADIR_PITCH_DEG) <= PITCH_TOLERANCE_DEG:
+        return "nadir"
+    if NADIR_PITCH_DEG < pitch < 0.0:
+        return "oblique"
+    raise RuntimeError(f"Unsupported gimbal pitch for {camera.image_name}: {pitch}")
+
+
+def select_diverse_class(
+    pool: list[dict[str, Any]], count: int, mandatory_image: str | None
+) -> list[dict[str, Any]]:
     names = [row["camera"].image_name for row in pool]
     if len(names) != len(set(names)):
-        raise RuntimeError("Candidate pool contains duplicate image names")
-    if mandatory_image and mandatory_image not in set(names):
-        raise RuntimeError(f"Known-visible anchor {mandatory_image} was not recalled by full candidate discovery")
-    return sorted(
-        pool,
-        key=lambda row: (
-            not bool(row["inside_image"]),
-            row["camera"].capture_order,
-            row["camera"].image_name,
-        ),
+        raise RuntimeError("View-class candidate pool contains duplicate image names")
+    if len(pool) < count:
+        raise RuntimeError(f"Only {len(pool)} strict in-bounds candidates for requested class quota {count}")
+    by_name = {row["camera"].image_name: row for row in pool}
+    selected: list[dict[str, Any]] = []
+    selected_anchor = None
+    if mandatory_image:
+        if mandatory_image not in by_name:
+            raise RuntimeError(f"Known-visible anchor {mandatory_image} was not recalled in its strict in-bounds class")
+        selected_anchor = by_name.pop(mandatory_image)
+        selected.append(selected_anchor)
+    groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for row in by_name.values():
+        key = (row["camera"].strip_id, int(row["azimuth_bin_45deg"]))
+        groups.setdefault(key, []).append(row)
+    for rows in groups.values():
+        rows.sort(
+            key=lambda row: (
+                -float(row["center_score"]),
+                -float(row["edge_margin_px"]),
+                float(row["ground_distance_m"]),
+                row["camera"].capture_order,
+                row["camera"].image_name,
+            )
+        )
+    group_counts = {key: 0 for key in groups}
+    strip_counts = {key[0]: 0 for key in groups}
+    azimuth_counts = {key[1]: 0 for key in groups}
+    if selected_anchor is not None:
+        anchor_key = (
+            selected_anchor["camera"].strip_id,
+            int(selected_anchor["azimuth_bin_45deg"]),
+        )
+        group_counts[anchor_key] = group_counts.get(anchor_key, 0) + 1
+        strip_counts[anchor_key[0]] = strip_counts.get(anchor_key[0], 0) + 1
+        azimuth_counts[anchor_key[1]] = azimuth_counts.get(anchor_key[1], 0) + 1
+    while len(selected) < count:
+        available = [key for key, rows in groups.items() if rows]
+        if not available:
+            raise RuntimeError(f"Candidate groups exhausted before class quota {count}")
+        key = min(
+            available,
+            key=lambda item: (
+                azimuth_counts[item[1]],
+                strip_counts[item[0]],
+                group_counts[item],
+                -float(groups[item][0]["center_score"]),
+                -float(groups[item][0]["edge_margin_px"]),
+                item,
+            ),
+        )
+        selected.append(groups[key].pop(0))
+        group_counts[key] += 1
+        strip_counts[key[0]] += 1
+        azimuth_counts[key[1]] += 1
+    return selected
+
+
+def select_stratified_candidates(
+    pool: list[dict[str, Any]], mandatory_image: str | None
+) -> list[dict[str, Any]]:
+    strict = [row for row in pool if bool(row["inside_image"])]
+    classes = {
+        "nadir": [row for row in strict if view_class(row["camera"]) == "nadir"],
+        "oblique": [row for row in strict if view_class(row["camera"]) == "oblique"],
+    }
+    anchor_class = None
+    if mandatory_image:
+        anchor_rows = [row for row in strict if row["camera"].image_name == mandatory_image]
+        if len(anchor_rows) != 1:
+            raise RuntimeError(f"Known-visible anchor {mandatory_image} is not uniquely strict in bounds")
+        anchor_class = view_class(anchor_rows[0]["camera"])
+    nadir = select_diverse_class(
+        classes["nadir"],
+        NADIR_TARGET_PER_POINT,
+        mandatory_image if anchor_class == "nadir" else None,
     )
+    oblique = select_diverse_class(
+        classes["oblique"],
+        OBLIQUE_TARGET_PER_POINT,
+        mandatory_image if anchor_class == "oblique" else None,
+    )
+    selected = nadir + oblique
+    if len(selected) != TOTAL_TARGET_PER_POINT:
+        raise AssertionError("Stratified candidate count mismatch")
+    if len({row["camera"].image_name for row in selected}) != len(selected):
+        raise AssertionError("Stratified selection contains duplicate image names")
+    for label, rows, quota in (
+        ("nadir", nadir, NADIR_TARGET_PER_POINT),
+        ("oblique", oblique, OBLIQUE_TARGET_PER_POINT),
+    ):
+        available_bins = {int(row["azimuth_bin_45deg"]) for row in classes[label]}
+        selected_bins = {int(row["azimuth_bin_45deg"]) for row in rows}
+        expected_bins = min(quota, len(available_bins))
+        if len(selected_bins) != expected_bins:
+            raise AssertionError(
+                f"{label} azimuth coverage mismatch: {len(selected_bins)} != {expected_bins}"
+            )
+    return selected
 
 
 def corrected_epoch_ellipsoid_heights(point_table: Path) -> dict[str, tuple[float, float, float, float]]:
@@ -469,11 +574,12 @@ def candidate_record(
         "image_path": relative_path,
         "rank_for_gcp": rank,
         "candidate_source": (
-            "known_visible_anchor+exif_projection_uncertainty_intersection"
+            "known_visible_anchor+stratified_exif_projection_candidate"
             if camera.image_name == mandatory_image
-            else "exif_projection_uncertainty_intersection"
+            else "stratified_exif_projection_candidate"
         ),
         "selection_method": SELECTION_METHOD,
+        "view_class": view_class(camera),
         "projection_method": PROJECTION_METHOD,
         "pixel_x": f"{float(row['pixel_x']):.9f}",
         "pixel_y": f"{float(row['pixel_y']):.9f}",
@@ -577,8 +683,9 @@ Good/Ambiguous 必须先点击坐标；Not visible 会自动清空坐标。所�
 ## 5. 冻结原则
 
 - 本批只使用 surveyed point、RGB EXIF/GPS/姿态和空间覆盖选图，不读取 3DGS residual、RMSE、depth、alpha 或 variance。
-- 每个点不设置候选数量上限；凡预测位置的 900 像素不确定性区域与原始 RGB 图像相交者均纳入。
-- 航带和相机中心方位仅作为候选元数据保留，不用于删除或限额候选图像。
+- 每个点固定 20 张：12 张正射、8 张多方向倾斜。
+- 正射和倾斜分别优先覆盖不同航带与 45 度相机方位分区；同一分层内优先目标靠近图像中心、边缘余量大且地面距离近的图像。
+- 若回传后某点 Good 视图不足，再从完整空间候选池定向补标，不要求首轮标完全部候选图像。
 - 人工标注域始终是 raw RGB；不得在 thermal、CFR crop、undistorted render 或低分辨率 packet 上代替标注。
 """
 
@@ -660,12 +767,10 @@ def main() -> int:
             pool = candidate_pool(cameras, point)
             anchor = KNOWN_VISIBLE_ANCHORS.get((scene, point.name))
             inside_pool = [row for row in pool if bool(row["inside_image"])]
-            included = order_all_candidates(pool, anchor)
-            if not included:
-                raise RuntimeError(f"{scene}/{point.name}: no projection-uncertainty candidate")
-            included_paths = {row["camera"].image_path for row in included}
-            all_selected_images.update(included_paths)
-            for path in included_paths:
+            selected = select_stratified_candidates(pool, anchor)
+            selected_paths = {row["camera"].image_path for row in selected}
+            all_selected_images.update(selected_paths)
+            for path in selected_paths:
                 if path not in image_hash_cache:
                     image_hash_cache[path] = sha256_file(path)
             records = [
@@ -677,7 +782,7 @@ def main() -> int:
                     image_hash_cache[row["camera"].image_path],
                     anchor,
                 )
-                for rank, row in enumerate(included, 1)
+                for rank, row in enumerate(selected, 1)
             ]
             selected_scene.extend(records)
             point_summaries.append(
@@ -688,10 +793,12 @@ def main() -> int:
                     "point_role": point.role,
                     "uncertainty_intersection_candidate_count": len(pool),
                     "in_bounds_candidate_count": len(inside_pool),
-                    "included_candidate_count": len(records),
-                    "excluded_by_candidate_cap_count": 0,
-                    "included_unique_strip_count": len({row["flight_strip_id"] for row in records}),
-                    "included_azimuth_bin_count": len({row["azimuth_bin_45deg"] for row in records}),
+                    "selected_candidate_count": len(records),
+                    "selected_nadir_count": sum(row["view_class"] == "nadir" for row in records),
+                    "selected_oblique_count": sum(row["view_class"] == "oblique" for row in records),
+                    "selected_unique_strip_count": len({row["flight_strip_id"] for row in records}),
+                    "selected_azimuth_bin_count": len({row["azimuth_bin_45deg"] for row in records}),
+                    "selected_center_score_median": f"{float(np.median([float(row['center_score']) for row in records])):.9f}",
                     "known_visible_anchor": anchor or "",
                     "known_visible_anchor_recalled": str(not anchor or any(row["image_name"] == anchor for row in records)).lower(),
                 }
@@ -729,7 +836,7 @@ def main() -> int:
     for path in sorted(candidate_dir.glob("*.csv"), key=lambda item: item.name.encode("utf-8")):
         candidate_hashes.append({"path": path.relative_to(args.output_root).as_posix(), "size": path.stat().st_size, "sha256": sha256_file(path)})
     manifest = {
-        "schema": "gs_gcp_tgs_rgb_outsourcing_package_v2",
+        "schema": "gs_gcp_tgs_rgb_outsourcing_package_v3",
         "status": "annotation_working_package_not_release",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "generator": {
@@ -752,8 +859,11 @@ def main() -> int:
             "coordinate_convention": COORDINATE_CONVENTION,
             "projection_method": PROJECTION_METHOD,
             "selection_method": SELECTION_METHOD,
-            "candidate_limit_per_point": None,
-            "all_uncertainty_intersections_included": True,
+            "candidate_limit_per_point": TOTAL_TARGET_PER_POINT,
+            "nadir_target_per_point": NADIR_TARGET_PER_POINT,
+            "oblique_target_per_point": OBLIQUE_TARGET_PER_POINT,
+            "strict_in_bounds_required": True,
+            "reserve_pool_packaged": False,
             "search_radius_px": SEARCH_RADIUS_PX,
             "model_residual_used": False,
             "thermal_used": False,
