@@ -38,6 +38,16 @@ def validate_preflight(
     check("camera_schema", camera.get("schema") == "gs_gcp_original_3dgs_camera_load_preflight_v2", camera.get("schema"))
     check("camera_resolution", int(camera.get("resolution", -1)) == 4, camera.get("resolution"))
     check("camera_data_device", camera.get("data_device") in {"cuda", "cpu"}, camera.get("data_device"))
+    check(
+        "host_allocator_policy",
+        camera.get("host_allocator_policy") == "glibc_malloc_trim_threshold_zero_v1",
+        camera.get("host_allocator_policy"),
+    )
+    check(
+        "malloc_trim_threshold_env",
+        camera.get("malloc_trim_threshold_env") == "0",
+        camera.get("malloc_trim_threshold_env"),
+    )
     check("point_tracks_not_read", camera.get("points3d_tracks_read") is False, camera.get("points3d_tracks_read"))
     check("camera_materialization_complete", (
         int(camera.get("camera_count", -1)) > 0

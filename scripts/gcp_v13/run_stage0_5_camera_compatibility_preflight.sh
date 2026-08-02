@@ -12,7 +12,7 @@ DATA_ROOT=/root/autodl-tmp/datasets/ms-gcp-v13/$RELEASE_DIGEST
 RUN_ROOT=/root/autodl-tmp/runs/gs-gcp-v13/stage0-5/$RUN_ID
 SPLIT_MANIFEST=$ORCH_ROOT/configs/gs_gcp_rgb_holdout_split_manifest_v1.json
 RESOURCE_CONTRACT=$ORCH_ROOT/configs/gs_gcp_resource_probe_contract_v2.json
-COMPATIBILITY_CONTRACT=$ORCH_ROOT/configs/gs_gcp_original_3dgs_camera_materialization_compatibility_v1.json
+COMPATIBILITY_CONTRACT=$ORCH_ROOT/configs/gs_gcp_original_3dgs_camera_materialization_compatibility_v2.json
 GNU_TIME=/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time
 
 test ! -e "$RUN_ROOT"
@@ -28,10 +28,11 @@ export CUDA_VISIBLE_DEVICES=0 CUDA_HOME=/usr/local/cuda
 export PATH="$CUDA_HOME/bin:$ENV_ROOT/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONHASHSEED=0
+export MALLOC_TRIM_THRESHOLD_=0
 export TORCH_EXTENSIONS_DIR="$RUN_ROOT/tmp/torch_extensions" TMPDIR="$RUN_ROOT/tmp"
 mkdir -p "$TORCH_EXTENSIONS_DIR"
 
-for scene in gcp_50000_20260610 gcp_100000_20260610; do
+for scene in gcp_100000_20260610 gcp_50000_20260610; do
   "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/gs_gcp_stage0_5.py" materialize-subsets \
     --split_manifest "$SPLIT_MANIFEST" --scene "$scene" --source_root "$DATA_ROOT/$scene" \
     --output_root "$RUN_ROOT/assets/$scene" --image_mode symlink \
@@ -52,6 +53,7 @@ run_one() {
     "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/original_3dgs_camera_load_preflight.py" \
       --method_root "$CANDIDATE_ROOT" --source_root "$train_root" \
       --resolution 4 --data_device "$device" --stabilization_seconds 30 \
+      --host_allocator_policy glibc_malloc_trim_threshold_zero_v1 \
       --expected_materialization path_backed \
       --lifecycle_report "$evidence/lifecycle.jsonl" \
       --report "$evidence/camera_load_report.json"
@@ -72,13 +74,13 @@ PY
   fi
 }
 
-run_one candidate_a_50k gcp_50000_20260610 cuda
-A50=$LAST_STATUS
-if [[ "$A50" == PASS ]]; then
-  run_one candidate_a_100k gcp_100000_20260610 cuda
-  A100=$LAST_STATUS
+run_one candidate_a_100k gcp_100000_20260610 cuda
+A100=$LAST_STATUS
+if [[ "$A100" == PASS ]]; then
+  run_one candidate_a_50k gcp_50000_20260610 cuda
+  A50=$LAST_STATUS
 else
-  A100=
+  A50=
 fi
 
 if [[ "$A50" == PASS && "$A100" == PASS ]]; then
@@ -86,14 +88,14 @@ if [[ "$A50" == PASS && "$A100" == PASS ]]; then
 elif [[ "$A50" == GPU_MEMORY_BLOCKED || "$A100" == GPU_MEMORY_BLOCKED ]]; then
   test "$A50" = PASS -o "$A50" = GPU_MEMORY_BLOCKED
   test -z "$A100" -o "$A100" = PASS -o "$A100" = GPU_MEMORY_BLOCKED
-  run_one candidate_b_50k gcp_50000_20260610 cpu
-  B50=$LAST_STATUS
-  test "$B50" = PASS
   run_one candidate_b_100k gcp_100000_20260610 cpu
   B100=$LAST_STATUS
   test "$B100" = PASS
+  run_one candidate_b_50k gcp_50000_20260610 cpu
+  B50=$LAST_STATUS
+  test "$B50" = PASS
 else
-  echo "Candidate A failed a non-GPU gate: 50K=$A50 100K=${A100:-NOT_RUN}" >&2
+  echo "Candidate A failed a non-GPU gate: 100K=$A100 50K=${A50:-NOT_RUN}" >&2
   exit 1
 fi
 
@@ -108,10 +110,10 @@ for key, status in statuses.items():
         path.write_text(json.dumps({"status": status}) + "\n", encoding="utf-8")
 PY
 
-selection_args=(--a50 "$RUN_ROOT/preflight/selection_a50.json" --output "$RUN_ROOT/preflight/selected_contract.json")
-test -z "${A100:-}" || selection_args+=(--a100 "$RUN_ROOT/preflight/selection_a100.json")
-test -z "${B50:-}" || selection_args+=(--b50 "$RUN_ROOT/preflight/selection_b50.json")
+selection_args=(--a100 "$RUN_ROOT/preflight/selection_a100.json" --output "$RUN_ROOT/preflight/selected_contract.json")
+test -z "${A50:-}" || selection_args+=(--a50 "$RUN_ROOT/preflight/selection_a50.json")
 test -z "${B100:-}" || selection_args+=(--b100 "$RUN_ROOT/preflight/selection_b100.json")
+test -z "${B50:-}" || selection_args+=(--b50 "$RUN_ROOT/preflight/selection_b50.json")
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/select_original_3dgs_camera_contract.py" "${selection_args[@]}"
 
 echo "$RUN_ROOT"

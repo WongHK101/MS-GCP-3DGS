@@ -29,11 +29,12 @@ export CUDA_HOME=/usr/local/cuda
 export PATH="$CUDA_HOME/bin:$ENV_ROOT/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONHASHSEED=0
+export MALLOC_TRIM_THRESHOLD_=0
 export TORCH_EXTENSIONS_DIR="$RUN_ROOT/tmp/torch_extensions"
 export TMPDIR="$RUN_ROOT/tmp"
 mkdir -p "$TORCH_EXTENSIONS_DIR"
 
-for scene in gcp_50000_20260610 gcp_100000_20260610; do
+for scene in gcp_100000_20260610 gcp_50000_20260610; do
   source_root="$DATA_ROOT/$scene"
   asset_root="$RUN_ROOT/assets/$scene"
   evidence_root="$RUN_ROOT/preflight/$scene"
@@ -48,11 +49,14 @@ for scene in gcp_50000_20260610 gcp_100000_20260610; do
   set +e
   "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/run_with_resource_probe_v2.py" \
     --contract "$RESOURCE_CONTRACT" --output_dir "$evidence_root/resource_probe" \
-    --working_directory "$METHOD_ROOT" --gpu_indices 0 --time_binary "$GNU_TIME" -- \
-    /usr/bin/timeout --signal=TERM 3600 \
+    --working_directory "$METHOD_ROOT" --gpu_indices 0 --time_binary "$GNU_TIME" \
+    --timeout_seconds 3600 --enforce_contract_gates --failure_stage camera_load -- \
     "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/original_3dgs_camera_load_preflight.py" \
       --method_root "$METHOD_ROOT" --source_root "$train_root" \
       --resolution 4 --data_device cuda --stabilization_seconds 30 \
+      --host_allocator_policy glibc_malloc_trim_threshold_zero_v1 \
+      --expected_materialization eager \
+      --lifecycle_report "$evidence_root/lifecycle.jsonl" \
       --report "$evidence_root/camera_load_report.json"
   status=$?
   set -e
@@ -70,7 +74,7 @@ import json, sys
 from pathlib import Path
 root = Path(sys.argv[1])
 rows = []
-for scene in ("gcp_50000_20260610", "gcp_100000_20260610"):
+for scene in ("gcp_100000_20260610", "gcp_50000_20260610"):
     payload = json.loads((root / "preflight" / scene / "validation.json").read_text())
     rows.append({"scene": scene, "status": payload["status"], "failed_count": payload["failed_count"]})
 out = {"schema": "gs_gcp_stage0_5_large_scene_preflight_summary_v1", "status": "PASS" if all(r["status"] == "PASS" for r in rows) else "BLOCKER", "scenes": rows, "scope": "camera_load_feasibility_only_not_training_guarantee"}

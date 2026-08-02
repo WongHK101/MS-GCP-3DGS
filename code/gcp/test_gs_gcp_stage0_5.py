@@ -119,6 +119,9 @@ def test_contract_files() -> None:
     split = json.loads((root / "configs" / "gs_gcp_rgb_holdout_split_v1.json").read_text(encoding="utf-8"))
     suite = json.loads((root / "configs" / "gs_gcp_common_measurement_suite_v1.json").read_text(encoding="utf-8"))
     order = json.loads((root / "configs" / "gs_gcp_scene_execution_order_v1.json").read_text(encoding="utf-8"))
+    materialization = json.loads(
+        (root / "configs" / "gs_gcp_original_3dgs_camera_materialization_compatibility_v2.json").read_text(encoding="utf-8")
+    )
     assert resolution["golden_case"] == {
         "decoded_width": 5654, "decoded_height": 4098, "loaded_width": 1414, "loaded_height": 1024
     }
@@ -137,6 +140,10 @@ def test_contract_files() -> None:
         "gcp_10000_20260610",
         "gcp_5000_20260602",
     ]
+    assert materialization["host_allocator_policy"]["environment"] == {
+        "MALLOC_TRIM_THRESHOLD_": "0"
+    }
+    assert materialization["host_allocator_policy"]["explicit_malloc_trim_calls"] is False
 
 
 def test_frozen_real_split_counts() -> None:

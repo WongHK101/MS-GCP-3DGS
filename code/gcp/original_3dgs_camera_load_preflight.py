@@ -10,6 +10,7 @@ import json
 import math
 import os
 import signal
+import platform
 import sys
 import time
 from pathlib import Path
@@ -80,6 +81,11 @@ def main() -> int:
     parser.add_argument("--lifecycle_report", type=Path, required=True)
     parser.add_argument("--expected_materialization", choices=("path_backed", "eager"), default="path_backed")
     parser.add_argument("--include_tensor_hashes", action="store_true")
+    parser.add_argument(
+        "--host_allocator_policy",
+        choices=("glibc_malloc_trim_threshold_zero_v1",),
+        required=True,
+    )
     args = parser.parse_args()
     method_root = args.method_root.resolve()
     source_root = args.source_root.resolve()
@@ -94,6 +100,8 @@ def main() -> int:
     from read_write_model import read_cameras_binary, read_images_binary
     if args.resolution != 4 or args.data_device not in {"cuda", "cpu"}:
         raise ValueError("formal resource preflight requires resolution=4 and data_device=cuda|cpu")
+    if os.environ.get("MALLOC_TRIM_THRESHOLD_") != "0":
+        raise ValueError("glibc_malloc_trim_threshold_zero_v1 requires MALLOC_TRIM_THRESHOLD_=0")
     lifecycle_path = args.lifecycle_report.resolve()
     lifecycle_path.parent.mkdir(parents=True, exist_ok=True)
     lifecycle_handle = lifecycle_path.open("x", encoding="utf-8", buffering=1, newline="\n")
@@ -104,6 +112,8 @@ def main() -> int:
         "camera_tensors_materialized_count": 0,
         "currently_open_source_image_count": 0,
         "data_device": args.data_device,
+        "host_allocator_policy": args.host_allocator_policy,
+        "malloc_trim_threshold_env": os.environ.get("MALLOC_TRIM_THRESHOLD_"),
     }
 
     def persist_partial(status: str, reason: str | None = None) -> None:
@@ -256,6 +266,9 @@ def main() -> int:
         "resolution": 4,
         "data_device": args.data_device,
         "materialization_mode": args.expected_materialization,
+        "host_allocator_policy": args.host_allocator_policy,
+        "malloc_trim_threshold_env": os.environ.get("MALLOC_TRIM_THRESHOLD_"),
+        "libc_runtime": list(platform.libc_ver()),
         "tensor_hashes_included": bool(args.include_tensor_hashes),
         "camera_count": len(cameras),
         "camera_records_read_count": progress["camera_records_read_count"],

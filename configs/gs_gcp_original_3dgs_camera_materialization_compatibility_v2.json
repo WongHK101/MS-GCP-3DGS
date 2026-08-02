@@ -1,0 +1,73 @@
+{
+  "schema": "gs_gcp_original_3dgs_camera_materialization_compatibility_v2",
+  "status": "candidate_a_envtrim_then_conditional_b_execution",
+  "supersedes_contract": "configs/gs_gcp_original_3dgs_camera_materialization_compatibility_v1.json",
+  "superseded_contract_disposition": "blocked_host_allocator_retained_pages_evidence_preserved",
+  "eager_reference_commit": "db8deebca67e8d5e1507e67c98de603eca0dfd85",
+  "path_backed_candidate_commit": "ac8e622f7347cc01ed2af4e0381a05191025834b",
+  "path_backed_candidate_tree": "8d94a99b5edb17aa049133846af5c335e6b117a5",
+  "host_allocator_policy": {
+    "policy_id": "glibc_malloc_trim_threshold_zero_v1",
+    "environment": {
+      "MALLOC_TRIM_THRESHOLD_": "0"
+    },
+    "explicit_malloc_trim_calls": false,
+    "gc_collect_added_to_training_path": false,
+    "cuda_synchronize_added_to_training_path": false,
+    "training_tensor_or_rng_semantics_changed": false,
+    "diagnosis": "released_temporary_decode_and_resize_pages_retained_by_host_allocator",
+    "diagnostic_evidence": {
+      "baseline_128_camera_sha256": "ddc342994c4f37e0c48d93a4ea8fbe4cfef91094d1530d3a89b8173253a2400b",
+      "sync_each_128_camera_sha256": "f0f3e51ef61d80a4fe81997300b60d3ef166dc34545cf62ecf39e26b8548a432",
+      "trim_each_128_camera_sha256": "ca6815231e4d818509ff9f6e61b1c7fd3918436a4c259e547a452112b52a065b",
+      "env_trim_threshold_128_camera_sha256": "57f79a9315b198f03424834c0e5efb6dd0d36f2f0665ba2c80cac07db823993b"
+    }
+  },
+  "candidate_a": {
+    "identity": "path_backed_cuda_resident_with_frozen_host_allocator_policy",
+    "data_device": "cuda",
+    "jpeg_decode_frequency": "once_during_camera_list_materialization",
+    "source_image_close_policy": "immediate_after_current_camera_construction"
+  },
+  "candidate_b": {
+    "identity": "path_backed_cpu_backed_official_with_frozen_host_allocator_policy",
+    "data_device": "cpu",
+    "eligibility": "candidate_a_host_and_all_non_gpu_gates_pass_and_only_gpu_gate_fails",
+    "original_3dgs_data_residency": "cpu_backed_official"
+  },
+  "selection_order": [
+    "candidate_a_100k",
+    "candidate_a_50k_if_100k_passes",
+    "select_a_if_both_pass",
+    "candidate_b_100k_50k_only_if_a_gpu_only_failure",
+    "select_one_contract_before_3k_parity"
+  ],
+  "scene_execution_order_contract": "configs/gs_gcp_scene_execution_order_v1.json",
+  "parity_sample_manifest": {
+    "path": "configs/gs_gcp_original_3dgs_camera_parity_samples_v1.json",
+    "file_sha256": "9a001c500bbb0290d78274dec14096a39da7c6b2f79d87b7e1aa3e8651322ee9",
+    "canonical_sha256": "6d054f387dac3267d1c6ff6f3da429156cc97bc89436c06d4a3632bc19a91971",
+    "selected_image_count": 2394,
+    "selection_frozen_before_pixel_comparison": true
+  },
+  "frozen_inputs": {
+    "release_root_digest": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "split_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+    "resolution_protocol": "graphdeco_quarter_resolution_v1",
+    "resolution_argument": 4,
+    "resource_contract": "gs_gcp_resource_probe_contract_v2"
+  },
+  "forbidden": [
+    "per_iteration_jpeg_decode",
+    "explicit_malloc_trim_call_in_training_code",
+    "gc_collect_in_training_path",
+    "cuda_synchronize_in_training_path",
+    "lru_cache",
+    "prefetch",
+    "pinned_memory_pipeline",
+    "multi_worker_loader",
+    "camera_order_change",
+    "resolution_change",
+    "resource_gate_change"
+  ]
+}

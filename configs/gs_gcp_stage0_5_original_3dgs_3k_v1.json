@@ -18,6 +18,8 @@
   "test_view_count": 12,
   "resolution_argument": 4,
   "resolution_protocol": "graphdeco_quarter_resolution_v1",
+  "camera_materialization_contract": "configs/gs_gcp_original_3dgs_camera_materialization_compatibility_v2.json",
+  "host_allocator_policy": "glibc_malloc_trim_threshold_zero_v1",
   "split_protocol": "gs_gcp_rgb_holdout_split_v1",
   "split_manifest_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
   "split_manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2",

@@ -292,6 +292,9 @@ def run(args: argparse.Namespace) -> int:
         "timeout_implementation": "resource_probe_internal_deadline",
         "timeout_seconds": args.timeout_seconds,
         "enforce_contract_gates": bool(args.enforce_contract_gates),
+        "runtime_environment": {
+            "MALLOC_TRIM_THRESHOLD_": os.environ.get("MALLOC_TRIM_THRESHOLD_"),
+        },
     }
     write_json(output / "command.json", command_record)
     wrapped = [str(time_binary), "-v", "-o", str(output / "gnu_time.txt"), "--", *command]

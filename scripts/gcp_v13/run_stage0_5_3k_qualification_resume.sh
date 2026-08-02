@@ -87,6 +87,7 @@ export PATH="$CUDA_HOME/bin:$ENV_ROOT/bin:$PATH"
 export LD_LIBRARY_PATH="$ADAPTER_SITE:$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export PYTHONPATH="$ADAPTER_SITE:$ADAPTER_ROOT"
 export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONHASHSEED=0
+export MALLOC_TRIM_THRESHOLD_=0
 export TORCH_EXTENSIONS_DIR="$RUN_ROOT/tmp/torch_extensions" TMPDIR="$RUN_ROOT/tmp"
 mkdir -p "$TORCH_EXTENSIONS_DIR"
 
@@ -115,6 +116,7 @@ strace -f -e trace=open,openat,openat2 -o "$RUN_ROOT/00_preflight/camera_access.
     --method_root "$CANDIDATE_ROOT" --source_root "$TRAIN_ROOT" \
     --report "$RUN_ROOT/00_preflight/3k_camera_report.json" --resolution 4 \
     --data_device "$SELECTED_DEVICE" --stabilization_seconds 1 \
+    --host_allocator_policy glibc_malloc_trim_threshold_zero_v1 \
     --expected_materialization path_backed --lifecycle_report "$RUN_ROOT/00_preflight/3k_lifecycle.jsonl"
 "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/validate_stage0_5_file_access.py" \
   --trace "$RUN_ROOT/00_preflight/camera_access.strace" --train_root "$TRAIN_ROOT" \

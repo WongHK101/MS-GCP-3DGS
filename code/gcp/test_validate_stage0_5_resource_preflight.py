@@ -38,6 +38,8 @@ class ResourcePreflightTests(unittest.TestCase):
         self.camera = {
             "schema": "gs_gcp_original_3dgs_camera_load_preflight_v2",
             "status": "PASS", "resolution": 4, "data_device": "cuda",
+            "host_allocator_policy": "glibc_malloc_trim_threshold_zero_v1",
+            "malloc_trim_threshold_env": "0",
             "camera_count": 10, "camera_records_read_count": 10,
             "camera_tensors_materialized_count": 10,
             "currently_open_source_image_count": 0,
@@ -70,6 +72,12 @@ class ResourcePreflightTests(unittest.TestCase):
         resource["cgroup_observed_peak_bytes"] = 60 * GIB
         resource["process_tree_sampled_peak_rss_kib"] = 10 * GIB // 1024
         result = validate_preflight(self.contract, resource, self.camera)
+        self.assertEqual(result["status"], "BLOCKER")
+
+    def test_missing_allocator_policy_is_blocker(self):
+        camera = copy.deepcopy(self.camera)
+        camera["malloc_trim_threshold_env"] = None
+        result = validate_preflight(self.contract, self.resource, camera)
         self.assertEqual(result["status"], "BLOCKER")
 
 

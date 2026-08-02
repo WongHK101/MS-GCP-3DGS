@@ -29,6 +29,7 @@ export CUDA_VISIBLE_DEVICES=0 CUDA_HOME=/usr/local/cuda
 export PATH="$CUDA_HOME/bin:$ENV_ROOT/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONHASHSEED=0
+export MALLOC_TRIM_THRESHOLD_=0
 export TORCH_EXTENSIONS_DIR="$RUN_ROOT/tmp/torch_extensions" TMPDIR="$RUN_ROOT/tmp"
 mkdir -p "$TORCH_EXTENSIONS_DIR"
 
@@ -47,11 +48,13 @@ for scene in \
     --output_root "$subset_root" > "$RUN_ROOT/reports/${scene}_materialize.log"
   "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/original_3dgs_camera_load_preflight.py" \
     --method_root "$REFERENCE_ROOT" --source_root "$subset_root" --resolution 4 --data_device cuda \
+    --host_allocator_policy glibc_malloc_trim_threshold_zero_v1 \
     --stabilization_seconds 1 --expected_materialization eager --include_tensor_hashes \
     --lifecycle_report "$RUN_ROOT/reports/${scene}_eager_lifecycle.jsonl" \
     --report "$RUN_ROOT/reports/${scene}_eager_camera_report.json"
   "$ENV_ROOT/bin/python" "$ORCH_ROOT/code/gcp/original_3dgs_camera_load_preflight.py" \
     --method_root "$CANDIDATE_ROOT" --source_root "$subset_root" --resolution 4 --data_device cuda \
+    --host_allocator_policy glibc_malloc_trim_threshold_zero_v1 \
     --stabilization_seconds 1 --expected_materialization path_backed --include_tensor_hashes \
     --lifecycle_report "$RUN_ROOT/reports/${scene}_candidate_lifecycle.jsonl" \
     --report "$RUN_ROOT/reports/${scene}_candidate_camera_report.json"

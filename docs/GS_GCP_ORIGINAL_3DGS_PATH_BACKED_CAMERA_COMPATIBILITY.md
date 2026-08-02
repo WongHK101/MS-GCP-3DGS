@@ -33,6 +33,19 @@ Candidate B only under the GPU-only rule. The selected contract must pass the
 frozen 3K synthetic, eager-reference, candidate, and external-probe equivalence
 checks before the 30K Stage 0.5 qualification may start.
 
+## Host allocator policy
+
+The v1 contract remains the immutable contract associated with the accepted
+50K host-memory blocker. The resumed v2 contract adds only the process
+environment `MALLOC_TRIM_THRESHOLD_=0`, identified as
+`glibc_malloc_trim_threshold_zero_v1`. Diagnostics show no surviving CPU
+tensor storage while anonymous RSS grows under the default allocator; the
+frozen environment policy releases those already-dead temporary decode/resize
+pages without adding `malloc_trim`, garbage collection, CUDA synchronization,
+workers, caches, or training-loop code. Camera tensors, image order, RNG, and
+all formal protocols remain unchanged. The runtime preflight hard-fails if the
+environment value is absent or different.
+
 Resource blocks are infrastructure feasibility outcomes, not geometry failures.
 The canonical host classification is `HOST_RAM_BLOCKED`, with
 `failure_stage=camera_load` and

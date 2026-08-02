@@ -17,13 +17,12 @@
     "original_3dgs_data_residency": "cpu_backed_official"
   },
   "selection_order": [
-    "candidate_a_100k",
-    "candidate_a_50k_if_100k_passes",
+    "candidate_a_50k",
+    "candidate_a_100k_if_50k_passes",
     "select_a_if_both_pass",
-    "candidate_b_100k_50k_only_if_a_gpu_only_failure",
+    "candidate_b_50k_100k_only_if_a_gpu_only_failure",
     "select_one_contract_before_3k_parity"
   ],
-  "scene_execution_order_contract": "configs/gs_gcp_scene_execution_order_v1.json",
   "parity_sample_manifest": {
     "path": "configs/gs_gcp_original_3dgs_camera_parity_samples_v1.json",
     "file_sha256": "9a001c500bbb0290d78274dec14096a39da7c6b2f79d87b7e1aa3e8651322ee9",
