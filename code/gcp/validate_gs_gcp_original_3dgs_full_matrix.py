@@ -1,43 +1,33 @@
 #!/usr/bin/env python3
-"""Validate the approved original-3DGS v1.3.0 full-matrix execution plan."""
+"""Validate the locked clean-R4 original-3DGS full-matrix plan."""
 
 from __future__ import annotations
 
 import argparse
-import csv
-import hashlib
 import json
-import re
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from gs_gcp_resolution import RULE_ID, graphdeco_rminus1_dimensions
 from validate_gs_gcp_method_registry import validate_registry
-from validate_gs_gcp_original_3dgs_serializer_compatibility import validate_serializer_compatibility
+from validate_gs_gcp_v13_original_3dgs_recipe import validate_recipe
 
 
-SCHEMA = "gs_gcp_v13_original_3dgs_full_matrix_plan_v1"
-RELEASE_DIGEST = "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
-EXPECTED_SCENES = {
-    "gcp_3000_20260602",
-    "gcp_5000_20260602",
-    "gcp_10000_20260610",
-    "gcp_20000_20260602",
-    "gcp_50000_20260610",
+SCHEMA = "gs_gcp_v13_original_3dgs_full_matrix_plan_v2"
+EXPECTED_ORDER = [
     "gcp_100000_20260610",
+    "gcp_50000_20260610",
+    "gcp_20000_20260602",
+    "gcp_10000_20260610",
+    "gcp_5000_20260602",
+]
+EXPECTED_SCENES = {
+    "gcp_3000_20260602": (94, 82, 12, 1414, 1024),
+    "gcp_5000_20260602": (101, 88, 13, 1414, 1025),
+    "gcp_10000_20260610": (976, 854, 122, 1414, 1025),
+    "gcp_20000_20260602": (298, 260, 38, 1414, 1024),
+    "gcp_50000_20260610": (2208, 1932, 276, 1414, 1025),
+    "gcp_100000_20260610": (2510, 2196, 314, 1414, 1025),
 }
-EXECUTION_SCENES = EXPECTED_SCENES - {"gcp_3000_20260602", "gcp_5000_20260602"}
-SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
-SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _require(condition: bool, message: str, errors: list[str]) -> None:
@@ -54,201 +44,119 @@ def validate_plan(
     scene_root: Path | None = None,
     release_root: Path | None = None,
 ) -> dict[str, Any]:
+    del scene_root, release_root
     errors: list[str] = []
     _require(plan.get("schema") == SCHEMA, "unknown full-matrix plan schema", errors)
+    _require(plan.get("status") == "blocked_pending_clean_r4_3k_qualification", "full matrix must remain locked", errors)
     _require(plan.get("method_id") == "3dgs_original", "method must be original 3DGS", errors)
     _require(
-        plan.get("release", {}).get("payload_root_digest_sha256") == RELEASE_DIGEST,
-        "release root digest mismatch",
+        plan.get("training_recipe") == "configs/gs_gcp_v13_original_3dgs_recipe_v3.json",
+        "active recipe must be clean R4 v3",
+        errors,
+    )
+    _require(
+        plan.get("input_materialization_contract") == "configs/gs_gcp_r4_input_materialization_v1.json",
+        "active R4 input contract mismatch",
         errors,
     )
 
     registry_result = validate_registry(registry, repo_root)
     _require(registry_result["passed"], "method registry validation failed", errors)
+    _require(registry_result["full_scene_matrix_eligible"] == [], "no method may enter the full matrix yet", errors)
+    _require(registry_result["qualification_allowed"] == ["3dgs_original"], "3DGS must remain admitted for 3K only", errors)
+
+    recipe_path = repo_root / str(plan.get("training_recipe", ""))
+    if not recipe_path.is_file():
+        errors.append("active recipe is missing")
+    else:
+        recipe_errors = validate_recipe(json.loads(recipe_path.read_text(encoding="utf-8")), repo_root=repo_root)
+        errors.extend(f"recipe: {item}" for item in recipe_errors)
+
+    qualification = plan.get("qualification", {})
+    _require(qualification.get("scene") == "gcp_3000_20260602", "qualification scene mismatch", errors)
+    _require(qualification.get("status") == "NOT_RUN", "clean R4 qualification must not inherit a result", errors)
+    _require(qualification.get("full_matrix_authorized") is False, "full matrix must not be authorized", errors)
     _require(
-        registry_result["full_scene_matrix_eligible"] == ["3dgs_original"],
-        "only original 3DGS may be full-matrix eligible",
+        qualification.get("external_review_status") == "CLEAN_R4_CONTRACT_PASS",
+        "clean R4 contract review must pass before qualification",
         errors,
     )
+    review_evidence = (repo_root / str(qualification.get("contract_review_evidence", ""))).resolve()
+    _require(review_evidence.is_relative_to(repo_root.resolve()), "clean R4 contract review evidence escapes repository", errors)
+    _require(review_evidence.is_file(), "clean R4 contract review evidence is missing", errors)
+    if review_evidence.is_file():
+        import hashlib
 
-    review = plan.get("qualification_review", {})
-    _require(review.get("status") == "PASS", "qualification review is not PASS", errors)
-    _require(bool(SHA256_RE.fullmatch(str(review.get("review_package_sha256", "")))), "invalid review package SHA", errors)
-    evidence = (repo_root / str(review.get("evidence_path", ""))).resolve()
-    _require(evidence.is_relative_to(repo_root.resolve()), "review evidence escapes repository", errors)
-    _require(evidence.is_file(), "review evidence is missing", errors)
-    if evidence.is_file():
-        _require(sha256_file(evidence) == review.get("evidence_sha256"), "review evidence SHA mismatch", errors)
-
-    serializer = plan.get("serializer_compatibility", {})
-    _require(serializer.get("status") == "APPROVED_AND_PARITY_VERIFIED", "serializer compatibility is not approved", errors)
-    serializer_config = (repo_root / str(serializer.get("config_path", ""))).resolve()
-    _require(serializer_config.is_relative_to(repo_root.resolve()), "serializer config escapes repository", errors)
-    _require(serializer_config.is_file(), "serializer compatibility config is missing", errors)
-    if serializer_config.is_file():
-        _require(sha256_file(serializer_config) == serializer.get("config_sha256"), "serializer config SHA mismatch", errors)
-        serializer_result = validate_serializer_compatibility(
-            json.loads(serializer_config.read_text(encoding="utf-8")),
-            repo_root=repo_root,
+        actual_review_sha = hashlib.sha256(review_evidence.read_bytes()).hexdigest()
+        _require(
+            actual_review_sha == qualification.get("contract_review_evidence_sha256"),
+            "clean R4 contract review evidence SHA mismatch",
+            errors,
         )
-        _require(serializer_result["passed"], "serializer compatibility validation failed", errors)
-    _require(
-        serializer.get("upstream_commit") == "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
-        "serializer upstream commit mismatch",
-        errors,
-    )
-    _require(
-        serializer.get("runtime_patch_commit") == "db8deebca67e8d5e1507e67c98de603eca0dfd85",
-        "serializer runtime patch commit mismatch",
-        errors,
-    )
-    _require(
-        serializer.get("runtime_patch_tree") == "bcb9df570c43755ed4cd43b51bafcc3cf180a466",
-        "serializer runtime patch tree mismatch",
-        errors,
-    )
+    legacy = plan.get("legacy_route", {})
+    _require(legacy.get("formal_reuse_allowed") is False, "legacy full-matrix evidence must not be reused", errors)
 
     identity = plan.get("frozen_method_identity", {})
     expected_identity = {
         "training_source_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
         "training_source_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+        "runtime_training_patch": None,
         "training_iterations": 30000,
         "seed": 0,
         "formal_model": "point_cloud/iteration_30000/point_cloud.ply",
-        "resolution_rule_id": RULE_ID,
-        "metric_adapter_commit": "69842bcbcf1d3a159d08256a8cac557261234d36",
-        "metric_rasterizer_commit": "c7c8ec385986ea5230dcdd517b8f6cc06db0049d",
-        "packet_schema": "ms_gcp_metric_depth_packet_v2",
+        "resolution_rule_id": "graphdeco_quarter_resolution_v1",
+        "official_resolution_argument_on_materialized_inputs": 1,
         "formal_tensor": "alpha_normalized_expected_camera_z",
         "formal_formula": "M1/A",
         "formal_semantics": "camera_z",
-        "patch_protocol": "native_packet_pixel_patch_v1",
-        "patch_size": 7,
-        "patch_radius": 3,
-        "aggregation": "robust_multiview_median",
-        "control_policy": "require_all",
-        "min_valid_observations": 1,
     }
     for key, expected in expected_identity.items():
         _require(identity.get(key) == expected, f"frozen identity mismatch: {key}", errors)
-    _require(bool(SHA1_RE.fullmatch(str(identity.get("training_source_commit", "")))), "invalid training commit", errors)
-    _require(bool(SHA1_RE.fullmatch(str(identity.get("metric_adapter_commit", "")))), "invalid adapter commit", errors)
+
+    _require(plan.get("execution_order_after_qualification") == EXPECTED_ORDER, "execution order mismatch", errors)
+    execution = plan.get("execution", {})
+    _require(execution.get("old_checkpoint_or_result_reuse") is False, "old results must not be reused", errors)
+    _require(execution.get("overwrite_policy") == "fail_if_exists", "run roots must not be overwritten", errors)
+    _require(execution.get("fresh_hardware_manifest_required") is True, "fresh hardware binding is required", errors)
 
     scenes = plan.get("scenes", [])
     scene_ids = [row.get("scene") for row in scenes if isinstance(row, dict)]
     _require(len(scene_ids) == len(set(scene_ids)), "duplicate scene rows", errors)
-    _require(set(scene_ids) == EXPECTED_SCENES, "scene set mismatch", errors)
-    _require(set(plan.get("execution_order", [])) == EXECUTION_SCENES, "execution-order scene set mismatch", errors)
-    _require(len(plan.get("execution_order", [])) == len(EXECUTION_SCENES), "execution order contains duplicates", errors)
-    _require(plan.get("execution", {}).get("other_methods_authorized") is False, "other methods must remain unauthorized", errors)
-
+    _require(set(scene_ids) == set(EXPECTED_SCENES), "scene set mismatch", errors)
     by_scene = {row["scene"]: row for row in scenes if isinstance(row, dict) and row.get("scene")}
-    for scene_id, row in by_scene.items():
-        expected_status = {
-            "gcp_3000_20260602": "qualified_pass_frozen_reference",
-            "gcp_5000_20260602": "formal_scene_pipeline_pass_frozen_reference",
-            "gcp_10000_20260610": "approved_from_scratch_retry_after_serializer_parity",
-        }.get(scene_id, "approved_pending_execution")
+    for scene_id, expected in EXPECTED_SCENES.items():
+        row = by_scene.get(scene_id, {})
+        values = tuple(
+            row.get(field)
+            for field in ("full_view_count", "train_view_count", "test_view_count", "loaded_width", "loaded_height")
+        )
+        _require(values == expected, f"{scene_id}: counts or R4 dimensions mismatch", errors)
+        expected_status = (
+            "pending_clean_r4_qualification"
+            if scene_id == "gcp_3000_20260602"
+            else "blocked_pending_clean_r4_3k_pass"
+        )
         _require(row.get("status") == expected_status, f"{scene_id}: status mismatch", errors)
-        for field in (
-            "source_manifest_sha256",
-            "cameras_bin_sha256",
-            "images_bin_sha256",
-            "points3D_bin_sha256",
-        ):
-            _require(bool(SHA256_RE.fullmatch(str(row.get(field, "")))), f"{scene_id}: invalid {field}", errors)
-        for field in (
-            "training_image_count",
-            "formal_observation_count",
-            "formal_target_view_count",
-            "control_count",
-            "checkpoint_count",
-        ):
-            _require(isinstance(row.get(field), int) and row[field] > 0, f"{scene_id}: invalid {field}", errors)
-        _require(row.get("formal_target_view_count", 0) <= row.get("training_image_count", 0), f"{scene_id}: too many target views", errors)
-        try:
-            expected_dims = graphdeco_rminus1_dimensions(row["original_width"], row["original_height"])
-        except Exception as exc:
-            errors.append(f"{scene_id}: invalid source dimensions: {exc}")
-        else:
-            _require(expected_dims == (row.get("loaded_width"), row.get("loaded_height")), f"{scene_id}: loaded dimensions mismatch", errors)
 
-    runtime: dict[str, Any] | None = None
     if scene is not None:
-        _require(scene in EXECUTION_SCENES, "runtime scene is not approved for remaining-five execution", errors)
-        row = by_scene.get(scene)
-        _require(row is not None, "runtime scene has no plan row", errors)
-        _require(scene_root is not None and scene_root.is_dir(), "runtime scene root is missing", errors)
-        _require(release_root is not None and release_root.is_dir(), "runtime release root is missing", errors)
-        if row is not None and scene_root is not None and scene_root.is_dir():
-            from PIL import Image
-
-            manifest = scene_root / "SOURCE_MANIFEST.json"
-            _require(manifest.is_file(), "runtime source manifest is missing", errors)
-            if manifest.is_file():
-                _require(sha256_file(manifest) == row["source_manifest_sha256"], "runtime source manifest SHA mismatch", errors)
-            image_paths = sorted(path for path in (scene_root / "images").iterdir() if path.is_file())
-            _require(len(image_paths) == row["training_image_count"], "runtime image count mismatch", errors)
-            decoded_dimensions: Counter[tuple[int, int]] = Counter()
-            for image_path in image_paths:
-                with Image.open(image_path) as image:
-                    decoded_dimensions[(image.width, image.height)] += 1
-            expected_dimensions = Counter(
-                {(row["original_width"], row["original_height"]): row["training_image_count"]}
-            )
-            _require(decoded_dimensions == expected_dimensions, "runtime decoded image dimensions mismatch", errors)
-            for name, field in (
-                ("cameras.bin", "cameras_bin_sha256"),
-                ("images.bin", "images_bin_sha256"),
-                ("points3D.bin", "points3D_bin_sha256"),
-            ):
-                path = scene_root / "sparse" / "0" / name
-                _require(path.is_file(), f"runtime {name} is missing", errors)
-                if path.is_file():
-                    _require(sha256_file(path) == row[field], f"runtime {name} SHA mismatch", errors)
-            runtime = {
-                "scene": scene,
-                "scene_root": str(scene_root),
-                "training_image_count": len(image_paths),
-                "decoded_dimensions": [
-                    {"width": width, "height": height, "count": count}
-                    for (width, height), count in sorted(decoded_dimensions.items())
-                ],
-                "source_manifest_sha256": sha256_file(manifest) if manifest.is_file() else None,
-            }
-        if row is not None and release_root is not None and release_root.is_dir():
-            annotation = release_root / f"{scene}_gcp_annotations_pixel_domain_v1_3_0.csv"
-            _require(annotation.is_file(), "runtime annotation CSV is missing", errors)
-            if annotation.is_file():
-                rows = list(csv.DictReader(annotation.open("r", encoding="utf-8-sig", newline="")))
-                formal = [r for r in rows if r.get("formal_eligible", "").strip().lower() in {"1", "true", "yes"}]
-                target_field = next((key for key in ("target_image_name", "image_name", "raw_image_name") if rows and key in rows[0]), None)
-                targets = {r[target_field] for r in formal} if target_field else set()
-                _require(len(formal) == row["formal_observation_count"], "runtime formal observation count mismatch", errors)
-                _require(len(targets) == row["formal_target_view_count"], "runtime target-view count mismatch", errors)
-                if scene_root is not None and scene_root.is_dir():
-                    image_names = {path.name for path in (scene_root / "images").iterdir() if path.is_file()}
-                    _require(targets.issubset(image_names), "runtime formal target view is absent from training images", errors)
-                if runtime is not None:
-                    runtime["formal_observation_count"] = len(formal)
-                    runtime["formal_target_view_count"] = len(targets)
+        errors.append("full-matrix runtime launch is locked until clean R4 3K qualification and external acceptance")
 
     return {
-        "schema": "gs_gcp_v13_original_3dgs_full_matrix_validation_v1",
+        "schema": "gs_gcp_v13_original_3dgs_full_matrix_validation_v2",
         "passed": not errors,
+        "launch_authorized": False,
         "method_id": plan.get("method_id"),
         "scene_count": len(scene_ids),
-        "execution_order": plan.get("execution_order", []),
-        "runtime": runtime,
+        "execution_order_after_qualification": plan.get("execution_order_after_qualification", []),
         "errors": errors,
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     root = Path(__file__).resolve().parents[2]
     parser.add_argument("--repo_root", type=Path, default=root)
-    parser.add_argument("--plan", type=Path, default=root / "configs/gs_gcp_v13_original_3dgs_full_matrix_v1.json")
+    parser.add_argument("--plan", type=Path, default=root / "configs/gs_gcp_v13_original_3dgs_full_matrix_v2.json")
     parser.add_argument("--registry", type=Path, default=root / "configs/gs_gcp_method_registry_v1.json")
     parser.add_argument("--scene")
     parser.add_argument("--scene_root", type=Path)

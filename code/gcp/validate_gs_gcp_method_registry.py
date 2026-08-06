@@ -46,6 +46,23 @@ def validate_registry(data: dict[str, Any], repo_root: Path | None = None) -> di
         "release root digest must be lowercase SHA-256",
         errors,
     )
+    training_resolution = data.get("training_resolution", {})
+    _require(
+        training_resolution.get("contract") == "configs/gs_gcp_quarter_resolution_v1.json",
+        "active training resolution must use the quarter-resolution contract",
+        errors,
+    )
+    _require(
+        training_resolution.get("rule_id") == "graphdeco_quarter_resolution_v1",
+        "active training resolution rule mismatch",
+        errors,
+    )
+    _require(
+        training_resolution.get("input_materialization_contract")
+        == "configs/gs_gcp_r4_input_materialization_v1.json",
+        "active R4 input materialization contract is missing",
+        errors,
+    )
     methods = data.get("methods")
     _require(isinstance(methods, list) and bool(methods), "methods must be a non-empty list", errors)
     methods = methods if isinstance(methods, list) else []
@@ -118,6 +135,63 @@ def validate_registry(data: dict[str, Any], repo_root: Path | None = None) -> di
             _require(status in {"pre_registered_for_3k_qualification", "qualified_for_full_scene_matrix"}, prefix + "qualification state mismatch", errors)
         elif status == "pre_registered_for_3k_qualification":
             errors.append(prefix + "pre-registered method must be qualification allowed")
+
+        if method_id == "3dgs_original":
+            _require(
+                method.get("recipe") == "configs/gs_gcp_v13_original_3dgs_recipe_v3.json",
+                prefix + "active recipe must be the clean R4 v3 recipe",
+                errors,
+            )
+            _require(
+                status == "pre_registered_for_3k_qualification",
+                prefix + "clean R4 route must qualify again before the full matrix",
+                errors,
+            )
+            _require(
+                external_review_status == "CLEAN_R4_CONTRACT_PASS",
+                prefix + "clean R4 contract external review is not PASS",
+                errors,
+            )
+            contract_review = method.get("clean_r4_contract_review_evidence", {})
+            _require(
+                contract_review.get("full_matrix_authorized") is False,
+                prefix + "contract review must not unlock the full matrix",
+                errors,
+            )
+            for path_field, sha_field in (
+                ("review_request", "review_request_sha256"),
+                ("verdict_path", "verdict_sha256"),
+            ):
+                relative = contract_review.get(path_field)
+                expected_sha = str(contract_review.get(sha_field, ""))
+                _require(
+                    isinstance(relative, str) and bool(relative),
+                    prefix + f"clean R4 review {path_field} is missing",
+                    errors,
+                )
+                _require(
+                    bool(SHA256_RE.fullmatch(expected_sha)),
+                    prefix + f"clean R4 review {sha_field} is invalid",
+                    errors,
+                )
+                if repo_root is not None and isinstance(relative, str) and relative:
+                    resolved_root = repo_root.resolve()
+                    evidence_path = (resolved_root / relative).resolve()
+                    in_root = evidence_path.is_relative_to(resolved_root)
+                    _require(in_root, prefix + f"clean R4 review {path_field} escapes repository", errors)
+                    _require(evidence_path.is_file(), prefix + f"clean R4 review {path_field} is missing", errors)
+                    if in_root and evidence_path.is_file():
+                        _require(
+                            _sha256_file(evidence_path) == expected_sha,
+                            prefix + f"clean R4 review {sha_field} mismatch",
+                            errors,
+                        )
+            legacy = method.get("legacy_qualification_evidence", {})
+            _require(
+                legacy.get("formal_reuse_allowed") is False,
+                prefix + "legacy qualification must not unlock formal execution",
+                errors,
+            )
 
     expected_core = {
         "3dgs_original",

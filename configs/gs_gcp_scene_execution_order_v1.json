@@ -16,7 +16,7 @@
     "gcp_10000_20260610",
     "gcp_5000_20260602"
   ],
-  "qualified_3k_result_policy": "reuse_exact_accepted_qualification_result_without_rerun",
+  "qualified_3k_result_policy": "reuse only the exact clean-R4 qualification result after external acceptance; all legacy qualification results are ineligible",
   "resource_failure_policy": {
     "largest_scene_preflight_failure": "stop_smaller_scene_formal_execution_until_failure_is_resolved",
     "shared_protocol_failure": "stop_all_scenes",

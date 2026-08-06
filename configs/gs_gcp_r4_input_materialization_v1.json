@@ -1,0 +1,74 @@
+{
+  "schema": "gs_gcp_r4_input_materialization_contract_v1",
+  "contract_id": "gs_gcp_clean_official_r4_inputs_v1",
+  "status": "frozen_for_clean_official_3dgs_r4_qualification",
+  "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "resolution_contract": "configs/gs_gcp_quarter_resolution_v1.json",
+  "resolution_rule_id": "graphdeco_quarter_resolution_v1",
+  "dimension_formula": "(round(decoded_width / 4), round(decoded_height / 4))",
+  "rounding": "Python built-in round, ties-to-even, independently per dimension",
+  "image_decode": "PIL.Image.open; decoded matrix orientation; ignore EXIF orientation",
+  "resize_call": "PIL.Image.Image.resize(size), resample omitted",
+  "effective_resampling": "BICUBIC",
+  "pillow_version": "11.1.0",
+  "image_output": "lossless_rgb_png",
+  "png_write": {
+    "compress_level": 6,
+    "optimize": false,
+    "semantic_identity": "decoded RGB uint8 matrix; PNG byte identity is also recorded per image"
+  },
+  "camera_model": "PINHOLE",
+  "camera_scaling": {
+    "dimensions": "W'=round(W/4), H'=round(H/4)",
+    "intrinsics": "fx'=fx*W'/W, fy'=fy*H'/H, cx'=cx*W'/W, cy'=cy*H'/H",
+    "extrinsics": "preserve source float64 qvec and tvec",
+    "maximum_fov_or_normalized_ray_error": 1e-12
+  },
+  "split_contract": "configs/gs_gcp_rgb_holdout_split_v1.json",
+  "split_manifest": "configs/gs_gcp_rgb_holdout_split_manifest_v1.json",
+  "split_manifest_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+  "split_manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2",
+  "holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
+  "train_test_physical_separation": true,
+  "training_root_contains": [
+    "train_rgb_only",
+    "train_camera_intrinsics",
+    "train_camera_extrinsics",
+    "shared_initial_points_xyz_rgb"
+  ],
+  "training_root_forbidden": [
+    "test_rgb",
+    "test_camera_records",
+    "test_view_2d_tracks",
+    "test_view_visibility_statistics",
+    "gcp_identity_or_residual"
+  ],
+  "points2d_tracks_present": false,
+  "points3d_bin_present": false,
+  "initial_point_cloud": "source points3D.ply copied byte-for-byte to isolated train and test roots",
+  "source_training_manifest": "configs/gs_gcp_v13_training_source_manifest_v1.json",
+  "source_training_manifest_file_sha256": "f3b39309c11b1a7335896f0dc61787b1802459684608d67df22167157f6cbe8e",
+  "generator_script": "code/gcp/materialize_gs_gcp_r4_inputs.py",
+  "generator_script_sha256": "53c7c80adcafbf6046364cbb9b08aa728cf1d04cba257e201104ab39b1299825",
+  "official_3dgs_resolution_argument": 1,
+  "official_3dgs_eval_argument": false,
+  "official_training_source_modified": false,
+  "reference_equivalence": "full-resolution frozen source JPEG decoded by Pillow 11.1.0 and loaded by official 3DGS with --resolution 4",
+  "scene_dimensions": {
+    "gcp_3000_20260602": [1414, 1024],
+    "gcp_5000_20260602": [1414, 1025],
+    "gcp_10000_20260610": [1414, 1025],
+    "gcp_20000_20260602": [1414, 1024],
+    "gcp_50000_20260610": [1414, 1025],
+    "gcp_100000_20260610": [1414, 1025]
+  },
+  "formal_admission_gates": [
+    "source hashes match frozen v1.3 manifest",
+    "split canonical SHA matches",
+    "every decoded R4 PNG is pixel-identical to the official R4 resize",
+    "scaled PINHOLE field of view and normalized principal ray errors are <= 1e-12",
+    "train and test image names are disjoint",
+    "both COLMAP subsets contain zero POINTS2D tracks",
+    "unmodified official 3DGS source is clean before and after training"
+  ]
+}

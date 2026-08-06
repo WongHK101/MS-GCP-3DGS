@@ -1,14 +1,15 @@
 {
   "schema": "gs_gcp_method_registry_v1",
-  "registry_id": "gs_gcp_v13_geometry_methods_20260717",
-  "audit_date": "2026-07-17",
+  "registry_id": "gs_gcp_v13_geometry_methods_clean_r4_20260807",
+  "audit_date": "2026-08-07",
   "release": {
     "release_id": "gcp_benchmark_release_v1_3_0_multiview_control_heavy_20260717",
     "payload_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
   },
   "training_resolution": {
-    "contract": "configs/gs_gcp_training_resolution_v1.json",
-    "rule_id": "graphdeco_rminus1_1600_width_cap_v1"
+    "contract": "configs/gs_gcp_quarter_resolution_v1.json",
+    "rule_id": "graphdeco_quarter_resolution_v1",
+    "input_materialization_contract": "configs/gs_gcp_r4_input_materialization_v1.json"
   },
   "admission_policy": {
     "formal_publication_required": true,
@@ -44,13 +45,24 @@
           "submodules/simple-knn": "44f764299fa305faf6ec5ebd99939e0508331503"
         }
       },
-      "source_status": "qualified_for_full_scene_matrix",
-      "recipe": "configs/gs_gcp_v13_original_3dgs_recipe_v2.json",
+      "source_status": "pre_registered_for_3k_qualification",
+      "recipe": "configs/gs_gcp_v13_original_3dgs_recipe_v3.json",
       "three_k_qualification_allowed": true,
-      "three_k_qualification_status": "PASS",
-      "full_scene_matrix_eligible": true,
-      "external_review_status": "PASS",
-      "qualification_evidence": {
+      "three_k_qualification_status": "NOT_RUN_CLEAN_R4",
+      "full_scene_matrix_eligible": false,
+      "external_review_status": "CLEAN_R4_CONTRACT_PASS",
+      "clean_r4_contract_review_evidence": {
+        "review_request": "evidence/external_reviews/GS_GCP_CLEAN_R4_CONTRACT_REVIEW_REQUEST_20260807.md",
+        "review_request_sha256": "3c9aecacc89f0aeefe3efa00731a6b2386cc9419a1b1a607233aedc2a4a6935b",
+        "verdict_path": "evidence/external_reviews/GS_GCP_CLEAN_R4_CONTRACT_PASS_20260807.md",
+        "verdict_sha256": "c5dd7807021a76d8f80368b41362ae280bc80e3a890e30c25a24bd7d473e5be1",
+        "reviewer_task_id": "019ec586-bf3c-7863-97ab-29e0fd8c709b",
+        "reviewer_turn_id": "019fd82b-1ee2-7b50-b03f-38007ed8a994",
+        "full_matrix_authorized": false
+      },
+      "legacy_qualification_evidence": {
+        "formal_reuse_allowed": false,
+        "invalidation_reason": "different 1600-width and serializer-modified execution route",
         "review_package": "GPT_GS_GCP_ORIGINAL_3DGS_3K_QUALIFICATION_REVIEW_20260718.zip",
         "review_package_sha256": "1349e1ffde057b4b450e82b6c5b1bd152692cc8288875ef18e1ea6bb0f178bd3",
         "external_review_evidence_path": "evidence/external_reviews/GS_GCP_ORIGINAL_3DGS_3K_QUALIFICATION_PASS_20260718.md",

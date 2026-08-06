@@ -1,0 +1,108 @@
+{
+  "schema": "gs_gcp_v13_original_3dgs_full_matrix_plan_v2",
+  "plan_id": "gs_gcp_v13_original_3dgs_clean_r4_full_matrix_20260807",
+  "status": "blocked_pending_clean_r4_3k_qualification",
+  "method_id": "3dgs_original",
+  "method_registry": "configs/gs_gcp_method_registry_v1.json",
+  "training_recipe": "configs/gs_gcp_v13_original_3dgs_recipe_v3.json",
+  "input_materialization_contract": "configs/gs_gcp_r4_input_materialization_v1.json",
+  "qualification": {
+    "scene": "gcp_3000_20260602",
+    "status": "NOT_RUN",
+    "external_review_status": "CLEAN_R4_CONTRACT_PASS",
+    "contract_review_evidence": "evidence/external_reviews/GS_GCP_CLEAN_R4_CONTRACT_PASS_20260807.md",
+    "contract_review_evidence_sha256": "c5dd7807021a76d8f80368b41362ae280bc80e3a890e30c25a24bd7d473e5be1",
+    "full_matrix_authorized": false,
+    "unlock_rule": "clean R4 3K end-to-end PASS plus external acceptance of the exact qualification result evidence package"
+  },
+  "legacy_route": {
+    "plan": "configs/gs_gcp_v13_original_3dgs_full_matrix_v1.json",
+    "formal_reuse_allowed": false,
+    "reason": "different 1600-width and serializer-modified execution identity"
+  },
+  "frozen_method_identity": {
+    "training_source_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "training_source_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "runtime_training_patch": null,
+    "training_iterations": 30000,
+    "seed": 0,
+    "formal_model": "point_cloud/iteration_30000/point_cloud.ply",
+    "resolution_rule_id": "graphdeco_quarter_resolution_v1",
+    "official_resolution_argument_on_materialized_inputs": 1,
+    "formal_tensor": "alpha_normalized_expected_camera_z",
+    "formal_formula": "M1/A",
+    "formal_semantics": "camera_z"
+  },
+  "execution": {
+    "server": "AutoDL-901",
+    "gpu_count": 1,
+    "sequential_scene_execution": true,
+    "fresh_hardware_manifest_required": true,
+    "run_root_template": "/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original-clean-r4/<scene>/<run_id>",
+    "overwrite_policy": "fail_if_exists",
+    "old_checkpoint_or_result_reuse": false
+  },
+  "execution_order_after_qualification": [
+    "gcp_100000_20260610",
+    "gcp_50000_20260610",
+    "gcp_20000_20260602",
+    "gcp_10000_20260610",
+    "gcp_5000_20260602"
+  ],
+  "scenes": [
+    {
+      "scene": "gcp_3000_20260602",
+      "status": "pending_clean_r4_qualification",
+      "full_view_count": 94,
+      "train_view_count": 82,
+      "test_view_count": 12,
+      "loaded_width": 1414,
+      "loaded_height": 1024
+    },
+    {
+      "scene": "gcp_5000_20260602",
+      "status": "blocked_pending_clean_r4_3k_pass",
+      "full_view_count": 101,
+      "train_view_count": 88,
+      "test_view_count": 13,
+      "loaded_width": 1414,
+      "loaded_height": 1025
+    },
+    {
+      "scene": "gcp_10000_20260610",
+      "status": "blocked_pending_clean_r4_3k_pass",
+      "full_view_count": 976,
+      "train_view_count": 854,
+      "test_view_count": 122,
+      "loaded_width": 1414,
+      "loaded_height": 1025
+    },
+    {
+      "scene": "gcp_20000_20260602",
+      "status": "blocked_pending_clean_r4_3k_pass",
+      "full_view_count": 298,
+      "train_view_count": 260,
+      "test_view_count": 38,
+      "loaded_width": 1414,
+      "loaded_height": 1024
+    },
+    {
+      "scene": "gcp_50000_20260610",
+      "status": "blocked_pending_clean_r4_3k_pass",
+      "full_view_count": 2208,
+      "train_view_count": 1932,
+      "test_view_count": 276,
+      "loaded_width": 1414,
+      "loaded_height": 1025
+    },
+    {
+      "scene": "gcp_100000_20260610",
+      "status": "blocked_pending_clean_r4_3k_pass",
+      "full_view_count": 2510,
+      "train_view_count": 2196,
+      "test_view_count": 314,
+      "loaded_width": 1414,
+      "loaded_height": 1025
+    }
+  ]
+}

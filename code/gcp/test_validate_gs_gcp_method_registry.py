@@ -20,7 +20,7 @@ class MethodRegistryTests(unittest.TestCase):
         self.assertTrue(result["passed"], result["errors"])
         self.assertEqual(result["method_count"], 10)
         self.assertEqual(result["qualification_allowed"], ["3dgs_original"])
-        self.assertEqual(result["full_scene_matrix_eligible"], ["3dgs_original"])
+        self.assertEqual(result["full_scene_matrix_eligible"], [])
 
     def test_duplicate_method_rejected(self) -> None:
         data = copy.deepcopy(REGISTRY)
@@ -43,16 +43,23 @@ class MethodRegistryTests(unittest.TestCase):
         data["methods"][1]["full_scene_matrix_eligible"] = True
         self.assertFalse(validate_registry(data, ROOT)["passed"])
 
-    def test_qualification_evidence_hash_mismatch_rejected(self) -> None:
+    def test_legacy_qualification_cannot_be_reused(self) -> None:
         data = copy.deepcopy(REGISTRY)
-        data["methods"][0]["qualification_evidence"]["external_review_evidence_sha256"] = "0" * 64
+        data["methods"][0]["legacy_qualification_evidence"]["formal_reuse_allowed"] = True
         result = validate_registry(data, ROOT)
         self.assertFalse(result["passed"])
-        self.assertTrue(any("external review evidence SHA mismatch" in error for error in result["errors"]))
+        self.assertTrue(any("legacy qualification" in error for error in result["errors"]))
+
+    def test_clean_r4_review_evidence_hash_is_bound(self) -> None:
+        data = copy.deepcopy(REGISTRY)
+        data["methods"][0]["clean_r4_contract_review_evidence"]["verdict_sha256"] = "0" * 64
+        result = validate_registry(data, ROOT)
+        self.assertFalse(result["passed"])
+        self.assertTrue(any("verdict_sha256 mismatch" in error for error in result["errors"]))
 
     def test_qualification_status_without_full_matrix_rejected(self) -> None:
         data = copy.deepcopy(REGISTRY)
-        data["methods"][0]["full_scene_matrix_eligible"] = False
+        data["methods"][0]["three_k_qualification_status"] = "PASS"
         self.assertFalse(validate_registry(data, ROOT)["passed"])
 
 

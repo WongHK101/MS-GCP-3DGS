@@ -26,6 +26,11 @@ class Stage0ReadinessTests(unittest.TestCase):
             "autodl_901_orchestrator_deployment_evidence_missing_or_mismatch",
             result["blockers"],
         )
+        self.assertNotIn(
+            "method_clean_r4_contract_review_not_passed:3dgs_original",
+            result["blockers"],
+        )
+        self.assertTrue(result["components"]["r4_input_materialization"]["passed"])
 
     def test_external_review_evidence_hash_is_bound(self) -> None:
         review = json.loads(
@@ -63,7 +68,7 @@ class Stage0ReadinessTests(unittest.TestCase):
         self.assertFalse(result["training_ready"])
         self.assertIn("method_not_pre_registered_for_3k_qualification:2dgs", result["blockers"])
 
-    def test_original_3dgs_is_approved_for_full_scene_matrix(self) -> None:
+    def test_original_3dgs_full_scene_matrix_is_relocked(self) -> None:
         result = validate_stage0(
             ROOT,
             None,
@@ -71,10 +76,10 @@ class Stage0ReadinessTests(unittest.TestCase):
             require_full_scene_matrix_eligible=True,
         )
         admission = result["components"]["method_qualification"]
-        self.assertTrue(admission["passed"])
-        self.assertTrue(admission["full_scene_matrix_eligible"])
-        self.assertEqual(admission["three_k_qualification_status"], "PASS")
-        self.assertEqual(admission["external_review_status"], "PASS")
+        self.assertFalse(admission["passed"])
+        self.assertFalse(admission["full_scene_matrix_eligible"])
+        self.assertEqual(admission["three_k_qualification_status"], "NOT_RUN_CLEAN_R4")
+        self.assertEqual(admission["external_review_status"], "CLEAN_R4_CONTRACT_PASS")
 
     def test_other_method_is_not_approved_for_full_scene_matrix(self) -> None:
         result = validate_stage0(

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# LEGACY_FULL_MATRIX_LAUNCHER_DISABLED: this body belongs to the superseded
+# 1600-width, serializer-modified route.  Keep it only as audit history; the
+# clean R4 full matrix is locked until a new 3K qualification is accepted.
+echo "legacy original-3DGS full-matrix launcher is disabled; use the clean R4 qualification recipe v3" >&2
+exit 64
+
 : "${SCENE_ID:?Set one approved remaining-five SCENE_ID}"
 : "${RUN_ID:?Set a unique RUN_ID before launch}"
 

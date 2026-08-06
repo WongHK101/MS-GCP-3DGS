@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from gcp_pixel_domain_v1_2 import verify_payload_integrity
+from materialize_gs_gcp_r4_inputs import validate_contract as validate_r4_materialization_contract
 from run_with_resource_probe import validate_contract as validate_resource_contract
 from validate_gs_gcp_method_registry import validate_registry
 
@@ -46,7 +47,8 @@ def validate_stage0(
     configs = repo_root / "configs"
     registry_path = configs / "gs_gcp_method_registry_v1.json"
     resource_path = configs / "gs_gcp_resource_probe_contract_v1.json"
-    resolution_path = configs / "gs_gcp_training_resolution_v1.json"
+    resolution_path = configs / "gs_gcp_quarter_resolution_v1.json"
+    r4_materialization_path = configs / "gs_gcp_r4_input_materialization_v1.json"
     review_path = configs / "gs_gcp_v13_release_review_status_v1.json"
     mirror_path = configs / "gs_gcp_v13_data_mirror_v1.json"
     promotion_path = configs / "gs_gcp_repository_promotion_status_v1.json"
@@ -78,16 +80,25 @@ def validate_stage0(
 
     resolution = _load(resolution_path)
     resolution_passed = (
-        resolution.get("schema") == "gs_gcp_training_resolution_contract_v1"
-        and resolution.get("rule_id") == "graphdeco_rminus1_1600_width_cap_v1"
-        and resolution.get("reference_method_argument") == -1
-        and resolution.get("max_width") == 1600
+        resolution.get("schema") == "gs_gcp_resolution_contract_v2"
+        and resolution.get("rule_id") == "graphdeco_quarter_resolution_v1"
+        and resolution.get("reference_method_argument") == 4
+        and resolution.get("dimension_formula")
+        == "(round(decoded_width / 4), round(decoded_height / 4))"
     )
     components["training_resolution"] = _component(
         resolution_passed,
         path=str(resolution_path),
         sha256=sha256_file(resolution_path),
         rule_id=resolution.get("rule_id"),
+    )
+    r4_materialization = _load(r4_materialization_path)
+    r4_materialization_errors = validate_r4_materialization_contract(r4_materialization, repo_root)
+    components["r4_input_materialization"] = _component(
+        not r4_materialization_errors,
+        path=str(r4_materialization_path),
+        sha256=sha256_file(r4_materialization_path),
+        errors=r4_materialization_errors,
     )
 
     review = _load(review_path)
@@ -292,12 +303,15 @@ def validate_stage0(
         method_details["external_review_status"] = (
             matched[0].get("external_review_status", "not_recorded") if matched else None
         )
+        if not require_full_scene_matrix_eligible:
+            method_gate = method_gate and method_details["external_review_status"] == "CLEAN_R4_CONTRACT_PASS"
     components["method_qualification"] = _component(method_gate, **method_details)
 
     contract_components = (
         "method_registry",
         "resource_probe_contract",
         "training_resolution",
+        "r4_input_materialization",
         "release_review",
         "archive_mirror",
         "repository_promotion",
@@ -318,8 +332,10 @@ def validate_stage0(
     if not method_gate:
         if require_full_scene_matrix_eligible:
             blockers.append(f"method_not_approved_for_full_scene_matrix:{method_id}")
-        else:
+        elif not method_details.get("three_k_qualification_allowed"):
             blockers.append(f"method_not_pre_registered_for_3k_qualification:{method_id}")
+        else:
+            blockers.append(f"method_clean_r4_contract_review_not_passed:{method_id}")
     if not contracts_valid:
         blockers.append("stage0_contract_validation_failed")
 

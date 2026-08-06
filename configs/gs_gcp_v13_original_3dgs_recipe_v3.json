@@ -1,0 +1,151 @@
+{
+  "schema": "gs_gcp_v1_3_method_recipe_v3",
+  "recipe_id": "gs_gcp_v13_original_3dgs_clean_r4_30k_seed0_v3",
+  "status": "pre_registered_for_clean_r4_3k_qualification",
+  "supersedes_for_formal_execution": [
+    "configs/gs_gcp_v13_original_3dgs_recipe_v2.json",
+    "configs/gs_gcp_stage0_5_original_3dgs_3k_v1.json",
+    "configs/gs_gcp_v13_original_3dgs_full_matrix_v1.json"
+  ],
+  "legacy_route_policy": "old 1600-width, path-backed, serializer-modified recipes, checkpoints, results, and qualification decisions are historical evidence only and cannot be inherited",
+  "method": {
+    "method_id": "3dgs_original",
+    "display_name": "3D Gaussian Splatting",
+    "publication_title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+    "official_repository": "https://github.com/graphdeco-inria/gaussian-splatting"
+  },
+  "source_provenance": {
+    "repository_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "repository_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "selection_rule": "last official main commit on the original 2023 implementation line before the 2024 feature release",
+    "submodules": {
+      "diff-gaussian-rasterization": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+      "simple-knn": "44f764299fa305faf6ec5ebd99939e0508331503"
+    }
+  },
+  "build_compatibility": {
+    "training_source_modified": false,
+    "runtime_training_patch": null,
+    "serializer_patch_allowed": false,
+    "simple_knn_build_copy_patch": {
+      "upstream_compatibility_commit": "86710c2d4b46680c02301765dd79e465819c8f19",
+      "patch_path": "patches/3dgs_original/simple_knn_86710c2_cuda12_cfloat.patch",
+      "patch_sha256": "c94eb0a6ef1318a05bcfeedf12feff257215b361206a372066f61403291c5aa4",
+      "scope": "isolated simple-knn build copy only; adds cfloat include for CUDA 12.8 FLT_MAX compatibility"
+    }
+  },
+  "release": {
+    "release_id": "gcp_benchmark_release_v1_3_0_multiview_control_heavy_20260717",
+    "payload_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "gcp_annotations_or_survey_coordinates_visible_to_training": false
+  },
+  "protocol": {
+    "resolution_contract": "configs/gs_gcp_quarter_resolution_v1.json",
+    "resolution_rule_id": "graphdeco_quarter_resolution_v1",
+    "input_materialization_contract": "configs/gs_gcp_r4_input_materialization_v1.json",
+    "input_materialization_contract_sha256": "1816299d4a2aabcba64103cd095e6704be76d11590ed395512b80518136389c4",
+    "split_contract": "configs/gs_gcp_rgb_holdout_split_v1.json",
+    "split_manifest": "configs/gs_gcp_rgb_holdout_split_manifest_v1.json",
+    "split_manifest_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+    "split_manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2",
+    "holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
+    "measurement_suite": "configs/gs_gcp_common_measurement_suite_v1.json"
+  },
+  "qualification_scene": {
+    "scene_id": "gcp_3000_20260602",
+    "full_view_count": 94,
+    "train_view_count": 82,
+    "test_view_count": 12,
+    "training_input_root_role": "train",
+    "heldout_input_root_role": "test",
+    "image_directory": "images",
+    "image_format": "lossless_rgb_png",
+    "loaded_width": 1414,
+    "loaded_height": 1024,
+    "official_resolution_argument": 1,
+    "official_eval_argument": false,
+    "camera_model": "PINHOLE",
+    "points2d_tracks_present": false,
+    "materialized_input_manifest_sha256": "88e354a7cc387975f6686020cf15a3584bfe28769c46360400dcfc027d82921c",
+    "materialized_input_file_count": 101,
+    "materialized_input_file_bytes": 250576506,
+    "source_cameras_bin_sha256": "49cfa412254ff4bfb68473cc1b2262a95362e9542020424c166304a3831962f7",
+    "source_images_bin_sha256": "4929f95d7a68d19820999efc734ff8d892c51508191d0380d00e3ae00b82a5d7",
+    "shared_initial_ply_sha256": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d"
+  },
+  "training": {
+    "iterations": 30000,
+    "seed": 0,
+    "seed_implementation": "utils.general_utils.safe_state",
+    "sh_degree": 3,
+    "white_background": false,
+    "data_device": "cuda",
+    "eval_holdout": false,
+    "convert_shs_python": false,
+    "compute_cov3d_python": false,
+    "detect_anomaly": false,
+    "position_lr_init": 0.00016,
+    "position_lr_final": 0.0000016,
+    "position_lr_delay_mult": 0.01,
+    "position_lr_max_steps": 30000,
+    "feature_lr": 0.0025,
+    "opacity_lr": 0.05,
+    "scaling_lr": 0.005,
+    "rotation_lr": 0.001,
+    "percent_dense": 0.01,
+    "lambda_dssim": 0.2,
+    "densification_interval": 100,
+    "opacity_reset_interval": 3000,
+    "densify_from_iter": 500,
+    "densify_until_iter": 15000,
+    "densify_grad_threshold": 0.0002,
+    "random_background": false,
+    "test_iterations": [7000, 30000],
+    "save_iterations": [7000, 30000],
+    "checkpoint_iterations": [],
+    "start_checkpoint": null,
+    "formal_checkpoint": "point_cloud/iteration_30000/point_cloud.ply",
+    "gcp_annotations_visible_to_training": false,
+    "split_role_labels_visible_to_optimizer": false,
+    "survey_coordinates_visible_to_training": false
+  },
+  "execution": {
+    "command_template": "python train.py -s <materialized_scene_root>/train -m <new_run_root> --resolution 1 --iterations 30000 --test_iterations 7000 30000 --save_iterations 7000 30000 --quiet",
+    "resume_allowed": false,
+    "preexisting_checkpoint_allowed": false,
+    "source_tree_clean_before_and_after_required": true,
+    "materialized_input_verification_required": true,
+    "fresh_hardware_manifest_required": true
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "gpu_binding": "record fresh UUID and hardware manifest at launch",
+    "python": "3.10.12",
+    "pytorch": "2.7.1+cu128",
+    "pillow": "11.1.0",
+    "environment_lock_sha256": "29f8997ba141357bbeddca9014757ab5a97acb9dd5ac312beda9e5f94acce0ed"
+  },
+  "server_roots": {
+    "official_code_root": "/root/autodl-tmp/worktrees/ms-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train",
+    "environment_root": "/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1",
+    "frozen_source_root_template": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/<scene>",
+    "materialized_input_root_template": "/root/autodl-tmp/datasets/gs-gcp-v13/r4_clean_v1/<scene>",
+    "build_root_template": "/root/autodl-tmp/build/gs-gcp-v13/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/<run_id>",
+    "run_root_template": "/root/autodl-tmp/runs/gs-gcp-v13/3dgs-original-clean-r4/<scene>/<run_id>"
+  },
+  "isolation": {
+    "source_dataset_access": "read_only",
+    "materialized_input_access_during_training": "read_only",
+    "code_runtime_writes": "forbidden",
+    "overwrite_policy": "fail_if_exists",
+    "method_specific_environment": true,
+    "method_and_run_specific_build_cache": true,
+    "method_and_scene_specific_run_root": true
+  },
+  "qualification": {
+    "scope": "3K clean R4 end-to-end only",
+    "external_review_required_before_formal_training": true,
+    "full_matrix_authorized_before_pass": false,
+    "legacy_qualification_inheritance": false
+  }
+}
