@@ -85,6 +85,7 @@ class Supervisor:
             "error": error,
             "gpu_used": False,
             "training_started": False,
+            "configured_num_threads": self.args.num_threads,
         }
         write_json(self.status_path, value)
 
@@ -252,6 +253,8 @@ class Supervisor:
                 self.args.remote_colmap,
                 "--workers",
                 str(self.args.transfer_workers),
+                "--num-threads",
+                str(self.args.num_threads),
             )
             for upload_attempt in range(1, 6):
                 try:
@@ -332,6 +335,7 @@ class Supervisor:
 
     def build_batch_audit(self) -> None:
         scenes = []
+        num_threads_by_scene = {}
         for scene in ALL_SCENES:
             package_path = (
                 self.args.candidate_root
@@ -342,6 +346,15 @@ class Supervisor:
             package = json.loads(package_path.read_text(encoding="utf-8"))
             if package.get("status") != "pass":
                 raise ValueError(f"Non-pass package audit for {scene}")
+            image_generation = package.get("image_generation")
+            if image_generation is None and scene == "gcp_3000_20260602":
+                # The approved pilot predates PACKAGE_AUDIT v2. Its frozen
+                # launch evidence records the original single-thread command.
+                num_threads_by_scene[scene] = 1
+            else:
+                num_threads_by_scene[scene] = int(
+                    image_generation["num_threads"]
+                )
             scenes.append(
                 {
                     "scene": scene,
@@ -370,7 +383,7 @@ class Supervisor:
             "command_contract": {
                 "CUDA_VISIBLE_DEVICES": "",
                 "max_image_size": 1414,
-                "num_threads": 1,
+                "num_threads_by_scene": num_threads_by_scene,
                 "output_type": "COLMAP",
             },
             "gpu_used": False,
@@ -424,6 +437,7 @@ def main() -> None:
     parser.add_argument("--remote-batch-root", required=True)
     parser.add_argument("--remote-colmap", required=True)
     parser.add_argument("--transfer-workers", type=int, default=8)
+    parser.add_argument("--num-threads", type=int, default=1)
     args = parser.parse_args()
 
     for path in (
@@ -437,6 +451,8 @@ def main() -> None:
     ):
         if not path.exists():
             raise FileNotFoundError(path)
+    if args.num_threads < 1 or args.num_threads > 64:
+        raise ValueError("--num-threads must be between 1 and 64")
     supervisor = Supervisor(args)
     try:
         supervisor.run()

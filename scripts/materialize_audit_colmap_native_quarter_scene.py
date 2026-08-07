@@ -179,10 +179,17 @@ def main() -> None:
             raise FileNotFoundError(path)
     preparation_path = args.candidate_root / "evidence" / "PREPARATION.json"
     download_path = args.candidate_root / "evidence" / "DOWNLOAD.json"
+    remote_launch_path = args.candidate_root / "evidence" / "REMOTE_LAUNCH.json"
     preparation = json.loads(preparation_path.read_text(encoding="utf-8"))
     download = json.loads(download_path.read_text(encoding="utf-8"))
+    remote_launch = json.loads(remote_launch_path.read_text(encoding="utf-8"))
     if preparation.get("scene") != args.scene or download.get("scene") != args.scene:
         raise ValueError("Scene identity differs across preparation/download evidence")
+    if remote_launch.get("scene") != args.scene or remote_launch.get("status") != "launched":
+        raise ValueError("Remote launch evidence has an invalid scene or status")
+    generation_threads = int(remote_launch["command_contract"]["num_threads"])
+    if generation_threads < 1:
+        raise ValueError(f"Invalid generation thread count: {generation_threads}")
     expected_images = int(preparation["raw_images"]["count"])
 
     colmap = load_colmap_module(args.read_write_model)
@@ -362,7 +369,7 @@ def main() -> None:
             "generator": "COLMAP 4.0.4 image_undistorter",
             "CUDA_VISIBLE_DEVICES": "",
             "max_image_size": 1414,
-            "num_threads": 1,
+            "num_threads": generation_threads,
         },
         "camera": {
             "id": native_camera.id,
@@ -410,6 +417,7 @@ def main() -> None:
         "sources": {
             "preparation": file_record(preparation_path),
             "download": file_record(download_path),
+            "remote_launch": file_record(remote_launch_path),
             "native_camera_model": file_record(native_root / "cameras.bin"),
             "native_image_model": file_record(native_root / "images.bin"),
             "frozen_camera_model": file_record(args.frozen_model / "cameras.bin"),
@@ -432,7 +440,8 @@ def main() -> None:
                 f"# {args.scene} COLMAP-native quarter candidate",
                 "",
                 "- `images/`: COLMAP 4.0.4 `image_undistorter` output with "
-                "`--max_image_size 1414 --num_threads 1` and GPU hidden.",
+                f"`--max_image_size 1414 --num_threads {generation_threads}` "
+                "and GPU hidden.",
                 "- `sparse/0/`: complete train-ready COLMAP model.",
                 "- `evidence/PACKAGE_AUDIT.json`: integrity, identity, track, "
                 "reprojection, and loader-layout audit.",

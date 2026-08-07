@@ -151,7 +151,7 @@ def upload_small(sftp, source: Path, destination: str) -> None:
 
 
 def make_wrapper(
-    remote_root: str, colmap: str, expected_count: int
+    remote_root: str, colmap: str, expected_count: int, num_threads: int
 ) -> str:
     root = shlex.quote(remote_root)
     executable = shlex.quote(colmap)
@@ -185,7 +185,7 @@ env CUDA_VISIBLE_DEVICES= {executable} image_undistorter \\
   --output_path "$root/output" \\
   --output_type COLMAP \\
   --max_image_size 1414 \\
-  --num_threads 1 \\
+  --num_threads {num_threads} \\
   > "$root/undistort.stdout.log" \\
   2> "$root/undistort.stderr.log" &
 child=$!
@@ -227,12 +227,15 @@ def main() -> None:
     parser.add_argument("--remote-batch-root", required=True)
     parser.add_argument("--colmap", required=True)
     parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--num-threads", type=int, default=1)
     args = parser.parse_args()
 
     if not SCENE_PATTERN.fullmatch(args.scene):
         raise ValueError(f"Invalid scene name: {args.scene}")
     if args.workers < 1 or args.workers > 16:
         raise ValueError("--workers must be between 1 and 16")
+    if args.num_threads < 1 or args.num_threads > 64:
+        raise ValueError("--num-threads must be between 1 and 64")
     for path in (args.raw_root, args.prepared_root, args.connector):
         if not path.exists():
             raise FileNotFoundError(path)
@@ -259,12 +262,29 @@ def main() -> None:
             "set -eu; "
             "test -x " + shlex.quote(args.colmap) + "; "
             "printf 'memory_max='; cat /sys/fs/cgroup/memory.max; "
+            "printf 'cpu_max='; cat /sys/fs/cgroup/cpu.max; "
+            "printf 'nproc='; nproc; "
             "printf 'disk_available='; df -B1 --output=avail /root/autodl-tmp | tail -1; "
             "printf 'colmap_version='; " + shlex.quote(args.colmap) + " -h | head -1",
             timeout=120,
         )
-        if "memory_max=2147483648" not in environment:
+        memory_line = next(
+            (
+                line
+                for line in environment.splitlines()
+                if line.startswith("memory_max=")
+            ),
+            None,
+        )
+        if memory_line is None or not memory_line.split("=", 1)[1].isdigit():
             raise RuntimeError(f"Unexpected remote memory limit: {environment!r}")
+        memory_max = int(memory_line.split("=", 1)[1])
+        required_memory = max(2 * 1024**3, args.num_threads * 512 * 1024**2)
+        if memory_max < required_memory:
+            raise RuntimeError(
+                f"Remote memory {memory_max} is below the {required_memory}-byte "
+                f"guard for {args.num_threads} threads"
+            )
         connector.run_remote(
             client,
             "set -eu; "
@@ -382,7 +402,9 @@ def main() -> None:
         )
         if check_output.count(": OK\n") != len(records):
             raise RuntimeError("Remote SHA256 verification count mismatch")
-        wrapper = make_wrapper(remote_root, args.colmap, len(records))
+        wrapper = make_wrapper(
+            remote_root, args.colmap, len(records), args.num_threads
+        )
         local_wrapper = args.prepared_root / "run_remote_undistorter.sh"
         local_wrapper.write_text(wrapper, encoding="utf-8", newline="\n")
         sftp = client.open_sftp()
@@ -428,7 +450,7 @@ def main() -> None:
                 "colmap": args.colmap,
                 "CUDA_VISIBLE_DEVICES": "",
                 "max_image_size": 1414,
-                "num_threads": 1,
+                "num_threads": args.num_threads,
                 "output_type": "COLMAP",
             },
         }
