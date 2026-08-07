@@ -1,0 +1,81 @@
+{
+  "counts": {
+    "active_checkpoints": 37,
+    "active_controls": 45,
+    "active_observations": 1018,
+    "active_scene_point_instances": 82,
+    "quarantined_scene_point_instances": 5,
+    "scene_count": 6,
+    "source_scene_point_instances": 87
+  },
+  "errors": [],
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v1",
+  "protocol_release_manifest_sha256": "acd9ffe58d825339c528182c0940d26c575cbc87505305d34394aa227317815b",
+  "scene_evidence": [
+    {
+      "checkpoint_count": 10,
+      "checkpoint_rmse_h_m": 0.08184857944475163,
+      "checkpoint_rmse_z_m": 0.1821711761365192,
+      "control_count": 11,
+      "loo_max_camera_center_shift_z_m": 0.13606055258455285,
+      "loo_max_omitted_prediction_z_m": 0.345721470301001,
+      "scene": "gcp_100000_20260610",
+      "transform_canonical_sha256": "2118f3f311964d2da5e97278da767852efdf01b29e17bb5239a736384cda728a"
+    },
+    {
+      "checkpoint_count": 4,
+      "checkpoint_rmse_h_m": 0.01883311287977645,
+      "checkpoint_rmse_z_m": 0.03988530952994269,
+      "control_count": 6,
+      "loo_max_camera_center_shift_z_m": 0.019458093921429054,
+      "loo_max_omitted_prediction_z_m": 0.018941259918747733,
+      "scene": "gcp_10000_20260610",
+      "transform_canonical_sha256": "129626b67e244b5c0a9f13cf7849393273e2d316b56000555374c007effaebdd"
+    },
+    {
+      "checkpoint_count": 4,
+      "checkpoint_rmse_h_m": 0.01721703276412314,
+      "checkpoint_rmse_z_m": 0.1023401800149317,
+      "control_count": 5,
+      "loo_max_camera_center_shift_z_m": 0.08754058271375698,
+      "loo_max_omitted_prediction_z_m": 0.09406516862672731,
+      "scene": "gcp_20000_20260602",
+      "transform_canonical_sha256": "934eac9c2db214a77367b2e07c8e2731171e70e71db7cdff49d45f9102b47b30"
+    },
+    {
+      "checkpoint_count": 4,
+      "checkpoint_rmse_h_m": 0.011780554170579929,
+      "checkpoint_rmse_z_m": 0.023462791787245117,
+      "control_count": 5,
+      "loo_max_camera_center_shift_z_m": 0.027202845934880315,
+      "loo_max_omitted_prediction_z_m": 0.021839926574571678,
+      "scene": "gcp_3000_20260602",
+      "transform_canonical_sha256": "7215da8c69551400feb31935ddece3e3bee8dd984630220f51fc04f04761cd65"
+    },
+    {
+      "checkpoint_count": 11,
+      "checkpoint_rmse_h_m": 0.039133270314305066,
+      "checkpoint_rmse_z_m": 0.13826127073698102,
+      "control_count": 12,
+      "loo_max_camera_center_shift_z_m": 0.13407543890090778,
+      "loo_max_omitted_prediction_z_m": 0.25354903626900693,
+      "scene": "gcp_50000_20260610",
+      "transform_canonical_sha256": "43fab5302c5607169e55b3c1aeea59e4378a701ee9a0d74896a69dc01a3b354a"
+    },
+    {
+      "checkpoint_count": 4,
+      "checkpoint_rmse_h_m": 0.02891577126327152,
+      "checkpoint_rmse_z_m": 0.05422647477738336,
+      "control_count": 6,
+      "loo_max_camera_center_shift_z_m": 0.04296510326577163,
+      "loo_max_omitted_prediction_z_m": 0.0375064156161784,
+      "scene": "gcp_5000_20260602",
+      "transform_canonical_sha256": "5b37e56124e08330c31c0016e963a95aaa83b80cecf143dad866263bbf6bc249"
+    }
+  ],
+  "schema": "m3m_gcp_native_quarter_protocol_release_validation_v1",
+  "sha256sums_sha256": "b919335b50a8f75769f657a7d9e080043dd5b0b68ed597c005a3724d89e7b219",
+  "training_allowed_globally": false,
+  "verified_sha256sum_entries": 34
+}

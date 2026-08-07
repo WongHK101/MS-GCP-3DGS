@@ -1,0 +1,270 @@
+{
+  "schema": "m3m_gcp_native_quarter_method_registry_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v1",
+  "status": "candidate_pool_frozen_training_locked_pending_per_method_qualification",
+  "source_data_release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
+  },
+  "method_count": 9,
+  "method_ids": [
+    "3dgs_original",
+    "2dgs",
+    "pgsr",
+    "rade_gs",
+    "gof",
+    "qgs",
+    "citygaussian_v2",
+    "citygs_x",
+    "metrogs"
+  ],
+  "formal_common_track": {
+    "name": "render_support_expected_camera_z",
+    "sample_operator": "bilinear(weighted_camera_z_sum) / bilinear(accumulated_alpha)",
+    "cross_method_primary": true,
+    "physical_surface_claim": false,
+    "native_surface_track": "secondary_family_specific",
+    "z50_and_mesh": "diagnostic_until_adapter_parity"
+  },
+  "input_class_definitions": {
+    "rgb_colmap_only": "Frozen native-quarter RGB and frozen COLMAP cameras/sparse initialization only.",
+    "rgb_colmap_external_geometry_prior": "Frozen native-quarter RGB/COLMAP plus a separately frozen pretrained geometry or depth prior. Results must be labelled and stratified by input class."
+  },
+  "methods": [
+    {
+      "method_id": "3dgs_original",
+      "display_name": "3D Gaussian Splatting",
+      "representation_family": "3d_gaussian_ellipsoid",
+      "publication": {
+        "venue": "ACM TOG / SIGGRAPH 2023",
+        "record": "https://doi.org/10.1145/3592433"
+      },
+      "source": {
+        "official_repository": "https://github.com/graphdeco-inria/gaussian-splatting",
+        "commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+        "tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {
+        "status": "CPU_OPERATOR_PREFLIGHT_PASS_RENDERER_INTEGRATION_PENDING",
+        "report": "docs/protocol_evidence/3dgs_native_quarter_adapter_cpu_preflight_v1.json",
+        "report_sha256": "8b7fcff7ded4345ec680cfc9cd8c2d1ff46ebd9847e925c361d5d0d8b7e3a1a0",
+        "end_to_end_cpu_smoke": "docs/protocol_evidence/native_quarter_evaluator_end_to_end_cpu_smoke_v1.json",
+        "end_to_end_cpu_smoke_sha256": "4a4c856954abc6a41a7b8ecbca1a40b2d7a562d0bf97b9afe82f33bd7f43bf4c"
+      },
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "2dgs",
+      "display_name": "2D Gaussian Splatting",
+      "representation_family": "2d_gaussian_surfel",
+      "publication": {
+        "venue": "ACM SIGGRAPH 2024 Conference Papers",
+        "record": "https://doi.org/10.1145/3641519.3657428"
+      },
+      "source": {
+        "official_repository": "https://github.com/hbb1/2d-gaussian-splatting",
+        "commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
+        "tree": "ad1da88f43447bde046712835db70e271816282e",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "pgsr",
+      "display_name": "PGSR",
+      "representation_family": "planar_gaussian_surfel",
+      "publication": {
+        "venue": "IEEE Transactions on Visualization and Computer Graphics",
+        "record": "https://doi.org/10.1109/TVCG.2024.3494046"
+      },
+      "source": {
+        "official_repository": "https://github.com/zju3dv/PGSR",
+        "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+        "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "rade_gs",
+      "display_name": "RaDe-GS",
+      "representation_family": "3d_gaussian_depth_rasterization",
+      "publication": {
+        "venue": "ACM Transactions on Graphics 45(2), 2026",
+        "record": "https://doi.org/10.1145/3789201"
+      },
+      "source": {
+        "official_repository": "https://github.com/HKUST-SAIL/RaDe-GS",
+        "commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+        "tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "gof",
+      "display_name": "Gaussian Opacity Fields",
+      "representation_family": "implicit_opacity_level_set",
+      "publication": {
+        "venue": "ACM Transactions on Graphics 43(6), 2024",
+        "record": "https://doi.org/10.1145/3687937"
+      },
+      "source": {
+        "official_repository": "https://github.com/autonomousvision/gaussian-opacity-fields",
+        "commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+        "tree": "b398209f5721e3944d4f95477c962a78e2106198",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "qgs",
+      "display_name": "Quadratic Gaussian Splatting",
+      "representation_family": "quadratic_gaussian_surfel",
+      "publication": {
+        "venue": "ICCV 2025",
+        "record": "https://openaccess.thecvf.com/content/ICCV2025/html/Zhang_Quadratic_Gaussian_Splatting_High_Quality_Surface_Reconstruction_with_Second-order_Geometric_ICCV_2025_paper.html"
+      },
+      "source": {
+        "official_repository": "https://github.com/will-zzy/QGS",
+        "commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+        "tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
+        "license_file": "LICENSE.md",
+        "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+        "license_status": "present_at_frozen_commit",
+        "source_audit": "official train.py and images+sparse/0 input documented at frozen commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "citygaussian_v2",
+      "display_name": "CityGaussianV2",
+      "representation_family": "large_scale_2d_gaussian",
+      "publication": {
+        "venue": "ICLR 2025",
+        "record": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/d218ec74edbfc494fa7d7a253951c603-Abstract-Conference.html"
+      },
+      "source": {
+        "official_repository": "https://github.com/Linketic/CityGaussian",
+        "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+        "tree": "be088977358cb36bac000caec396eff3758c74b2",
+        "license_file": "LICENSE.md",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "external_priors": [],
+      "recipe_status": "pending_native_quarter_recipe_freeze",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "citygs_x",
+      "display_name": "CityGS-X",
+      "representation_family": "hierarchical_3d_gaussian",
+      "publication": {
+        "venue": "ICCV 2025",
+        "record": "https://openaccess.thecvf.com/content/ICCV2025/html/Gao_CityGS-X_A_Scalable_Architecture_for_Efficient_and_Geometrically_Accurate_Large-Scale_ICCV_2025_paper.html"
+      },
+      "source": {
+        "official_repository": "https://github.com/gyy456/CityGS-X",
+        "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+        "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+        "license_file": null,
+        "license_status": "missing_at_frozen_commit_internal_test_only_redistribution_blocked"
+      },
+      "input_class": "rgb_colmap_external_geometry_prior",
+      "external_priors": [
+        {
+          "name": "Depth Anything V2",
+          "purpose": "monocular depth prior in the official real-world preparation recipe",
+          "freeze_status": "PENDING_EXACT_MODEL_WEIGHT_SHA_INPUT_RESOLUTION_COMMAND_AND_COST"
+        }
+      ],
+      "recipe_status": "blocked_until_external_prior_and_license_review_are_recorded",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    },
+    {
+      "method_id": "metrogs",
+      "display_name": "MetroGS",
+      "representation_family": "large_scale_2d_gaussian_with_pointmap_initialization",
+      "publication": {
+        "venue": "CVPR 2026",
+        "record": "https://arxiv.org/abs/2511.19172"
+      },
+      "source": {
+        "official_repository": "https://github.com/M3phist0/MetroGS",
+        "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+        "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+        "license_file": "LICENSE",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_external_geometry_prior",
+      "external_priors": [
+        {
+          "name": "pointmap dense initialization",
+          "candidate_routes": ["Pi3-Align", "VGGT"],
+          "purpose": "dense geometry initialization aligned with SfM",
+          "freeze_status": "PENDING_ROUTE_MODEL_WEIGHT_SHA_INPUT_RESOLUTION_COMMAND_AND_COST"
+        },
+        {
+          "name": "MoGe-2",
+          "purpose": "depth regularization in the official data preparation path",
+          "freeze_status": "PENDING_MODEL_WEIGHT_SHA_INPUT_RESOLUTION_COMMAND_AND_COST"
+        }
+      ],
+      "recipe_status": "blocked_until_external_prior_route_is_frozen",
+      "common_adapter": {"status": "PENDING"},
+      "three_k_qualification_status": "NOT_RUN",
+      "three_k_training_allowed": false,
+      "full_scene_matrix_eligible": false
+    }
+  ],
+  "global_training_allowed": false,
+  "qualification_policy": "A method may unlock only its own 3K run after source, recipe, prior, raw-moment adapter, synthetic conformance, packet-camera compatibility, and CPU preflight gates pass. Other methods and the six-scene matrix remain locked."
+}

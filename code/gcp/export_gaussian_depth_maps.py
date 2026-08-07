@@ -402,9 +402,16 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "tensor_formulas": packet_manifest_tensor_formulas(),
         "diagnostic_tensor_names": [DIAGNOSTIC_VARIANCE_TENSOR, DIAGNOSTIC_VARIANCE_VALID_MASK_TENSOR],
         "dtype": "float32",
-        "image_domain": "rendered_colmap_camera_domain",
+        "image_domain": args.image_domain,
         "distorted_or_undistorted": "same_as_gaussian_render_camera",
-        "pixel_coordinate_convention": "zero_indexed_pixel_centers",
+        "pixel_coordinate_convention": args.pixel_coordinate_convention,
+        "protocol_id": args.protocol_id,
+        "scene": args.protocol_scene,
+        "source_data_release_root_digest_sha256": args.source_data_release_root_digest_sha256,
+        "camera_z_unit_contract": args.camera_z_unit_contract,
+        "adapter_conformance_status": args.adapter_conformance_status,
+        "adapter_conformance_report": args.adapter_conformance_report,
+        "adapter_conformance_report_sha256": args.adapter_conformance_report_sha256,
         "camera_model_source": "Gaussian Scene/COLMAP camera loaded by training repository",
         "alpha_cutoff": DEFAULT_ALPHA_CUTOFF,
         "early_termination_threshold": DEFAULT_EARLY_TERMINATION_THRESHOLD,
@@ -488,6 +495,19 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--image_name_column", default="image_name")
     parser.add_argument("--image_list_status_column", default="")
     parser.add_argument("--image_list_status_values", default="")
+    parser.add_argument("--image_domain", default="rendered_colmap_camera_domain")
+    parser.add_argument(
+        "--pixel_coordinate_convention",
+        default="zero_indexed_pixel_centers",
+        choices=["zero_indexed_pixel_centers", "zero_based_pixel_centers"],
+    )
+    parser.add_argument("--protocol_id", default="")
+    parser.add_argument("--protocol_scene", default="")
+    parser.add_argument("--source_data_release_root_digest_sha256", default="")
+    parser.add_argument("--camera_z_unit_contract", default="")
+    parser.add_argument("--adapter_conformance_status", default="")
+    parser.add_argument("--adapter_conformance_report", default="")
+    parser.add_argument("--adapter_conformance_report_sha256", default="")
     parser.add_argument("--quiet", action="store_true")
     return parser, model, pipeline
 
