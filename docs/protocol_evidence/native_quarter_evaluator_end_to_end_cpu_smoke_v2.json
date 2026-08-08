@@ -1,0 +1,46 @@
+{
+  "schema": "m3m_gcp_native_quarter_evaluator_end_to_end_cpu_smoke_v2",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "PASS",
+  "device": "CPU",
+  "scene": "gcp_3000_20260602",
+  "synthetic_method_id": "synthetic_exact_g11_v2",
+  "test_design": "Seven compressed full-shape metric packets were reused for four nadir and three oblique frozen G11 observations. Each packet contains internally consistent A/M1/M2/H tensors at the frozen 3K camera dimensions. All unprovided observations were intentionally missing to exercise coverage and scene-ranking exclusion.",
+  "assertions": {
+    "raw_metric_packet_validation_passed": true,
+    "floating_bilinear_raw_moment_sampling_exercised": true,
+    "required_valid_observation_count": 7,
+    "valid_observation_count": 7,
+    "valid_nadir_count": 4,
+    "valid_oblique_count": 3,
+    "valid_oblique_azimuth_bins_45deg": [0, 2, 3],
+    "maximum_oblique_azimuth_circular_bin_separation": 3,
+    "required_oblique_azimuth_circular_bin_separation": 2,
+    "g11_point_coverage_gate_passed": true,
+    "method_specific_sim3_fitted": false,
+    "missing_metric_packet_count_reported": 118,
+    "checkpoint_passed": 0,
+    "checkpoint_total": 4,
+    "checkpoint_coverage_rate_reported": 0.0,
+    "scene_status": "INCOMPLETE_UNRANKED",
+    "ranking_eligible": false,
+    "ranking_exclusion_reason": "formal_checkpoint_coverage_incomplete",
+    "subset_checkpoint_statistics_scope": "passed_checkpoint_subset_diagnostic_only",
+    "missing_results_silently_deleted": false
+  },
+  "g11_result": {
+    "role": "control",
+    "aggregation_group_count": 6,
+    "error_h_m": 0.013950774093965028,
+    "error_z_m": 0.013057029988985391,
+    "error_3d_m": 0.019107855189793268
+  },
+  "ephemeral_input_and_output_hashes": {
+    "metric_packet_manifest_sha256": "a4a608c3f3c4b8a7eaf40cbc3e7f88f21f3dcec406cb12f7ee4308acc80c3922",
+    "evaluation_summary_sha256": "b379d4bc4404b151efa512156a6ef7f209ffda4ad5e2dc19c061c5427a9ee88f",
+    "evaluator_manifest_sha256": "160573ba29e2af3a417157c8911fd43dad64f29e21aa48c185d50cf7d09fcc4f",
+    "observation_samples_sha256": "c24a24cad93051a89760026258ffd435a32bd752150ea01a42f6ba40808b4734",
+    "point_results_sha256": "64223d5d3b0c75ed987c57a7becf0c0e66ab3cc4e787fe5345f3c8b38bd53bf9"
+  },
+  "interpretation": "The v2 evaluator accepts a point only with non-adjacent oblique azimuth support, never fits a method-specific Sim(3), and marks an incomplete formal checkpoint set as unranked. The smoke passes because those safeguards behaved as specified; it does not unlock 3DGS training or replace the pending real GPU renderer/packet-camera preflight."
+}

@@ -77,6 +77,7 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(
         json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -528,7 +529,7 @@ def build_release(
         )
 
         transform = {
-            "schema": "m3m_gcp_native_quarter_common_sim3_v1",
+            "schema": "m3m_gcp_native_quarter_common_sim3_v2",
             "protocol_id": PROTOCOL_ID,
             "scene": scene,
             "source_data_release_root_digest_sha256": data_contract["release_root_digest_sha256"],
@@ -697,7 +698,7 @@ def build_release(
 
     readme = "\n".join(
         [
-            "# M3M-GCP native-quarter protocol overlay v1",
+            "# M3M-GCP native-quarter protocol overlay v2",
             "",
             "This directory is an immutable evaluation overlay for the sibling",
             "`M3M-GCP-colmap-native-quarter-v1` image/camera release. It does not",
@@ -707,11 +708,13 @@ def build_release(
             "- Quarantine: five roof scene-point instances are diagnostic only.",
             "- Registration: one frozen, ground-control Sim(3) per scene; method-specific refit is forbidden.",
             "- Common primary sample: `bilinear(M1) / bilinear(A)` at floating zero-based pixel centres.",
+            "- Point coverage: at least two non-adjacent valid oblique 45-degree azimuth bins.",
+            "- Ranking: every formal checkpoint must pass; otherwise the scene is INCOMPLETE/UNRANKED.",
             "- Training remains locked until an individual method recipe and adapter pass qualification.",
             "",
         ]
     )
-    (out_dir / "README.md").write_text(readme, encoding="utf-8")
+    (out_dir / "README.md").write_text(readme, encoding="utf-8", newline="\n")
 
     payload_paths = sorted(
         path for path in out_dir.rglob("*")
@@ -754,6 +757,17 @@ def build_release(
             "minimum_valid": "max(4, ceil(0.5 * expected_formal_observation_count))",
             "minimum_valid_nadir": 2,
             "minimum_valid_oblique": 2,
+            "minimum_valid_oblique_azimuth_bins": 2,
+            "minimum_oblique_azimuth_circular_bin_separation": 2,
+            "azimuth_bin_count": 8,
+            "azimuth_bin_width_degrees": 45,
+            "separation_interpretation": "two non-adjacent frozen bins; not a claim that raw azimuths differ by at least 90 degrees",
+        },
+        "ranking_contract": {
+            "ranked_status": "COMPLETE_RANKED",
+            "ranked_requirement": "every formal checkpoint passes its point-level coverage gate",
+            "incomplete_status": "INCOMPLETE_UNRANKED",
+            "incomplete_subset_errors": "diagnostic_only_excluded_from_rmse_ranking_and_cross_scene_macro_average",
         },
         "surface_tracks": {
             "common_primary": "render-support expected camera-z coordinate (M1/A); cross-method formal ranking",
@@ -773,7 +787,7 @@ def build_release(
         "scene_summaries": scene_summaries,
         "method_result_sim3_refit_allowed": False,
         "training_allowed_globally": False,
-        "training_unlock_policy": "per-method 3K qualification only after frozen recipe, raw-moment adapter, synthetic conformance, and CPU preflight pass",
+        "training_unlock_policy": "per-method 3K qualification only after frozen recipe, raw-moment adapter, synthetic conformance, CPU operator preflight, target-GPU renderer build, and frozen-3K real packet-camera export/evaluator preflight pass",
         "payload_files": payload_files,
         "payload_manifest_canonical_sha256": payload_digest,
     }
@@ -782,7 +796,7 @@ def build_release(
     sums = "".join(
         f"{sha256_file(path)}  {path.relative_to(out_dir).as_posix()}\n" for path in sum_paths
     )
-    (out_dir / "SHA256SUMS.txt").write_text(sums, encoding="utf-8")
+    (out_dir / "SHA256SUMS.txt").write_text(sums, encoding="utf-8", newline="\n")
     return manifest
 
 
@@ -790,7 +804,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data_root", required=True, type=Path)
     parser.add_argument("--out_dir", required=True, type=Path)
-    parser.add_argument("--release_date", default="2026-08-07")
+    parser.add_argument("--release_date", default="2026-08-09")
     parser.add_argument(
         "--resume_incomplete",
         action="store_true",

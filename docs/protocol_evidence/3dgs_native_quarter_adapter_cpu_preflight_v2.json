@@ -1,0 +1,85 @@
+{
+  "adapter_id": "3dgs_raw_accumulated_alpha_weighted_camera_z_sum_v2",
+  "case_count": 9,
+  "cases": [
+    {
+      "abs_error_m": 2.9802322032423945e-07,
+      "exact_camera_z": 12.0,
+      "name": "single_plane_exact_shifted_ray",
+      "passed": true,
+      "sampled_camera_z": 12.00000029802322
+    },
+    {
+      "abs_error_m": 1.5795231167459178e-07,
+      "exact_camera_z": 7.195,
+      "name": "tilted_plane_exact_shifted_ray",
+      "passed": true,
+      "sampled_camera_z": 7.195000157952312
+    },
+    {
+      "definition": "(0.6*10 + 0.2*30) / (0.6+0.2)",
+      "expected_camera_z": 15.0,
+      "name": "front_back_two_layer_expected_coordinate",
+      "passed": true,
+      "sampled_camera_z": 14.999999776482586
+    },
+    {
+      "bilinear_camera_z": 20.0,
+      "exact_comparison_abs_difference_m": 10.0,
+      "exact_right_shifted_ray_camera_z": 30.0,
+      "formal_interpretation": "boundary sensitivity diagnostic; bilinear result is not relabelled as a physical first surface",
+      "half_pixel_max_abs_camera_z_delta_model_units": 10.0,
+      "name": "depth_boundary_mixing_is_detected_not_hidden",
+      "passed": true
+    },
+    {
+      "equal_to_floor_valid": false,
+      "name": "low_transparency_strict_support_floor_no_epsilon",
+      "passed": true,
+      "support_floor": 1e-06,
+      "twice_floor_valid": true
+    },
+    {
+      "floating_camera_z": 7.195000157952312,
+      "floating_pixel": [
+        2.25,
+        2.4
+      ],
+      "name": "floating_pixel_is_not_rounded",
+      "passed": true,
+      "rounded_camera_z": 7.2000000681195955
+    },
+    {
+      "input_pixel": [
+        2.25,
+        2.4
+      ],
+      "name": "zero_based_pixel_camera_roundtrip",
+      "passed": true,
+      "pixel_convention": "zero_based_pixel_centers",
+      "roundtrip_pixel": [
+        2.2500000000001137,
+        2.3999999999999204
+      ]
+    },
+    {
+      "absolute_difference_m": 0.015195233760716853,
+      "bilinear_normalised_depth": 6.334999918937683,
+      "name": "raw_moments_are_interpolated_before_division",
+      "passed": true,
+      "raw_moment_ratio": 6.3501951526984
+    },
+    {
+      "equivariance_error_m": 5.575456304969596e-17,
+      "name": "geometric_median_rotation_equivariance",
+      "passed": true
+    }
+  ],
+  "device": "CPU",
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "remaining_gate": "the patched evaluation renderer must build on the target CUDA runtime and pass a real packet-camera export/validation preflight on the frozen 3K cameras",
+  "schema": "m3m_gcp_3dgs_native_quarter_adapter_cpu_preflight_v2",
+  "scope": "common operator and camera-coordinate contract only",
+  "status": "PASS"
+}

@@ -6,7 +6,14 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
-from export_gaussian_depth_maps import collect_views, parse_train_repo, read_allowlist
+import numpy as np
+
+from export_gaussian_depth_maps import (
+    collect_views,
+    derive_packet_from_raw_accumulators,
+    parse_train_repo,
+    read_allowlist,
+)
 
 
 def write_list(path: Path, names: list[str]) -> None:
@@ -70,12 +77,25 @@ def test_explicit_train_repository_is_resolved() -> None:
         assert parse_train_repo(["--train_repo", tmp]) == Path(tmp).resolve()
 
 
+def test_raw_renderer_accumulators_are_derived_on_cpu() -> None:
+    raw = np.asarray([[[0.8]], [[12.0]], [[200.0]], [[0.08]]], dtype=np.float32)
+    packet = derive_packet_from_raw_accumulators(
+        raw,
+        numerical_support_floor=1.0e-6,
+        variance_clamp_tolerance=1.0e-6,
+    )
+    assert np.isclose(packet["alpha_normalized_expected_camera_z"][0, 0], 15.0)
+    assert np.isclose(packet["alpha_normalized_expected_inverse_camera_z"][0, 0], 0.1)
+    assert bool(packet["metric_depth_valid_mask"][0, 0])
+
+
 def main() -> int:
     tests = [
         test_extensionless_runtime_names_resolve_to_release_names,
         test_missing_requested_view_hard_fails,
         test_train_repository_must_be_explicit,
         test_explicit_train_repository_is_resolved,
+        test_raw_renderer_accumulators_are_derived_on_cpu,
     ]
     for test in tests:
         test()

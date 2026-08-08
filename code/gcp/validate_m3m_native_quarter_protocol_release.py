@@ -6,12 +6,12 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
 from evaluate_m3m_native_quarter_geometry import verify_data_release, verify_protocol_release
-from m3m_native_quarter_protocol import PROTOCOL_ID, sha256_file
+from m3m_native_quarter_protocol import PROTOCOL_ID, coverage_gate, sha256_file
 
 
 EXPECTED_QUARANTINE = {
@@ -48,11 +48,12 @@ def validate(
         verify_data_release(data_root, manifest)
     except Exception as exc:
         return {
-            "schema": "m3m_gcp_native_quarter_protocol_release_validation_v1",
+            "schema": "m3m_gcp_native_quarter_protocol_release_validation_v2",
             "passed": False,
             "errors": [f"cryptographic/source verification failed: {exc}"],
         }
     pin = json.loads(pin_path.read_text(encoding="utf-8"))
+    require(pin.get("schema") == "m3m_gcp_native_quarter_protocol_release_pin_v2", "pin schema mismatch")
     require(pin.get("protocol_id") == PROTOCOL_ID, "pin protocol id mismatch")
     require(protocol_root.name == pin.get("release_directory_name"), "protocol directory name mismatch")
     require(
@@ -70,6 +71,22 @@ def validate(
         "payload canonical digest differs from repo pin",
     )
     require(data_root.name == pin.get("source_data_directory_name"), "source data directory name mismatch")
+    pin_coverage = pin.get("coverage_contract", {})
+    require(pin_coverage.get("minimum_valid_oblique_azimuth_bins") == 2, "pin oblique-bin gate mismatch")
+    require(pin_coverage.get("minimum_oblique_azimuth_circular_bin_separation") == 2, "pin azimuth-separation gate mismatch")
+    require(pin_coverage.get("azimuth_bin_count") == 8, "pin azimuth-bin count mismatch")
+    require(pin_coverage.get("actual_angle_at_least_90_degrees_claimed") is False, "pin incorrectly claims a continuous 90-degree gate")
+    pin_ranking = pin.get("ranking_contract", {})
+    require(pin_ranking.get("complete") == "COMPLETE_RANKED", "pin complete status mismatch")
+    require(pin_ranking.get("incomplete") == "INCOMPLETE_UNRANKED", "pin incomplete status mismatch")
+    require(pin_ranking.get("all_formal_checkpoints_required") is True, "pin all-checkpoint ranking gate missing")
+    aggregation = manifest.get("aggregation_contract", {})
+    require(aggregation.get("minimum_valid_oblique_azimuth_bins") == 2, "manifest oblique-bin gate mismatch")
+    require(aggregation.get("minimum_oblique_azimuth_circular_bin_separation") == 2, "manifest azimuth-separation gate mismatch")
+    require("not a claim" in str(aggregation.get("separation_interpretation", "")), "manifest continuous-angle disclaimer missing")
+    ranking = manifest.get("ranking_contract", {})
+    require(ranking.get("ranked_status") == "COMPLETE_RANKED", "manifest complete status mismatch")
+    require(ranking.get("incomplete_status") == "INCOMPLETE_UNRANKED", "manifest incomplete status mismatch")
 
     sum_errors = []
     sum_count = 0
@@ -104,6 +121,19 @@ def validate(
     require(len(active_observations) == 1018, "active observation count is not 1018")
     require(all(truthy(row["safe_bilinear_stencil"]) for row in active_observations), "unsafe bilinear stencil exists")
     require({row["view_class"] for row in active_observations} == {"nadir", "oblique"}, "view classes incomplete")
+    observations_by_instance: dict[tuple[str, str], list[dict[str, str]]] = defaultdict(list)
+    for row in active_observations:
+        observations_by_instance[(row["scene"], row["point_name"])].append(row)
+    source_coverage_rows = []
+    for (scene, point_name), rows in sorted(observations_by_instance.items()):
+        gate = coverage_gate(
+            expected_observation_count=len(rows),
+            valid_view_classes=[row["view_class"] for row in rows],
+            valid_azimuth_bins_45deg=[int(row["azimuth_bin_45deg"]) for row in rows],
+        )
+        require(gate["passed"], f"{scene}/{point_name}: source observations fail v2 coverage: {gate['failure_reasons']}")
+        source_coverage_rows.append(gate)
+    require(len(source_coverage_rows) == 82, "source coverage instance count is not 82")
 
     scene_rows = []
     for scene_summary in manifest.get("scene_summaries", []):
@@ -129,7 +159,7 @@ def validate(
     require(manifest.get("training_allowed_globally") is False, "protocol overlay unlocked global training")
     require(pin.get("training_allowed_globally") is False, "repo pin unlocked global training")
     return {
-        "schema": "m3m_gcp_native_quarter_protocol_release_validation_v1",
+        "schema": "m3m_gcp_native_quarter_protocol_release_validation_v2",
         "protocol_id": PROTOCOL_ID,
         "passed": not errors,
         "protocol_release_manifest_sha256": sha256_file(
@@ -138,6 +168,15 @@ def validate(
         "sha256sums_sha256": sha256_file(protocol_root / "SHA256SUMS.txt"),
         "verified_sha256sum_entries": sum_count,
         "counts": manifest["counts"],
+        "source_observation_coverage": {
+            "instance_count": len(source_coverage_rows),
+            "minimum_oblique_azimuth_bin_count": min(
+                row["valid_oblique_azimuth_bin_count"] for row in source_coverage_rows
+            ),
+            "minimum_max_oblique_circular_bin_separation": min(
+                row["max_oblique_azimuth_circular_bin_separation"] for row in source_coverage_rows
+            ),
+        },
         "scene_evidence": scene_rows,
         "training_allowed_globally": False,
         "errors": errors,
@@ -157,7 +196,7 @@ def main() -> int:
     rendered = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(rendered, encoding="utf-8")
+        args.report.write_text(rendered, encoding="utf-8", newline="\n")
     print(rendered, end="")
     return 0 if result["passed"] else 1
 

@@ -1,0 +1,30 @@
+{
+  "schema": "m3m_gcp_native_quarter_protocol_release_pin_v2",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "release_directory_name": "M3M-GCP-native-quarter-benchmark-protocol-v2",
+  "protocol_release_manifest_sha256": "21fbac75d66433169535ea7440c31393f7a5ecdb4ed94fcefd31d1780c28bea4",
+  "sha256sums_sha256": "d1115bdcd6fe6951ee1f4b8d1d1faf3285d9d603191f90e518fa04be65abfc5b",
+  "payload_manifest_canonical_sha256": "065cd3f9ca3aefccffe3043ab75e90f379ad8c7906dda074d565d36368901180",
+  "source_data_directory_name": "M3M-GCP-colmap-native-quarter-v1",
+  "source_data_release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "coverage_contract": {
+    "minimum_valid_oblique_azimuth_bins": 2,
+    "minimum_oblique_azimuth_circular_bin_separation": 2,
+    "azimuth_bin_count": 8,
+    "actual_angle_at_least_90_degrees_claimed": false
+  },
+  "ranking_contract": {
+    "complete": "COMPLETE_RANKED",
+    "incomplete": "INCOMPLETE_UNRANKED",
+    "all_formal_checkpoints_required": true
+  },
+  "counts": {
+    "scenes": 6,
+    "source_scene_point_instances": 87,
+    "active_scene_point_instances": 82,
+    "active_controls": 45,
+    "active_checkpoints": 37,
+    "active_observations": 1018
+  },
+  "training_allowed_globally": false
+}

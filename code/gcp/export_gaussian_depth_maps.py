@@ -30,6 +30,7 @@ from metric_depth_packet import (  # noqa: E402
     PRIMARY_DEPTH_SEMANTICS,
     PRIMARY_DEPTH_TENSOR,
     directory_tree_hash,
+    derive_metric_depth_packet,
     file_sha256,
     git_commit,
     packet_manifest_tensor_formulas,
@@ -39,6 +40,7 @@ from metric_depth_packet import (  # noqa: E402
 )
 
 DEFAULT_RASTERIZER_DEPTH_SEMANTICS = "alpha_weighted_unnormalized_inverse_camera_z"
+RAW_ACCUMULATOR_TENSOR_NAMES = tuple(METRIC_PACKET_TENSOR_NAMES[:4])
 
 
 def git_tree_hash(path: Path) -> str:
@@ -151,6 +153,25 @@ def packet_filename(image_name: str) -> str:
     return f"{stem}_metric_depth_packet.npz"
 
 
+def derive_packet_from_raw_accumulators(
+    raw_accumulators: np.ndarray,
+    *,
+    numerical_support_floor: float,
+    variance_clamp_tolerance: float,
+) -> Dict[str, np.ndarray]:
+    raw = np.asarray(raw_accumulators, dtype=np.float32)
+    if raw.ndim != 3 or raw.shape[0] != len(RAW_ACCUMULATOR_TENSOR_NAMES):
+        raise ValueError(
+            "raw_metric_depth_accumulators must have shape "
+            f"({len(RAW_ACCUMULATOR_TENSOR_NAMES)}, H, W), got {raw.shape}"
+        )
+    return derive_metric_depth_packet(
+        *(raw[index] for index in range(len(RAW_ACCUMULATOR_TENSOR_NAMES))),
+        numerical_support_floor=float(numerical_support_floor),
+        variance_clamp_tolerance=float(variance_clamp_tolerance),
+    )
+
+
 def collect_views(
     scene: Any,
     camera_sets: str,
@@ -200,6 +221,15 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
     render = runtime["render"]
     sparse_adam_available = bool(runtime["sparse_adam_available"])
     render_parameters = set(runtime["render_parameters"])
+    if "return_raw_metric_depth_accumulators" in render_parameters:
+        adapter_api = "raw_metric_depth_accumulators_v1"
+    elif "return_metric_depth_packet" in render_parameters:
+        adapter_api = "legacy_metric_depth_packet_v2"
+    else:
+        raise RuntimeError(
+            "renderer exposes neither the required raw-accumulator API nor the legacy packet API; "
+            f"available={sorted(render_parameters)}"
+        )
 
     old_cwd = Path.cwd()
     os.chdir(train_repo)
@@ -214,12 +244,18 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             allowlist = read_allowlist(args)
             views = collect_views(scene, args.camera_sets, allowlist=allowlist)
             for index, (split, view, image_name) in enumerate(tqdm(views, desc="Exporting Gaussian depth")):
-                render_kwargs: Dict[str, Any] = {
-                    "return_metric_depth_packet": True,
-                    "numerical_support_floor": float(args.numerical_support_floor),
-                    "normalization_epsilon": float(args.normalization_epsilon),
-                    "variance_clamp_tolerance": float(args.variance_clamp_tolerance),
-                }
+                render_kwargs: Dict[str, Any] = {}
+                if adapter_api == "raw_metric_depth_accumulators_v1":
+                    render_kwargs["return_raw_metric_depth_accumulators"] = True
+                else:
+                    render_kwargs.update(
+                        {
+                            "return_metric_depth_packet": True,
+                            "numerical_support_floor": float(args.numerical_support_floor),
+                            "normalization_epsilon": float(args.normalization_epsilon),
+                            "variance_clamp_tolerance": float(args.variance_clamp_tolerance),
+                        }
+                    )
                 if "use_trained_exp" in render_parameters:
                     render_kwargs["use_trained_exp"] = bool(getattr(dataset, "train_test_exp", False))
                 if "separate_sh" in render_parameters:
@@ -237,20 +273,31 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                     background,
                     **render_kwargs,
                 )
-                metric_packet = payload["metric_depth_packet"]
-                if bool(getattr(dataset, "train_test_exp", False)):
-                    metric_packet = metric_packet[..., metric_packet.shape[-1] // 2 :]
-                packet_np = metric_packet.detach().squeeze().cpu().numpy().astype(np.float32)
-                if packet_np.shape[0] != len(METRIC_PACKET_TENSOR_NAMES):
-                    raise RuntimeError(
-                        f"metric_depth_packet expected {len(METRIC_PACKET_TENSOR_NAMES)} tensors, "
-                        f"got shape {packet_np.shape}"
+                if adapter_api == "raw_metric_depth_accumulators_v1":
+                    raw_packet = payload["raw_metric_depth_accumulators"]
+                    if bool(getattr(dataset, "train_test_exp", False)):
+                        raw_packet = raw_packet[..., raw_packet.shape[-1] // 2 :]
+                    raw_packet_np = raw_packet.detach().squeeze().cpu().numpy().astype(np.float32)
+                    packet_payload = derive_packet_from_raw_accumulators(
+                        raw_packet_np,
+                        numerical_support_floor=float(args.numerical_support_floor),
+                        variance_clamp_tolerance=float(args.variance_clamp_tolerance),
                     )
+                else:
+                    metric_packet = payload["metric_depth_packet"]
+                    if bool(getattr(dataset, "train_test_exp", False)):
+                        metric_packet = metric_packet[..., metric_packet.shape[-1] // 2 :]
+                    packet_np = metric_packet.detach().squeeze().cpu().numpy().astype(np.float32)
+                    if packet_np.shape[0] != len(METRIC_PACKET_TENSOR_NAMES):
+                        raise RuntimeError(
+                            f"metric_depth_packet expected {len(METRIC_PACKET_TENSOR_NAMES)} tensors, "
+                            f"got shape {packet_np.shape}"
+                        )
+                    packet_payload = {
+                        name: packet_np[i].astype(np.float32)
+                        for i, name in enumerate(METRIC_PACKET_TENSOR_NAMES)
+                    }
                 packet_path = out_dir / packet_filename(image_name)
-                packet_payload = {
-                    name: packet_np[i].astype(np.float32)
-                    for i, name in enumerate(METRIC_PACKET_TENSOR_NAMES)
-                }
                 packet_payload["metric_depth_valid_mask"] = packet_payload["metric_depth_valid_mask"] > 0.5
                 packet_payload[HISTORICAL_INVALID_TENSOR] = packet_payload[
                     "weighted_inverse_camera_z_sum"
@@ -276,8 +323,8 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                         "depth_path": str(packet_path),
                         "packet_sha256": packet_hash,
                         "packet_bytes": packet_size,
-                        "height": int(packet_np.shape[1]),
-                        "width": int(packet_np.shape[2]),
+                        "height": int(packet_payload["accumulated_alpha"].shape[0]),
+                        "width": int(packet_payload["accumulated_alpha"].shape[1]),
                         "dtype": "float32",
                         "primary_depth_tensor": PRIMARY_DEPTH_TENSOR,
                         "primary_depth_semantics": PRIMARY_DEPTH_SEMANTICS,
@@ -455,6 +502,17 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "image_list_status_values": args.image_list_status_values,
         "sparse_adam_available": bool(sparse_adam_available),
         "renderer_render_parameters": sorted(render_parameters),
+        "renderer_adapter_api": adapter_api,
+        "raw_accumulator_tensor_names": list(RAW_ACCUMULATOR_TENSOR_NAMES),
+        "derived_packet_computed_on_cpu": adapter_api == "raw_metric_depth_accumulators_v1",
+        "adapter_patch_files": [
+            {
+                "path": str(Path(path).expanduser().resolve()),
+                "sha256": file_sha256(Path(path).expanduser().resolve()),
+            }
+            for path in (args.renderer_adapter_patch, args.rasterizer_adapter_patch)
+            if path
+        ],
         "historical_invalid_tensor_source": "weighted_inverse_camera_z_sum raw H alias",
         "uses_alpha_map": True,
         "uses_depth_second_moment": True,
@@ -508,6 +566,8 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--adapter_conformance_status", default="")
     parser.add_argument("--adapter_conformance_report", default="")
     parser.add_argument("--adapter_conformance_report_sha256", default="")
+    parser.add_argument("--renderer_adapter_patch", default="")
+    parser.add_argument("--rasterizer_adapter_patch", default="")
     parser.add_argument("--quiet", action="store_true")
     return parser, model, pipeline
 

@@ -35,6 +35,7 @@ from m3m_native_quarter_protocol import (
     half_pixel_sensitivity,
     residual_statistics,
     sample_raw_moment_camera_z,
+    scene_ranking_status,
     sha256_file,
     sim3_from_mapping,
 )
@@ -67,6 +68,7 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(
         json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -335,6 +337,7 @@ def evaluate(
         gate = coverage_gate(
             expected_observation_count=len(rows_for_point),
             valid_view_classes=[row["view_class"] for row in valid],
+            valid_azimuth_bins_45deg=[row["azimuth_bin_45deg"] for row in valid],
         )
         role = disposition["active_role"]
         base: dict[str, Any] = {
@@ -381,16 +384,22 @@ def evaluate(
 
     role_totals = Counter(row["active_role"] for row in dispositions.values())
     role_passed = Counter(row["role"] for row in point_rows if truthy(row.get("passed")))
+    ranking = scene_ranking_status(
+        checkpoint_total=role_totals["checkpoint"],
+        checkpoint_passed=role_passed["checkpoint"],
+    )
     stats = {
         role: residual_statistics(residual_vectors[role])
         for role in ("control", "checkpoint", "all")
     }
     summary = {
-        "schema": "m3m_gcp_native_quarter_method_evaluation_v1",
+        "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
         "protocol_id": PROTOCOL_ID,
         "scene": scene,
         "method_id": method_id,
-        "status": "completed_with_coverage_report",
+        "status": ranking["status"],
+        "ranking_eligible": ranking["ranking_eligible"],
+        "ranking_exclusion_reason": ranking["ranking_exclusion_reason"],
         "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
         "physical_surface_claim": False,
         "method_specific_sim3_fitted": False,
@@ -411,7 +420,14 @@ def evaluate(
         ),
         "residual_statistics": stats,
         "observation_failure_counts": dict(sorted(failure_counts.items())),
-        "ranking_policy": "checkpoint errors and checkpoint coverage are reported together; missing surface support is never silently deleted",
+        "ranking_policy": (
+            "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level "
+            "coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter "
+            "an RMSE ranking or cross-scene macro-average."
+        ),
+        "checkpoint_residual_statistics_scope": (
+            "all_formal_checkpoints" if ranking["ranking_eligible"] else "passed_checkpoint_subset_diagnostic_only"
+        ),
     }
 
     write_csv(
@@ -455,6 +471,11 @@ def evaluate(
             "valid_observation_count",
             "valid_nadir_count",
             "valid_oblique_count",
+            "valid_oblique_azimuth_bin_count",
+            "valid_oblique_azimuth_bins_45deg",
+            "max_oblique_azimuth_circular_bin_separation",
+            "required_oblique_azimuth_bin_count",
+            "required_oblique_azimuth_circular_bin_separation",
             "aggregation_group_count",
             "model_x",
             "model_y",
@@ -478,7 +499,7 @@ def evaluate(
     )
     write_json(out_dir / "evaluation_summary.json", summary)
     evaluator_manifest = {
-        "schema": "m3m_gcp_native_quarter_evaluator_run_manifest_v1",
+        "schema": "m3m_gcp_native_quarter_evaluator_run_manifest_v2",
         "protocol_release_manifest": str(protocol_root / "protocol_release_manifest.json"),
         "protocol_release_manifest_sha256": sha256_file(
             protocol_root / "protocol_release_manifest.json"
@@ -488,7 +509,8 @@ def evaluate(
         "packet_manifest": str(packet_manifest_path),
         "packet_manifest_sha256": sha256_file(packet_manifest_path),
         "operator": "bilinear_raw_moment_ratio_v1",
-        "aggregation": "view_class_azimuth_group_geometric_median_v1",
+        "aggregation": "view_class_azimuth_group_geometric_median_v2_nonadjacent_oblique_gate",
+        "ranking_policy": "complete_checkpoint_coverage_only_v1",
         "sim3_policy": "frozen_common_transform_no_method_refit",
         "outputs": {
             name: sha256_file(out_dir / name)

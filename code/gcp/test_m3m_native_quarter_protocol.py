@@ -9,6 +9,7 @@ from m3m_native_quarter_protocol import (
     coverage_gate,
     geometric_median,
     sample_raw_moment_camera_z,
+    scene_ranking_status,
 )
 from preflight_3dgs_native_quarter_adapter import run_preflight
 
@@ -52,12 +53,43 @@ def test_geometric_median_rotation_equivariance() -> None:
 
 
 def test_coverage_gate_uses_fraction_and_view_classes() -> None:
-    passed = coverage_gate(10, ["nadir"] * 3 + ["oblique"] * 2)
+    passed = coverage_gate(
+        10,
+        ["nadir"] * 3 + ["oblique"] * 2,
+        [0, 1, 2, 0, 2],
+    )
     assert passed["passed"]
     assert passed["required_valid_observation_count"] == 5
-    failed = coverage_gate(12, ["nadir"] * 5 + ["oblique"])
+    assert passed["valid_oblique_azimuth_bins_45deg"] == [0, 2]
+    failed = coverage_gate(12, ["nadir"] * 5 + ["oblique"], [0, 1, 2, 3, 4, 6])
     assert not failed["passed"]
     assert "insufficient_valid_oblique_observations" in failed["failure_reasons"]
+
+
+def test_coverage_gate_rejects_adjacent_oblique_azimuth_bins() -> None:
+    result = coverage_gate(
+        8,
+        ["nadir", "nadir", "oblique", "oblique"],
+        [0, 4, 2, 3],
+    )
+    assert not result["passed"]
+    assert result["valid_oblique_azimuth_bin_count"] == 2
+    assert result["max_oblique_azimuth_circular_bin_separation"] == 1
+    assert "insufficient_valid_oblique_azimuth_bin_separation" in result["failure_reasons"]
+
+
+def test_scene_ranking_requires_every_formal_checkpoint() -> None:
+    assert scene_ranking_status(4, 4) == {
+        "status": "COMPLETE_RANKED",
+        "ranking_eligible": True,
+        "ranking_exclusion_reason": "",
+        "checkpoint_total": 4,
+        "checkpoint_passed": 4,
+    }
+    incomplete = scene_ranking_status(4, 3)
+    assert incomplete["status"] == "INCOMPLETE_UNRANKED"
+    assert not incomplete["ranking_eligible"]
+    assert incomplete["ranking_exclusion_reason"] == "formal_checkpoint_coverage_incomplete"
 
 
 def test_view_group_aggregation_equalises_duplicate_frames() -> None:

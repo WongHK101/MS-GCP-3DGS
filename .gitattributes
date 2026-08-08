@@ -3,4 +3,4 @@
 *.md text eol=lf
 *.json text eol=lf
 *.csv text eol=lf
-*.patch text eol=lf
+*.patch text eol=lf -whitespace

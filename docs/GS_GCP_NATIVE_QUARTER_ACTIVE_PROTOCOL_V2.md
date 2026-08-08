@@ -1,0 +1,165 @@
+# GS-GCP 原生 1/4 公平评测协议 v2
+
+状态：**ACTIVE（评测实现合同）**；**TRAINING HOLD（训练未放行）**
+日期：2026-08-09
+协议 ID：`m3m_gcp_native_quarter_geometry_v2`
+
+本文件替代 v1 的执行合同。v1、旧 clean-R4/Pillow 路线及其 checkpoint、结果和资格结论
+仅保留为历史证据，不能被新实验继承。
+
+## 1. 权威输入
+
+- 数据根固定为 `M3M-GCP-colmap-native-quarter-v1`。
+- 六场景图像和 PINHOLE 相机均为 COLMAP 4.0.4
+  `image_undistorter --output_type COLMAP --max_image_size 1414` 的直接输出。
+- COLMAP 输出后不得再次 resize、重编码、crop、pad 或 EXIF transpose。
+- 像素域固定为 `colmap_4_0_4_image_undistorter_pinhole_max_1414`，坐标采用浮点、
+  zero-based pixel centres。
+- 所有方法必须使用同一份 RGB、相机、holdout 和初始稀疏几何，不得通过各自的 R4
+  实现重建输入。
+
+3K 场景有 94 个相机视图，其中训练 82、holdout 12。这里的 82 是训练视图数，与全六
+场景共 82 个正式 GCP 点实例没有关系。
+
+## 2. 正式实例与隔离
+
+源 v1.3.0 有 87 个场景—点实例（48 control、39 checkpoint）。本协议用独立、带
+SHA-256 的 overlay 隔离五条记录，不修改源发布：
+
+| 场景 | 点 | 原角色 | 新处置 |
+|---|---|---|---|
+| 100K | `dxl3` | control | diagnostic only |
+| 100K | `dyl2` | checkpoint | diagnostic only |
+| 100K | `wy3_1` | checkpoint | diagnostic only |
+| 100K | `wy3_2` | control | diagnostic only |
+| 20K | `dyl2` | control | diagnostic only |
+
+正式集合固定为 82 个实例：45 control、37 checkpoint。当前没有可信的独立屋顶
+checkpoint，因此不得发布“屋顶表面精度排名”。评测器必须按 overlay 的
+`point_instance_disposition.csv` 和 `observation_semantics.csv` 执行，不得重新启用
+隔离点。
+
+## 3. 跨方法公共正式轨
+
+公共轨衡量统一透明度合成统计下的“渲染支撑期望 camera-z 坐标”，不等同于唯一物理
+表面。每个适配器输出原始累计量：
+
+\[
+w_i=T_i\alpha_i,\qquad A=\sum_iw_i,\qquad M_1=\sum_iw_i z_i.
+\]
+
+人工标注浮点像素 \((u,v)\) 的正式取值为：
+
+\[
+D(u,v)=\frac{\operatorname{bilinear}(M_1,u,v)}
+{\operatorname{bilinear}(A,u,v)}.
+\]
+
+实现必须满足：
+
+1. `A`、`M1` 分别以 float64 做四邻域双线性插值，不能先逐像素除法再插值；
+2. 仅当 `A_interp > 1e-6` 时有效，分母不加 epsilon；
+3. 任一邻域值非有限或邻域越界即无效，不 padding、clamp 或外推；
+4. `camera_z` 必须为有限正值并处于冻结 COLMAP 相机单位；
+5. 不得先取整像素，也不得改用窗口中值；
+6. 同时报告上下左右 `±0.5 px` 的 camera-z 敏感性，模型单位与经公共 Sim(3) 换算的
+   米必须分开。
+
+合成适配至少覆盖单平面、倾斜平面、前后双层、深度边界、低透明度、浮点像素、坐标
+往返和“先插值原始矩再除法”。
+
+## 4. 多视聚合与覆盖门槛
+
+视角类别和方位由冻结相机姿态及公共 Sim(3) 决定：off-nadir 不超过 5° 为 `nadir`，
+否则为 `oblique`；相机相对测量点的平面方位按 45° 划为 8 个 bin。
+
+每个点先在 `(view_class, azimuth_bin)` 组内求三维几何中位数，再对组代表点求三维几何
+中位数。禁止逐坐标中位数。
+
+一个点进入误差统计必须同时满足：
+
+- 有效观测数不少于 `max(4, ceil(0.5 × 该点冻结正式观测数))`；
+- 有效 `nadir` 不少于 2；
+- 有效 `oblique` 不少于 2；
+- 有效斜视观测覆盖至少两个不同的 45° 方位 bin，且其中至少一对 bin 的 8-bin 环形
+  距离不小于 2（即不能只是相邻 bin）。
+
+最后一条是离散方位多样性门槛，不声称两条实际观测射线的夹角必然达到 90°。例如落在
+bin 边界附近的非相邻 bin，实际夹角仍可能小于 90°。本规则选择的是可复现的冻结离散
+判据，而不是无法由 bin 编号保证的连续角度判据。
+
+门槛未通过必须记为覆盖失败，不得以“误差太大”为由删除。
+
+## 5. 唯一公共 Sim(3)
+
+每场景只允许 overlay 中冻结的一套
+
+`target_xyz = scale × rotation @ frozen_colmap_model_xyz + translation`。
+
+它仅由保留的 ground controls 和冻结相机/标注三角化结果拟合。所有方法共享同一变换；
+不得用方法输出重新拟合、不得用 checkpoint 配准、不得局部拉伸。control 残差只用于
+变换审计，checkpoint 才是独立精度依据。
+
+## 6. 完整性、排名与汇总
+
+场景级排名采用硬完整性门槛：只有该场景的所有正式 checkpoint 都通过点级覆盖门槛，
+状态才是 `COMPLETE_RANKED`，并允许计算/发布排名。只要缺少一个正式 checkpoint，就必须
+标为 `INCOMPLETE_UNRANKED`：
+
+- 不得从已成功的 checkpoint 子集产生正式场景排名；
+- 可以报告子集误差，但必须明确标作诊断量；
+- 必须报告 checkpoint 有效数/总数、覆盖率和逐点失败原因。
+
+完整场景至少报告水平、垂直、三维 RMSE，三维 median/P95/max，覆盖率，`±0.5 px`
+敏感性，以及训练时间、峰值显存/内存、模型和中间文件大小。跨场景总表使用场景宏平均，
+仅纳入 `COMPLETE_RANKED` 场景；不得按图像数或点数加权。OOM、超时和无法产生公共包都
+如实记录为不完整结果，不强行跑通。
+
+另设方法原生表面次轨。`z50`、网格参数敏感性和边界局部平面在适配一致性完成前均为
+诊断项，不与公共轨合成总分。
+
+## 7. 方法池与输入信息分层
+
+候选池固定为 3DGS、2DGS、PGSR、RaDe-GS、GOF、QGS、CityGaussianV2、CityGS-X、
+MetroGS；机器登记为 `configs/m3m_gcp_native_quarter_method_registry_v2.json`。
+
+结果必须标注 `rgb_colmap_only` 或 `rgb_colmap_external_geometry_prior`。CityGS-X、
+MetroGS 的外部先验型号、权重 SHA、输入分辨率、命令及成本未冻结前不得资格运行。
+CityGS-X 冻结提交缺少明确许可证，内部试验和代码再分发必须区分。
+
+## 8. 3DGS 原生 1/4 资格状态
+
+3DGS 的训练配方固定为
+`configs/m3m_gcp_native_quarter_3dgs_3k_recipe_v1.json`：官方 2023 训练源码不改，直接读取
+3K `train` 根中的 82 张 COLMAP undistorter JPEG，`--resolution 1`、30K iterations、
+seed 0；训练过程看不到 GCP、测量坐标或 holdout 角色标签。
+
+正式评测使用独立的 evaluation-only 源码副本。冻结补丁只增加四个 float32 原始累计量
+`A/M1/M2/H`，不修改官方训练源码、checkpoint、alpha cutoff 或提前终止规则；归一化包在
+CPU 侧派生。当前状态为：
+
+- 补丁对冻结 3DGS/rasterizer 提交可干净应用，静态校验通过；
+- 公共算子 CPU 合成预检通过；
+- 目标 GPU/CUDA 环境的扩展构建尚未运行；
+- 冻结 3K 真实模型与相机的 packet/export/evaluator 预检尚未运行。
+
+因此 3DGS 配方已冻结，但 `three_k_training_allowed=false`；这不是训练授权。
+
+## 9. 解锁顺序
+
+单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
+冻结 3K 真实 packet-camera 预检及端到端评测全部通过后，才可单独解锁其 3K 资格实验。
+解锁某一方法不自动解锁其他方法或六场景矩阵。
+
+当前实现入口：
+
+- 公共算子：`code/gcp/m3m_native_quarter_protocol.py`
+- overlay 生成/验证：`code/gcp/build_m3m_native_quarter_protocol_release.py`、
+  `code/gcp/validate_m3m_native_quarter_protocol_release.py`
+- 公共评测：`code/gcp/evaluate_m3m_native_quarter_geometry.py`
+- 3DGS 配方验证：`code/gcp/validate_m3m_native_quarter_3dgs_recipe.py`
+- 3DGS renderer 补丁静态验证：`code/gcp/validate_3dgs_native_quarter_renderer_adapter.py`
+- 九方法登记验证：`code/gcp/validate_m3m_native_quarter_method_registry.py`
+
+任何实现若回退到整数像素、窗口中值、逐坐标中位数、逐方法 Sim(3)、相邻斜视 bin 即
+通过，或在 checkpoint 不完整时发布场景排名，均不属于 v2 协议。

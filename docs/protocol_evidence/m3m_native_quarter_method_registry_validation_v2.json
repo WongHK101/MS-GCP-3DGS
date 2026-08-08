@@ -1,0 +1,22 @@
+{
+  "errors": [],
+  "external_prior_methods": [
+    "citygs_x",
+    "metrogs"
+  ],
+  "method_count": 9,
+  "method_ids": [
+    "3dgs_original",
+    "2dgs",
+    "pgsr",
+    "rade_gs",
+    "gof",
+    "qgs",
+    "citygaussian_v2",
+    "citygs_x",
+    "metrogs"
+  ],
+  "passed": true,
+  "schema": "m3m_gcp_native_quarter_method_registry_validation_v2",
+  "training_allowed_methods": []
+}

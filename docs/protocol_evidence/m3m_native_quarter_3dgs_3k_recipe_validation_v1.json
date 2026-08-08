@@ -1,0 +1,13 @@
+{
+  "cpu_operator_preflight_passed": true,
+  "data_root_verified": true,
+  "errors": [],
+  "frozen_3k_real_packet_camera_preflight_passed": false,
+  "gpu_renderer_build_preflight_passed": false,
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe_id": "m3m_gcp_native_quarter_3dgs_original_3k_30k_seed0_v1",
+  "schema": "m3m_gcp_native_quarter_3dgs_recipe_validation_v1",
+  "static_patch_preflight_passed": true,
+  "training_allowed": false
+}

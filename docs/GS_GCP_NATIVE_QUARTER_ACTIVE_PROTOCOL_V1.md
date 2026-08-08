@@ -1,8 +1,11 @@
 # GS-GCP 原生 1/4 公平评测协议 v1
 
-状态：**ACTIVE（评测实现合同）**；**TRAINING HOLD（训练未放行）**
+状态：**SUPERSEDED BY v2（仅保留历史溯源）**；**TRAINING HOLD（训练未放行）**
 日期：2026-08-07
 协议 ID：`m3m_gcp_native_quarter_geometry_v1`
+
+当前执行合同见 `docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md`。v1 的覆盖与排名规则
+不再用于新结果。
 
 本文件替代旧 clean-R4/Pillow 评测路线。旧
 `GS_GCP_FAIR_EXPERIMENT_PROTOCOL.md` 仍仅是历史材料，不构成本协议的授权来源。

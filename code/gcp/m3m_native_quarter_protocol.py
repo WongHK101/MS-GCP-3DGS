@@ -16,8 +16,8 @@ from typing import Any, Iterable, Mapping, Sequence
 import numpy as np
 
 
-PROTOCOL_ID = "m3m_gcp_native_quarter_geometry_v1"
-PROTOCOL_RELEASE_SCHEMA = "m3m_gcp_native_quarter_protocol_release_v1"
+PROTOCOL_ID = "m3m_gcp_native_quarter_geometry_v2"
+PROTOCOL_RELEASE_SCHEMA = "m3m_gcp_native_quarter_protocol_release_v2"
 PIXEL_DOMAIN = "colmap_4_0_4_image_undistorter_pinhole_max_1414"
 PIXEL_CONVENTION = "zero_based_pixel_centers"
 DEFAULT_SUPPORT_FLOOR = 1.0e-6
@@ -25,6 +25,9 @@ DEFAULT_MIN_VALID_FRACTION = 0.5
 DEFAULT_MIN_VALID_OBSERVATIONS = 4
 DEFAULT_MIN_NADIR_OBSERVATIONS = 2
 DEFAULT_MIN_OBLIQUE_OBSERVATIONS = 2
+DEFAULT_MIN_OBLIQUE_AZIMUTH_BINS = 2
+DEFAULT_MIN_OBLIQUE_AZIMUTH_BIN_SEPARATION = 2
+AZIMUTH_BIN_COUNT = 8
 
 
 def sha256_file(path: Path) -> str:
@@ -236,10 +239,13 @@ def geometric_median(
 def coverage_gate(
     expected_observation_count: int,
     valid_view_classes: Sequence[str],
+    valid_azimuth_bins_45deg: Sequence[int],
     min_valid_fraction: float = DEFAULT_MIN_VALID_FRACTION,
     min_valid_observations: int = DEFAULT_MIN_VALID_OBSERVATIONS,
     min_nadir: int = DEFAULT_MIN_NADIR_OBSERVATIONS,
     min_oblique: int = DEFAULT_MIN_OBLIQUE_OBSERVATIONS,
+    min_oblique_azimuth_bins: int = DEFAULT_MIN_OBLIQUE_AZIMUTH_BINS,
+    min_oblique_azimuth_bin_separation: int = DEFAULT_MIN_OBLIQUE_AZIMUTH_BIN_SEPARATION,
 ) -> dict[str, Any]:
     if expected_observation_count <= 0:
         raise ValueError("expected_observation_count must be positive")
@@ -248,6 +254,26 @@ def coverage_gate(
         int(math.ceil(float(min_valid_fraction) * int(expected_observation_count))),
     )
     normalised = [str(value).strip().lower() for value in valid_view_classes]
+    azimuth_bins = [int(value) for value in valid_azimuth_bins_45deg]
+    if len(normalised) != len(azimuth_bins):
+        raise ValueError("view-class and azimuth-bin sequences must have equal length")
+    if any(value not in range(AZIMUTH_BIN_COUNT) for value in azimuth_bins):
+        raise ValueError("45-degree azimuth bins must be integers in [0, 7]")
+    oblique_bins = sorted(
+        {
+            azimuth_bin
+            for view_class, azimuth_bin in zip(normalised, azimuth_bins, strict=True)
+            if view_class == "oblique"
+        }
+    )
+    max_oblique_bin_separation = 0
+    for left_index, left in enumerate(oblique_bins):
+        for right in oblique_bins[left_index + 1 :]:
+            direct = abs(left - right)
+            max_oblique_bin_separation = max(
+                max_oblique_bin_separation,
+                min(direct, AZIMUTH_BIN_COUNT - direct),
+            )
     counts = {
         "total": len(normalised),
         "nadir": normalised.count("nadir"),
@@ -260,6 +286,10 @@ def coverage_gate(
         failures.append("insufficient_valid_nadir_observations")
     if counts["oblique"] < int(min_oblique):
         failures.append("insufficient_valid_oblique_observations")
+    if len(oblique_bins) < int(min_oblique_azimuth_bins):
+        failures.append("insufficient_valid_oblique_azimuth_bins")
+    elif max_oblique_bin_separation < int(min_oblique_azimuth_bin_separation):
+        failures.append("insufficient_valid_oblique_azimuth_bin_separation")
     return {
         "passed": not failures,
         "failure_reasons": failures,
@@ -268,6 +298,37 @@ def coverage_gate(
         "valid_observation_count": counts["total"],
         "valid_nadir_count": counts["nadir"],
         "valid_oblique_count": counts["oblique"],
+        "valid_oblique_azimuth_bin_count": len(oblique_bins),
+        "valid_oblique_azimuth_bins_45deg": oblique_bins,
+        "max_oblique_azimuth_circular_bin_separation": max_oblique_bin_separation,
+        "required_oblique_azimuth_bin_count": int(min_oblique_azimuth_bins),
+        "required_oblique_azimuth_circular_bin_separation": int(
+            min_oblique_azimuth_bin_separation
+        ),
+    }
+
+
+def scene_ranking_status(checkpoint_total: int, checkpoint_passed: int) -> dict[str, Any]:
+    """Return the non-negotiable complete-scene ranking status.
+
+    Subset residuals remain useful diagnostics, but a scene is eligible for an
+    RMSE ranking only when every formal checkpoint passes its point-level
+    coverage gate.
+    """
+
+    total = int(checkpoint_total)
+    passed = int(checkpoint_passed)
+    if total <= 0:
+        raise ValueError("checkpoint_total must be positive")
+    if passed < 0 or passed > total:
+        raise ValueError("checkpoint_passed must be in [0, checkpoint_total]")
+    complete = passed == total
+    return {
+        "status": "COMPLETE_RANKED" if complete else "INCOMPLETE_UNRANKED",
+        "ranking_eligible": complete,
+        "ranking_exclusion_reason": "" if complete else "formal_checkpoint_coverage_incomplete",
+        "checkpoint_total": total,
+        "checkpoint_passed": passed,
     }
 
 

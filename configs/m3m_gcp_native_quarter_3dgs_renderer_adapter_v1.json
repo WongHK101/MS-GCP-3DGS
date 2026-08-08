@@ -1,0 +1,52 @@
+{
+  "schema": "m3m_gcp_native_quarter_3dgs_renderer_adapter_v1",
+  "adapter_id": "3dgs_original_raw_metric_depth_accumulators_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "STATIC_PATCH_PREFLIGHT_PASS_GPU_RENDER_PREFLIGHT_PENDING",
+  "scope": "evaluation-only renderer copy; official training source and trained checkpoint remain unmodified",
+  "source": {
+    "repository_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "repository_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d"
+  },
+  "patches": [
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch",
+      "sha256": "e88b1ca418751228862c4e4d99c2cf4b5f714838fdbdf1bfa81f75fb85e81363"
+    },
+    {
+      "apply_root": "submodules/diff-gaussian-rasterization",
+      "path": "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch",
+      "sha256": "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068"
+    }
+  ],
+  "patched_file_sha256": {
+    "gaussian_renderer/__init__.py": "56141c0b79d8615594adc5f88c1219b76a8d97e803bbe66a0a626e1fd4d5332b",
+    "submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/__init__.py": "608a2781d5077b0f9c5958c7bd0d4007c25263842ba129f3dcc81e91c78628d4",
+    "submodules/diff-gaussian-rasterization/rasterize_points.cu": "5c684bade946e8aadb4e6e575484d7b1a7d6e18a5581861eb74bb1bdccf015a7",
+    "submodules/diff-gaussian-rasterization/rasterize_points.h": "7fdf17df5880f2819551e70a162937abff526b7e6b0337ccb8d6fe184f18c3f2",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "3b214825007c52b48ab8263fd9919ce09e23f07140cdc0129dee20e8d2dd6ce8",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.h": "1649118113c1fd49b9386603a5ecdb71c965b72f947cdb488139c454a9bb3cf5",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer.h": "98322c1cb3d84afc260813bc65d0dac206099713aae22c59fc9eead901c635b8",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.cu": "1dbeb6e8a9ed16c841b4de0dafd392f3d1631deeaadb3988944dc8a5f8229b31"
+  },
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "camera_z_definition": "positive p_view.z from the frozen official 3DGS preprocessing kernel",
+    "alpha_compositing": "official alpha cutoff 1/255 and early termination T<1e-4 are unchanged",
+    "derived_packet_policy": "derive normalized fields on CPU from the four raw float32 accumulators"
+  },
+  "training_identity": {
+    "training_patch_allowed": false,
+    "checkpoint_mutation_allowed": false,
+    "evaluation_copy_required": true
+  },
+  "remaining_gate": "build patched rasterizer on the frozen GPU environment and pass actual frozen-3K camera packet/export/evaluator preflight"
+}

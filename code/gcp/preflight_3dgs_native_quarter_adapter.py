@@ -197,16 +197,16 @@ def run_preflight() -> dict[str, Any]:
 
     passed = all(item["passed"] for item in cases)
     return {
-        "schema": "m3m_gcp_3dgs_native_quarter_adapter_cpu_preflight_v1",
+        "schema": "m3m_gcp_3dgs_native_quarter_adapter_cpu_preflight_v2",
         "protocol_id": PROTOCOL_ID,
-        "adapter_id": "3dgs_raw_accumulated_alpha_weighted_camera_z_sum_v1",
+        "adapter_id": "3dgs_raw_accumulated_alpha_weighted_camera_z_sum_v2",
         "status": "PASS" if passed else "FAIL",
         "passed": passed,
         "device": "CPU",
         "case_count": len(cases),
         "cases": cases,
         "scope": "common operator and camera-coordinate contract only",
-        "remaining_gate": "actual 3DGS rasterizer/export integration must cite this report and pass packet validation on the frozen 3K cameras",
+        "remaining_gate": "the patched evaluation renderer must build on the target CUDA runtime and pass a real packet-camera export/validation preflight on the frozen 3K cameras",
     }
 
 
@@ -218,7 +218,7 @@ def main() -> int:
     rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(rendered, encoding="utf-8")
+        args.report.write_text(rendered, encoding="utf-8", newline="\n")
     print(rendered, end="")
     return 0 if report["passed"] else 1
 
