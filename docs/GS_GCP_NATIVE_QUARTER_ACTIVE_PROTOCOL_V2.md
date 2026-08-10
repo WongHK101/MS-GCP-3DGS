@@ -183,6 +183,25 @@ GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成
 该结果只有一个 seed，可作为本 benchmark 的正式单次结果，但不得用于宣称方法间细小差异
 具有统计显著性。本次只是执行状态更新，没有修改 v2 的输入、算子、覆盖、Sim(3) 或排名规则。
 
+### 8.2 GOF 方法级资格状态
+
+GOF 继续执行同一个 v2 协议，不产生新的协议版本。源码固定为官方提交
+`5245b20e5d11acd6d1ff5af4b890dc2bedd99693`，许可证与三个 vendored 源码树均已记录。3K 配方
+固定为 seed 0、30K iterations、`--resolution 1`、`--kernel_size 0`，直接读取同一冻结 `train`
+根；不启用 decoupled appearance、ray jitter、重采样或外部几何先验。官方训练源码、训练
+rasterizer 和 checkpoint 均不得修改。
+
+静态源码身份、配方和补丁重放已经通过。独立 evaluation-only rasterizer 使用 GOF 官方
+前向中同一组 `T*alpha` 权重增加 `M1/M2/H` 累计量，原生累计 alpha 为 `A`。由于官方相机
+射线写为 `(x/fx, y/fy, 1)`，其交点参数 `t` 即 camera-z。官方 rendered-image channel 6
+为中位/最大深度，不能替代公共 `M1/A`；GOF 原生 opacity level set 或网格仅是方法族诊断
+次轨，`physical_surface_claim=false`。
+
+当前只完成静态门禁，目标 GPU 构建、真实 82/0 相机 loader、合成原始矩、1 次迭代技术
+smoke、66 相机 packet 和公共评测器仍待验证。因此 GOF 正式 3K 训练仍锁定，方法 allowlist
+仍为空；静态通过本身不构成 benchmark 结果，也不授权六场景矩阵。本节只记录方法执行状态，
+没有修改 v2 的输入、公共算子、覆盖、Sim(3) 或排名语义。
+
 ## 9. 解锁顺序
 
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
@@ -199,6 +218,7 @@ GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成
 - 3DGS 配方验证：`code/gcp/validate_m3m_native_quarter_3dgs_recipe.py`
 - 3DGS renderer 补丁静态验证：`code/gcp/validate_3dgs_native_quarter_renderer_adapter.py`
 - 2DGS 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_2dgs_static.py`
+- GOF 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_gof_static.py`
 - 九方法登记验证：`code/gcp/validate_m3m_native_quarter_method_registry.py`
 - 正式训练 fail-closed 门禁：`code/gcp/check_m3m_native_quarter_formal_launch.py`
 

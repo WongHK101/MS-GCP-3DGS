@@ -46,7 +46,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol mismatch")
     require(
         value.get("status")
-        == "candidate_pool_frozen_3dgs_and_2dgs_3k_complete_ranked_other_methods_locked",
+        == "candidate_pool_frozen_3dgs_and_2dgs_3k_complete_ranked_gof_static_pass_gpu_pending_other_methods_locked",
         "registry status mismatch",
     )
     require(value.get("method_count") == 9, "method_count must be 9")
@@ -97,6 +97,12 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             require(method.get("three_k_training_allowed") is False, prefix + "completed 3K run must not remain launchable")
             require(
                 method.get("three_k_qualification_status") == "FORMAL_3K_COMPLETE_RANKED",
+                prefix + "qualification status mismatch",
+            )
+        elif method_id == "gof":
+            require(method.get("three_k_training_allowed") is False, prefix + "static-only qualification must remain locked")
+            require(
+                method.get("three_k_qualification_status") == "STATIC_PREFLIGHT_PASS_GPU_PENDING",
                 prefix + "qualification status mismatch",
             )
         else:
@@ -458,6 +464,65 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(two_checkpoint.get("rmse_h_m") == two_formal.get("checkpoint_rmse_h_m"), "2DGS checkpoint RMSE-H mismatch")
     require(two_checkpoint.get("rmse_z_m") == two_formal.get("checkpoint_rmse_z_m"), "2DGS checkpoint RMSE-Z mismatch")
     require(two_formal_report.get("final_gpu_compute_process_count") == 0, "2DGS formal run left a GPU compute process")
+
+    gof = next((method for method in methods if method.get("method_id") == "gof"), {})
+    gof_adapter = gof.get("common_adapter", {})
+    require(gof.get("recipe_status") == "FROZEN_STATIC_PREFLIGHT_GPU_PENDING", "GOF recipe status mismatch")
+    require(gof_adapter.get("status") == "STATIC_PATCH_PREFLIGHT_PASS_GPU_PENDING", "GOF adapter status mismatch")
+    gof_specs = [
+        (gof, "recipe", "recipe_sha256", "GOF recipe"),
+        (gof_adapter, "config", "config_sha256", "GOF adapter config"),
+        (gof_adapter, "static_report", "static_report_sha256", "GOF static report"),
+    ]
+    gof_evidence: dict[str, dict[str, Any]] = {}
+    for container, path_key, sha_key, label in gof_specs:
+        relative = container.get(path_key)
+        expected_sha = str(container.get(sha_key, ""))
+        require(isinstance(relative, str) and bool(relative), f"{label} path missing")
+        require(bool(SHA256.fullmatch(expected_sha)), f"{label} SHA invalid")
+        if isinstance(relative, str) and relative:
+            path = (resolved_repo / relative).resolve()
+            require(path.is_relative_to(resolved_repo), f"{label} escapes repo")
+            require(path.is_file(), f"{label} missing")
+            if path.is_file():
+                require(file_sha256(path) == expected_sha, f"{label} SHA mismatch")
+                gof_evidence[path_key] = json.loads(path.read_text(encoding="utf-8"))
+    gof_recipe = gof_evidence.get("recipe", {})
+    require(gof_recipe.get("protocol_id") == value.get("protocol_id"), "GOF recipe protocol mismatch")
+    require(gof_recipe.get("method", {}).get("method_id") == "gof", "GOF recipe method mismatch")
+    require(gof_recipe.get("source_provenance", {}).get("repository_commit") == gof.get("source", {}).get("commit"), "GOF recipe commit mismatch")
+    require(gof_recipe.get("source_provenance", {}).get("repository_tree") == gof.get("source", {}).get("tree"), "GOF recipe tree mismatch")
+    require(gof_recipe.get("build_compatibility", {}).get("training_source_modified") is False, "GOF training source was modified")
+    require(gof_recipe.get("execution", {}).get("training_authorized") is False, "GOF recipe prematurely authorizes training")
+    gof_qualification = gof_recipe.get("qualification", {})
+    require(gof_qualification.get("recipe_static_freeze_passed") is True, "GOF static recipe freeze missing")
+    require(gof_qualification.get("local_patch_replay_passed") is True, "GOF patch replay missing")
+    require(gof_qualification.get("three_k_training_allowed") is False, "GOF recipe prematurely unlocks 3K")
+    require(gof_qualification.get("full_scene_matrix_allowed") is False, "GOF recipe unlocks full matrix")
+    require(gof_qualification.get("global_training_allowed") is False, "GOF recipe unlocks global training")
+    for key in (
+        "real_input_loader_preflight_passed",
+        "gpu_official_training_extension_build_passed",
+        "gpu_evaluation_adapter_build_passed",
+        "synthetic_raw_moment_conformance_passed",
+        "frozen_3k_real_packet_camera_preflight_passed",
+        "one_iteration_technical_smoke_completed",
+        "formal_3k_completed",
+    ):
+        require(gof_qualification.get(key) is False, f"GOF pending gate unexpectedly passed: {key}")
+    gof_config = gof_evidence.get("config", {})
+    require(gof_config.get("status") == "STATIC_PATCH_PREFLIGHT_PASS_GPU_PENDING", "GOF adapter config state mismatch")
+    require(gof_config.get("raw_output", {}).get("rendered_image_plane_indices") == [7, 9, 10, 11], "GOF raw plane map mismatch")
+    require(gof_config.get("raw_output", {}).get("physical_surface_claim") is False, "GOF adapter makes physical-surface claim")
+    require(gof_config.get("training_identity", {}).get("training_patch_allowed") is False, "GOF training patch was allowed")
+    require(gof_config.get("training_identity", {}).get("checkpoint_mutation_allowed") is False, "GOF checkpoint mutation was allowed")
+    gof_static = gof_evidence.get("static_report", {})
+    require(gof_static.get("schema") == "m3m_gcp_native_quarter_gof_static_validation_v1", "GOF static schema mismatch")
+    require(gof_static.get("status") == "PASS" and gof_static.get("passed") is True, "GOF static validation failed")
+    require(gof_static.get("formal_training_authorized") is False, "GOF static report prematurely authorizes training")
+    require(gof_static.get("native_depth_channel_used_as_common_primary") is False, "GOF native median/max depth leaked into common primary")
+    require(gof_static.get("native_opacity_level_set_mesh_role") == "diagnostic_only", "GOF native surface role mismatch")
+    require(gof_static.get("physical_surface_claim") is False, "GOF static report makes physical-surface claim")
 
     city = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require("redistribution_blocked" in str(city.get("source", {}).get("license_status", "")), "CityGS-X redistribution risk missing")

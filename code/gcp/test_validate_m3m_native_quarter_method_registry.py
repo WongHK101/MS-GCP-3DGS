@@ -65,3 +65,15 @@ def test_2dgs_formal_3k_result_is_complete_and_relocked() -> None:
     assert value["per_method_training_allowed_methods"] == []
     assert value["global_training_allowed"] is False
     assert two_dgs["full_scene_matrix_eligible"] is False
+
+
+def test_gof_static_qualification_passes_without_unlocking_training() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    gof = next(method for method in value["methods"] if method["method_id"] == "gof")
+    assert gof["recipe_status"] == "FROZEN_STATIC_PREFLIGHT_GPU_PENDING"
+    assert gof["common_adapter"]["status"] == "STATIC_PATCH_PREFLIGHT_PASS_GPU_PENDING"
+    assert gof["three_k_qualification_status"] == "STATIC_PREFLIGHT_PASS_GPU_PENDING"
+    assert gof["three_k_training_allowed"] is False
+    assert gof["full_scene_matrix_eligible"] is False
+    assert value["per_method_training_allowed_methods"] == []
+    assert value["global_training_allowed"] is False

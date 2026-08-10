@@ -1,0 +1,49 @@
+diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h b/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h
+--- a/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h
++++ b/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h
+@@ -21,7 +21,10 @@
+ #define DEPTH_OFFSET 6
+ #define ALPHA_OFFSET 7
+ #define DISTORTION_OFFSET 8
+-#define OUTPUT_CHANNELS 9
++#define WEIGHTED_CAMERA_Z_SUM_OFFSET 9
++#define WEIGHTED_CAMERA_Z_SECOND_MOMENT_OFFSET 10
++#define WEIGHTED_INVERSE_CAMERA_Z_SUM_OFFSET 11
++#define OUTPUT_CHANNELS 12
+ 
+ #define MAX_NUM_CONTRIBUTORS 256
+ #define NEAR_PLANE 0.2
+diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu b/submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu
+--- a/submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu
++++ b/submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu
+@@ -467,6 +467,9 @@ renderCUDA(
+ 	float dist1 = {0};
+ 	float dist2 = {0};
+ 	float distortion = {0};
++	float weighted_camera_z_sum = 0.0f;
++	float weighted_camera_z_second_moment = 0.0f;
++	float weighted_inverse_camera_z_sum = 0.0f;
+ 
+ 	// Iterate over batches until all done or range is complete
+ 	for (int i = 0; i < rounds; i++, toDo -= BLOCK_SIZE)
+@@ -570,6 +573,10 @@ renderCUDA(
+ 				max_contributor = contributor;
+ 			}
+ 			C[CHANNELS * 2 + 1] += alpha * T;
++			const float metric_weight = alpha * T;
++			weighted_camera_z_sum += metric_weight * t;
++			weighted_camera_z_second_moment += metric_weight * t * t;
++			weighted_inverse_camera_z_sum += metric_weight / t;
+ 
+ 			T = test_T;
+ 
+@@ -608,6 +615,9 @@ renderCUDA(
+ 		out_color[DEPTH_OFFSET * H * W + pix_id] = C[CHANNELS * 2];
+ 		out_color[ALPHA_OFFSET * H * W + pix_id] = C[CHANNELS * 2 + 1];
+ 		out_color[DISTORTION_OFFSET * H * W + pix_id] = distortion;
++		out_color[WEIGHTED_CAMERA_Z_SUM_OFFSET * H * W + pix_id] = weighted_camera_z_sum;
++		out_color[WEIGHTED_CAMERA_Z_SECOND_MOMENT_OFFSET * H * W + pix_id] = weighted_camera_z_second_moment;
++		out_color[WEIGHTED_INVERSE_CAMERA_Z_SUM_OFFSET * H * W + pix_id] = weighted_inverse_camera_z_sum;
+ 	}
+ }
+ 

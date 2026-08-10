@@ -1,0 +1,202 @@
+{
+  "schema": "m3m_gcp_native_quarter_gof_recipe_v1",
+  "recipe_id": "m3m_gcp_native_quarter_gof_3k_30k_seed0_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "FROZEN_STATIC_PREFLIGHT_GPU_PENDING",
+  "method": {
+    "method_id": "gof",
+    "display_name": "Gaussian Opacity Fields",
+    "publication_title": "Gaussian Opacity Fields: Efficient Adaptive Surface Reconstruction in Unbounded Scenes",
+    "official_repository": "https://github.com/autonomousvision/gaussian-opacity-fields"
+  },
+  "source_provenance": {
+    "repository_commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+    "repository_tree": "b398209f5721e3944d4f95477c962a78e2106198",
+    "license_file": "LICENSE.md",
+    "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+    "license_scope": "non-commercial research and evaluation; redistribution must retain and respect the frozen upstream license",
+    "vendored_trees": {
+      "diff-gaussian-rasterization": "7b75ce386fb5c2f874c9605c90610158126f02a3",
+      "simple-knn": "3468dcff56d59c35d7f0776248bef37f2e138aba",
+      "tetra-triangulation": "06ce0acb28d07f36d6faacb5310b979b840dec8d"
+    }
+  },
+  "build_compatibility": {
+    "training_source_modified": false,
+    "training_rasterizer_patch": null,
+    "checkpoint_mutation_allowed": false,
+    "simple_knn_build_copy_patch": {
+      "path": "patches/gof/simple_knn_vendored_cuda12_cfloat_v1.patch",
+      "sha256": "5e5e255979f46d6dcc68d0672f26bbaffdb00fe5b0564a9a2fb4e48e87004aa3",
+      "scope": "isolated simple-knn build copy only; adds cfloat include for CUDA 12.x FLT_MAX compatibility"
+    }
+  },
+  "input_release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_input_manifest": "formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "formal_input_manifest_file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "pixel_domain": "colmap_4_0_4_image_undistorter_pinhole_max_1414",
+    "image_transform": "byte-preserving copy of COLMAP 4.0.4 image_undistorter JPEG output; no resize, crop, pad, EXIF transpose, or re-encode"
+  },
+  "qualification_scene": {
+    "scene_id": "gcp_3000_20260602",
+    "full_view_count": 94,
+    "train_view_count": 82,
+    "test_view_count": 12,
+    "training_input_root_role": "train",
+    "heldout_input_root_role": "test",
+    "loaded_width": 1414,
+    "loaded_height": 1025,
+    "camera_model": "PINHOLE",
+    "official_resolution_argument": 1,
+    "official_eval_argument": false,
+    "shared_initial_ply_relative_path": "sparse/0/points3D.ply",
+    "shared_initial_ply_sha256": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d",
+    "loader_preflight": {
+      "status": "PENDING_TARGET_GPU",
+      "expected_train_cameras_loaded": 82,
+      "expected_test_cameras_loaded": 0,
+      "expected_initial_points_loaded": 61302,
+      "training_started": false
+    }
+  },
+  "training": {
+    "iterations": 30000,
+    "seed": 0,
+    "seed_implementation": "train.py hard-coded random.seed(0), numpy.random.seed(0), and torch.manual_seed(0)",
+    "sh_degree": 3,
+    "white_background": false,
+    "data_device": "cuda",
+    "eval_holdout": false,
+    "resolution": 1,
+    "kernel_size": 0.0,
+    "convert_shs_python": false,
+    "compute_cov3d_python": false,
+    "compute_view2gaussian_python": false,
+    "ray_jitter": false,
+    "resample_gt_image": false,
+    "load_allres": false,
+    "sample_more_highres": false,
+    "use_decoupled_appearance": false,
+    "use_decoupled_appearance_rationale": "the frozen acquisition has stable exposure/illumination and other rgb_colmap_only baselines do not receive an appearance-network prior",
+    "lambda_distortion": 100.0,
+    "lambda_depth_normal": 0.05,
+    "distortion_from_iter": 15000,
+    "depth_normal_from_iter": 15000,
+    "position_lr_init": 0.00016,
+    "position_lr_final": 0.0000016,
+    "position_lr_delay_mult": 0.01,
+    "position_lr_max_steps": 30000,
+    "feature_lr": 0.0025,
+    "opacity_lr": 0.05,
+    "scaling_lr": 0.005,
+    "rotation_lr": 0.001,
+    "appearance_embeddings_lr": 0.001,
+    "appearance_network_lr": 0.001,
+    "percent_dense": 0.01,
+    "lambda_dssim": 0.2,
+    "densification_interval": 100,
+    "opacity_reset_interval": 3000,
+    "densify_from_iter": 500,
+    "densify_until_iter": 15000,
+    "densify_grad_threshold": 0.0002,
+    "test_iterations": [7000, 30000],
+    "save_iterations": [7000, 30000],
+    "checkpoint_iterations": [],
+    "start_checkpoint": null,
+    "formal_checkpoint": "point_cloud/iteration_30000/point_cloud.ply",
+    "gcp_annotations_visible_to_training": false,
+    "split_role_labels_visible_to_optimizer": false,
+    "survey_coordinates_visible_to_training": false,
+    "external_geometry_prior": null
+  },
+  "execution": {
+    "command_template": "python train.py -s <native_quarter_release>/formal_inputs/gcp_3000_20260602/train -m <new_run_root> --resolution 1 --iterations 30000 --kernel_size 0 --test_iterations 7000 30000 --save_iterations 7000 30000 --quiet",
+    "resume_allowed": false,
+    "preexisting_checkpoint_allowed": false,
+    "source_tree_clean_before_and_after_required": true,
+    "input_manifest_verification_required": true,
+    "fresh_hardware_manifest_required": true,
+    "training_authorized": false,
+    "authorization_scope": "no formal GOF run is authorized until the target-GPU build, synthetic raw-moment, one-iteration technical smoke, 66-camera packet, and common-evaluator qualification gates all pass",
+    "resource_probe_required": true
+  },
+  "evaluation_adapter": {
+    "scope": "evaluation-only patched copy; official training source, rasterizer, and checkpoint remain unchanged",
+    "config": "configs/m3m_gcp_native_quarter_gof_renderer_adapter_v1.json",
+    "common_primary_planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum"
+    ],
+    "diagnostic_planes_added_only_in_evaluation_copy": [
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "cpu_derived_packet_fields": [
+      "alpha_normalized_expected_camera_z",
+      "alpha_normalized_expected_inverse_camera_z",
+      "harmonic_camera_z",
+      "camera_z_variance",
+      "metric_depth_valid_mask"
+    ],
+    "native_opacity_level_set_mesh_role": "diagnostic_only_not_common_primary"
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "status": "GPU_QUALIFICATION_PENDING",
+    "target_environment": {
+      "path": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gof/py310-torch2.7.1-cu128-v1",
+      "python": "3.10.12",
+      "pytorch": "2.7.1+cu128",
+      "torch_cuda": "12.8",
+      "cuda_compiler": "12.8",
+      "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "driver": "580.82.09",
+      "gpu_capability": "12.0"
+    }
+  },
+  "server_roots": {
+    "official_training_code_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gof/5245b20e5d11acd6d1ff5af4b890dc2bedd99693/official-train",
+    "evaluation_adapter_code_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gof/5245b20e5d11acd6d1ff5af4b890dc2bedd99693/eval-adapter-v1",
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gof/py310-torch2.7.1-cu128-v1",
+    "input_release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "build_root_template": "/root/autodl-tmp/build/m3m-gcp-native-quarter/gof/5245b20e5d11acd6d1ff5af4b890dc2bedd99693/<run_id>",
+    "run_root_template": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gof/<scene>/<run_id>"
+  },
+  "isolation": {
+    "source_dataset_access": "read_only",
+    "training_input_access": "read_only",
+    "training_source_runtime_writes": "forbidden",
+    "evaluation_adapter_is_separate_copy": true,
+    "overwrite_policy": "fail_if_exists",
+    "method_specific_environment": true,
+    "method_and_run_specific_build_cache": true,
+    "method_and_scene_specific_run_root": true
+  },
+  "qualification": {
+    "scope": "GOF native-quarter 3K only",
+    "source_identity_passed": true,
+    "license_review_recorded": true,
+    "recipe_static_freeze_passed": true,
+    "real_input_loader_preflight_passed": false,
+    "local_patch_replay_passed": true,
+    "gpu_official_training_extension_build_required": true,
+    "gpu_official_training_extension_build_passed": false,
+    "gpu_evaluation_adapter_build_required": true,
+    "gpu_evaluation_adapter_build_passed": false,
+    "synthetic_raw_moment_conformance_required": true,
+    "synthetic_raw_moment_conformance_passed": false,
+    "frozen_3k_real_packet_camera_preflight_required": true,
+    "frozen_3k_real_packet_camera_preflight_passed": false,
+    "one_iteration_technical_smoke_completed": false,
+    "one_iteration_smoke_is_formal_result": false,
+    "formal_3k_completed": false,
+    "three_k_training_allowed": false,
+    "full_matrix_authorized_before_pass": false,
+    "unlock_rule": "all source, recipe, build, synthetic raw-moment, one-iteration, 66-camera packet, and common-evaluator gates must pass before exactly one GOF gcp_3000_20260602 seed-0/30K run may be authorized",
+    "full_scene_matrix_allowed": false,
+    "global_training_allowed": false
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "adapter_id": "gof_raw_metric_depth_accumulators_v1",
+  "common_primary": "A/M1 expected camera-z under official GOF compositing weights",
+  "errors": [],
+  "evaluation_copy_only": true,
+  "formal_training_authorized": false,
+  "method_id": "gof",
+  "native_depth_channel_used_as_common_primary": false,
+  "native_opacity_level_set_mesh_role": "diagnostic_only",
+  "passed": true,
+  "patches": [
+    {
+      "path": "patches/gof/native_quarter_raw_moments_renderer_5245b20_v1.patch",
+      "sha256": "2da9ac79d75b86d2afbf1e4337095c4279d12bb99851ab3abdbd92e2056a84b3"
+    },
+    {
+      "path": "patches/gof/native_quarter_raw_moments_rasterizer_5245b20_v1.patch",
+      "sha256": "43808ad998748c680acee6bdeaaa90b639f2d427fb4540aae182ca5378d2472b"
+    },
+    {
+      "path": "patches/gof/simple_knn_vendored_cuda12_cfloat_v1.patch",
+      "sha256": "5e5e255979f46d6dcc68d0672f26bbaffdb00fe5b0564a9a2fb4e48e87004aa3"
+    }
+  ],
+  "physical_surface_claim": false,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "remaining_gates": [
+    "target_gpu_official_training_extension_build",
+    "target_gpu_evaluation_adapter_build",
+    "real_input_loader_82_train_0_test_61302_points",
+    "synthetic_raw_moment_conformance",
+    "one_iteration_technical_smoke",
+    "frozen_3k_66_camera_packet_and_common_evaluator"
+  ],
+  "schema": "m3m_gcp_native_quarter_gof_static_validation_v1",
+  "source_identity": {
+    "canonical_git_blobs": {
+      "arguments/__init__.py": "65e715b29f71c65b7587579f3d9a77a684b7809e",
+      "gaussian_renderer/__init__.py": "d1595831c598e1f54cd2bd06df6ca7073cf3a09d",
+      "submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h": "e8184a0e2a06ec2ba2dbed1ca00d591366512be5",
+      "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "50e639019affb67eb7a1b44ea8c6336b23f2815b",
+      "submodules/simple-knn/simple_knn.cu": "e72e4c96ea9d161514835fc2fcee62b94954f2d9",
+      "train.py": "03c7630bca25db1715d99469ec845e931f95e564"
+    },
+    "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+    "repository_commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+    "repository_tree": "b398209f5721e3944d4f95477c962a78e2106198",
+    "vendored_trees": {
+      "submodules/diff-gaussian-rasterization": "7b75ce386fb5c2f874c9605c90610158126f02a3",
+      "submodules/simple-knn": "3468dcff56d59c35d7f0776248bef37f2e138aba",
+      "submodules/tetra-triangulation": "06ce0acb28d07f36d6faacb5310b979b840dec8d"
+    }
+  },
+  "status": "PASS",
+  "training_source_modified": false
+}

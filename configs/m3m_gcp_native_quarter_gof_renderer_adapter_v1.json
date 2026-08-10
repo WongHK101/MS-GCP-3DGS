@@ -1,0 +1,91 @@
+{
+  "schema": "m3m_gcp_native_quarter_gof_renderer_adapter_v1",
+  "adapter_id": "gof_raw_metric_depth_accumulators_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "STATIC_PATCH_PREFLIGHT_PASS_GPU_PENDING",
+  "scope": "evaluation-only renderer copy; official training source, rasterizer, and trained checkpoint remain unmodified",
+  "source": {
+    "repository_commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+    "repository_tree": "b398209f5721e3944d4f95477c962a78e2106198",
+    "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+    "vendored_trees": {
+      "submodules/diff-gaussian-rasterization": "7b75ce386fb5c2f874c9605c90610158126f02a3",
+      "submodules/simple-knn": "3468dcff56d59c35d7f0776248bef37f2e138aba",
+      "submodules/tetra-triangulation": "06ce0acb28d07f36d6faacb5310b979b840dec8d"
+    },
+    "canonical_git_blobs": {
+      "gaussian_renderer/__init__.py": "d1595831c598e1f54cd2bd06df6ca7073cf3a09d",
+      "submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h": "e8184a0e2a06ec2ba2dbed1ca00d591366512be5",
+      "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "50e639019affb67eb7a1b44ea8c6336b23f2815b",
+      "submodules/simple-knn/simple_knn.cu": "e72e4c96ea9d161514835fc2fcee62b94954f2d9",
+      "train.py": "03c7630bca25db1715d99469ec845e931f95e564",
+      "arguments/__init__.py": "65e715b29f71c65b7587579f3d9a77a684b7809e"
+    }
+  },
+  "patches": [
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/gof/native_quarter_raw_moments_renderer_5245b20_v1.patch",
+      "sha256": "2da9ac79d75b86d2afbf1e4337095c4279d12bb99851ab3abdbd92e2056a84b3"
+    },
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/gof/native_quarter_raw_moments_rasterizer_5245b20_v1.patch",
+      "sha256": "43808ad998748c680acee6bdeaaa90b639f2d427fb4540aae182ca5378d2472b"
+    }
+  ],
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "rendered_image_plane_indices": [7, 9, 10, 11],
+    "planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "plane_sources": {
+      "accumulated_alpha": "native GOF rendered-image channel 7, sum of official front-to-back alpha-compositing weights",
+      "weighted_camera_z_sum": "evaluation-only sum of the same official compositing weight times ray-intersection t",
+      "weighted_camera_z_second_moment": "evaluation-only sum of the same official compositing weight times ray-intersection t squared",
+      "weighted_inverse_camera_z_sum": "evaluation-only sum of the same official compositing weight divided by positive ray-intersection t"
+    },
+    "camera_z_definition": "GOF constructs the camera ray as (x/fx, y/fy, 1); therefore the frozen rasterizer intersection parameter t equals camera-z",
+    "alpha_compositing": "official alpha cutoff 1/255 and early termination threshold 1e-4 are unchanged",
+    "primary_common_track": "A/M1 under the official GOF compositing weights; not the native median/max-depth channel and not a level-set surface",
+    "native_depth_channel_policy": "rendered-image channel 6 is GOF median/max depth and is diagnostic only; it must never substitute for M1/A",
+    "native_opacity_level_set_mesh_policy": "diagnostic family-specific secondary track only",
+    "physical_surface_claim": false,
+    "derived_packet_policy": "derive normalized fields on CPU from the four raw float32 accumulators"
+  },
+  "training_identity": {
+    "training_patch_allowed": false,
+    "training_rasterizer_patch_allowed": false,
+    "checkpoint_mutation_allowed": false,
+    "evaluation_copy_required": true
+  },
+  "local_preflight": {
+    "fresh_exact_source_patch_check": "PASS",
+    "renderer_python_compile": "PASS",
+    "gpu_build": "PENDING",
+    "synthetic_raw_moment_conformance": "PENDING",
+    "one_iteration_technical_smoke": "PENDING_NOT_FORMAL_RESULT",
+    "real_3k_packet_camera_preflight": "PENDING",
+    "common_evaluator": "PENDING"
+  },
+  "target_gpu_evidence": {
+    "server": "AutoDL-901",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "driver": "580.82.09",
+    "compute_capability": "12.0",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "official_training_rasterizer_extension_sha256": null,
+    "official_training_simple_knn_extension_sha256": null,
+    "evaluation_adapter_extension_sha256": null,
+    "raw_moment_conformance_sha256": null,
+    "packet_manifest_sha256": null
+  },
+  "qualification_report": null,
+  "formal_3k_result": null,
+  "remaining_gate": "target-GPU official/evaluation builds, synthetic raw-moment conformance, real-input loader, one-iteration technical smoke, 66-camera packet export, and common-evaluator qualification"
+}
