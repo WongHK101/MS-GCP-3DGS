@@ -82,9 +82,16 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         else:
             require(input_class == "rgb_colmap_only", prefix + "unexpected input class")
             require(priors == [], prefix + "RGB+COLMAP method must not carry undeclared priors")
-        require(method.get("three_k_training_allowed") is False, prefix + "training must remain locked")
+        if method_id == "3dgs_original":
+            require(method.get("three_k_training_allowed") is True, prefix + "3K training authorization missing")
+            require(
+                method.get("three_k_qualification_status") == "PREFLIGHT_PASS_TRAINING_AUTHORIZED",
+                prefix + "qualification status mismatch",
+            )
+        else:
+            require(method.get("three_k_training_allowed") is False, prefix + "training must remain locked")
+            require(method.get("three_k_qualification_status") == "NOT_RUN", prefix + "qualification status mismatch")
         require(method.get("full_scene_matrix_eligible") is False, prefix + "full matrix must remain locked")
-        require(method.get("three_k_qualification_status") == "NOT_RUN", prefix + "qualification status mismatch")
 
     qgs = next((method for method in methods if method.get("method_id") == "qgs"), {})
     require(qgs.get("source", {}).get("official_repository") == "https://github.com/will-zzy/QGS", "QGS official repository not recorded")
@@ -95,12 +102,12 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     adapter = three_dgs.get("common_adapter", {})
     require(
         three_dgs.get("recipe_status")
-        == "FROZEN_TRAINING_LOCKED_PENDING_GPU_ADAPTER_PREFLIGHT",
+        == "FROZEN_3K_TRAINING_AUTHORIZED",
         "3DGS recipe status mismatch",
     )
     require(
         adapter.get("status")
-        == "STATIC_AND_CPU_PREFLIGHT_PASS_GPU_BUILD_AND_REAL_3K_PACKET_PENDING",
+        == "GPU_BUILD_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
         "3DGS adapter status mismatch",
     )
 
@@ -111,6 +118,13 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         (adapter, "static_report", "static_report_sha256", "3DGS static adapter report"),
         (adapter, "cpu_report", "cpu_report_sha256", "3DGS CPU preflight"),
         (adapter, "end_to_end_cpu_smoke", "end_to_end_cpu_smoke_sha256", "3DGS evaluator smoke"),
+        (adapter, "gpu_preflight", "gpu_preflight_sha256", "3DGS GPU preflight"),
+        (
+            adapter,
+            "real_3k_packet_camera_preflight",
+            "real_3k_packet_camera_preflight_sha256",
+            "3DGS real 3K packet-camera preflight",
+        ),
     ]
     evidence: dict[str, dict[str, Any]] = {}
     resolved_repo = repo_root.resolve()
@@ -129,11 +143,11 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
     recipe = evidence.get("recipe", {})
     require(recipe.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "3DGS recipe protocol mismatch")
-    require(recipe.get("execution", {}).get("training_authorized") is False, "3DGS recipe prematurely authorizes training")
-    require(recipe.get("qualification", {}).get("three_k_training_allowed") is False, "3DGS recipe qualification lock missing")
+    require(recipe.get("execution", {}).get("training_authorized") is True, "3DGS recipe training authorization missing")
+    require(recipe.get("qualification", {}).get("three_k_training_allowed") is True, "3DGS recipe qualification unlock missing")
     recipe_validation = evidence.get("recipe_validation", {})
     require(recipe_validation.get("passed") is True, "3DGS recipe validation did not pass")
-    require(recipe_validation.get("training_allowed") is False, "3DGS recipe validation unlocked training")
+    require(recipe_validation.get("training_allowed") is True, "3DGS recipe validation did not authorize training")
     config = evidence.get("config", {})
     require(
         config.get("status") == "STATIC_PATCH_PREFLIGHT_PASS_GPU_RENDER_PREFLIGHT_PENDING",
@@ -151,6 +165,29 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(assertions.get("scene_status") == "INCOMPLETE_UNRANKED", "3DGS evaluator smoke did not enforce incomplete status")
     require(assertions.get("ranking_eligible") is False, "3DGS evaluator smoke incorrectly allowed ranking")
     require(assertions.get("maximum_oblique_azimuth_circular_bin_separation", 0) >= 2, "3DGS evaluator smoke did not exercise azimuth separation")
+    gpu = evidence.get("gpu_preflight", {})
+    require(gpu.get("status") == "PASS" and gpu.get("passed") is True, "3DGS GPU preflight did not pass")
+    require(gpu.get("training_started") is False, "3DGS GPU preflight unexpectedly trained a model")
+    real = evidence.get("real_3k_packet_camera_preflight", {})
+    require(real.get("status") == "PASS", "3DGS real packet-camera preflight did not pass")
+    require(
+        real.get("packet_export", {}).get("all_packet_recomputations_passed") is True,
+        "3DGS real packet recomputation did not pass",
+    )
+    require(
+        real.get("evaluator", {}).get("method_specific_sim3_fitted") is False,
+        "3DGS real packet-camera preflight fitted a method-specific Sim(3)",
+    )
+    require(
+        real.get("training_unlock", {})
+        == {
+            "full_scene_matrix_allowed": False,
+            "global_unlock": False,
+            "method_id": "3dgs_original",
+            "three_k_training_allowed": True,
+        },
+        "3DGS real packet-camera preflight unlock scope mismatch",
+    )
 
     city = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require("redistribution_blocked" in str(city.get("source", {}).get("license_status", "")), "CityGS-X redistribution risk missing")
@@ -158,6 +195,10 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     prior_names = {str(prior.get("name")) for prior in metro.get("external_priors", [])}
     require(prior_names == {"pointmap dense initialization", "MoGe-2"}, "MetroGS prior inventory incomplete")
     require(value.get("global_training_allowed") is False, "global training lock missing")
+    require(
+        value.get("per_method_training_allowed_methods") == ["3dgs_original"],
+        "per-method training allowlist mismatch",
+    )
     return {
         "schema": "m3m_gcp_native_quarter_method_registry_validation_v2",
         "passed": not errors,

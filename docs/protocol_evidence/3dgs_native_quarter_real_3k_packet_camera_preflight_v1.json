@@ -1,0 +1,118 @@
+{
+  "adapter_gpu_preflight": {
+    "report": "docs/protocol_evidence/3dgs_native_quarter_adapter_gpu_preflight_v1.json",
+    "report_sha256": "a605a9c045647d92bc34bcc30e05e5a9632038220245b36078c14cbcdacf898c",
+    "status": "PASS"
+  },
+  "boundary": {
+    "benchmark_score_claim": false,
+    "checkpoint_loaded": false,
+    "full_scene_matrix_unlocked": false,
+    "method_unlocked_for_3k_training": "3dgs_original",
+    "training_started": false,
+    "usage": "qualification-only sparse-initialization renderer/packet/evaluator integration preflight"
+  },
+  "created_at": "2026-08-10T15:20:00+08:00",
+  "evaluator": {
+    "checkpoint_coverage_rate": 1.0,
+    "evaluator_commit": "cced58ecf3cc7f72355edec135ed12eb43e25b6b",
+    "evaluator_tree": "622b42b9d1d9321b45aab7be433be7c11b81997a",
+    "exit_code": 0,
+    "geometric_median_numerical_guard": {
+      "absolute_tolerance": 1e-10,
+      "failing_group": "gcp_3000_20260602/G13/nadir/azimuth_bin_3",
+      "iterations_required": 761,
+      "new_max_iterations": 4096,
+      "old_max_iterations": 512,
+      "semantic_change": false,
+      "update_rule_changed": false
+    },
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "output_sha256": {
+      "evaluation_summary.json": "a90060c08ae35722c2097aff937929ec20ec437715736cf63f03c9dd2e64ade6",
+      "evaluator_manifest.json": "822f90cae05de4faad9cd2dda6caa76f946df00e3b84064033376339139b0d65",
+      "observation_samples.csv": "f5fb5d02f3effdace4d9fb6dc097a42d32ecf354e773e4dc636906bfa7c6513b",
+      "point_results.csv": "eba4ac8a5b39386232cc2f47175690dea5d2c987939f7be4cf008f8d63197168"
+    },
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "ranking_eligible": true,
+    "status": "COMPLETE_RANKED"
+  },
+  "frozen_input": {
+    "height": 1025,
+    "image_count": 94,
+    "image_sha256_aggregate": "dbbe5329dc42dc473a5e3b9c597bf46e0a8f1ffeb0a190c7d4796859ee31bd79",
+    "scene": "gcp_3000_20260602",
+    "sparse_sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "frames.bin": "4d53a5b14629bde8058cfca3b90f69de517974f36e8c9fd9ade12b78a0b86a7d",
+      "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+      "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f",
+      "points3D.ply": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d",
+      "rigs.bin": "73e4d5f0da0a84a5711b46ae716a149f1532832f95bb09b4b01e73cf2c5afbe9"
+    },
+    "width": 1414
+  },
+  "packet_export": {
+    "all_packet_files_exist": true,
+    "all_packet_recomputations_passed": true,
+    "exporter_commit": "04df92b966cdf46e568cfce98e339b79c2f15e47",
+    "formal_observation_count": 147,
+    "formal_packet_camera_count": 66,
+    "packet_bytes_total": 2902703562,
+    "packet_manifest_sha256": "8cd0beff27052a72ba2563bc7e3b94d5f4965395fe77c9add960e008832eafa2",
+    "retry_value_comparison": {
+      "image_count": 66,
+      "mismatch_count": 0,
+      "tensor_count": 7
+    },
+    "shape": [
+      1025,
+      1414
+    ],
+    "valid_pixel_count_range": [
+      1443367,
+      1449350
+    ],
+    "variance_max_error_to_bound_ratio": 0.021447578497322276
+  },
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "protocol_release": {
+    "data_contract_sha256": "9141cf90e5bcdf342e5d47e58aa3a0aa48300bd461411ae495ce974993e5ed13",
+    "manifest_sha256": "21fbac75d66433169535ea7440c31393f7a5ecdb4ed94fcefd31d1780c28bea4",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
+  },
+  "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/gpu-packet-camera-preflight-20260810T0715Z",
+  "runtime": {
+    "cuda_compiler": "12.8",
+    "driver": "580.82.09",
+    "gpu_capability": "12.0",
+    "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "gpu_uuid": "GPU-2b3b7941-2afd-f285-e2a2-6702deb4f0c7",
+    "python": "3.10.12",
+    "server": "AutoDL-901",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8"
+  },
+  "schema": "m3m_gcp_3dgs_native_quarter_real_3k_packet_camera_preflight_v1",
+  "source": {
+    "official_source_clean_after_preflight": true,
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "repository_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "repository_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "simple_knn_commit": "44f764299fa305faf6ec5ebd99939e0508331503"
+  },
+  "status": "PASS",
+  "training_unlock": {
+    "full_scene_matrix_allowed": false,
+    "global_unlock": false,
+    "method_id": "3dgs_original",
+    "three_k_training_allowed": true
+  }
+}

@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v2",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "candidate_pool_frozen_training_locked_pending_per_method_qualification",
+  "status": "candidate_pool_frozen_3dgs_3k_training_authorized_other_methods_locked",
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
@@ -59,13 +59,13 @@
       },
       "input_class": "rgb_colmap_only",
       "external_priors": [],
-      "recipe_status": "FROZEN_TRAINING_LOCKED_PENDING_GPU_ADAPTER_PREFLIGHT",
+      "recipe_status": "FROZEN_3K_TRAINING_AUTHORIZED",
       "recipe": "configs/m3m_gcp_native_quarter_3dgs_3k_recipe_v1.json",
-      "recipe_sha256": "ebf3bcfdf7c078f6cb5a308489255a3bbeccd3adfc7e476850822a33a61ff389",
+      "recipe_sha256": "1a9550f9aed4add354e8b19e93ad6ddac11409399892359712463c65e737d058",
       "recipe_validation": "docs/protocol_evidence/m3m_native_quarter_3dgs_3k_recipe_validation_v1.json",
-      "recipe_validation_sha256": "95d9b36ce2642f4723b2190be57e965c45f0ce9bbcb8eaee3d7e5c3a240df809",
+      "recipe_validation_sha256": "d7fdc02dea00cec648e25565b40132ef5da746d1f4a02342ee8156d1d80217cb",
       "common_adapter": {
-        "status": "STATIC_AND_CPU_PREFLIGHT_PASS_GPU_BUILD_AND_REAL_3K_PACKET_PENDING",
+        "status": "GPU_BUILD_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
         "config": "configs/m3m_gcp_native_quarter_3dgs_renderer_adapter_v1.json",
         "config_sha256": "9fb339c043f893c80599b2d2a55dbe06f320e6a88085fd46d0eebff157edca81",
         "static_report": "docs/protocol_evidence/3dgs_native_quarter_renderer_adapter_static_validation_v1.json",
@@ -73,10 +73,14 @@
         "cpu_report": "docs/protocol_evidence/3dgs_native_quarter_adapter_cpu_preflight_v2.json",
         "cpu_report_sha256": "14bdd2a0cbf1355e918c8e8dd2f831ea28e5d944ead56efdf221c5b20d9b393f",
         "end_to_end_cpu_smoke": "docs/protocol_evidence/native_quarter_evaluator_end_to_end_cpu_smoke_v2.json",
-        "end_to_end_cpu_smoke_sha256": "cc9ca62df2bef67db588abcd8a2755d8856ad22bc91193ddb26e17665fd7f786"
+        "end_to_end_cpu_smoke_sha256": "cc9ca62df2bef67db588abcd8a2755d8856ad22bc91193ddb26e17665fd7f786",
+        "gpu_preflight": "docs/protocol_evidence/3dgs_native_quarter_adapter_gpu_preflight_v1.json",
+        "gpu_preflight_sha256": "a605a9c045647d92bc34bcc30e05e5a9632038220245b36078c14cbcdacf898c",
+        "real_3k_packet_camera_preflight": "docs/protocol_evidence/3dgs_native_quarter_real_3k_packet_camera_preflight_v1.json",
+        "real_3k_packet_camera_preflight_sha256": "a7176ec41131d19a10ff79f82ff917c47cce0b77e221d48c65225125d1a2825d"
       },
-      "three_k_qualification_status": "NOT_RUN",
-      "three_k_training_allowed": false,
+      "three_k_qualification_status": "PREFLIGHT_PASS_TRAINING_AUTHORIZED",
+      "three_k_training_allowed": true,
       "full_scene_matrix_eligible": false
     },
     {
@@ -260,5 +264,6 @@
     }
   ],
   "global_training_allowed": false,
+  "per_method_training_allowed_methods": ["3dgs_original"],
   "qualification_policy": "A method may unlock only its own 3K run after source, recipe, prior, raw-moment adapter, synthetic conformance, frozen-3K real packet-camera compatibility, and evaluator gates pass. Other methods and the six-scene matrix remain locked."
 }

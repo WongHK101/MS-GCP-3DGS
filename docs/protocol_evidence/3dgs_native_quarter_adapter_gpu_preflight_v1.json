@@ -1,0 +1,69 @@
+{
+  "adapter_id": "3dgs_original_raw_metric_depth_accumulators_v1",
+  "build": {
+    "cuda_home": "/usr/local/cuda",
+    "exit_code": 0,
+    "extension_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/eval-adapter-v1/submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/_C.cpython-310-x86_64-linux-gnu.so",
+    "extension_sha256": "107dfbfc9d4ee517f28ef739e2cd1348970498c18d0c2d58908a488e101141ca",
+    "root": "/root/autodl-tmp/build/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/gpu-build-20260810T0710Z",
+    "torch_cuda_arch_list": "12.0"
+  },
+  "checkpoint_loaded": false,
+  "initialization": "frozen COLMAP points3D.ply via official GaussianModel.create_from_pcd",
+  "passed": true,
+  "patches": [
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch",
+      "sha256": "e88b1ca418751228862c4e4d99c2cf4b5f714838fdbdf1bfa81f75fb85e81363"
+    },
+    {
+      "apply_root": "submodules/diff-gaussian-rasterization",
+      "path": "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch",
+      "sha256": "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068"
+    }
+  ],
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "real_camera_smoke": {
+    "g11_float_pixel_sample": {
+      "accumulated_alpha_interp": 0.47410580297083305,
+      "camera_z": 39.61010887791366,
+      "u_px": 835.52862373132,
+      "v_px": 455.56201662199277,
+      "valid": true
+    },
+    "height": 1025,
+    "image_name": "DJI_20260602165038_0001_D.JPG",
+    "packet_bytes": 44066700,
+    "packet_recompute_passed": true,
+    "packet_sha256": "4498f729ac1229abf9b9b5c6360a53cdb3ef79a6dbbbaacb1bcd10581be8bb07",
+    "raw_accumulator_tensor_count": 4,
+    "raw_accumulator_tensor_names": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "renderer_adapter_api": "raw_metric_depth_accumulators_v1",
+    "scene": "gcp_3000_20260602",
+    "valid_pixel_count": 1445209,
+    "width": 1414
+  },
+  "remaining_gate": "export all 66 formal 3K packet cameras and execute the common evaluator without contract or packet validation errors",
+  "schema": "m3m_gcp_3dgs_native_quarter_adapter_gpu_preflight_v1",
+  "scope": "target-GPU build/import plus one real frozen-3K packet-camera render and raw-packet recomputation",
+  "source": {
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "repository_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "repository_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4"
+  },
+  "status": "PASS",
+  "target_gpu": {
+    "cuda_available": true,
+    "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "python": "3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8"
+  },
+  "training_started": false
+}

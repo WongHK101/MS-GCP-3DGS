@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_3dgs_recipe_v1",
   "recipe_id": "m3m_gcp_native_quarter_3dgs_original_3k_30k_seed0_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "FROZEN_TRAINING_LOCKED_PENDING_GPU_ADAPTER_PREFLIGHT",
+  "status": "FROZEN_3K_TRAINING_AUTHORIZED",
   "supersedes_for_native_quarter_execution": [
     "configs/gs_gcp_v13_original_3dgs_recipe_v3.json"
   ],
@@ -111,7 +111,7 @@
     "source_tree_clean_before_and_after_required": true,
     "input_manifest_verification_required": true,
     "fresh_hardware_manifest_required": true,
-    "training_authorized": false
+    "training_authorized": true
   },
   "evaluation_adapter": {
     "scope": "evaluation-only patched copy; the official training source and checkpoint format remain unchanged",
@@ -127,11 +127,26 @@
     "static_patch_validation_sha256": "1f3281c36d21eb998d16052ff67856972c387894d484af730e0dc08d8924c08e",
     "cpu_operator_preflight": "docs/protocol_evidence/3dgs_native_quarter_adapter_cpu_preflight_v2.json",
     "cpu_operator_preflight_sha256": "14bdd2a0cbf1355e918c8e8dd2f831ea28e5d944ead56efdf221c5b20d9b393f",
-    "gpu_build_and_real_packet_camera_preflight_passed": false
+    "gpu_adapter_preflight": "docs/protocol_evidence/3dgs_native_quarter_adapter_gpu_preflight_v1.json",
+    "gpu_adapter_preflight_sha256": "a605a9c045647d92bc34bcc30e05e5a9632038220245b36078c14cbcdacf898c",
+    "real_3k_packet_camera_preflight": "docs/protocol_evidence/3dgs_native_quarter_real_3k_packet_camera_preflight_v1.json",
+    "real_3k_packet_camera_preflight_sha256": "a7176ec41131d19a10ff79f82ff917c47cce0b77e221d48c65225125d1a2825d",
+    "gpu_build_and_real_packet_camera_preflight_passed": true
   },
   "runtime": {
     "server": "AutoDL-901",
-    "status": "pending_fresh_runtime_and_gpu_hardware_probe",
+    "status": "TARGET_GPU_AND_REAL_PACKET_CAMERA_PREFLIGHT_PASS",
+    "qualification_environment": {
+      "path": "/root/autodl-tmp/envs/ms-gcp-v13/3dgs-original/py310-torch2.7.1-cu128-v1",
+      "python": "3.10.12",
+      "pytorch": "2.7.1+cu128",
+      "torch_cuda": "12.8",
+      "cuda_compiler": "12.8",
+      "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_uuid": "GPU-2b3b7941-2afd-f285-e2a2-6702deb4f0c7",
+      "driver": "580.82.09",
+      "gpu_capability": "12.0"
+    },
     "historical_candidate_environment": {
       "python": "3.10.12",
       "pytorch": "2.7.1+cu128",
@@ -163,9 +178,12 @@
     "local_static_patch_preflight_passed": true,
     "cpu_operator_preflight_passed": true,
     "gpu_renderer_build_preflight_required": true,
+    "gpu_renderer_build_preflight_passed": true,
     "frozen_3k_real_packet_camera_preflight_required": true,
+    "frozen_3k_real_packet_camera_preflight_passed": true,
     "external_review_required_before_formal_training": true,
-    "three_k_training_allowed": false,
+    "external_review_status": "accepted_by_user_following_cross_thread_review",
+    "three_k_training_allowed": true,
     "full_matrix_authorized_before_pass": false,
     "legacy_qualification_inheritance": false,
     "unlock_rule": "only this method's 3K qualification may unlock after the two pending GPU gates pass and are recorded; no global or six-scene matrix unlock follows automatically"

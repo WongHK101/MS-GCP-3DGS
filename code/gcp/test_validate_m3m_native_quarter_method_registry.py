@@ -14,7 +14,7 @@ def test_native_quarter_registry_passes() -> None:
     result = validate_registry(json.loads(REGISTRY.read_text(encoding="utf-8")), REPO_ROOT)
     assert result["passed"], result["errors"]
     assert set(result["method_ids"]) == EXPECTED_METHODS
-    assert result["training_allowed_methods"] == []
+    assert result["training_allowed_methods"] == ["3dgs_original"]
 
 
 def test_qgs_is_public_and_external_priors_are_explicit() -> None:
@@ -26,10 +26,12 @@ def test_qgs_is_public_and_external_priors_are_explicit() -> None:
     assert by_id["metrogs"]["external_priors"]
 
 
-def test_3dgs_is_frozen_but_not_unlocked() -> None:
+def test_3dgs_is_frozen_and_only_3k_training_is_unlocked() -> None:
     value = json.loads(REGISTRY.read_text(encoding="utf-8"))
     three_dgs = next(method for method in value["methods"] if method["method_id"] == "3dgs_original")
-    assert three_dgs["recipe_status"] == "FROZEN_TRAINING_LOCKED_PENDING_GPU_ADAPTER_PREFLIGHT"
-    assert three_dgs["common_adapter"]["status"].endswith("GPU_BUILD_AND_REAL_3K_PACKET_PENDING")
-    assert three_dgs["three_k_training_allowed"] is False
+    assert three_dgs["recipe_status"] == "FROZEN_3K_TRAINING_AUTHORIZED"
+    assert three_dgs["common_adapter"]["status"].endswith("PREFLIGHT_PASS")
+    assert three_dgs["three_k_training_allowed"] is True
+    assert three_dgs["full_scene_matrix_eligible"] is False
+    assert value["global_training_allowed"] is False
     assert value["coverage_and_ranking_contract"]["minimum_oblique_azimuth_bin_circular_separation"] == 2

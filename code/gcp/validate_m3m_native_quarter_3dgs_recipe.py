@@ -80,7 +80,7 @@ def validate_recipe(
     require(value.get("schema") == "m3m_gcp_native_quarter_3dgs_recipe_v1", "unknown schema")
     require(value.get("protocol_id") == EXPECTED_PROTOCOL, "protocol mismatch")
     require(
-        value.get("status") == "FROZEN_TRAINING_LOCKED_PENDING_GPU_ADAPTER_PREFLIGHT",
+        value.get("status") == "FROZEN_3K_TRAINING_AUTHORIZED",
         "recipe status mismatch",
     )
     require(value.get("method", {}).get("method_id") == "3dgs_original", "method mismatch")
@@ -158,17 +158,23 @@ def validate_recipe(
     require("clean_r4" not in command.lower() and "r4_clean" not in command.lower(), "legacy clean-R4 input leaked into command")
     require(execution.get("resume_allowed") is False, "resume must remain forbidden")
     require(execution.get("preexisting_checkpoint_allowed") is False, "preexisting checkpoint must remain forbidden")
-    require(execution.get("training_authorized") is False, "training must remain locked")
+    require(execution.get("training_authorized") is True, "3K training authorization missing")
 
     adapter = value.get("evaluation_adapter", {})
     require(adapter.get("raw_float32_accumulators") == EXPECTED_RAW_ACCUMULATORS, "raw accumulator contract mismatch")
-    require(adapter.get("gpu_build_and_real_packet_camera_preflight_passed") is False, "GPU gate was prematurely marked passed")
+    require(adapter.get("gpu_build_and_real_packet_camera_preflight_passed") is True, "GPU/real-packet gate did not pass")
     evidence_specs = [
         ("config", "config_sha256", "adapter config"),
         ("renderer_patch", "renderer_patch_sha256", "renderer patch"),
         ("rasterizer_patch", "rasterizer_patch_sha256", "rasterizer patch"),
         ("static_patch_validation", "static_patch_validation_sha256", "static patch report"),
         ("cpu_operator_preflight", "cpu_operator_preflight_sha256", "CPU preflight report"),
+        ("gpu_adapter_preflight", "gpu_adapter_preflight_sha256", "GPU adapter preflight report"),
+        (
+            "real_3k_packet_camera_preflight",
+            "real_3k_packet_camera_preflight_sha256",
+            "real 3K packet-camera preflight report",
+        ),
     ]
     evidence_values: dict[str, dict[str, Any]] = {}
     resolved_repo = repo_root.resolve()
@@ -202,13 +208,41 @@ def validate_recipe(
     cpu_report = evidence_values.get("cpu_operator_preflight", {})
     require(cpu_report.get("protocol_id") == EXPECTED_PROTOCOL, "CPU report protocol mismatch")
     require(cpu_report.get("status") == "PASS" and cpu_report.get("passed") is True, "CPU preflight did not pass")
+    gpu_report = evidence_values.get("gpu_adapter_preflight", {})
+    require(gpu_report.get("protocol_id") == EXPECTED_PROTOCOL, "GPU report protocol mismatch")
+    require(gpu_report.get("status") == "PASS" and gpu_report.get("passed") is True, "GPU preflight did not pass")
+    require(gpu_report.get("training_started") is False, "GPU preflight unexpectedly trained a model")
+    real_report = evidence_values.get("real_3k_packet_camera_preflight", {})
+    require(real_report.get("protocol_id") == EXPECTED_PROTOCOL, "real packet report protocol mismatch")
+    require(real_report.get("status") == "PASS", "real 3K packet-camera preflight did not pass")
+    require(
+        real_report.get("evaluator", {}).get("method_specific_sim3_fitted") is False,
+        "real 3K packet-camera preflight fitted a method-specific Sim(3)",
+    )
+    require(
+        real_report.get("packet_export", {}).get("all_packet_recomputations_passed") is True,
+        "real 3K packet recomputation did not pass",
+    )
+    require(
+        real_report.get("training_unlock", {}).get("three_k_training_allowed") is True,
+        "real 3K packet report did not authorize this method",
+    )
+    require(
+        real_report.get("training_unlock", {}).get("full_scene_matrix_allowed") is False,
+        "real 3K packet report incorrectly unlocked the full matrix",
+    )
 
     qualification = value.get("qualification", {})
     require(qualification.get("local_static_patch_preflight_passed") is True, "static preflight state mismatch")
     require(qualification.get("cpu_operator_preflight_passed") is True, "CPU preflight state mismatch")
     require(qualification.get("gpu_renderer_build_preflight_required") is True, "GPU build gate missing")
+    require(qualification.get("gpu_renderer_build_preflight_passed") is True, "GPU build gate did not pass")
     require(qualification.get("frozen_3k_real_packet_camera_preflight_required") is True, "real 3K packet gate missing")
-    require(qualification.get("three_k_training_allowed") is False, "3K training must remain locked")
+    require(
+        qualification.get("frozen_3k_real_packet_camera_preflight_passed") is True,
+        "real 3K packet gate did not pass",
+    )
+    require(qualification.get("three_k_training_allowed") is True, "3K training authorization missing")
     require(qualification.get("full_matrix_authorized_before_pass") is False, "full matrix must remain locked")
 
     data_verified = data_root is not None
@@ -273,12 +307,12 @@ def validate_recipe(
         "protocol_id": EXPECTED_PROTOCOL,
         "recipe_id": value.get("recipe_id"),
         "passed": not errors,
-        "training_allowed": False,
+        "training_allowed": not errors and data_verified,
         "data_root_verified": data_verified,
         "static_patch_preflight_passed": static_report.get("passed") is True,
         "cpu_operator_preflight_passed": cpu_report.get("passed") is True,
-        "gpu_renderer_build_preflight_passed": False,
-        "frozen_3k_real_packet_camera_preflight_passed": False,
+        "gpu_renderer_build_preflight_passed": gpu_report.get("passed") is True,
+        "frozen_3k_real_packet_camera_preflight_passed": real_report.get("status") == "PASS",
         "errors": errors,
     }
 
