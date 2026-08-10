@@ -33,7 +33,7 @@
   },
   "explicit_scene_run_authorization": {
     "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_20260810",
-    "status": "AUTHORIZED_NOT_STARTED",
+    "status": "ATTEMPTED_PREITERATION_HOST_MEMORY_KILL_RELOCKED",
     "authorization": "configs/m3m_gcp_native_quarter_3dgs_100k_run_v1.json",
     "authorization_sha256": "135e8fa15719adf3c8b4f85371d95983c7b05e9dba794b1e0c722d0c7fed1a58",
     "method_id": "3dgs_original",
@@ -41,10 +41,32 @@
     "seed": 0,
     "iterations": 30000,
     "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
-    "single_fresh_run_allowed": true,
+    "single_fresh_run_allowed": false,
     "resume_allowed": false,
     "rerun_after_attempt_allowed": false,
-    "other_methods_scenes_seeds_allowed": false
+    "other_methods_scenes_seeds_allowed": false,
+    "formal_iteration_reached": 0,
+    "checkpoint_file_count": 0,
+    "resource_summary_sha256": "e5c7d04a5b1c9c1043ded16db291dfbb6b45535653c3abec901f60a7293b8aa6"
+  },
+  "explicit_scene_compatibility_retry_authorization": {
+    "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_preiteration_trim_retry_20260810",
+    "status": "AUTHORIZED_NOT_STARTED",
+    "authorization": "configs/m3m_gcp_native_quarter_3dgs_100k_preiteration_compatibility_retry_v1.json",
+    "authorization_sha256": "02874a2d6e9f4c78a3feb6b4a2a217820c892822adefd08b27920e08747a817c",
+    "method_id": "3dgs_original",
+    "scene": "gcp_100000_20260610",
+    "seed": 0,
+    "iterations": 30000,
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
+    "compatibility_policy": "glibc_malloc_trim_threshold_zero_v1",
+    "environment": {
+      "MALLOC_TRIM_THRESHOLD_": "0"
+    },
+    "single_preiteration_retry_allowed": true,
+    "new_run_root_allowed": false,
+    "resume_allowed": false,
+    "other_methods_scenes_seeds_retries_allowed": false
   },
   "method_count": 9,
   "method_ids": [
