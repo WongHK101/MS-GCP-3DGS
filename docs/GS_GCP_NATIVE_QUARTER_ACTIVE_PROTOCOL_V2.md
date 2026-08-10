@@ -149,6 +149,15 @@ CPU 侧派生。当前状态为：
 - 该正式运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
   `full_scene_matrix_eligible=false`。
 
+用户单独授权的 100K 单场景、seed 0、30K 迭代运行也已完成并重新锁定。训练仍使用同一
+冻结官方源码与原生 1/4 输入；为避免 2,196 张图像的 eager loader 被 glibc 保留页推至
+主机内存上限，唯一兼容重试只设置 `MALLOC_TRIM_THRESHOLD_=0`，未修改训练张量、随机数、
+相机顺序或损失。正式公共评测为 `COMPLETE_RANKED`（10/10 checkpoints、11/11 controls），
+checkpoint RMSE 为 3D `0.2659138270 m`、水平 `0.0929837769 m`、高程
+`0.2491268364 m`；报告为
+`docs/protocol_evidence/3dgs_native_quarter_formal_100k_seed0_30k_v1.json`。这是一项显式
+单场景授权的结果，不解锁其他场景、方法、seed 或六场景矩阵，也不构成协议版本更新。
+
 因此这里的全局 `TRAINING HOLD` 不否定已完成的正式结果，也不阻止后续方法在通过全部门禁后
 获得一次方法级授权。当前没有方法处于运行授权状态；实时资格和结果状态只以
 `configs/m3m_gcp_native_quarter_method_registry_v2.json` 为准。

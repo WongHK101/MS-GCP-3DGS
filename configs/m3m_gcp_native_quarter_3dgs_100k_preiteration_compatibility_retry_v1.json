@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_preiteration_compatibility_retry_v1",
   "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_preiteration_trim_retry_20260810",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "AUTHORIZED_NOT_STARTED",
+  "status": "COMPLETED_RELOCKED",
   "authorization_basis": "same-run technical compatibility retry after the first training child was SIGKILLed during official eager camera loading before iteration 1 and before any checkpoint",
   "method": {
     "method_id": "3dgs_original",
@@ -73,7 +73,7 @@
     "failed_model_archive": "model_failed_preiteration_eager_no_trim",
     "fresh_model_root": "model",
     "resource_probe_root": "resource_probe_retry2",
-    "single_retry_allowed": true,
+    "single_retry_allowed": false,
     "resume_allowed": false,
     "checkpoint_reuse_allowed": false,
     "overwrite_failed_evidence_allowed": false,
@@ -91,6 +91,19 @@
     "common_track": "render_support_expected_camera_z",
     "method_specific_sim3_allowed": false,
     "physical_surface_claim": false
+  },
+  "completion": {
+    "status": "FORMAL_100K_COMPLETE_RANKED_RELOCKED",
+    "formal_iteration_reached": 30000,
+    "final_checkpoint_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "packet_manifest_sha256": "4af7514eade66b1d1cd716ab68ba8a02693c361d187edf39aa5cc6974e90301b",
+    "checkpoint_rmse_3d_m": 0.26591382702359617,
+    "checkpoint_rmse_h_m": 0.09298377691567157,
+    "checkpoint_rmse_z_m": 0.24912683643644584,
+    "formal_report": "docs/protocol_evidence/3dgs_native_quarter_formal_100k_seed0_30k_v1.json",
+    "formal_report_sha256": "daa910b7c4a634072e65e9a804d1ba979494dacd204e99b60c6b482843d81771",
+    "rerun_allowed": false,
+    "resume_allowed": false
   },
   "scope_locks": {
     "protocol_changed": false,

@@ -77,6 +77,42 @@ def test_completed_3dgs_seed_zero_run_cannot_be_reopened_silently() -> None:
     assert any("must not remain launchable" in error for error in result["errors"])
 
 
+def test_3dgs_formal_100k_result_is_complete_and_relocked() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    three_dgs = next(method for method in value["methods"] if method["method_id"] == "3dgs_original")
+    result = three_dgs["formal_100k_result"]
+    retry = value["explicit_scene_compatibility_retry_authorization"]
+    assert result["status"] == "COMPLETE_RANKED"
+    assert result["rerun_allowed"] is False
+    assert result["checkpoint_rmse_3d_m"] == 0.26591382702359617
+    assert retry["status"] == "COMPLETED_RELOCKED"
+    assert retry["single_preiteration_retry_allowed"] is False
+    assert retry["resume_allowed"] is False
+    assert retry["rerun_allowed"] is False
+    assert value["global_training_allowed"] is False
+    assert value["per_method_training_allowed_methods"] == []
+
+
+def test_completed_3dgs_100k_retry_cannot_be_reopened_silently() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    mutated = copy.deepcopy(value)
+    mutated["explicit_scene_compatibility_retry_authorization"]["status"] = "AUTHORIZED_NOT_STARTED"
+    mutated["explicit_scene_compatibility_retry_authorization"]["single_preiteration_retry_allowed"] = True
+    result = validate_registry(mutated, REPO_ROOT)
+    assert not result["passed"]
+    assert any("compatibility retry" in error and "relocked" in error for error in result["errors"])
+
+
+def test_3dgs_formal_100k_metric_cannot_drift_from_report() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    mutated = copy.deepcopy(value)
+    three_dgs = next(method for method in mutated["methods"] if method["method_id"] == "3dgs_original")
+    three_dgs["formal_100k_result"]["checkpoint_rmse_3d_m"] += 0.001
+    result = validate_registry(mutated, REPO_ROOT)
+    assert not result["passed"]
+    assert any("100K checkpoint RMSE-3D mismatch" in error for error in result["errors"])
+
+
 def test_2dgs_formal_3k_result_is_complete_and_relocked() -> None:
     value = json.loads(REGISTRY.read_text(encoding="utf-8"))
     two_dgs = next(method for method in value["methods"] if method["method_id"] == "2dgs")

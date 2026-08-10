@@ -35,7 +35,7 @@
     "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_20260810",
     "status": "ATTEMPTED_PREITERATION_HOST_MEMORY_KILL_RELOCKED",
     "authorization": "configs/m3m_gcp_native_quarter_3dgs_100k_run_v1.json",
-    "authorization_sha256": "135e8fa15719adf3c8b4f85371d95983c7b05e9dba794b1e0c722d0c7fed1a58",
+    "authorization_sha256": "4f568916f95f33d8921ad259c7e77a1043ec9ab9b45051879cb50809aaa376d5",
     "method_id": "3dgs_original",
     "scene": "gcp_100000_20260610",
     "seed": 0,
@@ -47,13 +47,14 @@
     "other_methods_scenes_seeds_allowed": false,
     "formal_iteration_reached": 0,
     "checkpoint_file_count": 0,
-    "resource_summary_sha256": "e5c7d04a5b1c9c1043ded16db291dfbb6b45535653c3abec901f60a7293b8aa6"
+    "resource_summary_sha256": "e5c7d04a5b1c9c1043ded16db291dfbb6b45535653c3abec901f60a7293b8aa6",
+    "superseded_by_compatibility_retry_authorization": "3dgs_original_gcp_100000_20260610_seed0_30k_preiteration_trim_retry_20260810"
   },
   "explicit_scene_compatibility_retry_authorization": {
     "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_preiteration_trim_retry_20260810",
-    "status": "AUTHORIZED_NOT_STARTED",
+    "status": "COMPLETED_RELOCKED",
     "authorization": "configs/m3m_gcp_native_quarter_3dgs_100k_preiteration_compatibility_retry_v1.json",
-    "authorization_sha256": "02874a2d6e9f4c78a3feb6b4a2a217820c892822adefd08b27920e08747a817c",
+    "authorization_sha256": "62a07ec99e6a93d4961381da062608e3fee73575e603b0e9add36a8ca0935df7",
     "method_id": "3dgs_original",
     "scene": "gcp_100000_20260610",
     "seed": 0,
@@ -63,10 +64,16 @@
     "environment": {
       "MALLOC_TRIM_THRESHOLD_": "0"
     },
-    "single_preiteration_retry_allowed": true,
+    "single_preiteration_retry_allowed": false,
     "new_run_root_allowed": false,
     "resume_allowed": false,
-    "other_methods_scenes_seeds_retries_allowed": false
+    "other_methods_scenes_seeds_retries_allowed": false,
+    "formal_iteration_reached": 30000,
+    "final_checkpoint_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "packet_manifest_sha256": "4af7514eade66b1d1cd716ab68ba8a02693c361d187edf39aa5cc6974e90301b",
+    "formal_report": "docs/protocol_evidence/3dgs_native_quarter_formal_100k_seed0_30k_v1.json",
+    "formal_report_sha256": "daa910b7c4a634072e65e9a804d1ba979494dacd204e99b60c6b482843d81771",
+    "rerun_allowed": false
   },
   "method_count": 9,
   "method_ids": [
@@ -154,6 +161,19 @@
         "checkpoint_rmse_3d_m": 0.04179960708774027,
         "checkpoint_rmse_h_m": 0.02761108288832967,
         "checkpoint_rmse_z_m": 0.03138208492792113,
+        "rerun_allowed": false
+      },
+      "formal_100k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/3dgs_native_quarter_formal_100k_seed0_30k_v1.json",
+        "report_sha256": "daa910b7c4a634072e65e9a804d1ba979494dacd204e99b60c6b482843d81771",
+        "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
+        "evaluator_commit": "db7a7612dee31fa27a15c04e7f783cff77f8428b",
+        "final_checkpoint_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+        "packet_manifest_sha256": "4af7514eade66b1d1cd716ab68ba8a02693c361d187edf39aa5cc6974e90301b",
+        "checkpoint_rmse_3d_m": 0.26591382702359617,
+        "checkpoint_rmse_h_m": 0.09298377691567157,
+        "checkpoint_rmse_z_m": 0.24912683643644584,
         "rerun_allowed": false
       },
       "three_k_qualification_status": "FORMAL_3K_COMPLETE_RANKED",

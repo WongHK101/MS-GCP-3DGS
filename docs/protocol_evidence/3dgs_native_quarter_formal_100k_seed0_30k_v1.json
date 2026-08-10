@@ -1,0 +1,292 @@
+{
+  "schema": "m3m_native_quarter_3dgs_formal_100k_run_v1",
+  "status": "PASS",
+  "passed": true,
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "created_utc": "2026-08-11T03:27:44.900+08:00",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "protocol_semantics_changed": false,
+  "method_id": "3dgs_original",
+  "scene": "gcp_100000_20260610",
+  "seed": 0,
+  "iterations": 30000,
+  "run": {
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
+    "prelaunch_manifest_sha256": "685ea392a54ea3eb9fb3a6e563ddf1806798a7df3814e171f53a039447ead4cf",
+    "initial_launch_gate_sha256": "979fa972238f5bf1722d9828877bc933bc646b760ecbd8e2284b7a567a2201e4",
+    "compatibility_retry_gate_sha256": "8d1c4f7e91a6c5845214cc50e185d8a2e9232dd50c23082e015fd926b57d4d75"
+  },
+  "protocol": {
+    "release_manifest_sha256": "21fbac75d66433169535ea7440c31393f7a5ecdb4ed94fcefd31d1780c28bea4",
+    "sha256sums_sha256": "d1115bdcd6fe6951ee1f4b8d1d1faf3285d9d603191f90e518fa04be65abfc5b"
+  },
+  "input": {
+    "release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_input_manifest_file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "formal_input_manifest_canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "formal_input_full_validation_sha256": "e112d0608d5f3d68c5402248d3e6d37f9dc6b97f1c84ca931c78cf27d1649b4e",
+    "full_view_count": 2510,
+    "train_view_count": 2196,
+    "heldout_test_view_count": 314,
+    "width": 1414,
+    "height": 1024,
+    "training_resolution_argument": 1,
+    "official_eval_argument": false,
+    "byte_preserving_native_quarter_images": true,
+    "gcp_annotations_visible_to_training": false,
+    "survey_coordinates_visible_to_training": false
+  },
+  "training_attempts": {
+    "external_probe_launch_without_child": {
+      "classification": "INFRASTRUCTURE_FAILURE_MISSING_USR_BIN_TIME_BEFORE_CHILD",
+      "formal_iteration_reached": 0,
+      "checkpoint_file_count": 0,
+      "evidence_sha256": "d213b38d11c2e66b21ce70cd2239b6dcb11c941a14a05179f4251826774c7d1d"
+    },
+    "official_eager_camera_load_without_allocator_trim": {
+      "classification": "PREITERATION_HOST_MEMORY_EXHAUSTION_NOT_CUDA_OOM_NOT_BENCHMARK_RESULT",
+      "exit_code": 137,
+      "formal_iteration_reached": 0,
+      "checkpoint_file_count": 0,
+      "wall_seconds": 148.95534698292613,
+      "peak_gpu_memory_mib": 39523.0,
+      "process_maximum_rss_kib": 110096564,
+      "cgroup_observed_peak_bytes": 115741913088,
+      "cgroup_memory_limit_bytes": 118111600640,
+      "max_gpu_utilization_percent": 1.0,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "resource_summary_sha256": "e5c7d04a5b1c9c1043ded16db291dfbb6b45535653c3abec901f60a7293b8aa6",
+      "command_record_sha256": "855779e1f0017f96c89646774d8e399246ecba038789abf80b71e8eb6850be31",
+      "failed_model_archive": "model_failed_preiteration_eager_no_trim"
+    },
+    "single_allocator_compatibility_retry": {
+      "policy_id": "glibc_malloc_trim_threshold_zero_v1",
+      "environment": {
+        "MALLOC_TRIM_THRESHOLD_": "0"
+      },
+      "same_run_root": true,
+      "fresh_model_root": true,
+      "resume_used": false,
+      "checkpoint_reused": false,
+      "training_tensor_semantics_changed": false,
+      "rng_semantics_changed": false,
+      "camera_order_changed": false,
+      "image_pixels_changed": false,
+      "result": "PASS_30000_OF_30000"
+    }
+  },
+  "training": {
+    "source_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "source_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "source_status_porcelain_after": "",
+    "official_training_source_modified": false,
+    "resource_status": "PASS",
+    "resource_summary_sha256": "79dc736403f929587b8f0546d83c981d5644a2cf09c906da7eaca90d26aa83bc",
+    "command_record_sha256": "80e806790d7e250bd4b73fffcced248ad6914fd5cce0aa0cbb3faa0ae9d91c2d",
+    "gnu_time_sha256": "5b793a1821e7348fd37e9d2a5775602a67af7700789da0ae3436248fb8f12f85",
+    "cfg_args_sha256": "0fc927d95b2553b7ef26fb86325d5c0b7e81f70b1b86aecb86a40e00a33a5222",
+    "wall_seconds": 1936.900176204741,
+    "gpu_hours": 0.5380278267235392,
+    "peak_gpu_memory_mib": 58565.0,
+    "process_maximum_rss_kib": 32042736,
+    "cgroup_observed_peak_bytes": 36870242304,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "sampler_errors": [],
+    "final_ply_relative_path": "model/point_cloud/iteration_30000/point_cloud.ply",
+    "final_ply_bytes": 2340432588,
+    "final_ply_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "gaussian_vertex_count": 9437222
+  },
+  "evaluation_input": {
+    "purpose": "evaluation-only merge of the formal train/test cameras observed by the protocol",
+    "materializer_commit": "db7a7612dee31fa27a15c04e7f783cff77f8428b",
+    "manifest_file_sha256": "a3a3181d4e6a853f8609e86b1c53cbe87acfb984bd4037a5bb8a9c57cac1ccfd",
+    "manifest_canonical_sha256": "c270f14073cf2df8191cf71dba065ed849a1f2bc5dd8aeba3fdffc27f766306b",
+    "camera_view_count": 211,
+    "source_observation_count": 256,
+    "source_point_count": 25,
+    "formal_active_observation_count": 216,
+    "formal_active_point_count": 21,
+    "images_cameras_and_initial_ply_byte_identical_to_formal_input": true,
+    "points2d_tracks_present": false,
+    "compatibility_points3d_bin_point_count": 0,
+    "compatibility_points3d_bin_sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+  },
+  "packet_export": {
+    "exporter_commit": "4646a8574a030069ff0e738a0cc0d932e6cfa94e",
+    "renderer_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "patched_extension_sha256": "107dfbfc9d4ee517f28ef739e2cd1348970498c18d0c2d58908a488e101141ca",
+    "allowlist_sha256": "05dfbd0cdec99fce4b5d52e109f8bae3ba8db137eecfac0bae826c36a77e2ffe",
+    "manifest_sha256": "4af7514eade66b1d1cd716ab68ba8a02693c361d187edf39aa5cc6974e90301b",
+    "mapping_csv_sha256": "9dfdee7c67774606604320d833c1cbab97bed5a937513e56f2083d268e622546",
+    "packet_verification_sha256": "5eb09d1a01f656cf9f8c3815f71dd1e19f81a8582b45c1872d34f35de5e21b60",
+    "packet_count": 211,
+    "packet_bytes": 8586164893,
+    "packet_identity_aggregate_sha256": "88a94232837783d15c29b6ef300e1ba9b66f234f4143f502dbb86568d06e47db",
+    "packet_disk_mismatch_count": 0,
+    "packet_recomputation_all_passed": true,
+    "variance_validation_fail_pixel_total": 0,
+    "variance_consistency_fail_total": 0,
+    "variance_cancellation_rejected_total": 0,
+    "variance_nonnegativity_unresolved_total": 818,
+    "variance_diagnostic_note": "The 818 unresolved float32 non-negativity cases invalidate only optional M2 variance diagnostics; formal M1/A depth is unchanged.",
+    "resource_status": "PASS",
+    "export_resource_summary_sha256": "f4de32cd793edede87c1ada9cc28dff832074d83b4f6a530889a4a7aaac527bc",
+    "wall_seconds": 740.5564023852348,
+    "gpu_hours": 0.20571011177367635,
+    "peak_gpu_memory_mib": 12773.0,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    }
+  },
+  "evaluation": {
+    "evaluator_commit": "db7a7612dee31fa27a15c04e7f783cff77f8428b",
+    "evaluator_tree": "37982a0b9c126674ffcb4270fea6ce067183ecd4",
+    "exit_code": 0,
+    "status": "COMPLETE_RANKED",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "checkpoint_coverage_rate": 1.0,
+    "method_specific_sim3_fitted": false,
+    "physical_surface_claim": false,
+    "common_sim3_sha256": "f2bdfe649891f666371db64d9b504aee49bb1312fde33801408d72bea6def000",
+    "packet_manifest_sha256": "4af7514eade66b1d1cd716ab68ba8a02693c361d187edf39aa5cc6974e90301b",
+    "observation_failure_counts": {},
+    "point_counts": {
+      "checkpoint_passed": 10,
+      "checkpoint_total": 10,
+      "control_passed": 11,
+      "control_total": 11
+    },
+    "residual_statistics": {
+      "all": {
+        "count": 21,
+        "max_3d_m": 1.2573318285894728,
+        "median_3d_m": 0.25030968723046015,
+        "p95_3d_m": 0.5086960617449942,
+        "rmse_3d_m": 0.39363548846507745,
+        "rmse_h_m": 0.09292154893184112,
+        "rmse_z_m": 0.3825107626240699
+      },
+      "checkpoint": {
+        "count": 10,
+        "max_3d_m": 0.5086960617449942,
+        "median_3d_m": 0.14455980956955722,
+        "p95_3d_m": 0.4690021582978641,
+        "rmse_3d_m": 0.26591382702359617,
+        "rmse_h_m": 0.09298377691567157,
+        "rmse_z_m": 0.24912683643644584
+      },
+      "control": {
+        "count": 11,
+        "max_3d_m": 1.2573318285894728,
+        "median_3d_m": 0.27753213680215516,
+        "p95_3d_m": 0.8824235664135531,
+        "rmse_3d_m": 0.48117519199810943,
+        "rmse_h_m": 0.09286494185287167,
+        "rmse_z_m": 0.4721288679683548
+      }
+    },
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2347,
+        "sha256": "9e7543a02ea84f963b5c9969180bd1d1c98b84d7e0de6e2645fe9d7e6a101ca1"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1376,
+        "sha256": "3bb6fb76e119c9ecec4ed2b6610c9b9a443b6b9169f01afb321a9f3fdb682a0b"
+      },
+      "observation_samples.csv": {
+        "bytes": 76695,
+        "sha256": "99b7c305e0d5aa4a1e0785d8cdb9c6df84c9db41805f0121266e190103e7d6e5"
+      },
+      "point_results.csv": {
+        "bytes": 9141,
+        "sha256": "4cc72162c4b3f6bf54cf327d329eb5070eba856a994c2e0d8c17dfe1d13bfa7a"
+      }
+    },
+    "independent_verification": {
+      "status": "PASS",
+      "passed": true,
+      "file_sha256": "dc472397f5ea9ee3fa5a7d921b539cbd0c57ff08d80d1f7699299e25f4cab985",
+      "output_hashes_passed": true,
+      "dependency_hashes_passed": true,
+      "coverage_recomputation_passed": true,
+      "common_sim3_recomputation_passed": true,
+      "residual_recomputation_passed": true,
+      "max_numeric_abs_error": 0.0
+    }
+  },
+  "evaluation_compatibility_events": [
+    {
+      "stage": "packet_export_before_first_packet",
+      "classification": "WRONG_INSTALLED_RASTERIZER_IMPORT_BINDING",
+      "failed_packet_count": 0,
+      "result_or_metric_observed": false,
+      "retry_change": "PYTHONPATH bound to the already frozen and hash-verified evaluation adapter",
+      "protocol_or_operator_changed": false,
+      "record_sha256": "3eddc6a318713670835c775acc162e13317db4e0c7c44cd9d06a4f37628f403a"
+    },
+    {
+      "stage": "evaluator_model_load_before_packet_sampling",
+      "classification": "INCOMPLETE_GENERIC_COLMAP_MODEL_TRIPLET",
+      "failed_result_row_count": 0,
+      "result_or_metric_observed": false,
+      "retry_change": "added deterministic zero-point points3D.bin to the evaluation-only camera model",
+      "camera_image_or_initial_ply_changed": false,
+      "protocol_or_operator_changed": false,
+      "record_sha256": "adb6fd4c6c74109a464f98e88f81744dea34e1b0a208f2365951911d89335694"
+    }
+  ],
+  "scope_locks": {
+    "rerun_allowed": false,
+    "resume_allowed": false,
+    "other_scene_authorized": false,
+    "other_method_authorized": false,
+    "other_seed_authorized": false,
+    "six_scene_matrix_authorized": false,
+    "protocol_changed": false,
+    "tgs_gcp_in_scope": false
+  },
+  "final_gpu_compute_process_count": 0,
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ]
+}

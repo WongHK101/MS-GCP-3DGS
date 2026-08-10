@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_explicit_scene_run_v1",
   "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_20260810",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "AUTHORIZED_NOT_STARTED",
+  "status": "ATTEMPTED_PREITERATION_HOST_MEMORY_KILL_RELOCKED",
   "authorization_basis": "explicit user request on 2026-08-11 Asia/Singapore to retrain and evaluate 3DGS on the 100K scene",
   "method": {
     "method_id": "3dgs_original",
@@ -60,7 +60,7 @@
     "server": "AutoDL-901",
     "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
     "command": "python train.py -s /root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train -m /root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z/model --resolution 1 --iterations 30000 --test_iterations 7000 30000 --save_iterations 7000 30000 --quiet",
-    "single_fresh_run_allowed": true,
+    "single_fresh_run_allowed": false,
     "resume_allowed": false,
     "preexisting_checkpoint_allowed": false,
     "rerun_after_attempt_allowed": false,
@@ -78,6 +78,15 @@
     "adapter_config": "configs/m3m_gcp_native_quarter_3dgs_renderer_adapter_v1.json",
     "renderer_patch": "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch",
     "rasterizer_patch": "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch"
+  },
+  "initial_attempt_result": {
+    "status": "PREITERATION_HOST_MEMORY_EXHAUSTION_NOT_BENCHMARK_RESULT",
+    "formal_iteration_reached": 0,
+    "checkpoint_file_count": 0,
+    "resource_summary_sha256": "e5c7d04a5b1c9c1043ded16db291dfbb6b45535653c3abec901f60a7293b8aa6",
+    "superseded_by_compatibility_retry_authorization": "configs/m3m_gcp_native_quarter_3dgs_100k_preiteration_compatibility_retry_v1.json",
+    "final_formal_report": "docs/protocol_evidence/3dgs_native_quarter_formal_100k_seed0_30k_v1.json",
+    "final_formal_report_sha256": "daa910b7c4a634072e65e9a804d1ba979494dacd204e99b60c6b482843d81771"
   },
   "scope_locks": {
     "protocol_changed": false,

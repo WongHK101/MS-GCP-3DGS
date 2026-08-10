@@ -182,6 +182,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     three_dgs = next((method for method in methods if method.get("method_id") == "3dgs_original"), {})
     adapter = three_dgs.get("common_adapter", {})
     formal = three_dgs.get("formal_3k_result", {})
+    formal_100k = three_dgs.get("formal_100k_result", {})
     require(
         three_dgs.get("recipe_status")
         == "FROZEN_3K_TRAINING_AUTHORIZED",
@@ -229,6 +230,19 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             if path.is_file():
                 require(file_sha256(path) == expected_sha, f"{label} SHA mismatch")
                 evidence[path_key] = json.loads(path.read_text(encoding="utf-8"))
+
+    formal_100k_report: dict[str, Any] = {}
+    formal_100k_relative = formal_100k.get("report")
+    formal_100k_expected_sha = str(formal_100k.get("report_sha256", ""))
+    require(isinstance(formal_100k_relative, str) and bool(formal_100k_relative), "3DGS formal 100K report path missing")
+    require(bool(SHA256.fullmatch(formal_100k_expected_sha)), "3DGS formal 100K report SHA invalid")
+    if isinstance(formal_100k_relative, str) and formal_100k_relative:
+        formal_100k_path = (resolved_repo / formal_100k_relative).resolve()
+        require(formal_100k_path.is_relative_to(resolved_repo), "3DGS formal 100K report escapes repo")
+        require(formal_100k_path.is_file(), "3DGS formal 100K report missing")
+        if formal_100k_path.is_file():
+            require(file_sha256(formal_100k_path) == formal_100k_expected_sha, "3DGS formal 100K report SHA mismatch")
+            formal_100k_report = json.loads(formal_100k_path.read_text(encoding="utf-8"))
 
     recipe = evidence.get("recipe", {})
     require(recipe.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "3DGS recipe protocol mismatch")
@@ -327,6 +341,137 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         == "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068",
         "3DGS Linux rasterizer patch identity mismatch",
     )
+
+    initial_100k = value.get("explicit_scene_run_authorization", {})
+    retry_100k = value.get("explicit_scene_compatibility_retry_authorization", {})
+    require(
+        initial_100k.get("status") == "ATTEMPTED_PREITERATION_HOST_MEMORY_KILL_RELOCKED",
+        "3DGS 100K initial authorization is not relocked",
+    )
+    require(initial_100k.get("single_fresh_run_allowed") is False, "3DGS 100K initial authorization remains launchable")
+    require(initial_100k.get("formal_iteration_reached") == 0, "3DGS 100K initial failed attempt reached a formal iteration")
+    require(initial_100k.get("checkpoint_file_count") == 0, "3DGS 100K initial failed attempt created a checkpoint")
+    require(
+        retry_100k.get("status") == "COMPLETED_RELOCKED",
+        "3DGS 100K compatibility retry is not completed and relocked",
+    )
+    require(retry_100k.get("single_preiteration_retry_allowed") is False, "3DGS 100K compatibility retry remains launchable")
+    require(retry_100k.get("resume_allowed") is False, "3DGS 100K compatibility retry permits resume")
+    require(retry_100k.get("rerun_allowed") is False, "3DGS 100K compatibility retry permits rerun")
+    require(retry_100k.get("formal_iteration_reached") == 30000, "3DGS 100K completion iteration mismatch")
+    require(retry_100k.get("formal_report") == formal_100k.get("report"), "3DGS 100K registry report path mismatch")
+    require(retry_100k.get("formal_report_sha256") == formal_100k.get("report_sha256"), "3DGS 100K registry report SHA mismatch")
+
+    for entry, expected_status, label in (
+        (initial_100k, "ATTEMPTED_PREITERATION_HOST_MEMORY_KILL_RELOCKED", "initial 100K authorization"),
+        (retry_100k, "COMPLETED_RELOCKED", "100K compatibility retry authorization"),
+    ):
+        relative = entry.get("authorization")
+        expected_sha = str(entry.get("authorization_sha256", ""))
+        require(isinstance(relative, str) and bool(relative), f"{label} path missing")
+        require(bool(SHA256.fullmatch(expected_sha)), f"{label} SHA invalid")
+        if isinstance(relative, str) and relative:
+            path = (resolved_repo / relative).resolve()
+            require(path.is_relative_to(resolved_repo), f"{label} escapes repo")
+            require(path.is_file(), f"{label} file missing")
+            if path.is_file():
+                require(file_sha256(path) == expected_sha, f"{label} SHA mismatch")
+                authorization = json.loads(path.read_text(encoding="utf-8"))
+                require(authorization.get("status") == expected_status, f"{label} status mismatch")
+                require(authorization.get("protocol_id") == value.get("protocol_id"), f"{label} protocol mismatch")
+                if expected_status == "ATTEMPTED_PREITERATION_HOST_MEMORY_KILL_RELOCKED":
+                    require(
+                        authorization.get("execution", {}).get("single_fresh_run_allowed") is False,
+                        "initial 100K authorization file remains launchable",
+                    )
+                    require(
+                        authorization.get("initial_attempt_result", {}).get("final_formal_report_sha256")
+                        == formal_100k.get("report_sha256"),
+                        "initial 100K authorization does not bind the final report",
+                    )
+                else:
+                    require(
+                        authorization.get("retry", {}).get("single_retry_allowed") is False,
+                        "100K compatibility retry file remains launchable",
+                    )
+                    require(
+                        authorization.get("completion", {}).get("formal_report_sha256")
+                        == formal_100k.get("report_sha256"),
+                        "100K compatibility retry file does not bind the final report",
+                    )
+
+    require(formal_100k.get("status") == "COMPLETE_RANKED", "3DGS formal 100K result status mismatch")
+    require(formal_100k.get("rerun_allowed") is False, "3DGS formal 100K result permits rerun")
+    require(
+        formal_100k_report.get("schema") == "m3m_native_quarter_3dgs_formal_100k_run_v1",
+        "3DGS formal 100K report schema mismatch",
+    )
+    require(
+        formal_100k_report.get("status") == "PASS" and formal_100k_report.get("passed") is True,
+        "3DGS formal 100K report did not pass",
+    )
+    require(formal_100k_report.get("result_kind") == "formal_benchmark_result_not_preflight", "3DGS 100K result is not formal")
+    require(formal_100k_report.get("protocol_id") == value.get("protocol_id"), "3DGS formal 100K protocol mismatch")
+    require(formal_100k_report.get("protocol_semantics_changed") is False, "3DGS formal 100K run changed protocol semantics")
+    require(formal_100k_report.get("method_id") == "3dgs_original", "3DGS formal 100K method mismatch")
+    require(formal_100k_report.get("scene") == "gcp_100000_20260610", "3DGS formal 100K scene mismatch")
+    require(formal_100k_report.get("seed") == 0 and formal_100k_report.get("iterations") == 30000, "3DGS formal 100K recipe mismatch")
+    input_100k = formal_100k_report.get("input", {})
+    require(
+        (input_100k.get("full_view_count"), input_100k.get("train_view_count"), input_100k.get("heldout_test_view_count"))
+        == (2510, 2196, 314),
+        "3DGS formal 100K input counts mismatch",
+    )
+    require(input_100k.get("training_resolution_argument") == 1, "3DGS formal 100K resolution mismatch")
+    require(input_100k.get("gcp_annotations_visible_to_training") is False, "3DGS formal 100K training saw GCP annotations")
+    training_attempts_100k = formal_100k_report.get("training_attempts", {})
+    initial_failure_100k = training_attempts_100k.get("official_eager_camera_load_without_allocator_trim", {})
+    compatibility_100k = training_attempts_100k.get("single_allocator_compatibility_retry", {})
+    require(initial_failure_100k.get("formal_iteration_reached") == 0, "3DGS formal 100K failed child reached an iteration")
+    require(initial_failure_100k.get("checkpoint_file_count") == 0, "3DGS formal 100K failed child created a checkpoint")
+    require(
+        compatibility_100k.get("policy_id") == "glibc_malloc_trim_threshold_zero_v1"
+        and compatibility_100k.get("environment") == {"MALLOC_TRIM_THRESHOLD_": "0"},
+        "3DGS formal 100K allocator policy mismatch",
+    )
+    for key in ("training_tensor_semantics_changed", "rng_semantics_changed", "camera_order_changed", "image_pixels_changed"):
+        require(compatibility_100k.get(key) is False, f"3DGS formal 100K allocator retry changed semantics: {key}")
+    training_100k = formal_100k_report.get("training", {})
+    require(training_100k.get("source_commit") == three_dgs.get("source", {}).get("commit"), "3DGS formal 100K source commit mismatch")
+    require(training_100k.get("source_tree") == three_dgs.get("source", {}).get("tree"), "3DGS formal 100K source tree mismatch")
+    require(training_100k.get("source_status_porcelain_after") == "", "3DGS formal 100K source is dirty")
+    require(training_100k.get("resource_status") == "PASS", "3DGS formal 100K training resource probe failed")
+    require(training_100k.get("memory_events_delta", {}).get("oom") == 0, "3DGS formal 100K training recorded OOM")
+    require(training_100k.get("final_ply_sha256") == formal_100k.get("final_checkpoint_sha256"), "3DGS formal 100K checkpoint SHA mismatch")
+    require(training_100k.get("gaussian_vertex_count") == 9437222, "3DGS formal 100K Gaussian count mismatch")
+    evaluation_input_100k = formal_100k_report.get("evaluation_input", {})
+    require(evaluation_input_100k.get("camera_view_count") == 211, "3DGS formal 100K evaluation camera count mismatch")
+    require(evaluation_input_100k.get("compatibility_points3d_bin_point_count") == 0, "3DGS formal 100K evaluation exposed reconstruction points")
+    packet_100k = formal_100k_report.get("packet_export", {})
+    require(packet_100k.get("manifest_sha256") == formal_100k.get("packet_manifest_sha256"), "3DGS formal 100K packet manifest SHA mismatch")
+    require(packet_100k.get("packet_count") == 211, "3DGS formal 100K packet count mismatch")
+    require(packet_100k.get("packet_disk_mismatch_count") == 0, "3DGS formal 100K packet identity mismatch")
+    require(packet_100k.get("packet_recomputation_all_passed") is True, "3DGS formal 100K packet recomputation failed")
+    require(packet_100k.get("variance_validation_fail_pixel_total") == 0, "3DGS formal 100K variance validation failed")
+    require(packet_100k.get("resource_status") == "PASS", "3DGS formal 100K export resource probe failed")
+    evaluation_100k = formal_100k_report.get("evaluation", {})
+    require(evaluation_100k.get("evaluator_commit") == formal_100k.get("evaluator_commit"), "3DGS formal 100K evaluator commit mismatch")
+    require(evaluation_100k.get("status") == "COMPLETE_RANKED" and evaluation_100k.get("ranking_eligible") is True, "3DGS formal 100K is not complete-ranked")
+    require(evaluation_100k.get("method_specific_sim3_fitted") is False, "3DGS formal 100K fitted a method-specific Sim(3)")
+    require(
+        evaluation_100k.get("point_counts")
+        == {"checkpoint_passed": 10, "checkpoint_total": 10, "control_passed": 11, "control_total": 11},
+        "3DGS formal 100K point coverage mismatch",
+    )
+    checkpoint_100k = evaluation_100k.get("residual_statistics", {}).get("checkpoint", {})
+    require(checkpoint_100k.get("rmse_3d_m") == formal_100k.get("checkpoint_rmse_3d_m"), "3DGS formal 100K checkpoint RMSE-3D mismatch")
+    require(checkpoint_100k.get("rmse_h_m") == formal_100k.get("checkpoint_rmse_h_m"), "3DGS formal 100K checkpoint RMSE-H mismatch")
+    require(checkpoint_100k.get("rmse_z_m") == formal_100k.get("checkpoint_rmse_z_m"), "3DGS formal 100K checkpoint RMSE-Z mismatch")
+    independent_100k = evaluation_100k.get("independent_verification", {})
+    require(independent_100k.get("status") == "PASS" and independent_100k.get("passed") is True, "3DGS formal 100K independent verification failed")
+    require(independent_100k.get("method_specific_sim3_fitted", False) is False, "3DGS formal 100K verification fitted Sim(3)")
+    require(all(event.get("result_or_metric_observed") is False for event in formal_100k_report.get("evaluation_compatibility_events", [])), "3DGS formal 100K compatibility retry was result-driven")
+    require(all(formal_100k_report.get("check_vector", [])), "3DGS formal 100K check vector failed")
 
     two_dgs = next((method for method in methods if method.get("method_id") == "2dgs"), {})
     two_adapter = two_dgs.get("common_adapter", {})
