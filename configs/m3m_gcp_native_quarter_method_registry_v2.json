@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v2",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "candidate_pool_frozen_3dgs_3k_training_authorized_other_methods_locked",
+  "status": "candidate_pool_frozen_3dgs_3k_complete_ranked_other_methods_locked",
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
@@ -79,8 +79,23 @@
         "real_3k_packet_camera_preflight": "docs/protocol_evidence/3dgs_native_quarter_real_3k_packet_camera_preflight_v1.json",
         "real_3k_packet_camera_preflight_sha256": "a7176ec41131d19a10ff79f82ff917c47cce0b77e221d48c65225125d1a2825d"
       },
-      "three_k_qualification_status": "PREFLIGHT_PASS_TRAINING_AUTHORIZED",
-      "three_k_training_allowed": true,
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/3dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "b8311cc687d9ab5f3c49d58f4473d26a70281c7b577177e3742c0abe00163b40",
+        "adapter_linux_identity_proof": "docs/protocol_evidence/3dgs_native_quarter_adapter_linux_identity_proof_v1.json",
+        "adapter_linux_identity_proof_sha256": "39a064fd8340d19deed15fe17bfaa888e2fec80f9d4bab8b64586b04d942420d",
+        "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/seed0-30k-20260810T073742Z",
+        "evaluator_commit": "efb096674d4149ee0712c94c4ea61e61114d9fe2",
+        "final_checkpoint_sha256": "461b48e97f31ee6588b5ba3de52d29ed07b4709134f7a155c95bc7c38dba91ff",
+        "packet_manifest_sha256": "36639ae7e82c4f314b47ff1941f39557382a074845044b72f9655a579d4a42b7",
+        "checkpoint_rmse_3d_m": 0.04179960708774027,
+        "checkpoint_rmse_h_m": 0.02761108288832967,
+        "checkpoint_rmse_z_m": 0.03138208492792113,
+        "rerun_allowed": false
+      },
+      "three_k_qualification_status": "FORMAL_3K_COMPLETE_RANKED",
+      "three_k_training_allowed": false,
       "full_scene_matrix_eligible": false
     },
     {
@@ -264,6 +279,6 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["3dgs_original"],
+  "per_method_training_allowed_methods": [],
   "qualification_policy": "A method may unlock only its own 3K run after source, recipe, prior, raw-moment adapter, synthetic conformance, frozen-3K real packet-camera compatibility, and evaluator gates pass. Other methods and the six-scene matrix remain locked."
 }

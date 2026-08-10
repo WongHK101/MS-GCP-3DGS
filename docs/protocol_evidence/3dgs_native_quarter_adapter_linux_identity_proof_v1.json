@@ -1,0 +1,22 @@
+{
+  "fresh_apply_proof_root": "/root/autodl-tmp/build/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/adapter-identity-proof-20260810T0755Z",
+  "identity_rule": "byte-identical to fresh Linux application of the two frozen patch blobs",
+  "note": "config patched_file_sha256 values reflect the Windows checkout; formal Linux identity is established by exact patch SHA, reverse-apply checks, expected diff file sets, and byte comparison to fresh Linux patch application.",
+  "passed": true,
+  "rasterizer_files": {
+    "cuda_rasterizer/forward.cu": "af77279263d7cb39f09d7b2d5d089f396e14dbe3726a1a6af38cb4722f521ca2",
+    "cuda_rasterizer/forward.h": "14e991a00e1be7958d3375675e49c8cba81ab67b634932ae1b552e9fda31db2e",
+    "cuda_rasterizer/rasterizer.h": "ae6cb41d90c60f8d9d8e2c8401a9e777e0c32167b02a84436acd131c3fa5465b",
+    "cuda_rasterizer/rasterizer_impl.cu": "d008f690da5cc27d1f74333df521b66532b6c56fe96e3fef29ce164e964291b2",
+    "diff_gaussian_rasterization/__init__.py": "61432710e2f150459d5f71b68529140d9ececa0d785d3ff91d24381696abfd89",
+    "rasterize_points.cu": "cc7a9fd3b0d809f28da952f54d36bba20d78906b54bfe3934013f953ed87f8ba",
+    "rasterize_points.h": "c4f5f2df458e75290bdaff7510b87395d5b8ca47ef07b51f47c9b5cb7e580629"
+  },
+  "rasterizer_patch_sha256": "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068",
+  "renderer_files": {
+    "gaussian_renderer/__init__.py": "1996207560bf23bf0df671bc1e801b5264ba08119e146e83c4a92493520dc062"
+  },
+  "renderer_patch_sha256": "e88b1ca418751228862c4e4d99c2cf4b5f714838fdbdf1bfa81f75fb85e81363",
+  "schema": "m3m_3dgs_eval_adapter_linux_identity_proof_v1",
+  "status": "PASS"
+}

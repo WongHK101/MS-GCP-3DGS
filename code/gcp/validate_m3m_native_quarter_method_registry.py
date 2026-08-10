@@ -44,6 +44,10 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
     require(value.get("schema") == "m3m_gcp_native_quarter_method_registry_v2", "unknown schema")
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol mismatch")
+    require(
+        value.get("status") == "candidate_pool_frozen_3dgs_3k_complete_ranked_other_methods_locked",
+        "registry status mismatch",
+    )
     require(value.get("method_count") == 9, "method_count must be 9")
     require(
         bool(SHA256.fullmatch(str(value.get("source_data_release", {}).get("release_root_digest_sha256", "")))),
@@ -83,9 +87,9 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             require(input_class == "rgb_colmap_only", prefix + "unexpected input class")
             require(priors == [], prefix + "RGB+COLMAP method must not carry undeclared priors")
         if method_id == "3dgs_original":
-            require(method.get("three_k_training_allowed") is True, prefix + "3K training authorization missing")
+            require(method.get("three_k_training_allowed") is False, prefix + "completed 3K run must not remain launchable")
             require(
-                method.get("three_k_qualification_status") == "PREFLIGHT_PASS_TRAINING_AUTHORIZED",
+                method.get("three_k_qualification_status") == "FORMAL_3K_COMPLETE_RANKED",
                 prefix + "qualification status mismatch",
             )
         else:
@@ -100,6 +104,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
     three_dgs = next((method for method in methods if method.get("method_id") == "3dgs_original"), {})
     adapter = three_dgs.get("common_adapter", {})
+    formal = three_dgs.get("formal_3k_result", {})
     require(
         three_dgs.get("recipe_status")
         == "FROZEN_3K_TRAINING_AUTHORIZED",
@@ -124,6 +129,13 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "real_3k_packet_camera_preflight",
             "real_3k_packet_camera_preflight_sha256",
             "3DGS real 3K packet-camera preflight",
+        ),
+        (formal, "report", "report_sha256", "3DGS formal 3K result"),
+        (
+            formal,
+            "adapter_linux_identity_proof",
+            "adapter_linux_identity_proof_sha256",
+            "3DGS Linux adapter identity proof",
         ),
     ]
     evidence: dict[str, dict[str, Any]] = {}
@@ -188,6 +200,56 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         },
         "3DGS real packet-camera preflight unlock scope mismatch",
     )
+    formal_report = evidence.get("report", {})
+    require(formal.get("status") == "COMPLETE_RANKED", "3DGS formal result status mismatch")
+    require(formal.get("rerun_allowed") is False, "3DGS completed seed-0 run must not be repeated")
+    require(formal_report.get("schema") == "m3m_native_quarter_3dgs_formal_3k_run_v1", "3DGS formal report schema mismatch")
+    require(formal_report.get("status") == "PASS" and formal_report.get("passed") is True, "3DGS formal report did not pass")
+    require(formal_report.get("result_kind") == "formal_benchmark_result_not_preflight", "3DGS result is not formal")
+    require(formal_report.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "3DGS formal protocol mismatch")
+    require(formal_report.get("method_id") == "3dgs_original", "3DGS formal method mismatch")
+    require(formal_report.get("scene") == "gcp_3000_20260602", "3DGS formal scene mismatch")
+    require(formal_report.get("seed") == 0 and formal_report.get("iterations") == 30000, "3DGS formal recipe mismatch")
+    require(formal_report.get("input", {}).get("train_view_count") == 82, "3DGS formal train-view count mismatch")
+    require(formal_report.get("input", {}).get("heldout_test_view_count") == 12, "3DGS formal holdout count mismatch")
+    require(formal_report.get("input", {}).get("training_resolution_argument") == 1, "3DGS formal resolution mismatch")
+    require(formal_report.get("training", {}).get("source_commit") == three_dgs.get("source", {}).get("commit"), "3DGS formal source commit mismatch")
+    require(formal_report.get("training", {}).get("source_tree") == three_dgs.get("source", {}).get("tree"), "3DGS formal source tree mismatch")
+    require(formal_report.get("training", {}).get("source_status_porcelain_after") == "", "3DGS training source is dirty")
+    require(formal_report.get("training", {}).get("resource_status") == "PASS", "3DGS training resource probe failed")
+    require(formal_report.get("training", {}).get("final_ply_sha256") == formal.get("final_checkpoint_sha256"), "3DGS final checkpoint SHA mismatch")
+    packet_export = formal_report.get("packet_export", {})
+    require(packet_export.get("manifest_sha256") == formal.get("packet_manifest_sha256"), "3DGS packet manifest SHA mismatch")
+    require(packet_export.get("packet_count") == 66, "3DGS formal packet count mismatch")
+    require(packet_export.get("packet_disk_mismatch_count") == 0, "3DGS formal packet identity mismatch")
+    require(packet_export.get("packet_recomputation_all_passed") is True, "3DGS formal packet recomputation failed")
+    require(packet_export.get("variance_validation_fail_pixel_total") == 0, "3DGS formal packet variance validation failed")
+    formal_evaluation = formal_report.get("evaluation", {})
+    require(formal_evaluation.get("evaluator_commit") == formal.get("evaluator_commit"), "3DGS evaluator commit mismatch")
+    require(formal_evaluation.get("status") == "COMPLETE_RANKED", "3DGS formal evaluation is not complete-ranked")
+    require(formal_evaluation.get("ranking_eligible") is True, "3DGS formal result is not ranking eligible")
+    require(formal_evaluation.get("method_specific_sim3_fitted") is False, "3DGS formal evaluation fitted method-specific Sim(3)")
+    require(
+        formal_evaluation.get("point_counts")
+        == {"checkpoint_passed": 4, "checkpoint_total": 4, "control_passed": 5, "control_total": 5},
+        "3DGS formal point coverage mismatch",
+    )
+    checkpoint = formal_evaluation.get("residual_statistics", {}).get("checkpoint", {})
+    require(checkpoint.get("rmse_3d_m") == formal.get("checkpoint_rmse_3d_m"), "3DGS checkpoint RMSE-3D mismatch")
+    require(checkpoint.get("rmse_h_m") == formal.get("checkpoint_rmse_h_m"), "3DGS checkpoint RMSE-H mismatch")
+    require(checkpoint.get("rmse_z_m") == formal.get("checkpoint_rmse_z_m"), "3DGS checkpoint RMSE-Z mismatch")
+    linux_identity = evidence.get("adapter_linux_identity_proof", {})
+    require(linux_identity.get("status") == "PASS" and linux_identity.get("passed") is True, "3DGS Linux adapter identity proof failed")
+    require(
+        linux_identity.get("renderer_patch_sha256")
+        == "e88b1ca418751228862c4e4d99c2cf4b5f714838fdbdf1bfa81f75fb85e81363",
+        "3DGS Linux renderer patch identity mismatch",
+    )
+    require(
+        linux_identity.get("rasterizer_patch_sha256")
+        == "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068",
+        "3DGS Linux rasterizer patch identity mismatch",
+    )
 
     city = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require("redistribution_blocked" in str(city.get("source", {}).get("license_status", "")), "CityGS-X redistribution risk missing")
@@ -196,7 +258,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(prior_names == {"pointmap dense initialization", "MoGe-2"}, "MetroGS prior inventory incomplete")
     require(value.get("global_training_allowed") is False, "global training lock missing")
     require(
-        value.get("per_method_training_allowed_methods") == ["3dgs_original"],
+        value.get("per_method_training_allowed_methods") == [],
         "per-method training allowlist mismatch",
     )
     return {
