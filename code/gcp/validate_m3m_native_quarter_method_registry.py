@@ -46,7 +46,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol mismatch")
     require(
         value.get("status")
-        == "candidate_pool_frozen_3dgs_3k_complete_ranked_2dgs_qualification_in_progress_other_methods_locked",
+        == "candidate_pool_frozen_3dgs_3k_complete_ranked_2dgs_qualified_3k_training_authorized_other_methods_locked",
         "registry status mismatch",
     )
     require(value.get("method_count") == 9, "method_count must be 9")
@@ -94,8 +94,11 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 prefix + "qualification status mismatch",
             )
         elif method_id == "2dgs":
-            require(method.get("three_k_training_allowed") is False, prefix + "formal training must remain locked during qualification")
-            require(method.get("three_k_qualification_status") == "QUALIFICATION_IN_PROGRESS", prefix + "qualification status mismatch")
+            require(method.get("three_k_training_allowed") is True, prefix + "qualified 3K run is not authorized")
+            require(
+                method.get("three_k_qualification_status") == "QUALIFIED_3K_TRAINING_AUTHORIZED",
+                prefix + "qualification status mismatch",
+            )
         else:
             require(method.get("three_k_training_allowed") is False, prefix + "training must remain locked")
             require(method.get("three_k_qualification_status") == "NOT_RUN", prefix + "qualification status mismatch")
@@ -257,12 +260,21 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
     two_dgs = next((method for method in methods if method.get("method_id") == "2dgs"), {})
     two_adapter = two_dgs.get("common_adapter", {})
-    require(two_dgs.get("recipe_status") == "FROZEN_3K_QUALIFICATION_PENDING", "2DGS recipe status mismatch")
-    require(two_adapter.get("status") == "LOCAL_PATCH_REPLAY_PASS_GPU_BUILD_PENDING", "2DGS adapter status mismatch")
+    require(two_dgs.get("recipe_status") == "FROZEN_3K_TRAINING_AUTHORIZED", "2DGS recipe status mismatch")
+    require(
+        two_adapter.get("status") == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
+        "2DGS adapter status mismatch",
+    )
     two_specs = [
         (two_dgs, "recipe", "recipe_sha256", "2DGS recipe"),
         (two_adapter, "config", "config_sha256", "2DGS adapter config"),
         (two_adapter, "static_report", "static_report_sha256", "2DGS static report"),
+        (
+            two_adapter,
+            "gpu_real_3k_qualification_report",
+            "gpu_real_3k_qualification_report_sha256",
+            "2DGS GPU/real-3K qualification report",
+        ),
     ]
     two_evidence: dict[str, dict[str, Any]] = {}
     for container, path_key, sha_key, label in two_specs:
@@ -280,18 +292,67 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     two_recipe = two_evidence.get("recipe", {})
     require(two_recipe.get("protocol_id") == value.get("protocol_id"), "2DGS recipe protocol mismatch")
     require(two_recipe.get("method", {}).get("method_id") == "2dgs", "2DGS recipe method mismatch")
-    require(two_recipe.get("execution", {}).get("training_authorized") is False, "2DGS recipe prematurely authorizes formal training")
-    require(two_recipe.get("qualification", {}).get("three_k_training_allowed") is False, "2DGS qualification prematurely unlocked training")
+    require(two_recipe.get("execution", {}).get("training_authorized") is True, "2DGS recipe training authorization missing")
+    require(two_recipe.get("qualification", {}).get("three_k_training_allowed") is True, "2DGS qualification unlock missing")
+    require(two_recipe.get("qualification", {}).get("full_scene_matrix_allowed") is False, "2DGS recipe unlocked the full matrix")
+    require(two_recipe.get("qualification", {}).get("global_training_allowed") is False, "2DGS recipe unlocked global training")
     require(two_recipe.get("source_provenance", {}).get("repository_commit") == two_dgs.get("source", {}).get("commit"), "2DGS recipe commit mismatch")
     require(two_recipe.get("source_provenance", {}).get("repository_tree") == two_dgs.get("source", {}).get("tree"), "2DGS recipe tree mismatch")
     two_config = two_evidence.get("config", {})
-    require(two_config.get("status") == "LOCAL_PATCH_REPLAY_PASS_GPU_BUILD_PENDING", "2DGS adapter config state mismatch")
+    require(
+        two_config.get("status") == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
+        "2DGS adapter config state mismatch",
+    )
     require(two_config.get("raw_output", {}).get("primary_track_uses_native_planes_only") is True, "2DGS primary A/M1 planes are not pinned as native")
     require(two_config.get("training_identity", {}).get("training_patch_allowed") is False, "2DGS training patch was allowed")
     two_static = two_evidence.get("static_report", {})
     require(two_static.get("status") == "PASS" and two_static.get("passed") is True, "2DGS static validation failed")
     require(two_static.get("formal_training_authorized") is False, "2DGS static report prematurely authorizes training")
     require(two_static.get("primary_common_planes_are_native_2dgs_outputs") is True, "2DGS native common-plane proof missing")
+    two_qualification = two_evidence.get("gpu_real_3k_qualification_report", {})
+    require(
+        two_qualification.get("schema") == "m3m_gcp_native_quarter_2dgs_gpu_real_3k_qualification_v1",
+        "2DGS qualification report schema mismatch",
+    )
+    require(two_qualification.get("status") == "PASS" and two_qualification.get("passed") is True, "2DGS qualification failed")
+    require(two_qualification.get("protocol_id") == value.get("protocol_id"), "2DGS qualification protocol mismatch")
+    require(two_qualification.get("method_id") == "2dgs", "2DGS qualification method mismatch")
+    require(two_qualification.get("boundary", {}).get("formal_training_started") is False, "2DGS formal training already started")
+    require(two_qualification.get("boundary", {}).get("benchmark_score_claim") is False, "2DGS qualification is mislabeled as a result")
+    require(two_qualification.get("source", {}).get("official_training_source_clean_after_qualification") is True, "2DGS training source is dirty")
+    require(two_qualification.get("raw_moment_conformance", {}).get("status") == "PASS", "2DGS raw-moment conformance failed")
+    require(
+        two_qualification.get("raw_moment_conformance", {}).get("primary_common_planes_are_native") == ["A", "M1"],
+        "2DGS common A/M1 native-plane proof mismatch",
+    )
+    two_packet = two_qualification.get("packet_preflight", {})
+    require(two_packet.get("formal_packet_camera_count") == 66, "2DGS packet-camera count mismatch")
+    require(two_packet.get("all_packet_recomputations_passed") is True, "2DGS packet recomputation failed")
+    require(two_packet.get("variance_validation_failing_pixel_total") == 0, "2DGS packet variance validation failed")
+    two_eval = two_qualification.get("evaluator", {})
+    require(two_eval.get("status") == "COMPLETE_RANKED" and two_eval.get("ranking_eligible") is True, "2DGS qualification evaluator failed")
+    require(two_eval.get("method_specific_sim3_fitted") is False, "2DGS qualification fitted a method-specific Sim(3)")
+    require(
+        two_eval.get("point_counts")
+        == {"checkpoint_passed": 4, "checkpoint_total": 4, "control_passed": 5, "control_total": 5},
+        "2DGS qualification point coverage mismatch",
+    )
+    require(two_qualification.get("technical_resume", {}).get("result_driven_retry") is False, "2DGS qualification used a result-driven retry")
+    require(
+        two_qualification.get("training_unlock")
+        == {
+            "method_id": "2dgs",
+            "scene": "gcp_3000_20260602",
+            "seed": 0,
+            "iterations": 30000,
+            "single_fresh_run_allowed": True,
+            "resume_allowed": False,
+            "rerun_after_completed_result_allowed": False,
+            "full_scene_matrix_allowed": False,
+            "global_unlock": False,
+        },
+        "2DGS qualification unlock scope mismatch",
+    )
 
     city = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require("redistribution_blocked" in str(city.get("source", {}).get("license_status", "")), "CityGS-X redistribution risk missing")
@@ -300,7 +361,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(prior_names == {"pointmap dense initialization", "MoGe-2"}, "MetroGS prior inventory incomplete")
     require(value.get("global_training_allowed") is False, "global training lock missing")
     require(
-        value.get("per_method_training_allowed_methods") == [],
+        value.get("per_method_training_allowed_methods") == ["2dgs"],
         "per-method training allowlist mismatch",
     )
     return {

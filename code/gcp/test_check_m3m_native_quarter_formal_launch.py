@@ -33,10 +33,25 @@ def test_completed_3dgs_is_denied() -> None:
     assert any("forbids rerun" in error for error in result["errors"])
 
 
-def test_unqualified_2dgs_is_denied() -> None:
+def test_qualified_2dgs_exact_run_is_authorized() -> None:
     result = check("2dgs")
+    assert result["passed"] is True
+    assert result["status"] == "AUTHORIZED"
+
+
+def test_qualified_2dgs_wrong_seed_is_denied() -> None:
+    result = check_launch(
+        current_registry(),
+        REPO_ROOT,
+        method_id="2dgs",
+        scene="gcp_3000_20260602",
+        seed=1,
+        iterations=30000,
+        run_root="/root/autodl-tmp/runs/m3m-gcp-native-quarter/2dgs/gcp_3000_20260602/wrong-seed",
+        run_root_exists=False,
+    )
     assert result["passed"] is False
-    assert any("not formally allowlisted" in error for error in result["errors"])
+    assert any("seed differs" in error for error in result["errors"])
 
 
 def test_unknown_method_is_denied() -> None:

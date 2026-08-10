@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_2dgs_renderer_adapter_v1",
   "adapter_id": "2dgs_raw_metric_depth_accumulators_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "LOCAL_PATCH_REPLAY_PASS_GPU_BUILD_PENDING",
+  "status": "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
   "scope": "evaluation-only renderer copy; official training source, rasterizer, and trained checkpoint remain unmodified",
   "source": {
     "repository_commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
@@ -57,8 +57,32 @@
   "local_preflight": {
     "fresh_exact_source_patch_check": "PASS",
     "renderer_python_compile": "PASS",
-    "gpu_build": "PENDING",
-    "real_3k_packet_camera_preflight": "PENDING"
+    "gpu_build": "PASS",
+    "synthetic_raw_moment_conformance": "PASS",
+    "one_iteration_technical_smoke": "PASS_NOT_FORMAL_RESULT",
+    "real_3k_packet_camera_preflight": "PASS",
+    "common_evaluator": "COMPLETE_RANKED_QUALIFICATION_ONLY"
   },
-  "remaining_gate": "build official training extensions and isolated patched evaluation rasterizer on the target GPU, pass synthetic raw-moment conformance, then pass actual frozen-3K packet/export/evaluator preflight"
+  "target_gpu_evidence": {
+    "server": "AutoDL-901",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "gpu_uuid": "GPU-2b3b7941-2afd-f285-e2a2-6702deb4f0c7",
+    "driver": "580.82.09",
+    "compute_capability": "12.0",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "official_training_rasterizer_extension_sha256": "d6df6f14cfc6d4bb58646c6c62ef40ffc90f7760e44cafa33097005d8f67ecae",
+    "official_training_simple_knn_extension_sha256": "06f580fce01c3797a8490bbe3c937dd0aa1af328fe3c8238e57434810d4892be",
+    "evaluation_adapter_extension_sha256": "4747a9124feee06e6a439b8c2eca9c9e571b0d3cdb7bc1f45f489788000fbee5",
+    "raw_moment_conformance_sha256": "000e9597b673f86e3e014ff9c911f767821a9be90d15ba50fd1482285bf4d831",
+    "packet_manifest_sha256": "165cba34864eb164c643ce0d0bf9e1b7fa73dcf911bc1d09c2b259467f2bfe54"
+  },
+  "patched_linux_file_sha256": {
+    "gaussian_renderer/__init__.py": "3a27f0bbce9974210619a6aba1b0a19ec99649c95e525f324fe339c515be9c63",
+    "submodules/diff-surfel-rasterization/cuda_rasterizer/auxiliary.h": "9695c1cd0f40047e155849c91aff14809150e811d89ab6106ce986c12e2ad7c4",
+    "submodules/diff-surfel-rasterization/cuda_rasterizer/forward.cu": "b575f23158590bd68bba0b6bfb6caab7d28c06d1fe66f9efe9cf7f212cbb5841",
+    "submodules/diff-surfel-rasterization/rasterize_points.cu": "1d2d33e760a2bae17637413d048c8768d5befe0cc47f009592f48d1d689fcdbd"
+  },
+  "qualification_report": "docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json",
+  "remaining_gate": "none for the single authorized 2DGS 3K seed-0/30K launch; all other methods, reruns, and the full scene matrix remain locked"
 }

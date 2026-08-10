@@ -45,6 +45,7 @@
     "configs/m3m_gcp_native_quarter_2dgs_3k_recipe_v1.json",
     "configs/m3m_gcp_native_quarter_2dgs_renderer_adapter_v1.json",
     "docs/protocol_evidence/2dgs_native_quarter_static_validation_v1.json",
+    "docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json",
     "patches/2dgs/native_quarter_raw_moments_renderer_335ad612_v1.patch",
     "patches/2dgs/native_quarter_raw_moments_rasterizer_e0ed020_v1.patch",
     "patches/2dgs/simple_knn_f155ec0_cuda12_cfloat_v1.patch"

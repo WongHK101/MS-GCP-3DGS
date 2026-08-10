@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_2dgs_recipe_v1",
   "recipe_id": "m3m_gcp_native_quarter_2dgs_3k_30k_seed0_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "FROZEN_3K_QUALIFICATION_PENDING",
+  "status": "FROZEN_3K_TRAINING_AUTHORIZED",
   "method": {
     "method_id": "2dgs",
     "display_name": "2D Gaussian Splatting",
@@ -115,7 +115,9 @@
     "source_tree_clean_before_and_after_required": true,
     "input_manifest_verification_required": true,
     "fresh_hardware_manifest_required": true,
-    "training_authorized": false
+    "training_authorized": true,
+    "authorization_scope": "one fresh 2DGS gcp_3000_20260602 seed-0 30000-iteration run only; resume, overwrite, and completed-result rerun remain forbidden",
+    "resource_probe_required": true
   },
   "evaluation_adapter": {
     "scope": "evaluation-only patched copy; official training source, rasterizer, and checkpoint remain unchanged",
@@ -138,7 +140,7 @@
   },
   "runtime": {
     "server": "AutoDL-901",
-    "status": "SOURCE_AND_REAL_INPUT_LOADER_PREFLIGHT_PASS_GPU_BUILD_PENDING",
+    "status": "GPU_BUILD_RAW_MOMENT_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
     "target_environment": {
       "path": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/2dgs/py310-torch2.7.1-cu128-v1",
       "python": "3.10.12",
@@ -152,7 +154,10 @@
         "numpy": "1.26.4",
         "opencv-python-headless": "4.10.0.84",
         "matplotlib": "3.9.4"
-      }
+      },
+      "official_training_rasterizer_extension_sha256": "d6df6f14cfc6d4bb58646c6c62ef40ffc90f7760e44cafa33097005d8f67ecae",
+      "official_training_simple_knn_extension_sha256": "06f580fce01c3797a8490bbe3c937dd0aa1af328fe3c8238e57434810d4892be",
+      "evaluation_adapter_extension_sha256": "4747a9124feee06e6a439b8c2eca9c9e571b0d3cdb7bc1f45f489788000fbee5"
     }
   },
   "server_roots": {
@@ -179,15 +184,20 @@
     "real_input_loader_preflight_passed": true,
     "local_patch_replay_passed": true,
     "gpu_official_training_extension_build_required": true,
-    "gpu_official_training_extension_build_passed": false,
+    "gpu_official_training_extension_build_passed": true,
     "gpu_evaluation_adapter_build_required": true,
-    "gpu_evaluation_adapter_build_passed": false,
+    "gpu_evaluation_adapter_build_passed": true,
     "synthetic_raw_moment_conformance_required": true,
-    "synthetic_raw_moment_conformance_passed": false,
+    "synthetic_raw_moment_conformance_passed": true,
     "frozen_3k_real_packet_camera_preflight_required": true,
-    "frozen_3k_real_packet_camera_preflight_passed": false,
-    "three_k_training_allowed": false,
+    "frozen_3k_real_packet_camera_preflight_passed": true,
+    "one_iteration_technical_smoke_completed": true,
+    "one_iteration_smoke_is_formal_result": false,
+    "qualification_evidence": "docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json",
+    "three_k_training_allowed": true,
     "full_matrix_authorized_before_pass": false,
-    "unlock_rule": "only 2DGS 3K may unlock after all method-specific build, raw-moment, real-camera packet, evaluator, registry, and launch-gate checks pass"
+    "unlock_rule": "fulfilled for exactly one fresh 2DGS 3K seed-0/30K run after all method-specific build, raw-moment, real-camera packet, evaluator, registry, and launch-gate checks passed",
+    "full_scene_matrix_allowed": false,
+    "global_training_allowed": false
   }
 }

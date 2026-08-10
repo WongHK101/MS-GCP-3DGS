@@ -149,8 +149,8 @@ CPU 侧派生。当前状态为：
 - 该正式运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
   `full_scene_matrix_eligible=false`。
 
-因此这里的全局 `TRAINING HOLD` 并不否定已完成的 3DGS 3K 结果；它表示当前没有任何新的
-训练授权。实时资格和结果状态只以
+因此这里的全局 `TRAINING HOLD` 并不否定已完成的 3DGS 3K 结果，也不阻止通过全部门禁的
+单方法授权。当前仅 2DGS 的一个全新 3K seed-0/30K 运行被放行；实时资格和结果状态只以
 `configs/m3m_gcp_native_quarter_method_registry_v2.json` 为准。
 
 ### 8.1 2DGS 方法级资格状态
@@ -163,8 +163,11 @@ CPU 侧派生。当前状态为：
 公共主轨所需的 `A/M1` 已是官方 2DGS rasterizer 的原生输出；独立 evaluation-only 副本只
 补齐 packet v2 诊断字段所需的 `M2/H`。固定提交、配方和补丁已通过本地重放与静态校验，
 真实输入 loader 已确认载入 82 个训练相机、0 个测试相机和冻结的 61,302 个初始化点。目标
-GPU 构建、合成原始矩一致性和冻结 3K 真实 packet-camera/evaluator 预检尚未完成，因此
-`three_k_training_allowed=false`，正式训练仍被门禁拒绝。
+GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成原始矩一致性通过；1 次迭代技术
+smoke 生成的 66 个真实 packet 全部逐包复算通过，公共评测覆盖 4/4 checkpoints 与 5/5
+controls，且未拟合方法专属 Sim(3)。因此仅该方法的一个全新 3K seed-0/30K 正式运行已解锁；
+该 smoke 不属于正式结果，其他方法、重跑与六场景矩阵仍保持锁定。资格证据为
+`docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json`。
 
 ## 9. 解锁顺序
 

@@ -50,9 +50,19 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, patched_sou
     require(recipe.get("protocol_id") == PROTOCOL_ID, "recipe protocol mismatch")
     require(adapter.get("protocol_id") == PROTOCOL_ID, "adapter protocol mismatch")
     require(recipe.get("method", {}).get("method_id") == "2dgs", "method mismatch")
-    require(recipe.get("status") == "FROZEN_3K_QUALIFICATION_PENDING", "recipe status mismatch")
-    require(recipe.get("execution", {}).get("training_authorized") is False, "formal training must remain locked")
-    require(recipe.get("qualification", {}).get("three_k_training_allowed") is False, "recipe qualification unlock is premature")
+    require(recipe.get("status") == "FROZEN_3K_TRAINING_AUTHORIZED", "recipe status mismatch")
+    require(recipe.get("execution", {}).get("training_authorized") is True, "formal training authorization missing")
+    qualification = recipe.get("qualification", {})
+    require(qualification.get("three_k_training_allowed") is True, "recipe qualification authorization missing")
+    for key in (
+        "gpu_official_training_extension_build_passed",
+        "gpu_evaluation_adapter_build_passed",
+        "synthetic_raw_moment_conformance_passed",
+        "frozen_3k_real_packet_camera_preflight_passed",
+    ):
+        require(qualification.get(key) is True, f"qualification.{key} did not pass")
+    require(qualification.get("full_scene_matrix_allowed") is False, "full matrix must remain locked")
+    require(qualification.get("global_training_allowed") is False, "global training must remain locked")
 
     source = recipe.get("source_provenance", {})
     require(source.get("repository_commit") == MAIN_COMMIT, "main commit mismatch")
@@ -167,7 +177,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, patched_sou
         "adapter_id": adapter.get("adapter_id"),
         "status": "PASS" if not errors else "FAIL",
         "passed": not errors,
-        "formal_training_authorized": False,
+        "formal_training_authorized": True,
         "training_source_modified": False,
         "evaluation_copy_only": True,
         "source_identity": {
@@ -181,12 +191,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, patched_sou
         "patches": patch_evidence,
         "primary_common_planes_are_native_2dgs_outputs": True,
         "diagnostic_m2_h_are_evaluation_only": True,
-        "remaining_gates": [
-            "target GPU official extension build",
-            "target GPU isolated evaluation adapter build",
-            "synthetic raw-moment conformance",
-            "frozen 3K real packet-camera evaluator preflight",
-        ],
+        "remaining_gates": [],
         "errors": errors,
     }
 
