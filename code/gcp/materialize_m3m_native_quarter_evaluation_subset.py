@@ -43,8 +43,10 @@ from read_write_model import (  # noqa: E402
     Image as ColmapImage,
     read_cameras_binary,
     read_images_binary,
+    read_points3D_binary,
     write_cameras_binary,
     write_images_binary,
+    write_points3D_binary,
 )
 
 
@@ -207,6 +209,10 @@ def materialize_subset(
         })
     write_cameras_binary(dict(sorted(selected_cameras.items())), model_root / "cameras.bin")
     write_images_binary(dict(sorted(selected_images.items())), model_root / "images.bin")
+    # COLMAP's generic read_model() requires a complete cameras/images/points3D
+    # triplet.  The evaluator uses only cameras and images, so provide an
+    # explicit zero-point file rather than exposing any reconstruction points.
+    write_points3D_binary({}, model_root / "points3D.bin")
     _materialize_file(initial_ply_path, model_root / "points3D.ply", file_mode)
 
     manifest: dict[str, Any] = {
@@ -250,9 +256,12 @@ def materialize_subset(
         "camera_count": len(selected_cameras),
         "cameras_bin_sha256": sha256_file(model_root / "cameras.bin"),
         "images_bin_sha256": sha256_file(model_root / "images.bin"),
+        "points3d_bin_sha256": sha256_file(model_root / "points3D.bin"),
         "points3d_ply_sha256": sha256_file(model_root / "points3D.ply"),
         "points2d_tracks_present": False,
-        "points3d_bin_present": False,
+        "points3d_bin_present": True,
+        "points3d_bin_point_count": 0,
+        "points3d_bin_purpose": "deterministic empty COLMAP compatibility file for read_model(); not geometry input",
         "images": image_rows,
     }
     manifest["manifest_sha256"] = canonical_sha256(manifest)
@@ -313,16 +322,16 @@ def verify_subset(root: Path, *, decode_images: bool = True) -> dict[str, Any]:
     for filename, field in (
         ("cameras.bin", "cameras_bin_sha256"),
         ("images.bin", "images_bin_sha256"),
+        ("points3D.bin", "points3d_bin_sha256"),
         ("points3D.ply", "points3d_ply_sha256"),
     ):
         path = model_root / filename
         if not path.is_file() or sha256_file(path) != manifest.get(field):
             errors.append(f"model identity mismatch: {filename}")
-    if (model_root / "points3D.bin").exists():
-        errors.append("points3D.bin must be absent")
     try:
         cameras = read_cameras_binary(model_root / "cameras.bin")
         images = read_images_binary(model_root / "images.bin")
+        points3d = read_points3D_binary(model_root / "points3D.bin")
         if len(cameras) != int(manifest.get("camera_count", -1)):
             errors.append("COLMAP camera count mismatch")
         if len(images) != int(manifest.get("camera_view_count", -1)):
@@ -331,6 +340,8 @@ def verify_subset(root: Path, *, decode_images: bool = True) -> dict[str, Any]:
             errors.append("COLMAP image names mismatch")
         if any(len(image.xys) or len(image.point3D_ids) for image in images.values()):
             errors.append("COLMAP POINTS2D tracks are present")
+        if points3d or int(manifest.get("points3d_bin_point_count", -1)) != 0:
+            errors.append("COLMAP compatibility points3D.bin is not empty")
         for image in images.values():
             row = rows.get(image.name, {})
             if int(image.id) != int(row.get("image_id", -1)) or int(image.camera_id) != int(row.get("camera_id", -1)):

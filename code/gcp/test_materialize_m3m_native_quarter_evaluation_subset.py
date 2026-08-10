@@ -24,7 +24,13 @@ from materialize_gs_gcp_native_quarter_inputs import (  # noqa: E402
     sha256_file,
 )
 from materialize_m3m_native_quarter_evaluation_subset import materialize_subset, verify_subset  # noqa: E402
-from read_write_model import Camera, Image as ColmapImage, write_cameras_binary, write_images_binary  # noqa: E402
+from read_write_model import (  # noqa: E402
+    Camera,
+    Image as ColmapImage,
+    read_model,
+    write_cameras_binary,
+    write_images_binary,
+)
 
 
 class EvaluationCameraSubsetTest(unittest.TestCase):
@@ -131,7 +137,11 @@ class EvaluationCameraSubsetTest(unittest.TestCase):
             self.assertEqual(manifest["observation_count"], 3)
             self.assertEqual(manifest["point_count"], 2)
             self.assertEqual({row["formal_role"] for row in manifest["images"]}, {"train", "test"})
-            self.assertFalse((output / "sparse" / "0" / "points3D.bin").exists())
+            self.assertTrue((output / "sparse" / "0" / "points3D.bin").is_file())
+            cameras, images, points3d = read_model(output / "sparse" / "0", ext=".bin")
+            self.assertEqual(len(cameras), 1)
+            self.assertEqual(len(images), 2)
+            self.assertEqual(points3d, {})
             result = verify_subset(output)
             self.assertTrue(result["passed"], result["errors"])
 
