@@ -61,7 +61,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, source: Pat
     require(recipe.get("protocol_id") == PROTOCOL_ID, "recipe protocol mismatch")
     require(adapter.get("protocol_id") == PROTOCOL_ID, "adapter protocol mismatch")
     require(recipe.get("method", {}).get("method_id") == "gof", "method mismatch")
-    require(recipe.get("status") == "FROZEN_3K_TRAINING_AUTHORIZED", "recipe status mismatch")
+    require(recipe.get("status") == "FROZEN_3K_FORMAL_COMPLETE_RELOCKED", "recipe status mismatch")
     require(
         adapter.get("status") == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
         "adapter status mismatch",
@@ -120,7 +120,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, source: Pat
     require(training.get("start_checkpoint") is None, "start checkpoint must be null")
 
     execution = recipe.get("execution", {})
-    require(execution.get("training_authorized") is True, "qualified formal training authorization missing")
+    require(execution.get("training_authorized") is False, "completed formal run must be re-locked")
     require(execution.get("resume_allowed") is False, "resume must remain forbidden")
     require(execution.get("preexisting_checkpoint_allowed") is False, "pre-existing checkpoint must remain forbidden")
     command = execution.get("command_template", "")
@@ -148,10 +148,11 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, source: Pat
         "synthetic_raw_moment_conformance_passed",
         "frozen_3k_real_packet_camera_preflight_passed",
         "one_iteration_technical_smoke_completed",
-        "three_k_training_allowed",
     ):
         require(qualification.get(key) is True, f"qualification gate did not pass: {key}")
-    require(qualification.get("formal_3k_completed") is False, "formal 3K already marked complete")
+    require(qualification.get("three_k_training_allowed") is False, "completed formal run remains launchable")
+    require(qualification.get("formal_3k_completed") is True, "formal completion state missing")
+    require(qualification.get("formal_3k_result", {}).get("rerun_allowed") is False, "formal rerun lock missing")
     require(qualification.get("full_scene_matrix_allowed") is False, "full matrix must remain locked")
     require(qualification.get("global_training_allowed") is False, "global training must remain locked")
 
@@ -258,7 +259,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, source: Pat
         "adapter_id": adapter.get("adapter_id"),
         "status": "PASS" if not errors else "FAIL",
         "passed": not errors,
-        "formal_training_authorized": True,
+        "formal_training_authorized": False,
         "training_source_modified": False,
         "evaluation_copy_only": True,
         "source_identity": {
@@ -273,7 +274,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, source: Pat
         "native_depth_channel_used_as_common_primary": False,
         "native_opacity_level_set_mesh_role": "diagnostic_only",
         "physical_surface_claim": False,
-        "remaining_gates": ["exactly_one_fresh_gof_3k_seed0_30000_iteration_formal_run"],
+        "remaining_gates": [],
         "errors": errors,
     }
 

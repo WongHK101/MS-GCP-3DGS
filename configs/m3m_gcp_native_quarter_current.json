@@ -54,6 +54,7 @@
     "configs/m3m_gcp_native_quarter_gof_renderer_adapter_v1.json",
     "docs/protocol_evidence/gof_native_quarter_static_validation_v1.json",
     "docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json",
+    "docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json",
     "patches/gof/native_quarter_raw_moments_renderer_5245b20_v1.patch",
     "patches/gof/native_quarter_raw_moments_rasterizer_5245b20_v1.patch",
     "patches/gof/simple_knn_vendored_cuda12_cfloat_v1.patch"

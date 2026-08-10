@@ -46,7 +46,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol mismatch")
     require(
         value.get("status")
-        == "candidate_pool_frozen_3dgs_and_2dgs_3k_complete_ranked_gof_qualified_single_3k_authorized_other_methods_locked",
+        == "candidate_pool_frozen_3dgs_2dgs_and_gof_3k_complete_ranked_other_methods_locked",
         "registry status mismatch",
     )
     require(value.get("method_count") == 9, "method_count must be 9")
@@ -100,9 +100,9 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 prefix + "qualification status mismatch",
             )
         elif method_id == "gof":
-            require(method.get("three_k_training_allowed") is True, prefix + "qualified single 3K run is not authorized")
+            require(method.get("three_k_training_allowed") is False, prefix + "completed 3K run must not remain launchable")
             require(
-                method.get("three_k_qualification_status") == "QUALIFIED_3K_TRAINING_AUTHORIZED",
+                method.get("three_k_qualification_status") == "FORMAL_3K_COMPLETE_RANKED",
                 prefix + "qualification status mismatch",
             )
         else:
@@ -467,7 +467,8 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
     gof = next((method for method in methods if method.get("method_id") == "gof"), {})
     gof_adapter = gof.get("common_adapter", {})
-    require(gof.get("recipe_status") == "FROZEN_3K_TRAINING_AUTHORIZED", "GOF recipe status mismatch")
+    gof_formal = gof.get("formal_3k_result", {})
+    require(gof.get("recipe_status") == "FROZEN_3K_FORMAL_COMPLETE_RELOCKED", "GOF recipe status mismatch")
     require(
         gof_adapter.get("status") == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
         "GOF adapter status mismatch",
@@ -482,6 +483,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "gpu_real_3k_qualification_report_sha256",
             "GOF GPU/real-3K qualification report",
         ),
+        (gof_formal, "report", "report_sha256", "GOF formal 3K result"),
     ]
     gof_evidence: dict[str, dict[str, Any]] = {}
     for container, path_key, sha_key, label in gof_specs:
@@ -502,11 +504,11 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(gof_recipe.get("source_provenance", {}).get("repository_commit") == gof.get("source", {}).get("commit"), "GOF recipe commit mismatch")
     require(gof_recipe.get("source_provenance", {}).get("repository_tree") == gof.get("source", {}).get("tree"), "GOF recipe tree mismatch")
     require(gof_recipe.get("build_compatibility", {}).get("training_source_modified") is False, "GOF training source was modified")
-    require(gof_recipe.get("execution", {}).get("training_authorized") is True, "GOF recipe training authorization missing")
+    require(gof_recipe.get("execution", {}).get("training_authorized") is False, "GOF completed recipe remains training-authorized")
     gof_qualification = gof_recipe.get("qualification", {})
     require(gof_qualification.get("recipe_static_freeze_passed") is True, "GOF static recipe freeze missing")
     require(gof_qualification.get("local_patch_replay_passed") is True, "GOF patch replay missing")
-    require(gof_qualification.get("three_k_training_allowed") is True, "GOF recipe 3K authorization missing")
+    require(gof_qualification.get("three_k_training_allowed") is False, "GOF completed recipe remains launchable")
     require(gof_qualification.get("full_scene_matrix_allowed") is False, "GOF recipe unlocks full matrix")
     require(gof_qualification.get("global_training_allowed") is False, "GOF recipe unlocks global training")
     for key in (
@@ -518,7 +520,11 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         "one_iteration_technical_smoke_completed",
     ):
         require(gof_qualification.get(key) is True, f"GOF qualification gate did not pass: {key}")
-    require(gof_qualification.get("formal_3k_completed") is False, "GOF formal 3K already marked complete")
+    require(gof_qualification.get("formal_3k_completed") is True, "GOF formal completion state missing")
+    require(
+        gof_qualification.get("formal_3k_result", {}).get("rerun_allowed") is False,
+        "GOF recipe formal rerun lock missing",
+    )
     gof_config = gof_evidence.get("config", {})
     require(
         gof_config.get("status") == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
@@ -528,6 +534,18 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(gof_config.get("raw_output", {}).get("physical_surface_claim") is False, "GOF adapter makes physical-surface claim")
     require(gof_config.get("training_identity", {}).get("training_patch_allowed") is False, "GOF training patch was allowed")
     require(gof_config.get("training_identity", {}).get("checkpoint_mutation_allowed") is False, "GOF checkpoint mutation was allowed")
+    require(
+        gof_config.get("formal_3k_result", {}).get("report_sha256") == gof_formal.get("report_sha256"),
+        "GOF adapter formal report SHA mismatch",
+    )
+    require(
+        gof_config.get("formal_3k_result", {}).get("checkpoint_sha256") == gof_formal.get("final_checkpoint_sha256"),
+        "GOF adapter final checkpoint SHA mismatch",
+    )
+    require(
+        gof_config.get("formal_3k_result", {}).get("packet_manifest_sha256") == gof_formal.get("packet_manifest_sha256"),
+        "GOF adapter packet manifest SHA mismatch",
+    )
     gof_static = gof_evidence.get("static_report", {})
     require(gof_static.get("schema") == "m3m_gcp_native_quarter_gof_static_validation_v1", "GOF static schema mismatch")
     require(gof_static.get("status") == "PASS" and gof_static.get("passed") is True, "GOF static validation failed")
@@ -578,6 +596,92 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         "GOF qualification unlock scope mismatch",
     )
 
+    gof_formal_report = gof_evidence.get("report", {})
+    require(gof_formal.get("status") == "COMPLETE_RANKED", "GOF formal result status mismatch")
+    require(gof_formal.get("rerun_allowed") is False, "GOF completed seed-0 run must not be repeated")
+    require(gof_formal.get("single_seed_only") is True, "GOF single-seed boundary missing")
+    require(gof_formal.get("statistical_significance_claim") is False, "GOF registry makes a significance claim")
+    require(
+        gof_formal_report.get("schema") == "m3m_native_quarter_gof_formal_3k_run_v1",
+        "GOF formal report schema mismatch",
+    )
+    require(
+        gof_formal_report.get("status") == "PASS" and gof_formal_report.get("passed") is True,
+        "GOF formal report did not pass",
+    )
+    require(
+        gof_formal_report.get("result_kind") == "formal_benchmark_result_not_preflight",
+        "GOF result is not formal",
+    )
+    require(gof_formal_report.get("protocol_id") == value.get("protocol_id"), "GOF formal protocol mismatch")
+    require(gof_formal_report.get("method_id") == "gof", "GOF formal method mismatch")
+    require(gof_formal_report.get("scene") == "gcp_3000_20260602", "GOF formal scene mismatch")
+    require(
+        gof_formal_report.get("seed") == 0 and gof_formal_report.get("iterations") == 30000,
+        "GOF formal recipe mismatch",
+    )
+    require(gof_formal_report.get("single_seed_only") is True, "GOF formal report single-seed boundary missing")
+    require(
+        gof_formal_report.get("statistical_significance_claim") is False,
+        "GOF formal report makes a significance claim",
+    )
+    gof_formal_input = gof_formal_report.get("input", {})
+    require(gof_formal_input.get("train_view_count") == 82, "GOF formal train-view count mismatch")
+    require(gof_formal_input.get("heldout_test_view_count") == 12, "GOF formal holdout count mismatch")
+    require(gof_formal_input.get("training_resolution_argument") == 1, "GOF formal resolution mismatch")
+    require(gof_formal_input.get("kernel_size") == 0.0, "GOF formal kernel-size mismatch")
+    require(
+        gof_formal_input.get("all_94_image_hashes_verified_before_launch") is True,
+        "GOF formal input hashes were not verified",
+    )
+    gof_formal_source = gof_formal_report.get("source", {})
+    require(
+        gof_formal_source.get("official_repository_commit") == gof.get("source", {}).get("commit"),
+        "GOF formal source commit mismatch",
+    )
+    require(
+        gof_formal_source.get("official_repository_tree") == gof.get("source", {}).get("tree"),
+        "GOF formal source tree mismatch",
+    )
+    require(gof_formal_source.get("official_training_source_modified") is False, "GOF formal training source was modified")
+    require(
+        gof_formal_source.get("official_training_source_status_porcelain_after") == "",
+        "GOF formal training source is dirty",
+    )
+    gof_formal_training = gof_formal_report.get("training", {})
+    require(gof_formal_training.get("resource_status") == "PASS", "GOF formal training resource probe failed")
+    require(
+        gof_formal_training.get("memory_events_delta", {}).get("oom") == 0
+        and gof_formal_training.get("memory_events_delta", {}).get("oom_kill") == 0,
+        "GOF formal training recorded an OOM",
+    )
+    require(
+        gof_formal_training.get("final_ply_sha256") == gof_formal.get("final_checkpoint_sha256"),
+        "GOF final checkpoint SHA mismatch",
+    )
+    gof_formal_packet = gof_formal_report.get("packet_export", {})
+    require(gof_formal_packet.get("status") == "PASS", "GOF formal packet export failed")
+    require(gof_formal_packet.get("manifest_sha256") == gof_formal.get("packet_manifest_sha256"), "GOF packet manifest SHA mismatch")
+    require(gof_formal_packet.get("packet_count") == 66, "GOF formal packet count mismatch")
+    require(gof_formal_packet.get("packet_recomputation_all_passed") is True, "GOF formal packet recomputation failed")
+    require(gof_formal_packet.get("variance_validation_fail_pixel_total") == 0, "GOF formal packet variance validation failed")
+    gof_formal_evaluation = gof_formal_report.get("evaluation", {})
+    require(gof_formal_evaluation.get("evaluator_commit") == gof_formal.get("evaluator_commit"), "GOF evaluator commit mismatch")
+    require(gof_formal_evaluation.get("status") == "COMPLETE_RANKED", "GOF formal evaluation is not complete-ranked")
+    require(gof_formal_evaluation.get("ranking_eligible") is True, "GOF formal result is not ranking eligible")
+    require(gof_formal_evaluation.get("physical_surface_claim") is False, "GOF formal evaluation makes a physical-surface claim")
+    require(gof_formal_evaluation.get("method_specific_sim3_fitted") is False, "GOF formal evaluation fitted method-specific Sim(3)")
+    require(
+        gof_formal_evaluation.get("point_counts")
+        == {"checkpoint_passed": 4, "checkpoint_total": 4, "control_passed": 5, "control_total": 5},
+        "GOF formal point coverage mismatch",
+    )
+    gof_checkpoint = gof_formal_evaluation.get("residual_statistics", {}).get("checkpoint", {})
+    require(gof_checkpoint.get("rmse_3d_m") == gof_formal.get("checkpoint_rmse_3d_m"), "GOF checkpoint RMSE-3D mismatch")
+    require(gof_checkpoint.get("rmse_h_m") == gof_formal.get("checkpoint_rmse_h_m"), "GOF checkpoint RMSE-H mismatch")
+    require(gof_checkpoint.get("rmse_z_m") == gof_formal.get("checkpoint_rmse_z_m"), "GOF checkpoint RMSE-Z mismatch")
+    require(gof_formal_report.get("final_gpu_compute_process_count") == 0, "GOF formal run left a GPU compute process")
+
     city = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require("redistribution_blocked" in str(city.get("source", {}).get("license_status", "")), "CityGS-X redistribution risk missing")
     metro = next((method for method in methods if method.get("method_id") == "metrogs"), {})
@@ -585,7 +689,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(prior_names == {"pointmap dense initialization", "MoGe-2"}, "MetroGS prior inventory incomplete")
     require(value.get("global_training_allowed") is False, "global training lock missing")
     require(
-        value.get("per_method_training_allowed_methods") == ["gof"],
+        value.get("per_method_training_allowed_methods") == [],
         "per-method training allowlist mismatch",
     )
     return {

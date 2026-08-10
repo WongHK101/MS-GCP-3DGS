@@ -91,6 +91,12 @@
     "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "50a68117052a47ecf9c5026b8999bc7ecf98196f0c577e607e78d540dec83706"
   },
   "qualification_report": "docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json",
-  "formal_3k_result": null,
-  "remaining_gate": "exactly one fresh GOF gcp_3000_20260602 seed-0/30K formal run; all other methods and the full scene matrix remain locked"
+  "formal_3k_result": {
+    "status": "COMPLETE_RANKED",
+    "report": "docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json",
+    "report_sha256": "04f72d495fba0c74cc2124246feea931ffcceaaba12005529b8ec2ad088eda8a",
+    "checkpoint_sha256": "c24c0ac4e35028e4984c3c03304e723b824dc22916213498bedc946629bce1b2",
+    "packet_manifest_sha256": "306d00a48af9485cb38885142a19801b3914844470e331c9f8ad4d5d142de688"
+  },
+  "remaining_gate": "none for qualification; the unique GOF 3K formal run is complete and re-locked, while reruns and the full scene matrix remain locked"
 }

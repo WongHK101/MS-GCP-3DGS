@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_gof_recipe_v1",
   "recipe_id": "m3m_gcp_native_quarter_gof_3k_30k_seed0_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "FROZEN_3K_TRAINING_AUTHORIZED",
+  "status": "FROZEN_3K_FORMAL_COMPLETE_RELOCKED",
   "method": {
     "method_id": "gof",
     "display_name": "Gaussian Opacity Fields",
@@ -123,8 +123,8 @@
     "source_tree_clean_before_and_after_required": true,
     "input_manifest_verification_required": true,
     "fresh_hardware_manifest_required": true,
-    "training_authorized": true,
-    "authorization_scope": "exactly one fresh GOF gcp_3000_20260602 seed-0 30000-iteration run; no resume, overwrite, rerun, other scene, or matrix expansion",
+    "training_authorized": false,
+    "authorization_scope": "the unique GOF gcp_3000_20260602 seed-0 30000-iteration run is complete; resume, overwrite, and rerun are forbidden",
     "resource_probe_required": true
   },
   "evaluation_adapter": {
@@ -149,7 +149,7 @@
   },
   "runtime": {
     "server": "AutoDL-901",
-    "status": "GPU_QUALIFICATION_PASS_SINGLE_3K_AUTHORIZED",
+    "status": "FORMAL_3K_COMPLETE_RANKED_RELOCKED",
     "target_environment": {
       "path": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gof/py310-torch2.7.1-cu128-v1",
       "python": "3.10.12",
@@ -209,11 +209,19 @@
     "frozen_3k_real_packet_camera_preflight_passed": true,
     "one_iteration_technical_smoke_completed": true,
     "one_iteration_smoke_is_formal_result": false,
-    "formal_3k_completed": false,
+    "formal_3k_completed": true,
     "qualification_evidence": "docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json",
-    "three_k_training_allowed": true,
+    "formal_3k_result": {
+      "status": "COMPLETE_RANKED",
+      "report": "docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json",
+      "report_sha256": "04f72d495fba0c74cc2124246feea931ffcceaaba12005529b8ec2ad088eda8a",
+      "final_checkpoint_sha256": "c24c0ac4e35028e4984c3c03304e723b824dc22916213498bedc946629bce1b2",
+      "packet_manifest_sha256": "306d00a48af9485cb38885142a19801b3914844470e331c9f8ad4d5d142de688",
+      "rerun_allowed": false
+    },
+    "three_k_training_allowed": false,
     "full_matrix_authorized_before_pass": false,
-    "unlock_rule": "all qualification gates passed; exactly one fresh GOF gcp_3000_20260602 seed-0/30K run is authorized, after which this method must be re-locked regardless of result quality",
+    "unlock_rule": "consumed by the completed unique GOF 3K seed-0/30K formal run; the method is re-locked and cannot be launched again",
     "full_scene_matrix_allowed": false,
     "global_training_allowed": false
   }

@@ -1,6 +1,6 @@
 # GS-GCP 原生 1/4 公平评测协议 v2
 
-状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（仅 GOF 一次 3K 方法级运行获授权）**
+状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（当前无方法级运行授权）**
 协议冻结日期：2026-08-09；执行状态更新：2026-08-10
 协议 ID：`m3m_gcp_native_quarter_geometry_v2`
 
@@ -183,7 +183,7 @@ GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成
 该结果只有一个 seed，可作为本 benchmark 的正式单次结果，但不得用于宣称方法间细小差异
 具有统计显著性。本次只是执行状态更新，没有修改 v2 的输入、算子、覆盖、Sim(3) 或排名规则。
 
-### 8.2 GOF 方法级资格状态
+### 8.2 GOF 方法级正式状态
 
 GOF 继续执行同一个 v2 协议，不产生新的协议版本。源码固定为官方提交
 `5245b20e5d11acd6d1ff5af4b890dc2bedd99693`，许可证与三个 vendored 源码树均已记录。3K 配方
@@ -199,23 +199,33 @@ rasterizer 和 checkpoint 均不得修改。
 
 目标 GPU 上的官方训练 rasterizer、simple-knn 与隔离评测 rasterizer 均已构建通过；真实
 loader 确认载入 82 个训练相机、0 个测试相机、1414×1025 图像和 61,302 个初始化点。单层、
-双层合成原始矩测试通过。1 次迭代技术 smoke 在 11.61 秒完成，峰值显存 2,873 MiB、无 OOM，
-但该模型不属于正式结果。随后 66/66 真实 packet 全部生成并逐包复算通过，方差验证失败像元
-为 0；公共评测器通过 4/4 checkpoints 与 5/5 controls，未拟合方法专属 Sim(3)。资格证据为
+双层合成原始矩测试通过。1 次迭代技术 smoke 与 66-camera packet 资格预检均通过，但二者不
+属于正式结果；资格证据为
 `docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json`。
 
-因此当前只授权一次新的 GOF 3K、seed 0、30K iterations 正式运行；禁止 resume、覆盖或完成后
-重跑。全局训练、其余方法和六场景矩阵仍锁定。资格阶段的 `COMPLETE_RANKED` 只证明管线在
-1-iteration 模型上端到端可执行，不作为 GOF benchmark 精度结果。本节只更新执行状态，没有
-修改 v2 的输入、公共算子、覆盖、Sim(3) 或排名语义。
+随后，唯一获准的 3K seed-0/30K 正式运行已完成：
+
+- 训练耗时 `5704.8391 s`，峰值显存 `50531 MiB`，未发生 OOM；最终 PLY 含
+  `2,731,847` 个顶点，SHA-256 为
+  `c24c0ac4e35028e4984c3c03304e723b824dc22916213498bedc946629bce1b2`；
+- 66 个正式 packet 全部通过身份与复算验证，方差验证失败像元为 0；公共评测覆盖 4/4
+  checkpoints 与 5/5 controls，未拟合方法专属 Sim(3)，场景状态为 `COMPLETE_RANKED`；
+- checkpoint RMSE 为 3D `0.0708386374 m`、水平 `0.0200620356 m`、高程
+  `0.0679384079 m`；正式报告为
+  `docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json`；
+- 运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
+  `full_scene_matrix_eligible=false`。其他方法与六场景矩阵仍保持锁定。
+
+GOF 原生 opacity level set/mesh 仍只属于诊断次轨，正式公共结果不作物理表面声明。该结果只有
+一个 seed，不得宣称方法间差异具有统计显著性。本节只更新执行状态，没有修改 v2 的输入、
+公共算子、覆盖、Sim(3) 或排名语义。
 
 ## 9. 解锁顺序
 
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
 冻结 3K 真实 packet-camera 预检及端到端评测全部通过后，才可单独解锁其 3K 资格实验。
 解锁某一方法不自动解锁其他方法或六场景矩阵。
-3DGS 和 2DGS 的 3K 正式运行均已完成并重锁；当前方法级训练 allowlist 仅含 GOF 的一次
-`gcp_3000_20260602/seed0/30000-iteration` 新运行。
+3DGS、2DGS 和 GOF 的 3K 正式运行均已完成并重锁；当前方法级训练 allowlist 为空。
 
 当前实现入口：
 
