@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_gof_recipe_v1",
   "recipe_id": "m3m_gcp_native_quarter_gof_3k_30k_seed0_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "FROZEN_STATIC_PREFLIGHT_GPU_PENDING",
+  "status": "FROZEN_3K_TRAINING_AUTHORIZED",
   "method": {
     "method_id": "gof",
     "display_name": "Gaussian Opacity Fields",
@@ -55,10 +55,14 @@
     "shared_initial_ply_relative_path": "sparse/0/points3D.ply",
     "shared_initial_ply_sha256": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d",
     "loader_preflight": {
-      "status": "PENDING_TARGET_GPU",
+      "status": "PASS",
       "expected_train_cameras_loaded": 82,
       "expected_test_cameras_loaded": 0,
       "expected_initial_points_loaded": 61302,
+      "train_cameras_loaded": 82,
+      "test_cameras_loaded": 0,
+      "initial_points_loaded": 61302,
+      "report_sha256": "fc319bc846138f03a4745585244a065d10df9b594873f0073a3ca63514910077",
       "training_started": false
     }
   },
@@ -119,8 +123,8 @@
     "source_tree_clean_before_and_after_required": true,
     "input_manifest_verification_required": true,
     "fresh_hardware_manifest_required": true,
-    "training_authorized": false,
-    "authorization_scope": "no formal GOF run is authorized until the target-GPU build, synthetic raw-moment, one-iteration technical smoke, 66-camera packet, and common-evaluator qualification gates all pass",
+    "training_authorized": true,
+    "authorization_scope": "exactly one fresh GOF gcp_3000_20260602 seed-0 30000-iteration run; no resume, overwrite, rerun, other scene, or matrix expansion",
     "resource_probe_required": true
   },
   "evaluation_adapter": {
@@ -145,7 +149,7 @@
   },
   "runtime": {
     "server": "AutoDL-901",
-    "status": "GPU_QUALIFICATION_PENDING",
+    "status": "GPU_QUALIFICATION_PASS_SINGLE_3K_AUTHORIZED",
     "target_environment": {
       "path": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gof/py310-torch2.7.1-cu128-v1",
       "python": "3.10.12",
@@ -154,7 +158,20 @@
       "cuda_compiler": "12.8",
       "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
       "driver": "580.82.09",
-      "gpu_capability": "12.0"
+      "gpu_capability": "12.0",
+      "runtime_dependencies_added_to_isolated_method_environment": {
+        "open3d": "0.18.0",
+        "GPUtil": "1.4.0",
+        "lpips": "0.1.4",
+        "trimesh": "4.4.9",
+        "einops": "0.8.0",
+        "opencv-python-headless": "4.10.0.84",
+        "matplotlib": "3.9.4",
+        "numpy": "1.26.4"
+      },
+      "official_training_rasterizer_extension_sha256": "2afa85023e60c910e4c4d39f99d1eb76673a77a8a525af54a6bfa27e85f21a9d",
+      "official_training_simple_knn_extension_sha256": "ecc09b743cd565b0120f40674f40a27071570e922dfbe3d20a88a8dd5267a767",
+      "evaluation_adapter_extension_sha256": "175a8469f5742bca56babce03439e0b2c6e20feece2eb249b58db1e7ac7ec1ec"
     }
   },
   "server_roots": {
@@ -180,22 +197,23 @@
     "source_identity_passed": true,
     "license_review_recorded": true,
     "recipe_static_freeze_passed": true,
-    "real_input_loader_preflight_passed": false,
+    "real_input_loader_preflight_passed": true,
     "local_patch_replay_passed": true,
     "gpu_official_training_extension_build_required": true,
-    "gpu_official_training_extension_build_passed": false,
+    "gpu_official_training_extension_build_passed": true,
     "gpu_evaluation_adapter_build_required": true,
-    "gpu_evaluation_adapter_build_passed": false,
+    "gpu_evaluation_adapter_build_passed": true,
     "synthetic_raw_moment_conformance_required": true,
-    "synthetic_raw_moment_conformance_passed": false,
+    "synthetic_raw_moment_conformance_passed": true,
     "frozen_3k_real_packet_camera_preflight_required": true,
-    "frozen_3k_real_packet_camera_preflight_passed": false,
-    "one_iteration_technical_smoke_completed": false,
+    "frozen_3k_real_packet_camera_preflight_passed": true,
+    "one_iteration_technical_smoke_completed": true,
     "one_iteration_smoke_is_formal_result": false,
     "formal_3k_completed": false,
-    "three_k_training_allowed": false,
+    "qualification_evidence": "docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json",
+    "three_k_training_allowed": true,
     "full_matrix_authorized_before_pass": false,
-    "unlock_rule": "all source, recipe, build, synthetic raw-moment, one-iteration, 66-camera packet, and common-evaluator gates must pass before exactly one GOF gcp_3000_20260602 seed-0/30K run may be authorized",
+    "unlock_rule": "all qualification gates passed; exactly one fresh GOF gcp_3000_20260602 seed-0/30K run is authorized, after which this method must be re-locked regardless of result quality",
     "full_scene_matrix_allowed": false,
     "global_training_allowed": false
   }

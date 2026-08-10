@@ -39,6 +39,28 @@ def test_completed_2dgs_exact_run_is_denied() -> None:
     assert any("forbids rerun" in error for error in result["errors"])
 
 
+def test_qualified_gof_exact_run_is_authorized() -> None:
+    result = check("gof")
+    assert result["passed"] is True
+    assert result["status"] == "AUTHORIZED"
+    assert result["errors"] == []
+
+
+def test_qualified_gof_existing_run_root_is_denied() -> None:
+    result = check_launch(
+        current_registry(),
+        REPO_ROOT,
+        method_id="gof",
+        scene="gcp_3000_20260602",
+        seed=0,
+        iterations=30000,
+        run_root="/root/autodl-tmp/runs/m3m-gcp-native-quarter/gof/gcp_3000_20260602/existing-run",
+        run_root_exists=True,
+    )
+    assert result["passed"] is False
+    assert any("already exists" in error for error in result["errors"])
+
+
 def test_qualified_2dgs_wrong_seed_is_denied() -> None:
     result = check_launch(
         current_registry(),

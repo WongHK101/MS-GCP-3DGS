@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_gof_renderer_adapter_v1",
   "adapter_id": "gof_raw_metric_depth_accumulators_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "STATIC_PATCH_PREFLIGHT_PASS_GPU_PENDING",
+  "status": "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
   "scope": "evaluation-only renderer copy; official training source, rasterizer, and trained checkpoint remain unmodified",
   "source": {
     "repository_commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
@@ -66,11 +66,11 @@
   "local_preflight": {
     "fresh_exact_source_patch_check": "PASS",
     "renderer_python_compile": "PASS",
-    "gpu_build": "PENDING",
-    "synthetic_raw_moment_conformance": "PENDING",
-    "one_iteration_technical_smoke": "PENDING_NOT_FORMAL_RESULT",
-    "real_3k_packet_camera_preflight": "PENDING",
-    "common_evaluator": "PENDING"
+    "gpu_build": "PASS",
+    "synthetic_raw_moment_conformance": "PASS",
+    "one_iteration_technical_smoke": "PASS_NOT_FORMAL_RESULT",
+    "real_3k_packet_camera_preflight": "PASS",
+    "common_evaluator": "COMPLETE_RANKED_QUALIFICATION_ONLY"
   },
   "target_gpu_evidence": {
     "server": "AutoDL-901",
@@ -79,13 +79,18 @@
     "compute_capability": "12.0",
     "torch": "2.7.1+cu128",
     "torch_cuda": "12.8",
-    "official_training_rasterizer_extension_sha256": null,
-    "official_training_simple_knn_extension_sha256": null,
-    "evaluation_adapter_extension_sha256": null,
-    "raw_moment_conformance_sha256": null,
-    "packet_manifest_sha256": null
+    "official_training_rasterizer_extension_sha256": "2afa85023e60c910e4c4d39f99d1eb76673a77a8a525af54a6bfa27e85f21a9d",
+    "official_training_simple_knn_extension_sha256": "ecc09b743cd565b0120f40674f40a27071570e922dfbe3d20a88a8dd5267a767",
+    "evaluation_adapter_extension_sha256": "175a8469f5742bca56babce03439e0b2c6e20feece2eb249b58db1e7ac7ec1ec",
+    "raw_moment_conformance_sha256": "490b0e89763d9c0cfda34ddbbef56156e33f715efc713abb5531e7410e1a8b08",
+    "packet_manifest_sha256": "f85eef59af23cbc706a317c49a9b04c28634a51e34026d4897ab3ad63b1c4588"
   },
-  "qualification_report": null,
+  "patched_linux_file_sha256": {
+    "gaussian_renderer/__init__.py": "e7bf9b76b8148f82e0278508e835023347d46121d9e4f6e68fe07378afb364b4",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h": "96cc1520b1ed7c3fcaecbd63fb683479442d8abfaa5e1430e2d871a667008382",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "50a68117052a47ecf9c5026b8999bc7ecf98196f0c577e607e78d540dec83706"
+  },
+  "qualification_report": "docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json",
   "formal_3k_result": null,
-  "remaining_gate": "target-GPU official/evaluation builds, synthetic raw-moment conformance, real-input loader, one-iteration technical smoke, 66-camera packet export, and common-evaluator qualification"
+  "remaining_gate": "exactly one fresh GOF gcp_3000_20260602 seed-0/30K formal run; all other methods and the full scene matrix remain locked"
 }

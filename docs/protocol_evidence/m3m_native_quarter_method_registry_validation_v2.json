@@ -18,5 +18,7 @@
   ],
   "passed": true,
   "schema": "m3m_gcp_native_quarter_method_registry_validation_v2",
-  "training_allowed_methods": []
+  "training_allowed_methods": [
+    "gof"
+  ]
 }

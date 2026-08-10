@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v2",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "candidate_pool_frozen_3dgs_and_2dgs_3k_complete_ranked_gof_static_pass_gpu_pending_other_methods_locked",
+  "status": "candidate_pool_frozen_3dgs_and_2dgs_3k_complete_ranked_gof_qualified_single_3k_authorized_other_methods_locked",
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
@@ -197,18 +197,20 @@
       },
       "input_class": "rgb_colmap_only",
       "external_priors": [],
-      "recipe_status": "FROZEN_STATIC_PREFLIGHT_GPU_PENDING",
+      "recipe_status": "FROZEN_3K_TRAINING_AUTHORIZED",
       "recipe": "configs/m3m_gcp_native_quarter_gof_3k_recipe_v1.json",
-      "recipe_sha256": "bccec8671fd0001c9e76b41f837f4851a7f34045e35a30b84aac97f237c8aaf0",
+      "recipe_sha256": "ff95dd341689f70560417b8f59fb03d2db5f921fd1df265a6d749f96c5370ef2",
       "common_adapter": {
-        "status": "STATIC_PATCH_PREFLIGHT_PASS_GPU_PENDING",
+        "status": "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
         "config": "configs/m3m_gcp_native_quarter_gof_renderer_adapter_v1.json",
-        "config_sha256": "aa3731ec849069e5e768dc5d6d29eaf9bc4532b4a6745c0a9717cb2a79f9dd0e",
+        "config_sha256": "4df294473082c594fa5fbb6e0b4ec464372ea11cf46eadcbe7fac2dd05b86388",
         "static_report": "docs/protocol_evidence/gof_native_quarter_static_validation_v1.json",
-        "static_report_sha256": "f6dac56dd2f445e6be4159c20b2f613d51068b37532ac6925e91b617e35e1f02"
+        "static_report_sha256": "f6dac56dd2f445e6be4159c20b2f613d51068b37532ac6925e91b617e35e1f02",
+        "gpu_real_3k_qualification_report": "docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json",
+        "gpu_real_3k_qualification_report_sha256": "09ec1ff42ab460d641fcc0f50a529b96376a1e52d9ac9e3f2795fc3c811e1cd4"
       },
-      "three_k_qualification_status": "STATIC_PREFLIGHT_PASS_GPU_PENDING",
-      "three_k_training_allowed": false,
+      "three_k_qualification_status": "QUALIFIED_3K_TRAINING_AUTHORIZED",
+      "three_k_training_allowed": true,
       "full_scene_matrix_eligible": false
     },
     {
@@ -312,6 +314,6 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": [],
+  "per_method_training_allowed_methods": ["gof"],
   "qualification_policy": "A method may unlock only its own 3K run after source, recipe, prior, raw-moment adapter, synthetic conformance, frozen-3K real packet-camera compatibility, and evaluator gates pass. Other methods and the six-scene matrix remain locked."
 }

@@ -1,6 +1,6 @@
 # GS-GCP 原生 1/4 公平评测协议 v2
 
-状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（当前无方法级运行授权）**
+状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（仅 GOF 一次 3K 方法级运行获授权）**
 协议冻结日期：2026-08-09；执行状态更新：2026-08-10
 协议 ID：`m3m_gcp_native_quarter_geometry_v2`
 
@@ -197,17 +197,25 @@ rasterizer 和 checkpoint 均不得修改。
 为中位/最大深度，不能替代公共 `M1/A`；GOF 原生 opacity level set 或网格仅是方法族诊断
 次轨，`physical_surface_claim=false`。
 
-当前只完成静态门禁，目标 GPU 构建、真实 82/0 相机 loader、合成原始矩、1 次迭代技术
-smoke、66 相机 packet 和公共评测器仍待验证。因此 GOF 正式 3K 训练仍锁定，方法 allowlist
-仍为空；静态通过本身不构成 benchmark 结果，也不授权六场景矩阵。本节只记录方法执行状态，
-没有修改 v2 的输入、公共算子、覆盖、Sim(3) 或排名语义。
+目标 GPU 上的官方训练 rasterizer、simple-knn 与隔离评测 rasterizer 均已构建通过；真实
+loader 确认载入 82 个训练相机、0 个测试相机、1414×1025 图像和 61,302 个初始化点。单层、
+双层合成原始矩测试通过。1 次迭代技术 smoke 在 11.61 秒完成，峰值显存 2,873 MiB、无 OOM，
+但该模型不属于正式结果。随后 66/66 真实 packet 全部生成并逐包复算通过，方差验证失败像元
+为 0；公共评测器通过 4/4 checkpoints 与 5/5 controls，未拟合方法专属 Sim(3)。资格证据为
+`docs/protocol_evidence/gof_native_quarter_gpu_real_3k_qualification_v1.json`。
+
+因此当前只授权一次新的 GOF 3K、seed 0、30K iterations 正式运行；禁止 resume、覆盖或完成后
+重跑。全局训练、其余方法和六场景矩阵仍锁定。资格阶段的 `COMPLETE_RANKED` 只证明管线在
+1-iteration 模型上端到端可执行，不作为 GOF benchmark 精度结果。本节只更新执行状态，没有
+修改 v2 的输入、公共算子、覆盖、Sim(3) 或排名语义。
 
 ## 9. 解锁顺序
 
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
 冻结 3K 真实 packet-camera 预检及端到端评测全部通过后，才可单独解锁其 3K 资格实验。
 解锁某一方法不自动解锁其他方法或六场景矩阵。
-3DGS 和 2DGS 的 3K 正式运行均已完成并重锁；当前方法级训练 allowlist 为空。
+3DGS 和 2DGS 的 3K 正式运行均已完成并重锁；当前方法级训练 allowlist 仅含 GOF 的一次
+`gcp_3000_20260602/seed0/30000-iteration` 新运行。
 
 当前实现入口：
 
