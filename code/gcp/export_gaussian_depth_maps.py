@@ -54,6 +54,32 @@ def git_tree_hash(path: Path) -> str:
         return ""
 
 
+def resolve_rasterizer_repo(train_repo: Path, requested: str = "") -> Path:
+    resolved_train = train_repo.resolve()
+    if requested:
+        candidate = Path(requested).expanduser()
+        if not candidate.is_absolute():
+            candidate = resolved_train / candidate
+        candidate = candidate.resolve()
+        if not candidate.is_relative_to(resolved_train):
+            raise ValueError(f"rasterizer repository must be inside train_repo: {candidate}")
+        if not candidate.is_dir():
+            raise FileNotFoundError(f"rasterizer repository not found: {candidate}")
+        return candidate
+
+    candidates = [
+        resolved_train / "submodules" / "diff-gaussian-rasterization",
+        resolved_train / "submodules" / "diff-surfel-rasterization",
+    ]
+    existing = [path for path in candidates if path.is_dir()]
+    if len(existing) != 1:
+        raise RuntimeError(
+            "could not infer one rasterizer repository; pass --rasterizer_repo explicitly: "
+            f"{[str(path) for path in existing]}"
+        )
+    return existing[0]
+
+
 def parse_train_repo(argv: Sequence[str]) -> Path:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--train_repo", required=True)
@@ -408,12 +434,14 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         ],
     )
 
-    renderer_sources = [
-        train_repo / "gaussian_renderer" / "__init__.py",
-        train_repo / "submodules" / "diff-gaussian-rasterization" / "diff_gaussian_rasterization" / "__init__.py",
-        train_repo / "submodules" / "diff-gaussian-rasterization" / "cuda_rasterizer" / "forward.cu",
-    ]
-    rasterizer_repo = train_repo / "submodules" / "diff-gaussian-rasterization"
+    rasterizer_repo = resolve_rasterizer_repo(train_repo, args.rasterizer_repo)
+    rasterizer_sources = sorted(rasterizer_repo.glob("*_rasterization/__init__.py"))
+    rasterizer_sources.extend(
+        path
+        for path in [rasterizer_repo / "cuda_rasterizer" / "forward.cu"]
+        if path.is_file()
+    )
+    renderer_sources = [train_repo / "gaussian_renderer" / "__init__.py", *rasterizer_sources]
     rasterizer_commit = git_commit(rasterizer_repo)
     rasterizer_tree_hash = git_tree_hash(rasterizer_repo)
     if not rasterizer_commit or not rasterizer_tree_hash:
@@ -493,8 +521,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                 "sha256": file_sha256(path) if path.exists() else "",
                 "exists": path.exists(),
             }
-            for path in renderer_sources
-            if "diff-gaussian-rasterization" in str(path)
+            for path in rasterizer_sources
         ],
         "image_list_csv": str(Path(args.image_list_csv).expanduser().resolve()) if args.image_list_csv else "",
         "image_name_column": args.image_name_column,
@@ -568,6 +595,11 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--adapter_conformance_report_sha256", default="")
     parser.add_argument("--renderer_adapter_patch", default="")
     parser.add_argument("--rasterizer_adapter_patch", default="")
+    parser.add_argument(
+        "--rasterizer_repo",
+        default="",
+        help="Rasterizer Git repository inside train_repo; inferred for official 3DGS or 2DGS layouts when omitted.",
+    )
     parser.add_argument("--quiet", action="store_true")
     return parser, model, pipeline
 

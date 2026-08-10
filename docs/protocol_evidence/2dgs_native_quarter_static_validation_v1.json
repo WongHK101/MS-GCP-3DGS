@@ -1,0 +1,38 @@
+{
+  "adapter_id": "2dgs_raw_metric_depth_accumulators_v1",
+  "diagnostic_m2_h_are_evaluation_only": true,
+  "errors": [],
+  "evaluation_copy_only": true,
+  "formal_training_authorized": false,
+  "method_id": "2dgs",
+  "passed": true,
+  "patches": [
+    {
+      "path": "patches/2dgs/native_quarter_raw_moments_renderer_335ad612_v1.patch",
+      "sha256": "9be94ca767445dc5df99f3c594b19c2aee5f0dc52fdc581e6969aa850c2069cd"
+    },
+    {
+      "path": "patches/2dgs/native_quarter_raw_moments_rasterizer_e0ed020_v1.patch",
+      "sha256": "fd26330feb332874d280628e47b845b39e8e2caf5897df20ceb1703ed54ac66f"
+    }
+  ],
+  "primary_common_planes_are_native_2dgs_outputs": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "remaining_gates": [
+    "target GPU official extension build",
+    "target GPU isolated evaluation adapter build",
+    "synthetic raw-moment conformance",
+    "frozen 3K real packet-camera evaluator preflight"
+  ],
+  "schema": "m3m_gcp_native_quarter_2dgs_static_validation_v1",
+  "source_identity": {
+    "rasterizer_commit": "e0ed0207b3e0669960cfad70852200a4a5847f61",
+    "rasterizer_tree": "0be3f326aaa8bf794913a96e1eba6b5b66a9b764",
+    "repository_commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
+    "repository_tree": "ad1da88f43447bde046712835db70e271816282e",
+    "simple_knn_commit": "f155ec04131cb579f53443a06879d37115f4612f",
+    "simple_knn_tree": "6c55d0d2c0941f1e6121bfa13b8c7ff690374d9c"
+  },
+  "status": "PASS",
+  "training_source_modified": false
+}

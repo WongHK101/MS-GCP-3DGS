@@ -1,0 +1,193 @@
+{
+  "schema": "m3m_gcp_native_quarter_2dgs_recipe_v1",
+  "recipe_id": "m3m_gcp_native_quarter_2dgs_3k_30k_seed0_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "FROZEN_3K_QUALIFICATION_PENDING",
+  "method": {
+    "method_id": "2dgs",
+    "display_name": "2D Gaussian Splatting",
+    "publication_title": "2D Gaussian Splatting for Geometrically Accurate Radiance Fields",
+    "official_repository": "https://github.com/hbb1/2d-gaussian-splatting"
+  },
+  "source_provenance": {
+    "repository_commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
+    "repository_tree": "ad1da88f43447bde046712835db70e271816282e",
+    "license_file": "LICENSE.md",
+    "license_git_blob": "c869e695fa63bfde6f887d63a24a2a71f03480ac",
+    "submodules": {
+      "diff-surfel-rasterization": {
+        "commit": "e0ed0207b3e0669960cfad70852200a4a5847f61",
+        "tree": "0be3f326aaa8bf794913a96e1eba6b5b66a9b764",
+        "third_party/glm": "5c46b9c07008ae65cb81ab79cd677ecc1934b903"
+      },
+      "simple-knn": {
+        "commit": "f155ec04131cb579f53443a06879d37115f4612f",
+        "tree": "6c55d0d2c0941f1e6121bfa13b8c7ff690374d9c"
+      }
+    }
+  },
+  "build_compatibility": {
+    "training_source_modified": false,
+    "training_rasterizer_patch": null,
+    "checkpoint_mutation_allowed": false,
+    "simple_knn_build_copy_patch": {
+      "path": "patches/2dgs/simple_knn_f155ec0_cuda12_cfloat_v1.patch",
+      "sha256": "604bae81a7396cf163c90ae88623f5c8ba0ed5a73f935961ded8bd6010cbb348",
+      "scope": "isolated simple-knn build copy only; adds cfloat include for CUDA 12.8 FLT_MAX compatibility"
+    }
+  },
+  "input_release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_input_manifest": "formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "formal_input_manifest_file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "pixel_domain": "colmap_4_0_4_image_undistorter_pinhole_max_1414",
+    "image_transform": "byte-preserving copy of COLMAP 4.0.4 image_undistorter JPEG output; no resize, crop, pad, EXIF transpose, or re-encode"
+  },
+  "qualification_scene": {
+    "scene_id": "gcp_3000_20260602",
+    "full_view_count": 94,
+    "train_view_count": 82,
+    "test_view_count": 12,
+    "training_input_root_role": "train",
+    "heldout_input_root_role": "test",
+    "loaded_width": 1414,
+    "loaded_height": 1025,
+    "camera_model": "PINHOLE",
+    "official_resolution_argument": 1,
+    "official_eval_argument": false,
+    "shared_initial_ply_relative_path": "sparse/0/points3D.ply",
+    "shared_initial_ply_sha256": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d",
+    "loader_preflight": {
+      "status": "PASS",
+      "train_cameras_loaded": 82,
+      "test_cameras_loaded": 0,
+      "initial_points_loaded": 61302,
+      "training_started": false
+    }
+  },
+  "training": {
+    "iterations": 30000,
+    "seed": 0,
+    "seed_implementation": "utils.general_utils.safe_state",
+    "sh_degree": 3,
+    "white_background": false,
+    "data_device": "cuda",
+    "eval_holdout": false,
+    "resolution": 1,
+    "convert_shs_python": false,
+    "compute_cov3d_python": false,
+    "depth_ratio": 0.0,
+    "depth_ratio_rationale": "official README recommendation for unbounded/large scenes; selects expected depth for normal regularization",
+    "lambda_dist": 0.0,
+    "lambda_normal": 0.05,
+    "opacity_cull": 0.05,
+    "position_lr_init": 0.00016,
+    "position_lr_final": 0.0000016,
+    "position_lr_delay_mult": 0.01,
+    "position_lr_max_steps": 30000,
+    "feature_lr": 0.0025,
+    "opacity_lr": 0.05,
+    "scaling_lr": 0.005,
+    "rotation_lr": 0.001,
+    "percent_dense": 0.01,
+    "lambda_dssim": 0.2,
+    "densification_interval": 100,
+    "opacity_reset_interval": 3000,
+    "densify_from_iter": 500,
+    "densify_until_iter": 15000,
+    "densify_grad_threshold": 0.0002,
+    "random_background": false,
+    "test_iterations": [7000, 30000],
+    "save_iterations": [7000, 30000],
+    "checkpoint_iterations": [],
+    "start_checkpoint": null,
+    "formal_checkpoint": "point_cloud/iteration_30000/point_cloud.ply",
+    "gcp_annotations_visible_to_training": false,
+    "split_role_labels_visible_to_optimizer": false,
+    "survey_coordinates_visible_to_training": false
+  },
+  "execution": {
+    "command_template": "python train.py -s <native_quarter_release>/formal_inputs/gcp_3000_20260602/train -m <new_run_root> --resolution 1 --iterations 30000 --depth_ratio 0 --test_iterations 7000 30000 --save_iterations 7000 30000 --quiet",
+    "resume_allowed": false,
+    "preexisting_checkpoint_allowed": false,
+    "source_tree_clean_before_and_after_required": true,
+    "input_manifest_verification_required": true,
+    "fresh_hardware_manifest_required": true,
+    "training_authorized": false
+  },
+  "evaluation_adapter": {
+    "scope": "evaluation-only patched copy; official training source, rasterizer, and checkpoint remain unchanged",
+    "config": "configs/m3m_gcp_native_quarter_2dgs_renderer_adapter_v1.json",
+    "common_primary_native_planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum"
+    ],
+    "diagnostic_planes_added_only_in_evaluation_copy": [
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "cpu_derived_packet_fields": [
+      "alpha_normalized_expected_camera_z",
+      "alpha_normalized_expected_inverse_camera_z",
+      "harmonic_camera_z",
+      "camera_z_variance",
+      "metric_depth_valid_mask"
+    ]
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "status": "SOURCE_AND_REAL_INPUT_LOADER_PREFLIGHT_PASS_GPU_BUILD_PENDING",
+    "target_environment": {
+      "path": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/2dgs/py310-torch2.7.1-cu128-v1",
+      "python": "3.10.12",
+      "pytorch": "2.7.1+cu128",
+      "torch_cuda": "12.8",
+      "cuda_compiler": "12.8",
+      "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "driver": "580.82.09",
+      "gpu_capability": "12.0",
+      "runtime_dependencies_added_to_isolated_method_environment": {
+        "numpy": "1.26.4",
+        "opencv-python-headless": "4.10.0.84",
+        "matplotlib": "3.9.4"
+      }
+    }
+  },
+  "server_roots": {
+    "official_training_code_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/2dgs/335ad612f2e783a4e57b9cbc4d1e167bd599fc98/official-train",
+    "evaluation_adapter_code_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/2dgs/335ad612f2e783a4e57b9cbc4d1e167bd599fc98/eval-adapter-v1",
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/2dgs/py310-torch2.7.1-cu128-v1",
+    "input_release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "build_root_template": "/root/autodl-tmp/build/m3m-gcp-native-quarter/2dgs/335ad612f2e783a4e57b9cbc4d1e167bd599fc98/<run_id>",
+    "run_root_template": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/2dgs/<scene>/<run_id>"
+  },
+  "isolation": {
+    "source_dataset_access": "read_only",
+    "training_input_access": "read_only",
+    "training_source_runtime_writes": "forbidden",
+    "evaluation_adapter_is_separate_copy": true,
+    "overwrite_policy": "fail_if_exists",
+    "method_specific_environment": true,
+    "method_and_run_specific_build_cache": true,
+    "method_and_scene_specific_run_root": true
+  },
+  "qualification": {
+    "scope": "2DGS native-quarter 3K only",
+    "source_identity_passed": true,
+    "real_input_loader_preflight_passed": true,
+    "local_patch_replay_passed": true,
+    "gpu_official_training_extension_build_required": true,
+    "gpu_official_training_extension_build_passed": false,
+    "gpu_evaluation_adapter_build_required": true,
+    "gpu_evaluation_adapter_build_passed": false,
+    "synthetic_raw_moment_conformance_required": true,
+    "synthetic_raw_moment_conformance_passed": false,
+    "frozen_3k_real_packet_camera_preflight_required": true,
+    "frozen_3k_real_packet_camera_preflight_passed": false,
+    "three_k_training_allowed": false,
+    "full_matrix_authorized_before_pass": false,
+    "unlock_rule": "only 2DGS 3K may unlock after all method-specific build, raw-moment, real-camera packet, evaluator, registry, and launch-gate checks pass"
+  }
+}

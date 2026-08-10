@@ -153,6 +153,19 @@ CPU 侧派生。当前状态为：
 训练授权。实时资格和结果状态只以
 `configs/m3m_gcp_native_quarter_method_registry_v2.json` 为准。
 
+### 8.1 2DGS 方法级资格状态
+
+2DGS 仍执行同一个 v2 协议，并未引入新的协议版本。源码固定为官方提交
+`335ad612f2e783a4e57b9cbc4d1e167bd599fc98`；3K 配方固定为 seed 0、30K iterations、
+`--resolution 1`、`--depth_ratio 0`，直接读取同一冻结 `train` 根的 82 张图像。官方训练源码、
+训练 rasterizer 和 checkpoint 均不修改。
+
+公共主轨所需的 `A/M1` 已是官方 2DGS rasterizer 的原生输出；独立 evaluation-only 副本只
+补齐 packet v2 诊断字段所需的 `M2/H`。固定提交、配方和补丁已通过本地重放与静态校验，
+真实输入 loader 已确认载入 82 个训练相机、0 个测试相机和冻结的 61,302 个初始化点。目标
+GPU 构建、合成原始矩一致性和冻结 3K 真实 packet-camera/evaluator 预检尚未完成，因此
+`three_k_training_allowed=false`，正式训练仍被门禁拒绝。
+
 ## 9. 解锁顺序
 
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
@@ -167,7 +180,9 @@ CPU 侧派生。当前状态为：
 - 公共评测：`code/gcp/evaluate_m3m_native_quarter_geometry.py`
 - 3DGS 配方验证：`code/gcp/validate_m3m_native_quarter_3dgs_recipe.py`
 - 3DGS renderer 补丁静态验证：`code/gcp/validate_3dgs_native_quarter_renderer_adapter.py`
+- 2DGS 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_2dgs_static.py`
 - 九方法登记验证：`code/gcp/validate_m3m_native_quarter_method_registry.py`
+- 正式训练 fail-closed 门禁：`code/gcp/check_m3m_native_quarter_formal_launch.py`
 
 任何实现若回退到整数像素、窗口中值、逐坐标中位数、逐方法 Sim(3)、相邻斜视 bin 即
 通过，或在 checkpoint 不完整时发布场景排名，均不属于 v2 协议。

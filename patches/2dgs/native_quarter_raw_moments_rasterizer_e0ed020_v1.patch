@@ -1,0 +1,57 @@
+diff --git a/cuda_rasterizer/auxiliary.h b/cuda_rasterizer/auxiliary.h
+index 9dff1c9..c97422a 100644
+--- a/cuda_rasterizer/auxiliary.h
++++ b/cuda_rasterizer/auxiliary.h
+@@ -25,6 +25,8 @@
+ #define NORMAL_OFFSET 2 
+ #define MIDDEPTH_OFFSET 5
+ #define DISTORTION_OFFSET 6
++#define DEPTH_SECOND_MOMENT_OFFSET 7
++#define INVERSE_DEPTH_MOMENT_OFFSET 8
+ // #define MEDIAN_WEIGHT_OFFSET 7
+ 
+ // distortion helper macros
+diff --git a/cuda_rasterizer/forward.cu b/cuda_rasterizer/forward.cu
+index 6ba9e33..a82ad2a 100644
+--- a/cuda_rasterizer/forward.cu
++++ b/cuda_rasterizer/forward.cu
+@@ -309,6 +309,8 @@ renderCUDA(
+ 	// render axutility ouput
+ 	float N[3] = {0};
+ 	float D = { 0 };
++	float D2 = { 0 };
++	float Hinv = { 0 };
+ 	float M1 = {0};
+ 	float M2 = {0};
+ 	float distortion = {0};
+@@ -401,6 +403,8 @@ renderCUDA(
+ 			float m = far_n / (far_n - near_n) * (1 - near_n / depth);
+ 			distortion += (m * m * A + M2 - 2 * m * M1) * w;
+ 			D  += depth * w;
++			D2 += depth * depth * w;
++			Hinv += w / depth;
+ 			M1 += m * w;
+ 			M2 += m * m * w;
+ 
+@@ -442,6 +446,8 @@ renderCUDA(
+ 		for (int ch=0; ch<3; ch++) out_others[pix_id + (NORMAL_OFFSET+ch) * H * W] = N[ch];
+ 		out_others[pix_id + MIDDEPTH_OFFSET * H * W] = median_depth;
+ 		out_others[pix_id + DISTORTION_OFFSET * H * W] = distortion;
++		out_others[pix_id + DEPTH_SECOND_MOMENT_OFFSET * H * W] = D2;
++		out_others[pix_id + INVERSE_DEPTH_MOMENT_OFFSET * H * W] = Hinv;
+ 		// out_others[pix_id + MEDIAN_WEIGHT_OFFSET * H * W] = median_weight;
+ #endif
+ 	}
+diff --git a/rasterize_points.cu b/rasterize_points.cu
+index efc6491..90dacf0 100644
+--- a/rasterize_points.cu
++++ b/rasterize_points.cu
+@@ -83,7 +83,7 @@ RasterizeGaussiansCUDA(
+   auto float_opts = means3D.options().dtype(torch::kFloat32);
+ 
+   torch::Tensor out_color = torch::full({NUM_CHANNELS, H, W}, 0.0, float_opts);
+-  torch::Tensor out_others = torch::full({3+3+1, H, W}, 0.0, float_opts);
++  torch::Tensor out_others = torch::full({3+3+1+2, H, W}, 0.0, float_opts);
+   torch::Tensor radii = torch::full({P}, 0, means3D.options().dtype(torch::kInt32));
+   
+   torch::Device device(torch::kCUDA);

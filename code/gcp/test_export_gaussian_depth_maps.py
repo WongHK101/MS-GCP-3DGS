@@ -13,6 +13,7 @@ from export_gaussian_depth_maps import (
     derive_packet_from_raw_accumulators,
     parse_train_repo,
     read_allowlist,
+    resolve_rasterizer_repo,
 )
 
 
@@ -89,6 +90,33 @@ def test_raw_renderer_accumulators_are_derived_on_cpu() -> None:
     assert bool(packet["metric_depth_valid_mask"][0, 0])
 
 
+def test_rasterizer_repository_infers_3dgs_or_2dgs_layout() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        surfel = root / "submodules" / "diff-surfel-rasterization"
+        surfel.mkdir(parents=True)
+        assert resolve_rasterizer_repo(root) == surfel.resolve()
+        gaussian = root / "submodules" / "diff-gaussian-rasterization"
+        gaussian.mkdir()
+        try:
+            resolve_rasterizer_repo(root)
+        except RuntimeError as exc:
+            assert "pass --rasterizer_repo explicitly" in str(exc)
+        else:
+            raise AssertionError("ambiguous rasterizer layout did not fail closed")
+        assert resolve_rasterizer_repo(root, "submodules/diff-surfel-rasterization") == surfel.resolve()
+
+
+def test_rasterizer_repository_cannot_escape_train_repo() -> None:
+    with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside:
+        try:
+            resolve_rasterizer_repo(Path(tmp), outside)
+        except ValueError as exc:
+            assert "must be inside train_repo" in str(exc)
+        else:
+            raise AssertionError("out-of-tree rasterizer repository was accepted")
+
+
 def main() -> int:
     tests = [
         test_extensionless_runtime_names_resolve_to_release_names,
@@ -96,6 +124,8 @@ def main() -> int:
         test_train_repository_must_be_explicit,
         test_explicit_train_repository_is_resolved,
         test_raw_renderer_accumulators_are_derived_on_cpu,
+        test_rasterizer_repository_infers_3dgs_or_2dgs_layout,
+        test_rasterizer_repository_cannot_escape_train_repo,
     ]
     for test in tests:
         test()

@@ -51,3 +51,13 @@ def test_completed_3dgs_seed_zero_run_cannot_be_reopened_silently() -> None:
     result = validate_registry(mutated, REPO_ROOT)
     assert not result["passed"]
     assert any("must not remain launchable" in error for error in result["errors"])
+
+
+def test_2dgs_is_frozen_for_qualification_but_not_formal_training() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    two_dgs = next(method for method in value["methods"] if method["method_id"] == "2dgs")
+    assert two_dgs["recipe_status"] == "FROZEN_3K_QUALIFICATION_PENDING"
+    assert two_dgs["common_adapter"]["status"] == "LOCAL_PATCH_REPLAY_PASS_GPU_BUILD_PENDING"
+    assert two_dgs["three_k_qualification_status"] == "QUALIFICATION_IN_PROGRESS"
+    assert two_dgs["three_k_training_allowed"] is False
+    assert "2dgs" not in value["per_method_training_allowed_methods"]

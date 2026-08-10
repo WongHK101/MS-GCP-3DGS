@@ -41,7 +41,13 @@
     "docs/protocol_evidence/3dgs_native_quarter_adapter_linux_identity_proof_v1.json",
     "docs/protocol_evidence/3dgs_native_quarter_formal_3k_seed0_30k_v1.json",
     "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch",
-    "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch"
+    "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch",
+    "configs/m3m_gcp_native_quarter_2dgs_3k_recipe_v1.json",
+    "configs/m3m_gcp_native_quarter_2dgs_renderer_adapter_v1.json",
+    "docs/protocol_evidence/2dgs_native_quarter_static_validation_v1.json",
+    "patches/2dgs/native_quarter_raw_moments_renderer_335ad612_v1.patch",
+    "patches/2dgs/native_quarter_raw_moments_rasterizer_e0ed020_v1.patch",
+    "patches/2dgs/simple_knn_f155ec0_cuda12_cfloat_v1.patch"
   ],
   "component_suffix_rule": "A v1 suffix on the frozen data release, recipe, adapter, or evidence is that component's own version and does not select protocol v1. Only protocol_id selects protocol semantics."
 }

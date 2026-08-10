@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v2",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "candidate_pool_frozen_3dgs_3k_complete_ranked_other_methods_locked",
+  "status": "candidate_pool_frozen_3dgs_3k_complete_ranked_2dgs_qualification_in_progress_other_methods_locked",
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
@@ -112,9 +112,17 @@
       },
       "input_class": "rgb_colmap_only",
       "external_priors": [],
-      "recipe_status": "pending_native_quarter_recipe_freeze",
-      "common_adapter": {"status": "PENDING"},
-      "three_k_qualification_status": "NOT_RUN",
+      "recipe_status": "FROZEN_3K_QUALIFICATION_PENDING",
+      "recipe": "configs/m3m_gcp_native_quarter_2dgs_3k_recipe_v1.json",
+      "recipe_sha256": "123768073f20b52f0ae6408688f221d739d564e77b7e7aafdbc44ad77fb3d9d9",
+      "common_adapter": {
+        "status": "LOCAL_PATCH_REPLAY_PASS_GPU_BUILD_PENDING",
+        "config": "configs/m3m_gcp_native_quarter_2dgs_renderer_adapter_v1.json",
+        "config_sha256": "54f79e00793338bc11e97c7baf5a8b28397fbc9c658f7a1c3e2622809d561445",
+        "static_report": "docs/protocol_evidence/2dgs_native_quarter_static_validation_v1.json",
+        "static_report_sha256": "49e69ad494ea4ad4248d8ed03e17377a976c3f1bbfb41610d3c9a879d360c566"
+      },
+      "three_k_qualification_status": "QUALIFICATION_IN_PROGRESS",
       "three_k_training_allowed": false,
       "full_scene_matrix_eligible": false
     },
