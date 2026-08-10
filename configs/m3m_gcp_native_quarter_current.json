@@ -1,0 +1,47 @@
+{
+  "schema": "m3m_gcp_native_quarter_current_pointer_v1",
+  "status": "ACTIVE",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "protocol_document": "docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md",
+  "protocol_release_pin": "configs/m3m_gcp_native_quarter_protocol_release_v2.json",
+  "method_registry": "configs/m3m_gcp_native_quarter_method_registry_v2.json",
+  "source_data_release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
+  },
+  "state_ownership": {
+    "protocol_semantics": "protocol_document and protocol_release_pin",
+    "training_authorization_and_results": "method_registry"
+  },
+  "superseded_protocol_ids": [
+    "m3m_gcp_native_quarter_geometry_v1"
+  ],
+  "removed_repository_assets": [
+    "docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V1.md",
+    "configs/m3m_gcp_native_quarter_protocol_release_v1.json",
+    "configs/m3m_gcp_native_quarter_method_registry_v1.json",
+    "docs/protocol_evidence/m3m_native_quarter_protocol_release_validation_v1.json",
+    "docs/protocol_evidence/native_quarter_evaluator_end_to_end_cpu_smoke_v1.json",
+    "docs/protocol_evidence/3dgs_native_quarter_adapter_cpu_preflight_v1.json"
+  ],
+  "tombstoned_legacy_entrypoints": [
+    "docs/GS_GCP_FAIR_EXPERIMENT_PROTOCOL.md",
+    "docs/GS_GCP_STAGE0_FREEZE.md",
+    "docs/GS_GCP_STAGE0_5_COMMON_MEASUREMENT_PROTOCOL.md",
+    "docs/GS_GCP_ORIGINAL_3DGS_PATH_BACKED_CAMERA_COMPATIBILITY.md",
+    "docs/GCP_V1_3_COMPLETE_EXPERIMENT_PLAN.md"
+  ],
+  "current_repository_components_with_independent_v1_suffixes": [
+    "configs/m3m_gcp_native_quarter_3dgs_3k_recipe_v1.json",
+    "configs/m3m_gcp_native_quarter_3dgs_renderer_adapter_v1.json",
+    "docs/protocol_evidence/m3m_native_quarter_3dgs_3k_recipe_validation_v1.json",
+    "docs/protocol_evidence/3dgs_native_quarter_renderer_adapter_static_validation_v1.json",
+    "docs/protocol_evidence/3dgs_native_quarter_adapter_gpu_preflight_v1.json",
+    "docs/protocol_evidence/3dgs_native_quarter_real_3k_packet_camera_preflight_v1.json",
+    "docs/protocol_evidence/3dgs_native_quarter_adapter_linux_identity_proof_v1.json",
+    "docs/protocol_evidence/3dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+    "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch",
+    "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch"
+  ],
+  "component_suffix_rule": "A v1 suffix on the frozen data release, recipe, adapter, or evidence is that component's own version and does not select protocol v1. Only protocol_id selects protocol semantics."
+}

@@ -1,52 +1,7 @@
-# Original 3DGS Path-Backed Camera Compatibility
+# SUPERSEDED_DO_NOT_USE — path-backed camera 路线已废止
 
-## Accepted blocker diagnosis
+本路径仅保留为旧链接的阻断标记。旧 path-backed/R4 相机兼容性结论和产物不得用于
+原生 1/4 实验。
 
-The 50K Stage 0.5 preflight exposed overlapping eager camera materialization:
-all-image PIL/source-image backing remained live while quarter-resolution
-`Camera` tensors were materialized sequentially. Host/cgroup memory therefore
-continued to grow before the temporary source-image backing could be released.
-The evidence does not establish that CUDA RGB tensors alone exhausted host RAM.
-
-## Candidate order
-
-Candidate A is `path_backed_cuda_resident`: COLMAP camera records retain paths
-and metadata, each JPEG is decoded once during camera-list construction and
-closed immediately, and the resulting quarter-resolution tensor remains on
-CUDA. Candidate B is the same path-backed implementation with the official
-`--data_device cpu`; it is eligible only if Candidate A passes every host,
-lifecycle, camera, ray, and protocol gate and fails only the frozen GPU-memory
-gate. A host or non-GPU failure stops the audit.
-
-Neither candidate changes the image set, ordering, resolution, PIL resize,
-camera matrices, training loop, viewpoint RNG, loss, densification, or formal
-geometry protocol. Per-iteration JPEG decoding, caches, workers, prefetch,
-pinned-memory pipelines, and resource-gate changes are outside this contract.
-
-## Evidence sequence
-
-Before large-scene preflight, the implementation freezes the cross-scene parity
-sample manifest, compares all 3K train/test images and the preregistered samples,
-and performs a path-backed identity/dimension/FD-closure audit over all 6,187
-images. Large-scene selection is Candidate A 100K, Candidate A 50K, then
-Candidate B only under the GPU-only rule. The selected contract must pass the
-frozen 3K synthetic, eager-reference, candidate, and external-probe equivalence
-checks before the 30K Stage 0.5 qualification may start.
-
-## Host allocator policy
-
-The v1 contract remains the immutable contract associated with the accepted
-50K host-memory blocker. The resumed v2 contract adds only the process
-environment `MALLOC_TRIM_THRESHOLD_=0`, identified as
-`glibc_malloc_trim_threshold_zero_v1`. Diagnostics show no surviving CPU
-tensor storage while anonymous RSS grows under the default allocator; the
-frozen environment policy releases those already-dead temporary decode/resize
-pages without adding `malloc_trim`, garbage collection, CUDA synchronization,
-workers, caches, or training-loop code. Camera tensors, image order, RNG, and
-all formal protocols remain unchanged. The runtime preflight hard-fails if the
-environment value is absent or different.
-
-Resource blocks are infrastructure feasibility outcomes, not geometry failures.
-The canonical host classification is `HOST_RAM_BLOCKED`, with
-`failure_stage=camera_load` and
-`failure_reason=host_cgroup_peak_exceeded_frozen_gate`.
+唯一正式入口：`configs/m3m_gcp_native_quarter_current.json`。
+原文只可从 Git 历史追溯。

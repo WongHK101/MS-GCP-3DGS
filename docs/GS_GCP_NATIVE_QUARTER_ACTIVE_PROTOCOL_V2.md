@@ -1,11 +1,11 @@
 # GS-GCP 原生 1/4 公平评测协议 v2
 
-状态：**ACTIVE（评测实现合同）**；**TRAINING HOLD（训练未放行）**
-日期：2026-08-09
+状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（仅允许方法级资格放行）**
+协议冻结日期：2026-08-09；执行状态更新：2026-08-10
 协议 ID：`m3m_gcp_native_quarter_geometry_v2`
 
-本文件替代 v1 的执行合同。v1、旧 clean-R4/Pillow 路线及其 checkpoint、结果和资格结论
-仅保留为历史证据，不能被新实验继承。
+本文件替代 v1 的执行合同。v1 的工作树资产已清除，只能从 Git 历史追溯；旧
+clean-R4/Pillow 路线及其 checkpoint、结果和资格结论同样不能被新实验继承。
 
 ## 1. 权威输入
 
@@ -139,11 +139,19 @@ seed 0；训练过程看不到 GCP、测量坐标或 holdout 角色标签。
 CPU 侧派生。当前状态为：
 
 - 补丁对冻结 3DGS/rasterizer 提交可干净应用，静态校验通过；
-- 公共算子 CPU 合成预检通过；
-- 目标 GPU/CUDA 环境的扩展构建尚未运行；
-- 冻结 3K 真实模型与相机的 packet/export/evaluator 预检尚未运行。
+- 公共算子 CPU 合成预检、目标 GPU/CUDA 构建及冻结 3K 真实 packet-camera 预检均通过；
+- seed 0、30K iterations 的 3K 正式训练和公共评测已完成，场景状态为
+  `COMPLETE_RANKED`；正式报告为
+  `docs/protocol_evidence/3dgs_native_quarter_formal_3k_seed0_30k_v1.json`；
+- 正式 checkpoint RMSE 为 3D `0.0417996071 m`、水平 `0.0276110829 m`、高程
+  `0.0313820849 m`；checkpoint PLY SHA-256 为
+  `461b48e97f31ee6588b5ba3de52d29ed07b4709134f7a155c95bc7c38dba91ff`；
+- 该正式运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
+  `full_scene_matrix_eligible=false`。
 
-因此 3DGS 配方已冻结，但 `three_k_training_allowed=false`；这不是训练授权。
+因此这里的全局 `TRAINING HOLD` 并不否定已完成的 3DGS 3K 结果；它表示当前没有任何新的
+训练授权。实时资格和结果状态只以
+`configs/m3m_gcp_native_quarter_method_registry_v2.json` 为准。
 
 ## 9. 解锁顺序
 

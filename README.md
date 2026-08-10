@@ -27,19 +27,25 @@ stopping, or hyperparameter selection.
 
 ## Formal Experiment Policy
 
-The current primary protocol uses release v1.3.0 and a shared benchmark camera
-track. Every method must use the same images, COLMAP cameras, initial sparse
-model, train/evaluation split, and loaded image dimensions. The common
-resolution follows the original 3DGS `--resolution -1` rule: images wider than
-1600 pixels are downscaled to width 1600 with aspect ratio preserved; smaller
-images are not enlarged.
+The sole active entry point is
+[`configs/m3m_gcp_native_quarter_current.json`](configs/m3m_gcp_native_quarter_current.json).
+It currently selects protocol `m3m_gcp_native_quarter_geometry_v2`, the frozen
+COLMAP-native-quarter data release, the v2 protocol release pin, and the v2
+method registry.
 
-Each method must first pass the complete 3K pipeline before any six-scene
-training is allowed. See
-[`docs/GS_GCP_FAIR_EXPERIMENT_PROTOCOL.md`](docs/GS_GCP_FAIR_EXPERIMENT_PROTOCOL.md).
-Stage 0 contracts, current hard blockers, and the non-invasive resource probe
-are documented in
-[`docs/GS_GCP_STAGE0_FREEZE.md`](docs/GS_GCP_STAGE0_FREEZE.md).
+Every method must use the exact same COLMAP 4.0.4 undistorter images, PINHOLE
+cameras, initial sparse model, and train/holdout split from
+`M3M-GCP-colmap-native-quarter-v1`. No method-specific R4 resize or the former
+1600-pixel loading rule is part of the active benchmark. The complete human
+contract is
+[`docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md`](docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md).
+
+Training authorization and completed-result state are owned only by
+[`configs/m3m_gcp_native_quarter_method_registry_v2.json`](configs/m3m_gcp_native_quarter_method_registry_v2.json).
+At this revision, original 3DGS has one completed and re-locked 3K formal run;
+all other methods and the six-scene matrix remain locked. Older clean-R4 and
+native-quarter-v1 execution assets are provenance only and cannot authorize or
+supply a new result.
 
 ## Repository Layout
 
