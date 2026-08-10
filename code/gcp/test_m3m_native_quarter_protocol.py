@@ -52,6 +52,30 @@ def test_geometric_median_rotation_equivariance() -> None:
     )
 
 
+def test_geometric_median_near_degenerate_group_reaches_frozen_tolerance() -> None:
+    # Real frozen-3K packet-camera regression: this near-degenerate triangle
+    # needs 761 unmodified Weiszfeld steps to meet the absolute 1e-10 tolerance.
+    points = np.asarray(
+        [
+            [-12.46924929418725, -5.001013263495224, -40.12934294395702],
+            [-12.602891770099252, -4.943036121464891, -40.07308061439844],
+            [-12.611029814192284, -4.882359460456224, -40.066931284830275],
+        ],
+        dtype=np.float64,
+    )
+    try:
+        geometric_median(points, max_iterations=512)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("512 iterations unexpectedly met the frozen tolerance")
+
+    default_result = geometric_median(points)
+    long_budget_result = geometric_median(points, max_iterations=8192)
+    assert np.array_equal(default_result, long_budget_result)
+    assert np.linalg.norm(default_result - points[1]) < 1.0e-7
+
+
 def test_coverage_gate_uses_fraction_and_view_classes() -> None:
     passed = coverage_gate(
         10,
