@@ -1,10 +1,35 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v2",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "candidate_pool_frozen_3dgs_2dgs_and_gof_3k_complete_ranked_other_methods_locked",
+  "status": "preliminary_evidence_closed_three_families_one_representative_each_other_methods_locked",
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
+  },
+  "preliminary_evidence_scope": {
+    "status": "CLOSED_THREE_FAMILIES_ONE_REPRESENTATIVE_EACH",
+    "selected_method_ids": [
+      "3dgs_original",
+      "2dgs",
+      "gof"
+    ],
+    "deferred_candidate_method_ids": [
+      "pgsr",
+      "rade_gs",
+      "qgs",
+      "citygaussian_v2",
+      "citygs_x",
+      "metrogs"
+    ],
+    "candidate_expansion_status": "LOCKED_UNLESS_EXPLICITLY_REOPENED",
+    "six_scene_matrix_status": "LOCKED",
+    "multi_seed_status": "NOT_AUTHORIZED",
+    "closure_report": "docs/protocol_evidence/m3m_native_quarter_three_method_closure_v1.json",
+    "closure_report_sha256": "88a259c07043a1cee16ed831e182be74ca878bf45ad1f390016b7edddea1e835",
+    "point_results_csv": "docs/protocol_evidence/m3m_native_quarter_three_method_point_results_v1.csv",
+    "point_results_csv_sha256": "6303b6e02296ce971832336ab1fd9360036a2d6b33a657263d33cc653e4a0f9c",
+    "human_summary": "docs/m3m_native_quarter_three_method_preliminary_evidence_v1.md",
+    "human_summary_sha256": "606c7fe4c5a4f5472d5329ce33d47548b41560a3e6be7f13d3348685334dbcdf"
   },
   "method_count": 9,
   "method_ids": [

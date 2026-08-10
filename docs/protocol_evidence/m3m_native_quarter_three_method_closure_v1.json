@@ -1,0 +1,267 @@
+{
+  "schema": "m3m_gcp_native_quarter_three_method_closure_v1",
+  "created_utc": "2026-08-10T17:11:07Z",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "protocol_semantics_changed": false,
+  "status": "PASS_PRELIMINARY_SCOPE_CLOSED",
+  "passed": true,
+  "generated_by": {
+    "script": "code/gcp/build_m3m_native_quarter_three_method_closure.py",
+    "script_sha256": "28d2781a45336899da3243221baba29e6ee78fbea7ab41f2f07f856b1483ca5a"
+  },
+  "scope": {
+    "scene": "gcp_3000_20260602",
+    "nominal_scene_scale": "3K",
+    "seed": 0,
+    "iterations": 30000,
+    "single_scene_only": true,
+    "single_seed_only": true,
+    "statistical_significance_claim": false,
+    "checkpoint_count": 4,
+    "control_point_count": 5,
+    "surface_levels": [
+      "ground"
+    ],
+    "selected_method_ids": [
+      "3dgs_original",
+      "2dgs",
+      "gof"
+    ],
+    "deferred_candidate_method_ids": [
+      "pgsr",
+      "rade_gs",
+      "qgs",
+      "citygaussian_v2",
+      "citygs_x",
+      "metrogs"
+    ],
+    "candidate_expansion_status": "LOCKED_UNLESS_EXPLICITLY_REOPENED",
+    "six_scene_matrix_status": "LOCKED",
+    "multi_seed_status": "NOT_AUTHORIZED",
+    "new_training_started_by_closure": false
+  },
+  "classification": [
+    {
+      "family_id": "volumetric_3d_gaussian_ellipsoid",
+      "family_label_zh": "三维体高斯/椭球类",
+      "surface_semantics_zh": "三维协方差体高斯；表面位置由统一渲染支持取点算子解释。",
+      "representative_method_id": "3dgs_original",
+      "representative_display_name": "3DGS"
+    },
+    {
+      "family_id": "explicit_gaussian_surface_element",
+      "family_label_zh": "显式高斯面元类",
+      "surface_semantics_zh": "高斯基元自身对应局部平面面元。",
+      "representative_method_id": "2dgs",
+      "representative_display_name": "2DGS"
+    },
+    {
+      "family_id": "implicit_gaussian_opacity_field_isosurface",
+      "family_label_zh": "隐式高斯场/等值面类",
+      "surface_semantics_zh": "由连续高斯不透明度场的等值面定义方法原生表面。",
+      "representative_method_id": "gof",
+      "representative_display_name": "GOF"
+    }
+  ],
+  "fairness_identity": {
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "scene": "gcp_3000_20260602",
+    "seed": 0,
+    "iterations": 30000,
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "train_view_count": 82,
+    "heldout_test_view_count": 12,
+    "width": 1414,
+    "height": 1025,
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "release_manifest_sha256": "21fbac75d66433169535ea7440c31393f7a5ecdb4ed94fcefd31d1780c28bea4",
+    "sha256sums_sha256": "d1115bdcd6fe6951ee1f4b8d1d1faf3285d9d603191f90e518fa04be65abfc5b",
+    "evaluator_core_git_blob": "4d6ba0b6cad0abb80b539f628a2e04bb2292e2b2",
+    "protocol_core_git_blob": "220b0e4a26df48c399cc3ef585c76e35da442f0a",
+    "input_class": "rgb_colmap_only",
+    "external_prior_used": false,
+    "formal_common_primary": "render_support_expected_camera_z_A_over_M1",
+    "method_specific_sim3_fitted": false,
+    "physical_surface_claim": false,
+    "all_packet_recomputation_passed": true,
+    "all_variance_validation_fail_pixel_total": 0,
+    "all_methods_complete_ranked": true
+  },
+  "methods": [
+    {
+      "method_id": "3dgs_original",
+      "display_name": "3DGS",
+      "archive_directory": "3DGS_seed0",
+      "family_id": "volumetric_3d_gaussian_ellipsoid",
+      "family_label_zh": "三维体高斯/椭球类",
+      "surface_semantics_zh": "三维协方差体高斯；表面位置由统一渲染支持取点算子解释。",
+      "formal_report": "docs/protocol_evidence/3dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+      "formal_report_sha256": "b8311cc687d9ab5f3c49d58f4473d26a70281c7b577177e3742c0abe00163b40",
+      "source_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+      "evaluator_commit": "efb096674d4149ee0712c94c4ea61e61114d9fe2",
+      "local_point_results": "3K/3DGS_seed0/formal_evaluation/evaluator/point_results.csv",
+      "local_point_results_sha256": "7c828e8039b16aed8c43ee8f1e2ed42ad2c46979a0e5657b8b2910c12911bc6b",
+      "training": {
+        "wall_seconds": 964.892561480403,
+        "gpu_hours": 0.2680257115223342,
+        "peak_gpu_memory_mib": 10261.0,
+        "gaussian_vertex_count": 3709573,
+        "final_ply_bytes": 919975636,
+        "final_ply_sha256": "461b48e97f31ee6588b5ba3de52d29ed07b4709134f7a155c95bc7c38dba91ff"
+      },
+      "residual_statistics_m": {
+        "all": {
+          "count": 9,
+          "max_3d_m": 0.11819244805776545,
+          "median_3d_m": 0.045600232717650555,
+          "p95_3d_m": 0.10759182800231015,
+          "rmse_3d_m": 0.06211720035276042,
+          "rmse_h_m": 0.02415617166034214,
+          "rmse_z_m": 0.057227842440380906
+        },
+        "checkpoint": {
+          "count": 4,
+          "max_3d_m": 0.058565782257735156,
+          "median_3d_m": 0.03944899744378741,
+          "p95_3d_m": 0.05662094982672246,
+          "rmse_3d_m": 0.04179960708774027,
+          "rmse_h_m": 0.02761108288832967,
+          "rmse_z_m": 0.03138208492792113
+        },
+        "control": {
+          "count": 5,
+          "max_3d_m": 0.11819244805776545,
+          "median_3d_m": 0.06419039653245115,
+          "p95_3d_m": 0.11289213803003781,
+          "rmse_3d_m": 0.0744823342897186,
+          "rmse_h_m": 0.020986653237190567,
+          "rmse_z_m": 0.07146452621509017
+        }
+      },
+      "packet_count": 66,
+      "variance_validation_fail_pixel_total": 0
+    },
+    {
+      "method_id": "2dgs",
+      "display_name": "2DGS",
+      "archive_directory": "2DGS_seed0",
+      "family_id": "explicit_gaussian_surface_element",
+      "family_label_zh": "显式高斯面元类",
+      "surface_semantics_zh": "高斯基元自身对应局部平面面元。",
+      "formal_report": "docs/protocol_evidence/2dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+      "formal_report_sha256": "d1967db9991e018eb3c8d3d01d95b42eb9dca162ed64d926a70a067567d7a79e",
+      "source_commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
+      "evaluator_commit": "6bb5a0652b1dfa6ea881c55f7e8a0a869865325f",
+      "local_point_results": "3K/2DGS_seed0/formal_evaluation/evaluator/point_results.csv",
+      "local_point_results_sha256": "ce29f34ac3c33196404bbc6512a9fadb99229334ebaec5c9f0d836715f9d1fc5",
+      "training": {
+        "wall_seconds": 1264.051518600434,
+        "gpu_hours": 0.3511254218334539,
+        "peak_gpu_memory_mib": 31833.0,
+        "gaussian_vertex_count": 1634781,
+        "final_ply_bytes": 398888073,
+        "final_ply_sha256": "3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193"
+      },
+      "residual_statistics_m": {
+        "all": {
+          "count": 9,
+          "max_3d_m": 0.05307656492850149,
+          "median_3d_m": 0.015902741941102593,
+          "p95_3d_m": 0.04358037166451197,
+          "rmse_3d_m": 0.024766259084112063,
+          "rmse_h_m": 0.011902741859555374,
+          "rmse_z_m": 0.021718478888866768
+        },
+        "checkpoint": {
+          "count": 4,
+          "max_3d_m": 0.05307656492850149,
+          "median_3d_m": 0.028108046493041834,
+          "p95_3d_m": 0.049515492454505414,
+          "rmse_3d_m": 0.03390831267596038,
+          "rmse_h_m": 0.01286951817621036,
+          "rmse_z_m": 0.031371151882627554
+        },
+        "control": {
+          "count": 5,
+          "max_3d_m": 0.018959173263706067,
+          "median_3d_m": 0.011976347225552566,
+          "p95_3d_m": 0.01834788699918537,
+          "rmse_3d_m": 0.01357360399503011,
+          "rmse_h_m": 0.011068689006613838,
+          "rmse_z_m": 0.007856643627450807
+        }
+      },
+      "packet_count": 66,
+      "variance_validation_fail_pixel_total": 0
+    },
+    {
+      "method_id": "gof",
+      "display_name": "GOF",
+      "archive_directory": "GOF_seed0",
+      "family_id": "implicit_gaussian_opacity_field_isosurface",
+      "family_label_zh": "隐式高斯场/等值面类",
+      "surface_semantics_zh": "由连续高斯不透明度场的等值面定义方法原生表面。",
+      "formal_report": "docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json",
+      "formal_report_sha256": "04f72d495fba0c74cc2124246feea931ffcceaaba12005529b8ec2ad088eda8a",
+      "source_commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+      "evaluator_commit": "392530beb5a96f33a483b605e8c65d0c08b709ad",
+      "local_point_results": "3K/GOF_seed0/formal_evaluation/evaluator/point_results.csv",
+      "local_point_results_sha256": "0e9e3bd15a8c626943b8d3cafbc8ff593a6b1bd57d5ed22174f9a840bf4a9fbd",
+      "training": {
+        "wall_seconds": 5704.839090120047,
+        "gpu_hours": 1.5846775250333465,
+        "peak_gpu_memory_mib": 50531.0,
+        "gaussian_vertex_count": 2731847,
+        "final_ply_bytes": 688427001,
+        "final_ply_sha256": "c24c0ac4e35028e4984c3c03304e723b824dc22916213498bedc946629bce1b2"
+      },
+      "residual_statistics_m": {
+        "all": {
+          "count": 9,
+          "max_3d_m": 0.11039922547938104,
+          "median_3d_m": 0.02211975387171472,
+          "p95_3d_m": 0.10667605584454529,
+          "rmse_3d_m": 0.05974160638353974,
+          "rmse_h_m": 0.017312605006126205,
+          "rmse_z_m": 0.05717808357393285
+        },
+        "checkpoint": {
+          "count": 4,
+          "max_3d_m": 0.11039922547938104,
+          "median_3d_m": 0.05189436801757799,
+          "p95_3d_m": 0.10680958121446199,
+          "rmse_3d_m": 0.07083863738939943,
+          "rmse_h_m": 0.02006203562696807,
+          "rmse_z_m": 0.06793840794196668
+        },
+        "control": {
+          "count": 5,
+          "max_3d_m": 0.10109130139229165,
+          "median_3d_m": 0.02211975387171472,
+          "p95_3d_m": 0.08696075358434258,
+          "rmse_3d_m": 0.04908988818651941,
+          "rmse_h_m": 0.01474852897676491,
+          "rmse_z_m": 0.046821982179169906
+        }
+      },
+      "packet_count": 66,
+      "variance_validation_fail_pixel_total": 0
+    }
+  ],
+  "derived_artifacts": {
+    "point_results_csv": "docs/protocol_evidence/m3m_native_quarter_three_method_point_results_v1.csv",
+    "point_results_csv_sha256": "6303b6e02296ce971832336ab1fd9360036a2d6b33a657263d33cc653e4a0f9c",
+    "human_summary_markdown": "docs/m3m_native_quarter_three_method_preliminary_evidence_v1.md",
+    "human_summary_markdown_sha256": "606c7fe4c5a4f5472d5329ce33d47548b41560a3e6be7f13d3348685334dbcdf"
+  },
+  "boundaries": [
+    "The package is preliminary feasibility evidence, not a comprehensive algorithm benchmark.",
+    "Only one 3K scene and seed 0 were run; no statistical significance is claimed.",
+    "All four checkpoints and five control points are ground-level points.",
+    "The common A/M1 primary is not asserted to be any method's native physical surface.",
+    "Other candidate methods, multi-seed runs, and the six-scene matrix remain locked.",
+    "M3M-GCP and TGS-GCP remain separate; this package does not read or modify TGS-GCP."
+  ]
+}

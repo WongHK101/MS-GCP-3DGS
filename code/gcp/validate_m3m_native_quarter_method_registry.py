@@ -46,7 +46,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol mismatch")
     require(
         value.get("status")
-        == "candidate_pool_frozen_3dgs_2dgs_and_gof_3k_complete_ranked_other_methods_locked",
+        == "preliminary_evidence_closed_three_families_one_representative_each_other_methods_locked",
         "registry status mismatch",
     )
     require(value.get("method_count") == 9, "method_count must be 9")
@@ -109,6 +109,70 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             require(method.get("three_k_training_allowed") is False, prefix + "training must remain locked")
             require(method.get("three_k_qualification_status") == "NOT_RUN", prefix + "qualification status mismatch")
         require(method.get("full_scene_matrix_eligible") is False, prefix + "full matrix must remain locked")
+
+    selected_method_ids = ["3dgs_original", "2dgs", "gof"]
+    deferred_method_ids = ["pgsr", "rade_gs", "qgs", "citygaussian_v2", "citygs_x", "metrogs"]
+    preliminary_scope = value.get("preliminary_evidence_scope", {})
+    require(
+        preliminary_scope.get("status") == "CLOSED_THREE_FAMILIES_ONE_REPRESENTATIVE_EACH",
+        "preliminary evidence scope is not closed",
+    )
+    require(preliminary_scope.get("selected_method_ids") == selected_method_ids, "selected representative methods mismatch")
+    require(preliminary_scope.get("deferred_candidate_method_ids") == deferred_method_ids, "deferred candidate methods mismatch")
+    require(
+        preliminary_scope.get("candidate_expansion_status") == "LOCKED_UNLESS_EXPLICITLY_REOPENED",
+        "candidate expansion is not locked",
+    )
+    require(preliminary_scope.get("six_scene_matrix_status") == "LOCKED", "six-scene matrix is not locked")
+    require(preliminary_scope.get("multi_seed_status") == "NOT_AUTHORIZED", "multi-seed runs are authorized")
+    scope_artifacts = [
+        ("closure_report", "closure_report_sha256", "three-method closure report"),
+        ("point_results_csv", "point_results_csv_sha256", "three-method point results"),
+        ("human_summary", "human_summary_sha256", "three-method human summary"),
+    ]
+    scope_paths: dict[str, Path] = {}
+    resolved_scope_repo = repo_root.resolve()
+    for path_key, sha_key, label in scope_artifacts:
+        relative = preliminary_scope.get(path_key)
+        expected_sha = str(preliminary_scope.get(sha_key, ""))
+        require(isinstance(relative, str) and bool(relative), f"{label} path missing")
+        require(bool(SHA256.fullmatch(expected_sha)), f"{label} SHA invalid")
+        if isinstance(relative, str) and relative:
+            path = (resolved_scope_repo / relative).resolve()
+            require(path.is_relative_to(resolved_scope_repo), f"{label} escapes repo")
+            require(path.is_file(), f"{label} missing")
+            if path.is_file():
+                require(file_sha256(path) == expected_sha, f"{label} SHA mismatch")
+                scope_paths[path_key] = path
+    closure_path = scope_paths.get("closure_report")
+    if closure_path is not None:
+        closure = json.loads(closure_path.read_text(encoding="utf-8"))
+        closure_scope = closure.get("scope", {})
+        closure_fairness = closure.get("fairness_identity", {})
+        closure_derived = closure.get("derived_artifacts", {})
+        require(closure.get("schema") == "m3m_gcp_native_quarter_three_method_closure_v1", "closure schema mismatch")
+        require(closure.get("protocol_id") == value.get("protocol_id"), "closure protocol mismatch")
+        require(closure.get("protocol_semantics_changed") is False, "closure changed protocol semantics")
+        require(closure.get("status") == "PASS_PRELIMINARY_SCOPE_CLOSED" and closure.get("passed") is True, "closure did not pass")
+        require(closure_scope.get("selected_method_ids") == selected_method_ids, "closure selected methods mismatch")
+        require(closure_scope.get("deferred_candidate_method_ids") == deferred_method_ids, "closure deferred methods mismatch")
+        require(closure_scope.get("new_training_started_by_closure") is False, "closure started new training")
+        require(closure_scope.get("single_scene_only") is True, "closure single-scene boundary missing")
+        require(closure_scope.get("single_seed_only") is True, "closure single-seed boundary missing")
+        require(closure_scope.get("surface_levels") == ["ground"], "closure surface boundary mismatch")
+        require(closure_fairness.get("method_specific_sim3_fitted") is False, "closure fitted a method-specific Sim(3)")
+        require(closure_fairness.get("all_packet_recomputation_passed") is True, "closure packet recomputation mismatch")
+        require(closure_fairness.get("all_methods_complete_ranked") is True, "closure contains an unranked method")
+        require(
+            closure_derived.get("point_results_csv") == preliminary_scope.get("point_results_csv")
+            and closure_derived.get("point_results_csv_sha256") == preliminary_scope.get("point_results_csv_sha256"),
+            "closure point-results identity mismatch",
+        )
+        require(
+            closure_derived.get("human_summary_markdown") == preliminary_scope.get("human_summary")
+            and closure_derived.get("human_summary_markdown_sha256") == preliminary_scope.get("human_summary_sha256"),
+            "closure human-summary identity mismatch",
+        )
 
     qgs = next((method for method in methods if method.get("method_id") == "qgs"), {})
     require(qgs.get("source", {}).get("official_repository") == "https://github.com/will-zzy/QGS", "QGS official repository not recorded")

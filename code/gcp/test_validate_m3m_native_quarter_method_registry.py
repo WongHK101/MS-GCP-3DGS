@@ -27,6 +27,30 @@ def test_qgs_is_public_and_external_priors_are_explicit() -> None:
     assert by_id["metrogs"]["external_priors"]
 
 
+def test_preliminary_scope_is_closed_to_three_representatives() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    scope = value["preliminary_evidence_scope"]
+    assert scope["status"] == "CLOSED_THREE_FAMILIES_ONE_REPRESENTATIVE_EACH"
+    assert scope["selected_method_ids"] == ["3dgs_original", "2dgs", "gof"]
+    assert scope["deferred_candidate_method_ids"] == [
+        "pgsr", "rade_gs", "qgs", "citygaussian_v2", "citygs_x", "metrogs"
+    ]
+    assert scope["candidate_expansion_status"] == "LOCKED_UNLESS_EXPLICITLY_REOPENED"
+    assert scope["six_scene_matrix_status"] == "LOCKED"
+    assert scope["multi_seed_status"] == "NOT_AUTHORIZED"
+    assert value["per_method_training_allowed_methods"] == []
+    assert value["global_training_allowed"] is False
+
+
+def test_preliminary_scope_cannot_be_reopened_silently() -> None:
+    value = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    mutated = copy.deepcopy(value)
+    mutated["preliminary_evidence_scope"]["candidate_expansion_status"] = "OPEN"
+    result = validate_registry(mutated, REPO_ROOT)
+    assert not result["passed"]
+    assert any("candidate expansion is not locked" in error for error in result["errors"])
+
+
 def test_3dgs_formal_3k_result_is_complete_without_unlocking_the_matrix() -> None:
     value = json.loads(REGISTRY.read_text(encoding="utf-8"))
     three_dgs = next(method for method in value["methods"] if method["method_id"] == "3dgs_original")
