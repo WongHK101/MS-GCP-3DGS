@@ -33,10 +33,10 @@ def test_completed_3dgs_is_denied() -> None:
     assert any("forbids rerun" in error for error in result["errors"])
 
 
-def test_qualified_2dgs_exact_run_is_authorized() -> None:
+def test_completed_2dgs_exact_run_is_denied() -> None:
     result = check("2dgs")
-    assert result["passed"] is True
-    assert result["status"] == "AUTHORIZED"
+    assert result["passed"] is False
+    assert any("forbids rerun" in error for error in result["errors"])
 
 
 def test_qualified_2dgs_wrong_seed_is_denied() -> None:

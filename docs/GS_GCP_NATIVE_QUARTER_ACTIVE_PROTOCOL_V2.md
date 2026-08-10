@@ -1,6 +1,6 @@
 # GS-GCP 原生 1/4 公平评测协议 v2
 
-状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（仅允许方法级资格放行）**
+状态：**ACTIVE（评测实现合同）**；**GLOBAL TRAINING HOLD（当前无方法级运行授权）**
 协议冻结日期：2026-08-09；执行状态更新：2026-08-10
 协议 ID：`m3m_gcp_native_quarter_geometry_v2`
 
@@ -149,11 +149,11 @@ CPU 侧派生。当前状态为：
 - 该正式运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
   `full_scene_matrix_eligible=false`。
 
-因此这里的全局 `TRAINING HOLD` 并不否定已完成的 3DGS 3K 结果，也不阻止通过全部门禁的
-单方法授权。当前仅 2DGS 的一个全新 3K seed-0/30K 运行被放行；实时资格和结果状态只以
+因此这里的全局 `TRAINING HOLD` 不否定已完成的正式结果，也不阻止后续方法在通过全部门禁后
+获得一次方法级授权。当前没有方法处于运行授权状态；实时资格和结果状态只以
 `configs/m3m_gcp_native_quarter_method_registry_v2.json` 为准。
 
-### 8.1 2DGS 方法级资格状态
+### 8.1 2DGS 方法级正式状态
 
 2DGS 仍执行同一个 v2 协议，并未引入新的协议版本。源码固定为官方提交
 `335ad612f2e783a4e57b9cbc4d1e167bd599fc98`；3K 配方固定为 seed 0、30K iterations、
@@ -163,17 +163,32 @@ CPU 侧派生。当前状态为：
 公共主轨所需的 `A/M1` 已是官方 2DGS rasterizer 的原生输出；独立 evaluation-only 副本只
 补齐 packet v2 诊断字段所需的 `M2/H`。固定提交、配方和补丁已通过本地重放与静态校验，
 真实输入 loader 已确认载入 82 个训练相机、0 个测试相机和冻结的 61,302 个初始化点。目标
-GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成原始矩一致性通过；1 次迭代技术
-smoke 生成的 66 个真实 packet 全部逐包复算通过，公共评测覆盖 4/4 checkpoints 与 5/5
-controls，且未拟合方法专属 Sim(3)。因此仅该方法的一个全新 3K seed-0/30K 正式运行已解锁；
-该 smoke 不属于正式结果，其他方法、重跑与六场景矩阵仍保持锁定。资格证据为
-`docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json`。
+GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成原始矩一致性通过；资格阶段的
+1 次迭代技术 smoke 生成了 66 个可逐包复算的真实 packet，但该 smoke 不属于正式结果。
+资格证据为 `docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json`。
+
+随后，唯一获准的 3K seed-0/30K 正式运行已完成：
+
+- 训练耗时 `1264.0515 s`，峰值显存 `31833 MiB`，未发生 OOM；最终 PLY 含
+  `1,634,781` 个顶点，SHA-256 为
+  `3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193`；
+- 66 个正式 packet 全部通过身份与复算验证，公共评测覆盖 4/4 checkpoints 与 5/5
+  controls，未拟合方法专属 Sim(3)，场景状态为 `COMPLETE_RANKED`；
+- checkpoint RMSE 为 3D `0.0339083127 m`、水平 `0.0128695182 m`、高程
+  `0.0313711519 m`；正式报告为
+  `docs/protocol_evidence/2dgs_native_quarter_formal_3k_seed0_30k_v1.json`；
+- 运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
+  `full_scene_matrix_eligible=false`。其他方法与六场景矩阵仍保持锁定。
+
+该结果只有一个 seed，可作为本 benchmark 的正式单次结果，但不得用于宣称方法间细小差异
+具有统计显著性。本次只是执行状态更新，没有修改 v2 的输入、算子、覆盖、Sim(3) 或排名规则。
 
 ## 9. 解锁顺序
 
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
 冻结 3K 真实 packet-camera 预检及端到端评测全部通过后，才可单独解锁其 3K 资格实验。
 解锁某一方法不自动解锁其他方法或六场景矩阵。
+3DGS 和 2DGS 的 3K 正式运行均已完成并重锁；当前方法级训练 allowlist 为空。
 
 当前实现入口：
 

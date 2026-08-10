@@ -2,7 +2,7 @@
   "schema": "m3m_gcp_native_quarter_2dgs_recipe_v1",
   "recipe_id": "m3m_gcp_native_quarter_2dgs_3k_30k_seed0_v1",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "FROZEN_3K_TRAINING_AUTHORIZED",
+  "status": "FROZEN_3K_FORMAL_COMPLETE_RELOCKED",
   "method": {
     "method_id": "2dgs",
     "display_name": "2D Gaussian Splatting",
@@ -115,8 +115,8 @@
     "source_tree_clean_before_and_after_required": true,
     "input_manifest_verification_required": true,
     "fresh_hardware_manifest_required": true,
-    "training_authorized": true,
-    "authorization_scope": "one fresh 2DGS gcp_3000_20260602 seed-0 30000-iteration run only; resume, overwrite, and completed-result rerun remain forbidden",
+    "training_authorized": false,
+    "authorization_scope": "the unique 2DGS gcp_3000_20260602 seed-0 30000-iteration run is complete; resume, overwrite, and rerun are forbidden",
     "resource_probe_required": true
   },
   "evaluation_adapter": {
@@ -140,7 +140,7 @@
   },
   "runtime": {
     "server": "AutoDL-901",
-    "status": "GPU_BUILD_RAW_MOMENT_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
+    "status": "FORMAL_3K_COMPLETE_RANKED_RELOCKED",
     "target_environment": {
       "path": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/2dgs/py310-torch2.7.1-cu128-v1",
       "python": "3.10.12",
@@ -194,9 +194,18 @@
     "one_iteration_technical_smoke_completed": true,
     "one_iteration_smoke_is_formal_result": false,
     "qualification_evidence": "docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json",
-    "three_k_training_allowed": true,
+    "formal_3k_completed": true,
+    "formal_3k_result": {
+      "status": "COMPLETE_RANKED",
+      "report": "docs/protocol_evidence/2dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+      "report_sha256": "d1967db9991e018eb3c8d3d01d95b42eb9dca162ed64d926a70a067567d7a79e",
+      "final_checkpoint_sha256": "3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193",
+      "packet_manifest_sha256": "a38e56a633aed6ff650a3a25a42d0f2c76f283c7cc2d9054bf9c55614d8492a2",
+      "rerun_allowed": false
+    },
+    "three_k_training_allowed": false,
     "full_matrix_authorized_before_pass": false,
-    "unlock_rule": "fulfilled for exactly one fresh 2DGS 3K seed-0/30K run after all method-specific build, raw-moment, real-camera packet, evaluator, registry, and launch-gate checks passed",
+    "unlock_rule": "consumed by the completed unique 2DGS 3K seed-0/30K formal run; the method is re-locked and cannot be launched again",
     "full_scene_matrix_allowed": false,
     "global_training_allowed": false
   }

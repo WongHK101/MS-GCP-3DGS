@@ -46,7 +46,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol mismatch")
     require(
         value.get("status")
-        == "candidate_pool_frozen_3dgs_3k_complete_ranked_2dgs_qualified_3k_training_authorized_other_methods_locked",
+        == "candidate_pool_frozen_3dgs_and_2dgs_3k_complete_ranked_other_methods_locked",
         "registry status mismatch",
     )
     require(value.get("method_count") == 9, "method_count must be 9")
@@ -94,9 +94,9 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 prefix + "qualification status mismatch",
             )
         elif method_id == "2dgs":
-            require(method.get("three_k_training_allowed") is True, prefix + "qualified 3K run is not authorized")
+            require(method.get("three_k_training_allowed") is False, prefix + "completed 3K run must not remain launchable")
             require(
-                method.get("three_k_qualification_status") == "QUALIFIED_3K_TRAINING_AUTHORIZED",
+                method.get("three_k_qualification_status") == "FORMAL_3K_COMPLETE_RANKED",
                 prefix + "qualification status mismatch",
             )
         else:
@@ -260,7 +260,8 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
     two_dgs = next((method for method in methods if method.get("method_id") == "2dgs"), {})
     two_adapter = two_dgs.get("common_adapter", {})
-    require(two_dgs.get("recipe_status") == "FROZEN_3K_TRAINING_AUTHORIZED", "2DGS recipe status mismatch")
+    two_formal = two_dgs.get("formal_3k_result", {})
+    require(two_dgs.get("recipe_status") == "FROZEN_3K_FORMAL_COMPLETE_RELOCKED", "2DGS recipe status mismatch")
     require(
         two_adapter.get("status") == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
         "2DGS adapter status mismatch",
@@ -275,6 +276,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             "gpu_real_3k_qualification_report_sha256",
             "2DGS GPU/real-3K qualification report",
         ),
+        (two_formal, "report", "report_sha256", "2DGS formal 3K result"),
     ]
     two_evidence: dict[str, dict[str, Any]] = {}
     for container, path_key, sha_key, label in two_specs:
@@ -292,10 +294,16 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     two_recipe = two_evidence.get("recipe", {})
     require(two_recipe.get("protocol_id") == value.get("protocol_id"), "2DGS recipe protocol mismatch")
     require(two_recipe.get("method", {}).get("method_id") == "2dgs", "2DGS recipe method mismatch")
-    require(two_recipe.get("execution", {}).get("training_authorized") is True, "2DGS recipe training authorization missing")
-    require(two_recipe.get("qualification", {}).get("three_k_training_allowed") is True, "2DGS qualification unlock missing")
-    require(two_recipe.get("qualification", {}).get("full_scene_matrix_allowed") is False, "2DGS recipe unlocked the full matrix")
-    require(two_recipe.get("qualification", {}).get("global_training_allowed") is False, "2DGS recipe unlocked global training")
+    require(two_recipe.get("execution", {}).get("training_authorized") is False, "2DGS completed recipe remains training-authorized")
+    two_recipe_qualification = two_recipe.get("qualification", {})
+    require(two_recipe_qualification.get("three_k_training_allowed") is False, "2DGS completed recipe remains launchable")
+    require(two_recipe_qualification.get("formal_3k_completed") is True, "2DGS formal completion state missing")
+    require(
+        two_recipe_qualification.get("formal_3k_result", {}).get("rerun_allowed") is False,
+        "2DGS recipe formal rerun lock missing",
+    )
+    require(two_recipe_qualification.get("full_scene_matrix_allowed") is False, "2DGS recipe unlocked the full matrix")
+    require(two_recipe_qualification.get("global_training_allowed") is False, "2DGS recipe unlocked global training")
     require(two_recipe.get("source_provenance", {}).get("repository_commit") == two_dgs.get("source", {}).get("commit"), "2DGS recipe commit mismatch")
     require(two_recipe.get("source_provenance", {}).get("repository_tree") == two_dgs.get("source", {}).get("tree"), "2DGS recipe tree mismatch")
     two_config = two_evidence.get("config", {})
@@ -305,6 +313,18 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     )
     require(two_config.get("raw_output", {}).get("primary_track_uses_native_planes_only") is True, "2DGS primary A/M1 planes are not pinned as native")
     require(two_config.get("training_identity", {}).get("training_patch_allowed") is False, "2DGS training patch was allowed")
+    require(
+        two_config.get("formal_3k_result", {}).get("report_sha256") == two_formal.get("report_sha256"),
+        "2DGS adapter formal report SHA mismatch",
+    )
+    require(
+        two_config.get("formal_3k_result", {}).get("checkpoint_sha256") == two_formal.get("final_checkpoint_sha256"),
+        "2DGS adapter final checkpoint SHA mismatch",
+    )
+    require(
+        two_config.get("formal_3k_result", {}).get("packet_manifest_sha256") == two_formal.get("packet_manifest_sha256"),
+        "2DGS adapter packet manifest SHA mismatch",
+    )
     two_static = two_evidence.get("static_report", {})
     require(two_static.get("status") == "PASS" and two_static.get("passed") is True, "2DGS static validation failed")
     require(two_static.get("formal_training_authorized") is False, "2DGS static report prematurely authorizes training")
@@ -354,6 +374,91 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         "2DGS qualification unlock scope mismatch",
     )
 
+    two_formal_report = two_evidence.get("report", {})
+    require(two_formal.get("status") == "COMPLETE_RANKED", "2DGS formal result status mismatch")
+    require(two_formal.get("rerun_allowed") is False, "2DGS completed seed-0 run must not be repeated")
+    require(two_formal.get("single_seed_only") is True, "2DGS single-seed boundary missing")
+    require(two_formal.get("statistical_significance_claim") is False, "2DGS registry makes a significance claim")
+    require(
+        two_formal_report.get("schema") == "m3m_native_quarter_2dgs_formal_3k_run_v1",
+        "2DGS formal report schema mismatch",
+    )
+    require(
+        two_formal_report.get("status") == "PASS" and two_formal_report.get("passed") is True,
+        "2DGS formal report did not pass",
+    )
+    require(
+        two_formal_report.get("result_kind") == "formal_benchmark_result_not_preflight",
+        "2DGS result is not formal",
+    )
+    require(two_formal_report.get("protocol_id") == value.get("protocol_id"), "2DGS formal protocol mismatch")
+    require(two_formal_report.get("method_id") == "2dgs", "2DGS formal method mismatch")
+    require(two_formal_report.get("scene") == "gcp_3000_20260602", "2DGS formal scene mismatch")
+    require(
+        two_formal_report.get("seed") == 0 and two_formal_report.get("iterations") == 30000,
+        "2DGS formal recipe mismatch",
+    )
+    require(two_formal_report.get("single_seed_only") is True, "2DGS formal report single-seed boundary missing")
+    require(
+        two_formal_report.get("statistical_significance_claim") is False,
+        "2DGS formal report makes a significance claim",
+    )
+    two_formal_input = two_formal_report.get("input", {})
+    require(two_formal_input.get("train_view_count") == 82, "2DGS formal train-view count mismatch")
+    require(two_formal_input.get("heldout_test_view_count") == 12, "2DGS formal holdout count mismatch")
+    require(two_formal_input.get("training_resolution_argument") == 1, "2DGS formal resolution mismatch")
+    require(two_formal_input.get("depth_ratio") == 0.0, "2DGS formal depth-ratio mismatch")
+    require(
+        two_formal_input.get("all_94_image_hashes_verified_before_launch") is True,
+        "2DGS formal input hashes were not verified",
+    )
+    two_formal_source = two_formal_report.get("source", {})
+    require(
+        two_formal_source.get("official_repository_commit") == two_dgs.get("source", {}).get("commit"),
+        "2DGS formal source commit mismatch",
+    )
+    require(
+        two_formal_source.get("official_repository_tree") == two_dgs.get("source", {}).get("tree"),
+        "2DGS formal source tree mismatch",
+    )
+    require(two_formal_source.get("official_training_source_modified") is False, "2DGS formal training source was modified")
+    require(
+        two_formal_source.get("official_training_source_status_porcelain_after") == "",
+        "2DGS formal training source is dirty",
+    )
+    two_formal_training = two_formal_report.get("training", {})
+    require(two_formal_training.get("resource_status") == "PASS", "2DGS formal training resource probe failed")
+    require(
+        two_formal_training.get("memory_events_delta", {}).get("oom") == 0
+        and two_formal_training.get("memory_events_delta", {}).get("oom_kill") == 0,
+        "2DGS formal training recorded an OOM",
+    )
+    require(
+        two_formal_training.get("final_ply_sha256") == two_formal.get("final_checkpoint_sha256"),
+        "2DGS final checkpoint SHA mismatch",
+    )
+    two_formal_packet = two_formal_report.get("packet_export", {})
+    require(two_formal_packet.get("status") == "PASS", "2DGS formal packet export failed")
+    require(two_formal_packet.get("manifest_sha256") == two_formal.get("packet_manifest_sha256"), "2DGS packet manifest SHA mismatch")
+    require(two_formal_packet.get("packet_count") == 66, "2DGS formal packet count mismatch")
+    require(two_formal_packet.get("packet_recomputation_all_passed") is True, "2DGS formal packet recomputation failed")
+    require(two_formal_packet.get("variance_validation_fail_pixel_total") == 0, "2DGS formal packet variance validation failed")
+    two_formal_evaluation = two_formal_report.get("evaluation", {})
+    require(two_formal_evaluation.get("evaluator_commit") == two_formal.get("evaluator_commit"), "2DGS evaluator commit mismatch")
+    require(two_formal_evaluation.get("status") == "COMPLETE_RANKED", "2DGS formal evaluation is not complete-ranked")
+    require(two_formal_evaluation.get("ranking_eligible") is True, "2DGS formal result is not ranking eligible")
+    require(two_formal_evaluation.get("method_specific_sim3_fitted") is False, "2DGS formal evaluation fitted method-specific Sim(3)")
+    require(
+        two_formal_evaluation.get("point_counts")
+        == {"checkpoint_passed": 4, "checkpoint_total": 4, "control_passed": 5, "control_total": 5},
+        "2DGS formal point coverage mismatch",
+    )
+    two_checkpoint = two_formal_evaluation.get("residual_statistics", {}).get("checkpoint", {})
+    require(two_checkpoint.get("rmse_3d_m") == two_formal.get("checkpoint_rmse_3d_m"), "2DGS checkpoint RMSE-3D mismatch")
+    require(two_checkpoint.get("rmse_h_m") == two_formal.get("checkpoint_rmse_h_m"), "2DGS checkpoint RMSE-H mismatch")
+    require(two_checkpoint.get("rmse_z_m") == two_formal.get("checkpoint_rmse_z_m"), "2DGS checkpoint RMSE-Z mismatch")
+    require(two_formal_report.get("final_gpu_compute_process_count") == 0, "2DGS formal run left a GPU compute process")
+
     city = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require("redistribution_blocked" in str(city.get("source", {}).get("license_status", "")), "CityGS-X redistribution risk missing")
     metro = next((method for method in methods if method.get("method_id") == "metrogs"), {})
@@ -361,7 +466,7 @@ def validate_registry(value: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     require(prior_names == {"pointmap dense initialization", "MoGe-2"}, "MetroGS prior inventory incomplete")
     require(value.get("global_training_allowed") is False, "global training lock missing")
     require(
-        value.get("per_method_training_allowed_methods") == ["2dgs"],
+        value.get("per_method_training_allowed_methods") == [],
         "per-method training allowlist mismatch",
     )
     return {

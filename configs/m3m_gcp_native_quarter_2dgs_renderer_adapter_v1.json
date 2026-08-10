@@ -84,5 +84,12 @@
     "submodules/diff-surfel-rasterization/rasterize_points.cu": "1d2d33e760a2bae17637413d048c8768d5befe0cc47f009592f48d1d689fcdbd"
   },
   "qualification_report": "docs/protocol_evidence/2dgs_native_quarter_gpu_real_3k_qualification_v1.json",
-  "remaining_gate": "none for the single authorized 2DGS 3K seed-0/30K launch; all other methods, reruns, and the full scene matrix remain locked"
+  "formal_3k_result": {
+    "status": "COMPLETE_RANKED",
+    "report": "docs/protocol_evidence/2dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+    "report_sha256": "d1967db9991e018eb3c8d3d01d95b42eb9dca162ed64d926a70a067567d7a79e",
+    "checkpoint_sha256": "3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193",
+    "packet_manifest_sha256": "a38e56a633aed6ff650a3a25a42d0f2c76f283c7cc2d9054bf9c55614d8492a2"
+  },
+  "remaining_gate": "none for qualification; the unique 2DGS 3K formal run is complete and re-locked, while reruns and the full scene matrix remain locked"
 }

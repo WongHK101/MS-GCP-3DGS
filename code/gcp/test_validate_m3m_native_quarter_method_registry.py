@@ -15,7 +15,7 @@ def test_native_quarter_registry_passes() -> None:
     result = validate_registry(json.loads(REGISTRY.read_text(encoding="utf-8")), REPO_ROOT)
     assert result["passed"], result["errors"]
     assert set(result["method_ids"]) == EXPECTED_METHODS
-    assert result["training_allowed_methods"] == ["2dgs"]
+    assert result["training_allowed_methods"] == []
 
 
 def test_qgs_is_public_and_external_priors_are_explicit() -> None:
@@ -38,7 +38,7 @@ def test_3dgs_formal_3k_result_is_complete_without_unlocking_the_matrix() -> Non
     assert three_dgs["three_k_training_allowed"] is False
     assert three_dgs["full_scene_matrix_eligible"] is False
     assert value["global_training_allowed"] is False
-    assert value["per_method_training_allowed_methods"] == ["2dgs"]
+    assert value["per_method_training_allowed_methods"] == []
     assert value["coverage_and_ranking_contract"]["minimum_oblique_azimuth_bin_circular_separation"] == 2
 
 
@@ -53,13 +53,15 @@ def test_completed_3dgs_seed_zero_run_cannot_be_reopened_silently() -> None:
     assert any("must not remain launchable" in error for error in result["errors"])
 
 
-def test_2dgs_is_qualified_for_one_3k_formal_run_only() -> None:
+def test_2dgs_formal_3k_result_is_complete_and_relocked() -> None:
     value = json.loads(REGISTRY.read_text(encoding="utf-8"))
     two_dgs = next(method for method in value["methods"] if method["method_id"] == "2dgs")
-    assert two_dgs["recipe_status"] == "FROZEN_3K_TRAINING_AUTHORIZED"
+    assert two_dgs["recipe_status"] == "FROZEN_3K_FORMAL_COMPLETE_RELOCKED"
     assert two_dgs["common_adapter"]["status"] == "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS"
-    assert two_dgs["three_k_qualification_status"] == "QUALIFIED_3K_TRAINING_AUTHORIZED"
-    assert two_dgs["three_k_training_allowed"] is True
-    assert value["per_method_training_allowed_methods"] == ["2dgs"]
+    assert two_dgs["three_k_qualification_status"] == "FORMAL_3K_COMPLETE_RANKED"
+    assert two_dgs["formal_3k_result"]["status"] == "COMPLETE_RANKED"
+    assert two_dgs["formal_3k_result"]["rerun_allowed"] is False
+    assert two_dgs["three_k_training_allowed"] is False
+    assert value["per_method_training_allowed_methods"] == []
     assert value["global_training_allowed"] is False
     assert two_dgs["full_scene_matrix_eligible"] is False

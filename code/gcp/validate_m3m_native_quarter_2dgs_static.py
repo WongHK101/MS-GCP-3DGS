@@ -50,10 +50,12 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, patched_sou
     require(recipe.get("protocol_id") == PROTOCOL_ID, "recipe protocol mismatch")
     require(adapter.get("protocol_id") == PROTOCOL_ID, "adapter protocol mismatch")
     require(recipe.get("method", {}).get("method_id") == "2dgs", "method mismatch")
-    require(recipe.get("status") == "FROZEN_3K_TRAINING_AUTHORIZED", "recipe status mismatch")
-    require(recipe.get("execution", {}).get("training_authorized") is True, "formal training authorization missing")
+    require(recipe.get("status") == "FROZEN_3K_FORMAL_COMPLETE_RELOCKED", "recipe status mismatch")
+    require(recipe.get("execution", {}).get("training_authorized") is False, "completed formal run must be re-locked")
     qualification = recipe.get("qualification", {})
-    require(qualification.get("three_k_training_allowed") is True, "recipe qualification authorization missing")
+    require(qualification.get("three_k_training_allowed") is False, "completed formal run remains launchable")
+    require(qualification.get("formal_3k_completed") is True, "formal completion state missing")
+    require(qualification.get("formal_3k_result", {}).get("rerun_allowed") is False, "formal rerun lock missing")
     for key in (
         "gpu_official_training_extension_build_passed",
         "gpu_evaluation_adapter_build_passed",
@@ -177,7 +179,7 @@ def validate(repo_root: Path, recipe_path: Path, adapter_path: Path, patched_sou
         "adapter_id": adapter.get("adapter_id"),
         "status": "PASS" if not errors else "FAIL",
         "passed": not errors,
-        "formal_training_authorized": True,
+        "formal_training_authorized": False,
         "training_source_modified": False,
         "evaluation_copy_only": True,
         "source_identity": {
