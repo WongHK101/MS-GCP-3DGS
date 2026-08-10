@@ -31,6 +31,21 @@
     "human_summary": "docs/m3m_native_quarter_three_method_preliminary_evidence_v1.md",
     "human_summary_sha256": "606c7fe4c5a4f5472d5329ce33d47548b41560a3e6be7f13d3348685334dbcdf"
   },
+  "explicit_scene_run_authorization": {
+    "authorization_id": "3dgs_original_gcp_100000_20260610_seed0_30k_20260810",
+    "status": "AUTHORIZED_NOT_STARTED",
+    "authorization": "configs/m3m_gcp_native_quarter_3dgs_100k_run_v1.json",
+    "authorization_sha256": "135e8fa15719adf3c8b4f85371d95983c7b05e9dba794b1e0c722d0c7fed1a58",
+    "method_id": "3dgs_original",
+    "scene": "gcp_100000_20260610",
+    "seed": 0,
+    "iterations": 30000,
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
+    "single_fresh_run_allowed": true,
+    "resume_allowed": false,
+    "rerun_after_attempt_allowed": false,
+    "other_methods_scenes_seeds_allowed": false
+  },
   "method_count": 9,
   "method_ids": [
     "3dgs_original",

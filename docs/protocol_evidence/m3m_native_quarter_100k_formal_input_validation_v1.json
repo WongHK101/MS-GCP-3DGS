@@ -1,0 +1,68 @@
+{
+  "schema": "m3m_native_quarter_formal_input_validation_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "scene": "gcp_100000_20260610",
+  "status": "PASS",
+  "passed": true,
+  "validated_utc": "2026-08-10T17:54:00Z",
+  "release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_input_relative_path": "formal_inputs/gcp_100000_20260610",
+    "manifest_file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "manifest_canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d"
+  },
+  "views": {
+    "full": 2510,
+    "train": 2196,
+    "heldout_test": 314,
+    "train_test_overlap": 0,
+    "decoded_width": 1414,
+    "decoded_height": 1024,
+    "decoded_mode": "RGB",
+    "all_image_hashes_verified": true
+  },
+  "image_identity": {
+    "source": "COLMAP 4.0.4 image_undistorter --max_image_size 1414 output",
+    "byte_preserved": true,
+    "resize": false,
+    "crop": false,
+    "pad": false,
+    "exif_transpose": false,
+    "reencode": false,
+    "source_image_sha256_manifest_sha256": "8a34b8f973b9ca0efb92b5df95164a1e4d3bb6ec56452e0bfaf873b021168afb"
+  },
+  "colmap_models": {
+    "camera_model": "PINHOLE",
+    "source_cameras_bin_sha256": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+    "source_images_bin_sha256": "57163927bceee6ca330c113c9caf06cafe1a84a7ca21ac0f055680dcbe8eff6e",
+    "source_points3d_bin_sha256": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+    "shared_initial_ply_sha256": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e",
+    "train_cameras_bin_sha256": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+    "train_images_bin_sha256": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+    "test_cameras_bin_sha256": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+    "test_images_bin_sha256": "8a2b67af4d1b0eecb9f5f204dc168f3fc8e7331c77bf2fc2ea53bbcb581b9031",
+    "points2d_tracks_present_in_formal_models": false,
+    "points3d_bin_present_in_formal_models": false
+  },
+  "frozen_split": {
+    "protocol": "gs_gcp_rgb_holdout_split_v1",
+    "holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
+    "manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2"
+  },
+  "official_3dgs_binding": {
+    "training_root_role": "train",
+    "heldout_root_role": "test",
+    "resolution_argument": 1,
+    "eval_argument": false,
+    "training_source_modified": false
+  },
+  "verification": {
+    "manifest_canonical_hash_passed": true,
+    "all_files_present": true,
+    "all_file_hashes_passed": true,
+    "all_images_decoded": true,
+    "all_colmap_models_decoded": true,
+    "standard_official_3dgs_loader_layout": true
+  }
+}
