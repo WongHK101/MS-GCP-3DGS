@@ -1,0 +1,409 @@
+{
+  "boundary": {
+    "benchmark_score_claim": false,
+    "formal_sof_training_started": false,
+    "full_scene_matrix_unlocked": false,
+    "gcp_truth_visible_to_training": false,
+    "heldout_rgb_visible_to_training": false,
+    "lidar_visible_to_training": false,
+    "qualification_models_only": true
+  },
+  "build": {
+    "environment_freeze_sha256": "9cd3f61d5cbce393120029c1f57e35e4b7a3fd64521855ab71ff4d622c304d10",
+    "native_hierarchical_config_sha256": "8240401c9ec5be481899cfc466615e489088b452cea9c86fdf04163c2bd1fe80",
+    "official_training_fused_ssim_extension_sha256": "a239949d1403d67e6ea8e704f54151ee5cf464529072d74135aadb3851513705",
+    "official_training_rasterizer_extension_sha256": "be8dc6a8745b54279f8d676ae7987f3034c3c86bf53234556733b66a4210cf8b",
+    "official_training_simple_knn_extension_sha256": "ffdab01d67433b0f42457bf691ce51632eaf5e50e7e8317b29edf1d932f753fe",
+    "root": "/root/autodl-tmp/build/m3m-gcp-native-quarter/sof/b9eb4170c843014f5f96d54924976161bd675469/qualification-v1"
+  },
+  "compatibility": {
+    "evaluation_renderer_patch_sha256": "9ca87eaf77119e34f536705e52d6bc204e8f3b79de68b44bed1caf6730e22bf1",
+    "native_training_rasterizer_modified": false,
+    "reverse_patch_checks_passed": true,
+    "training_source_patch_required": false
+  },
+  "created_at": "2026-08-18T18:31:01.085211+00:00",
+  "errors": [],
+  "evaluator": {
+    "method_specific_sim3_fitted": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "qualification_only_not_benchmark_result": true,
+    "ranking_eligible": true,
+    "status": "COMPLETE_RANKED"
+  },
+  "formal_training_unlock_candidate": {
+    "full_scene_matrix_allowed": false,
+    "iterations": 30000,
+    "resume_allowed": false,
+    "scene": "gcp_3000_20260602",
+    "seed": 0,
+    "single_fresh_run_allowed": true
+  },
+  "frozen_input": {
+    "heldout_test_camera_count": 12,
+    "image_transform": "none",
+    "loaded_height": 1025,
+    "loaded_width": 1414,
+    "manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "manifest_file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "resolution_argument": 1,
+    "scene": "gcp_3000_20260602",
+    "train_camera_count": 82
+  },
+  "method_id": "sof",
+  "packet_preflight": {
+    "all_packet_recomputations_passed": true,
+    "evaluation": {
+      "checkpoint_coverage_rate": 1.0,
+      "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+      "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+      "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+      "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+      "method_id": "sof",
+      "method_specific_sim3_fitted": false,
+      "observation_failure_counts": {},
+      "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/qualification-packet-preflight-20260818-v1/evaluation/packets/depth_export_manifest.json",
+      "packet_manifest_sha256": "df5fe73f0657d9cd21842ee4167f28c629e7b797dab7512f988ec65e3071439c",
+      "physical_surface_claim": false,
+      "point_counts": {
+        "checkpoint_passed": 4,
+        "checkpoint_total": 4,
+        "control_passed": 5,
+        "control_total": 5
+      },
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "ranking_eligible": true,
+      "ranking_exclusion_reason": "",
+      "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+      "residual_statistics": {
+        "all": {
+          "count": 9,
+          "max_3d_m": 0.28682250373610707,
+          "median_3d_m": 0.02206316450942717,
+          "p95_3d_m": 0.2548740023454236,
+          "rmse_3d_m": 0.11977202028767127,
+          "rmse_h_m": 0.04776461147896427,
+          "rmse_z_m": 0.10983568970992047
+        },
+        "checkpoint": {
+          "count": 4,
+          "max_3d_m": 0.28682250373610707,
+          "median_3d_m": 0.02273593967596768,
+          "p95_3d_m": 0.24894831083671298,
+          "rmse_3d_m": 0.1445531954701226,
+          "rmse_h_m": 0.06860723604394657,
+          "rmse_z_m": 0.12723471807267728
+        },
+        "control": {
+          "count": 5,
+          "max_3d_m": 0.2069512502593985,
+          "median_3d_m": 0.02206316450942717,
+          "p95_3d_m": 0.17319610844910618,
+          "rmse_3d_m": 0.09542067523510733,
+          "rmse_h_m": 0.01846787284593675,
+          "rmse_z_m": 0.09361646722062383
+        }
+      },
+      "scene": "gcp_3000_20260602",
+      "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+      "status": "COMPLETE_RANKED"
+    },
+    "evaluation_camera_domain_is_frozen_94_camera_scene": true,
+    "export_resource": {
+      "allocated_gpu_count": 1,
+      "baseline_device_memory_used_mib_by_gpu": {
+        "0": 0.0
+      },
+      "camera_load_child_exit_code": 0,
+      "cgroup_memory_baseline_bytes": 76035584000,
+      "cgroup_memory_limit_bytes": 118111600640,
+      "cgroup_observed_peak_bytes": 84493529088,
+      "controlled_termination_details": null,
+      "controlled_termination_initiator": null,
+      "controlled_termination_signal": null,
+      "ended_utc": "2026-08-18T18:29:57.081Z",
+      "estimated_gpu_energy_wh": 5.1093157822015804,
+      "failure_reason": null,
+      "failure_stage": null,
+      "fd_last_ten_max": 47,
+      "fd_last_ten_min": 4,
+      "fd_peak": 47,
+      "gnu_time_wrapper_exit_code": 0,
+      "gpu_hours": 0.053460435017736424,
+      "gpu_memory_total_mib_per_device": [
+        97887.0
+      ],
+      "gpu_sample_count": 191,
+      "jpeg_fd_peak": 1,
+      "max_gpu_utilization_percent": 14.0,
+      "mean_gpu_utilization_percent": 0.3717277486910995,
+      "memory_events_after": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_events_before": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "outer_probe_exit_code": 0,
+      "peak_device_memory_used_mib": 2861.0,
+      "peak_gpu_memory_mib": 2861.0,
+      "probe_complete": true,
+      "process_maximum_rss_kib": 5885352,
+      "process_tree_sampled_peak_rss_kib": 5781700,
+      "rlimit_nofile_soft": 65536,
+      "sampler_errors": [],
+      "schema": "gs_gcp_resource_probe_summary_v2",
+      "status": "PASS",
+      "timeout_implementation": "resource_probe_internal_deadline",
+      "timeout_triggered": false,
+      "usr_bin_timeout_exit_code": null,
+      "usr_bin_timeout_used": false,
+      "wall_seconds": 192.45756606385112
+    },
+    "formal_training_started": false,
+    "mapping_csv_sha256": "de37f3955ed6ba3367e17cb914c928184098947d10727459dd8235d8ae3832cd",
+    "model_ply_sha256": "0508a34f6ae9b0aa927ba07187b4d0e31cee417447940d8da7c8d61476673459",
+    "packet_bytes": 2898607003,
+    "packet_count": 66,
+    "packet_manifest_sha256": "df5fe73f0657d9cd21842ee4167f28c629e7b797dab7512f988ec65e3071439c",
+    "passed": true,
+    "qualification_only": true,
+    "qualification_validation_sha256": "49849d44cef2ed662c1538de728bc6a2420bc3cee7e133ab4036544fc82dd928",
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/qualification-packet-preflight-20260818-v1",
+    "schema": "m3m_native_quarter_sof_qualification_packet_validation_v1",
+    "status": "PASS_NOT_FORMAL_RESULT",
+    "variance_nonnegativity_unresolved_total": 0,
+    "variance_validation_failing_pixel_total": 0
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "raw_moment_conformance": {
+    "adapter_strategy": "two auxiliary native three-channel compositor passes with zero background",
+    "common_primary_planes": [
+      "A",
+      "M1"
+    ],
+    "diagnostic_evaluation_only_planes": [
+      "M2",
+      "H"
+    ],
+    "native_sort_mode": "HIER",
+    "native_sort_order": "PTD_MAX",
+    "report_sha256": "2e40d3b132cb58be69e92b4d66edfd65dc7396c138a3f2595e4090e6b0bb5aee",
+    "runtime": {
+      "extension": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/sof/py310-torch2.7.1-cu128-v1/lib/python3.10/site-packages/diff_gaussian_rasterization/_C.cpython-310-x86_64-linux-gnu.so",
+      "extension_sha256": "be8dc6a8745b54279f8d676ae7987f3034c3c86bf53234556733b66a4210cf8b",
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "package": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/sof/py310-torch2.7.1-cu128-v1/lib/python3.10/site-packages/diff_gaussian_rasterization/__init__.py",
+      "python": "3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]",
+      "torch": "2.7.1+cu128",
+      "torch_cuda": "12.8"
+    },
+    "status": "PASS"
+  },
+  "real_3k_smoke": {
+    "checkpoint": {
+      "bytes": 15449659,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/qualification-2it-20260818-v1/model/point_cloud/iteration_2/point_cloud.ply",
+      "sha256": "0508a34f6ae9b0aa927ba07187b4d0e31cee417447940d8da7c8d61476673459"
+    },
+    "qualification": {
+      "formal_training_started": false,
+      "height": 1025,
+      "iterations": 2,
+      "method_id": "sof",
+      "model_ply": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/qualification-2it-20260818-v1/model/point_cloud/iteration_2/point_cloud.ply",
+      "model_ply_bytes": 15449659,
+      "native_sort_mode": "HIER",
+      "native_sort_order": "PTD_MAX",
+      "passed": true,
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "resource": {
+        "allocated_gpu_count": 1,
+        "baseline_device_memory_used_mib_by_gpu": {
+          "0": 0.0
+        },
+        "camera_load_child_exit_code": 0,
+        "cgroup_memory_baseline_bytes": 67967483904,
+        "cgroup_memory_limit_bytes": 118111600640,
+        "cgroup_observed_peak_bytes": 74072498176,
+        "controlled_termination_details": null,
+        "controlled_termination_initiator": null,
+        "controlled_termination_signal": null,
+        "ended_utc": "2026-08-18T17:40:28.018Z",
+        "estimated_gpu_energy_wh": 0.2481146056099174,
+        "failure_reason": null,
+        "failure_stage": null,
+        "fd_last_ten_max": 50,
+        "fd_last_ten_min": 49,
+        "fd_peak": 50,
+        "gnu_time_wrapper_exit_code": 0,
+        "gpu_hours": 0.004184012430616551,
+        "gpu_memory_total_mib_per_device": [
+          97887.0
+        ],
+        "gpu_sample_count": 13,
+        "jpeg_fd_peak": 1,
+        "max_gpu_utilization_percent": 1.0,
+        "mean_gpu_utilization_percent": 0.23076923076923078,
+        "memory_events_after": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_events_before": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_events_delta": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "outer_probe_exit_code": 0,
+        "peak_device_memory_used_mib": 2909.0,
+        "peak_gpu_memory_mib": 2909.0,
+        "probe_complete": true,
+        "process_maximum_rss_kib": 5825920,
+        "process_tree_sampled_peak_rss_kib": 5681884,
+        "rlimit_nofile_soft": 65536,
+        "sampler_errors": [],
+        "schema": "gs_gcp_resource_probe_summary_v2",
+        "status": "PASS",
+        "timeout_implementation": "resource_probe_internal_deadline",
+        "timeout_triggered": false,
+        "usr_bin_timeout_exit_code": null,
+        "usr_bin_timeout_used": false,
+        "wall_seconds": 15.062444750219584
+      },
+      "schema": "m3m_gcp_native_quarter_sof_real_3k_qualification_v1",
+      "source_path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/train",
+      "status": "PASS",
+      "train_view_count": 82,
+      "width": 1414
+    },
+    "qualification_validation_sha256": "a52c3931f4b8fbfd8e44e601a443d6edc0c277c374eab4c3be3d7fad6a7b2cd7",
+    "resource": {
+      "allocated_gpu_count": 1,
+      "baseline_device_memory_used_mib_by_gpu": {
+        "0": 0.0
+      },
+      "camera_load_child_exit_code": 0,
+      "cgroup_memory_baseline_bytes": 67967483904,
+      "cgroup_memory_limit_bytes": 118111600640,
+      "cgroup_observed_peak_bytes": 74072498176,
+      "controlled_termination_details": null,
+      "controlled_termination_initiator": null,
+      "controlled_termination_signal": null,
+      "ended_utc": "2026-08-18T17:40:28.018Z",
+      "estimated_gpu_energy_wh": 0.2481146056099174,
+      "failure_reason": null,
+      "failure_stage": null,
+      "fd_last_ten_max": 50,
+      "fd_last_ten_min": 49,
+      "fd_peak": 50,
+      "gnu_time_wrapper_exit_code": 0,
+      "gpu_hours": 0.004184012430616551,
+      "gpu_memory_total_mib_per_device": [
+        97887.0
+      ],
+      "gpu_sample_count": 13,
+      "jpeg_fd_peak": 1,
+      "max_gpu_utilization_percent": 1.0,
+      "mean_gpu_utilization_percent": 0.23076923076923078,
+      "memory_events_after": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_events_before": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "outer_probe_exit_code": 0,
+      "peak_device_memory_used_mib": 2909.0,
+      "peak_gpu_memory_mib": 2909.0,
+      "probe_complete": true,
+      "process_maximum_rss_kib": 5825920,
+      "process_tree_sampled_peak_rss_kib": 5681884,
+      "rlimit_nofile_soft": 65536,
+      "sampler_errors": [],
+      "schema": "gs_gcp_resource_probe_summary_v2",
+      "status": "PASS",
+      "timeout_implementation": "resource_probe_internal_deadline",
+      "timeout_triggered": false,
+      "usr_bin_timeout_exit_code": null,
+      "usr_bin_timeout_used": false,
+      "wall_seconds": 15.062444750219584
+    },
+    "resource_summary_sha256": "f0bcdd48542078ca03605c89331e575add66b87c42a3546701cb3aa655c6dbda",
+    "status": "PASS_NOT_FORMAL_RESULT"
+  },
+  "recipe_basis": {
+    "iterations": 30000,
+    "native_sort_mode": "HIER",
+    "native_sort_order": "PTD_MAX",
+    "resolution": 1,
+    "result_or_truth_used": false,
+    "selection_inputs": "frozen training RGB/COLMAP geometry and published upstream recipe only",
+    "source": "published upstream SOF_STD Tanks-and-Temples unbounded route"
+  },
+  "runtime": {
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/sof/py310-torch2.7.1-cu128-v1",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "python": "3.10.12",
+    "server": "AutoDL-901",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8"
+  },
+  "schema": "m3m_gcp_native_quarter_sof_gpu_real_3k_qualification_v1",
+  "source": {
+    "evaluation_adapter_diff_names": [
+      "gaussian_renderer/__init__.py"
+    ],
+    "official_repository_commit": "b9eb4170c843014f5f96d54924976161bd675469",
+    "official_repository_tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
+    "official_training_source_clean": true,
+    "training_diff_names": []
+  },
+  "status": "PASS"
+}
