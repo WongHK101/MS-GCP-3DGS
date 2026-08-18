@@ -388,6 +388,23 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             else:
                 require(False, f"{method_id}: unknown formal result status")
 
+        if method.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED":
+            qualification_relative = method.get("qualification_report")
+            qualification_sha = method.get("qualification_report_sha256")
+            require(
+                isinstance(qualification_relative, str) and bool(qualification_relative),
+                f"{method_id}: qualification report path missing",
+            )
+            require(is_sha256(qualification_sha), f"{method_id}: qualification report SHA malformed")
+            if isinstance(qualification_relative, str) and qualification_relative:
+                qualification_path = repo_root / qualification_relative
+                require(qualification_path.is_file(), f"{method_id}: qualification report missing")
+                if qualification_path.is_file() and is_sha256(qualification_sha):
+                    require(
+                        file_sha256(qualification_path) == qualification_sha,
+                        f"{method_id}: qualification report file SHA mismatch",
+                    )
+
     for method_id in ("gsprior", "citygs_x"):
         license_status = str(by_id.get(method_id, {}).get("source", {}).get("license_status", ""))
         require("internal_test_only" in license_status and "redistribution_blocked" in license_status, f"{method_id}: missing-license boundary absent")

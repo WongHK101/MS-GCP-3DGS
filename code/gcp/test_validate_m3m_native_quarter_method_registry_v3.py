@@ -108,3 +108,12 @@ def test_six_scene_matrix_cannot_open_during_3k_batch(tmp_path: Path) -> None:
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is False
     assert "six-scene matrix unlocked" in result["errors"]
+
+
+def test_qualified_candidate_report_hash_is_bound(tmp_path: Path) -> None:
+    value = load_registry()
+    method = next(item for item in value["methods"] if item["method_id"] == "qgs")
+    method["qualification_report_sha256"] = "0" * 64
+    result = validate_mutation(tmp_path, value)
+    assert result["passed"] is False
+    assert "qgs: qualification report file SHA mismatch" in result["errors"]

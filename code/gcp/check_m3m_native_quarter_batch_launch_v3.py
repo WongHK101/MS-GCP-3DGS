@@ -97,6 +97,49 @@ def check_launch(
             require(file_sha256(recipe_path) == method.get("recipe_sha256"), "frozen recipe SHA mismatch")
             require(gate.get("recipe_sha256") == method.get("recipe_sha256"), "gate recipe SHA mismatch")
 
+        adapter_relative = method.get("adapter_config") or method.get("renderer_adapter")
+        adapter_sha = method.get("adapter_config_sha256") or method.get("renderer_adapter_sha256")
+        adapter_path = repo_root / str(adapter_relative or "")
+        require(isinstance(adapter_relative, str) and bool(adapter_relative), "method adapter path is missing")
+        require(isinstance(adapter_sha, str) and len(adapter_sha) == 64, "method adapter SHA is missing")
+        require(adapter_path.is_file(), "frozen method adapter is missing")
+        if adapter_path.is_file():
+            require(file_sha256(adapter_path) == adapter_sha, "frozen adapter SHA mismatch")
+            require(gate.get("adapter_config") == adapter_relative, "gate adapter path mismatch")
+            require(gate.get("adapter_config_sha256") == adapter_sha, "gate adapter SHA mismatch")
+
+        qualification_relative = method.get("qualification_report")
+        qualification_sha = method.get("qualification_report_sha256")
+        qualification_path = repo_root / str(qualification_relative or "")
+        require(
+            isinstance(qualification_relative, str) and bool(qualification_relative),
+            "method qualification report path is missing",
+        )
+        require(
+            isinstance(qualification_sha, str) and len(qualification_sha) == 64,
+            "method qualification report SHA is missing",
+        )
+        require(qualification_path.is_file(), "method qualification report is missing")
+        if qualification_path.is_file():
+            require(file_sha256(qualification_path) == qualification_sha, "method qualification report SHA mismatch")
+            require(gate.get("qualification_report") == qualification_relative, "gate qualification report path mismatch")
+            require(
+                gate.get("qualification_report_sha256") == qualification_sha,
+                "gate qualification report SHA mismatch",
+            )
+
+        truth_relative = method.get("truth_deny_report")
+        truth_sha = method.get("truth_deny_report_sha256")
+        if truth_relative is not None or truth_sha is not None:
+            truth_path = repo_root / str(truth_relative or "")
+            require(isinstance(truth_relative, str) and bool(truth_relative), "method truth-deny path is missing")
+            require(isinstance(truth_sha, str) and len(truth_sha) == 64, "method truth-deny SHA is missing")
+            require(truth_path.is_file(), "method truth-deny report is missing")
+            if truth_path.is_file():
+                require(file_sha256(truth_path) == truth_sha, "method truth-deny report SHA mismatch")
+                require(gate.get("truth_deny_report") == truth_relative, "gate truth-deny path mismatch")
+                require(gate.get("truth_deny_report_sha256") == truth_sha, "gate truth-deny SHA mismatch")
+
     required_gates = (
         "source_frozen",
         "recipe_frozen",

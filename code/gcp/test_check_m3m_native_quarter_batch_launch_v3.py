@@ -97,3 +97,23 @@ def test_existing_run_root_is_always_denied() -> None:
     )
     assert result["passed"] is False
     assert "run root already exists; overwrite and resume are forbidden" in result["errors"]
+
+
+def test_gate_cannot_substitute_adapter_or_qualification_evidence() -> None:
+    registry, gate = load_qgs_gate_fixture()
+    method = next(item for item in registry["methods"] if item["method_id"] == "qgs")
+    method["adapter_config_sha256"] = "0" * 64
+    method["qualification_report_sha256"] = "1" * 64
+    result = check_launch(
+        registry,
+        REPO_ROOT,
+        method_id="qgs",
+        scene="gcp_3000_20260602",
+        seed=0,
+        budget_value=30000,
+        run_root=gate["run_root"],
+        run_root_exists=False,
+    )
+    assert result["passed"] is False
+    assert "frozen adapter SHA mismatch" in result["errors"]
+    assert "method qualification report SHA mismatch" in result["errors"]
