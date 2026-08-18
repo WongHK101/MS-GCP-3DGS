@@ -238,9 +238,24 @@ def main() -> int:
     print("RUN", json.dumps(command, ensure_ascii=False), flush=True)
     subprocess.run(command, cwd=repo, env=env, check=True)
     checkpoint = model_path / "point_cloud" / f"iteration_{args.iterations}"
+    canonical_point_cloud = checkpoint / "point_cloud.ply"
+    distributed_point_clouds = sorted(checkpoint.glob("point_cloud_rk*_ws*.ply"))
+    if canonical_point_cloud.is_file():
+        point_cloud = canonical_point_cloud
+        point_cloud_layout = "canonical_single_file"
+    elif [path.name for path in distributed_point_clouds] == ["point_cloud_rk0_ws1.ply"]:
+        # CityGS-X uses its distributed saver even for world_size=1.  Keep the
+        # official file byte-for-byte and record that layout explicitly.
+        point_cloud = distributed_point_clouds[0]
+        point_cloud_layout = "official_distributed_single_rank"
+    else:
+        raise RuntimeError(
+            "unexpected CityGS-X checkpoint point-cloud layout: "
+            f"{[path.name for path in distributed_point_clouds]}"
+        )
     for required in (
         model_path / "cfg_args",
-        checkpoint / "point_cloud.ply",
+        point_cloud,
         checkpoint / "additional_attributes.npz",
         checkpoint / "checkpoints.pth",
     ):
@@ -270,7 +285,9 @@ def main() -> int:
         "model_path": str(model_path),
         "checkpoint": {
             "path": str(checkpoint),
-            "point_cloud_sha256": sha256(checkpoint / "point_cloud.ply"),
+            "point_cloud_file": point_cloud.name,
+            "point_cloud_layout": point_cloud_layout,
+            "point_cloud_sha256": sha256(point_cloud),
         },
         "command": command,
         "route": {

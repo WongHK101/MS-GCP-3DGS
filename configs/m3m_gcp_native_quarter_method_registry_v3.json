@@ -396,11 +396,13 @@
           "freeze_status": "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT"
         }
       ],
-      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "qualification_report": "docs/protocol_evidence/citygaussian_v2_native_quarter_gpu_real_3k_qualification_v1.json",
+      "qualification_report_sha256": "a61e63e2aa8bd95150082a99e3162ffc049c88a791ba3500e6143bfa8bb61f3d",
+      "technical_qualification_status": "TECHNICALLY_QUALIFIED",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
-      "technical_full_matrix_eligibility": false,
+      "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": false
+      "three_k_training_allowed": true
     },
     {
       "method_id": "citygs_x",
@@ -417,7 +419,7 @@
       },
       "input_class": "rgb_colmap_external_geometry_prior",
       "recipe": "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
-      "recipe_sha256": "6fbe97e42be70ab6312acfd167db1212e48d60f3363245e08566f6f64c91b536",
+      "recipe_sha256": "fb6e311a6beef9316b289a0eb8c807b617b1e8384826f71e16f57a522031bdc4",
       "adapter_config": "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
       "adapter_config_sha256": "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
       "external_priors": [
@@ -505,8 +507,12 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": [],
-  "current_one_use_launch_gate": null,
+  "per_method_training_allowed_methods": ["citygaussian_v2"],
+  "current_one_use_launch_gate": {
+    "method_id": "citygaussian_v2",
+    "path": "configs/launch_gates/m3m_gcp_native_quarter_citygaussian_v2_3k_seed0_90k_gate_v1.json",
+    "sha256": "674f1db430bf1aafcb3374aa6653698542666a3e4122826f08200105e8b57f99"
+  },
   "batch_controller": {
     "preparation_allowed": true,
     "formal_training_requires_method_gate": true,

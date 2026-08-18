@@ -261,7 +261,16 @@ def load_model(runtime: dict[str, Any], cameras: list[tuple[str, Any, int]], ite
     )
     gaussians.set_appearance(len(cameras))
     checkpoint_dir = runtime["model_path"] / "point_cloud" / f"iteration_{iteration}"
-    for required in (checkpoint_dir / "point_cloud.ply", checkpoint_dir / "checkpoints.pth"):
+    canonical_point_cloud = checkpoint_dir / "point_cloud.ply"
+    distributed_point_clouds = sorted(checkpoint_dir.glob("point_cloud_rk*_ws*.ply"))
+    if not canonical_point_cloud.is_file() and [path.name for path in distributed_point_clouds] != [
+        "point_cloud_rk0_ws1.ply"
+    ]:
+        raise RuntimeError(
+            "unexpected CityGS-X checkpoint point-cloud layout: "
+            f"{[path.name for path in distributed_point_clouds]}"
+        )
+    for required in (checkpoint_dir / "additional_attributes.npz", checkpoint_dir / "checkpoints.pth"):
         if not required.is_file():
             raise FileNotFoundError(required)
     gaussians.load_ply(str(checkpoint_dir))

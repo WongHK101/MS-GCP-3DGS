@@ -476,7 +476,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
         ),
         "citygs_x": (
             "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
-            "6fbe97e42be70ab6312acfd167db1212e48d60f3363245e08566f6f64c91b536",
+            "fb6e311a6beef9316b289a0eb8c807b617b1e8384826f71e16f57a522031bdc4",
             "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
             "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
         ),

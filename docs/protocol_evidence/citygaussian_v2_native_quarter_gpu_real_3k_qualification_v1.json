@@ -1,0 +1,2251 @@
+{
+  "boundary": {
+    "benchmark_score_claim": false,
+    "formal_citygaussian_v2_training_started": false,
+    "full_scene_matrix_unlocked": false,
+    "gcp_truth_visible_to_training": false,
+    "heldout_rgb_visible_to_training": false,
+    "lidar_visible_to_training": false,
+    "qualification_models_only": true
+  },
+  "created_at": "2026-08-18T22:31:51.102618+00:00",
+  "errors": [],
+  "evaluator": {
+    "method_specific_sim3_fitted": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "qualification_only_not_benchmark_result": true,
+    "ranking_eligible": true,
+    "status": "COMPLETE_RANKED"
+  },
+  "external_geometry_prior": {
+    "manifest": {
+      "access_boundary": {
+        "gcp_annotations_opened": 0,
+        "heldout_rgb_opened": 0,
+        "isolated_dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602",
+        "lidar_opened": 0,
+        "only_training_rgb_and_train_only_colmap_supplied_to_prior_commands": true,
+        "training_rgb_opened": 82
+      },
+      "citygaussian_v2": {
+        "get_depth_scales_script_sha256": "41757e210865cb0ec2b84c7aa56814a73ba83b963588bc7c2f00209cbdcaca9a",
+        "repository_commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+        "run_depth_script_sha256": "15a34713315f82cabd657712de964cb47c9441c53575f1dd8efec99d46ac7303"
+      },
+      "claims": {
+        "heldout_gcp_lidar_or_orthophoto_truth_used": false,
+        "physical_metric_depth_claim": false,
+        "result_driven_prior_or_hyperparameter_selection": false
+      },
+      "commands": {
+        "colmap_scale_fit": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "utils/get_depth_scales.py",
+          "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602",
+          "--depth_dir",
+          "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602/estimated_depths",
+          "--output",
+          "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602/estimated_depth_scales.json",
+          "--point-max-error",
+          "1.5"
+        ],
+        "depth_generation": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "utils/run_depth_anything_v2.py",
+          "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602/images",
+          "--input_size",
+          "518",
+          "--output",
+          "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602/estimated_depths",
+          "--downsample_factor",
+          "1",
+          "--encoder",
+          "vitl",
+          "--da2_path",
+          "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1"
+        ]
+      },
+      "depth_anything_v2": {
+        "encoder": "vitl",
+        "input_size": 518,
+        "output_semantics": "normalized monocular inverse-depth proxy used by official CityGaussianV2 depth-scale fitting",
+        "per_image_normalization": "official CityGaussianV2 wrapper min-max to [0,1]",
+        "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+        "weight_bytes": 1341395338,
+        "weight_path": "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1/checkpoints/depth_anything_v2_vitl.pth",
+        "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345"
+      },
+      "depth_outputs": [
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165038_0001_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165038_0001_D.JPG.npy",
+          "sha256": "67fe7940b5e443d8df1856fc15b28a7d3c3d0a08361c5fd53706857a6d48ac40",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165042_0002_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165042_0002_D.JPG.npy",
+          "sha256": "6a617d72e3d0f5e3c564928abf11734c894190c43a121c3e9cba337cb642f928",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165050_0004_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165050_0004_D.JPG.npy",
+          "sha256": "3cacb5d3e00e9c723f9f14bdd42da553138e4b4ad82c21844970014f649662cf",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165054_0005_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165054_0005_D.JPG.npy",
+          "sha256": "e98f28f6060647e9c9a6071f125bd89876451bf00ef567f6b4ff9b3c440b5217",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165102_0007_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165102_0007_D.JPG.npy",
+          "sha256": "95c9a39e01199abc072142b907408ff9016d1672c7bda09d9f5347a494572035",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165106_0008_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165106_0008_D.JPG.npy",
+          "sha256": "3e847d57db96e24b12204dc3ea1f755c50fdfef25711a295c5f46228e52854a4",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165110_0009_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165110_0009_D.JPG.npy",
+          "sha256": "7ce1815583d8edea928d5030329f454b2cd4482652246ae368cbef644680f8b3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165114_0010_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165114_0010_D.JPG.npy",
+          "sha256": "3b1521507c11df8a3dde9fe61827bed7979289e887cf23190a4051efca02bd2f",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165118_0011_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165118_0011_D.JPG.npy",
+          "sha256": "0fd5058c7a50b9cccc1938b99779c7cdf730df0288c7642c3bd530cc5a82b9c8",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165122_0012_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165122_0012_D.JPG.npy",
+          "sha256": "273325cfd9728096ec760303fed03c49546801063f68f28c8013fa37637ed010",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165126_0013_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165126_0013_D.JPG.npy",
+          "sha256": "8fcabc5c9811404284f4d9b3689130d3ee700ab7e14abf9551f2f553bc3ffcbb",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165130_0014_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165130_0014_D.JPG.npy",
+          "sha256": "d97967238bee9aa1d92e4a0f9c21c6866ae6d67c7f1457e70fa4e13f843e21f5",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165138_0016_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165138_0016_D.JPG.npy",
+          "sha256": "87cf8828216d13b3111033b85a5024e56f845026f2128ca6700f4e2f7d9cfcbd",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165142_0017_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165142_0017_D.JPG.npy",
+          "sha256": "5856b16035f1c40b08327b7a6ce8a9ab5306756423f1b5ab983e544cc36bccc4",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165146_0018_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165146_0018_D.JPG.npy",
+          "sha256": "56dc1f3361161c1755e53737c5c20aabdddd53b441dc4615ea49e1dc3409c188",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165150_0019_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165150_0019_D.JPG.npy",
+          "sha256": "f1b83861c6e033806ef09d72d47432b580ae573c7dc087fe25d94623db2810b7",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165154_0020_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165154_0020_D.JPG.npy",
+          "sha256": "7035e379533eefc78919d7c4bdc21078dc35aaceb19a632f4af63dcb626b5ab9",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165158_0021_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165158_0021_D.JPG.npy",
+          "sha256": "e8d3242ba4657ea44f1f7e93dc3dc069a43e1ba1c0d7908b28bd74dca438fb63",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165206_0023_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165206_0023_D.JPG.npy",
+          "sha256": "52b65cd7eb240da6c3d59cf605fba807a0a326621dff718bc6b69a4a1de7ba88",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165210_0024_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165210_0024_D.JPG.npy",
+          "sha256": "e66865c2740a64887c5057ac7ec4eb6dd34a7679547dbf16651a8694d56301a1",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165229_0025_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165229_0025_D.JPG.npy",
+          "sha256": "28809709ed73d6a9c17188c789b4adb4b65e9b5dee1c2fd65331b211987c2e90",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165233_0026_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165233_0026_D.JPG.npy",
+          "sha256": "6984a37ffce532975c5f288bd3e9a13a21f6fea7c8cacea8e112c7e52fa21f3b",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165237_0027_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165237_0027_D.JPG.npy",
+          "sha256": "74213287ebf61e490da79f5ba16f6e0cb76cd1bd72585a459f0e5097981372c5",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165241_0028_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165241_0028_D.JPG.npy",
+          "sha256": "3c2cbbc6b23808605a41043ff149d26ace8e72aff0f6d31f9a6218d6458d75ed",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165245_0029_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165245_0029_D.JPG.npy",
+          "sha256": "f22743854ba36fc76ea877471f61fa633e26cb882612a725ee44106928f97bef",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165249_0030_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165249_0030_D.JPG.npy",
+          "sha256": "e0b0cecce4d08a3fcdad5611b057dc7d6d9d4f0383b932a97d1b10bf6f7aa888",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165253_0031_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165253_0031_D.JPG.npy",
+          "sha256": "4b87fe18403f175a714a3b3cd01ae30025777f9c9debb2e43698e4b4811440d3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165301_0033_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165301_0033_D.JPG.npy",
+          "sha256": "ff0e20dbf0344549ed1664769a1a3279768eb78c995698912e8265c149788b5f",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165305_0034_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165305_0034_D.JPG.npy",
+          "sha256": "c9a1b4bd29240a8fd1ca89ee4d7db4ddd457d0123847c9f08a2004d97296ea5f",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165309_0035_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165309_0035_D.JPG.npy",
+          "sha256": "c4a18b1323c76126c7ff91f41ace14f4fbd8e0602462e462394f32d799dc4b69",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165313_0036_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165313_0036_D.JPG.npy",
+          "sha256": "5d5b5bc40977fb2d1708f69721a89b020e7fc9aa525edf8b308ab7023393c4c8",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165321_0038_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165321_0038_D.JPG.npy",
+          "sha256": "cbfb2629c2fb9188589b7a4ccc8d8dc0115d7133f2bd4a753cf7bf8fc71ef4f3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165325_0039_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165325_0039_D.JPG.npy",
+          "sha256": "d41f8018a2ed8a03af09d795fa056fe799ffd244f4013ab22d3a0b074f5a626f",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165329_0040_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165329_0040_D.JPG.npy",
+          "sha256": "692895c0306ea1e8204bd9d282da9b7acef6a0332c85a09210c395749ecb1e4e",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165348_0041_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165348_0041_D.JPG.npy",
+          "sha256": "8a6e57af84303179eaba58e0e7dbc2c30aac88edc07e66ac13b2cc23477c6fc5",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165353_0042_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165353_0042_D.JPG.npy",
+          "sha256": "e456c56884477f8d932bfb5e70d5c1548fc09a1e82ede20ade63d48f52ca60bf",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165357_0043_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165357_0043_D.JPG.npy",
+          "sha256": "88fe1aa14c80d557420bcafa832b4cc415ea3a427c4e492b08852c0e930d6421",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165401_0044_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165401_0044_D.JPG.npy",
+          "sha256": "e508f25c2b87c5401e1c143c55afeff116619f0ee40e56210fdbba8bda683410",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165409_0046_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165409_0046_D.JPG.npy",
+          "sha256": "b52319ff41bfdebea8fb3d4e6ed157799707fb3de1746f05762ef3e4baf4817a",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165413_0047_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165413_0047_D.JPG.npy",
+          "sha256": "e4800d8d59272bbf837e461e42b006a62d2af6cec3f1defad01940bc590a305e",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165417_0048_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165417_0048_D.JPG.npy",
+          "sha256": "d9a49351da01e3a2e9920b5ece555819afdb1427a89bd354c99b33f5963b2362",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165421_0049_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165421_0049_D.JPG.npy",
+          "sha256": "274141715cf956d469b147ca19b185fa12365da07975ad2a193d732f85b5742a",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165425_0050_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165425_0050_D.JPG.npy",
+          "sha256": "e76fbb471bb6f163ae172699916a90185135b399ef72b1ccf373b09fb04a8ea5",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165429_0051_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165429_0051_D.JPG.npy",
+          "sha256": "6d988516b2af32a5cf77a10a1adcf29b817ccd8dbabb5d1a3e2ceaa2496dd0d9",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165433_0052_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165433_0052_D.JPG.npy",
+          "sha256": "3a705de68e0f097ef25787095da8e7cafd65495dd0a3e80ce8970f09e3f41204",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165437_0053_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165437_0053_D.JPG.npy",
+          "sha256": "f00429d89f1e76f5ddcd8962898efd6d9856f4668d1cb9435ef6d1870b492375",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165445_0055_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165445_0055_D.JPG.npy",
+          "sha256": "d1900e2e2085fce54f73391ef48607dd9ffdbb2be97f05d3062df534b5fa6b63",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165449_0056_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165449_0056_D.JPG.npy",
+          "sha256": "2d14237bbee8c40463564d93db19b294270e58aeac0a5fc759eee9ce6422ee58",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165453_0057_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165453_0057_D.JPG.npy",
+          "sha256": "a208f85905455739a62cd60c07745a6594380870fe133061cd3dd3667a860750",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165457_0058_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165457_0058_D.JPG.npy",
+          "sha256": "bbcb162e9e972ee8bb2c31f8ac6c564f2a7e2a15b0abedc45949afcfad57550f",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165501_0059_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165501_0059_D.JPG.npy",
+          "sha256": "cb0653bc8520b6e8bd44dc6180e90a10cf9a6e321074a84359b1ef918d10ac6c",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165517_0060_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165517_0060_D.JPG.npy",
+          "sha256": "e5578c06b3909bab60d72345a9fe19f79cf2659bf73f67e812ddebc6c8a3ca2e",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165522_0061_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165522_0061_D.JPG.npy",
+          "sha256": "1aab10675af8a348f3db5ec9c524d30e90a379f8a862227628e5078b57f8f5dd",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165526_0062_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165526_0062_D.JPG.npy",
+          "sha256": "fd46c2e96f5e75f2b5a075687b8af01f57b31e3e01dbc5d20bd320c3ab195d44",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165530_0063_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165530_0063_D.JPG.npy",
+          "sha256": "927b95fd55eabb6df4e9d87fc2c8d7d56c0c576f83f205baa495dabb366b4685",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165538_0065_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165538_0065_D.JPG.npy",
+          "sha256": "15646ea764e7d00db01feb692879ff38ceebc6a955f81f2a9468acf10c2d6b7d",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165542_0066_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165542_0066_D.JPG.npy",
+          "sha256": "295c22c1238e19b8a342dd6229358b5c2b0a7216835facaca00fd2dfcdf79a06",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165546_0067_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165546_0067_D.JPG.npy",
+          "sha256": "63e46c50196371f47f81c8cc4244442aa8031eadc35f14f711b257ea107270f5",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165550_0068_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165550_0068_D.JPG.npy",
+          "sha256": "2d83c417405c3dc56894478b49dbee7598ce11523b481c6b32e3b92414b7948b",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165554_0069_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165554_0069_D.JPG.npy",
+          "sha256": "8d2165f53da1aa46bddfabe9c6808e306919e620ee502ad19f532f23255ddc56",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165558_0070_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165558_0070_D.JPG.npy",
+          "sha256": "c7cf8584fafc9923317d8302a443534787e23f0bc63d7eab25f41ccd400ffa7b",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165606_0072_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165606_0072_D.JPG.npy",
+          "sha256": "edfdfb38e6613f206fe55e2c7b4d8ee5c2a845a6c15f674b2ccff8d3e0299936",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165610_0073_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165610_0073_D.JPG.npy",
+          "sha256": "02fad0e125092f07d39804622ff8247a90cc9d6b527374238b89032402b28dc3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165614_0074_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165614_0074_D.JPG.npy",
+          "sha256": "d65b498edd870ebc8789ce2bd6cd18cae8295b4baaeb455b6fa7e1fefcf78e58",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165618_0075_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165618_0075_D.JPG.npy",
+          "sha256": "f7b3e7b7f6b1a6d203c9cef6c41b98abdae030e3a942ceaf3bf37aefe1878557",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165640_0076_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165640_0076_D.JPG.npy",
+          "sha256": "e80c25366ae73488a2501fbd89d87d395ccc284c096ef7c4a7974fc310467457",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165645_0077_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165645_0077_D.JPG.npy",
+          "sha256": "ce6d83ad8fcd9be3c7e11e7b801a81093d472709035030c90e57b40966a3240d",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165649_0078_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165649_0078_D.JPG.npy",
+          "sha256": "f44b9dfa470e9b578ee7c1c89ca28c007923496edb3ca3002ebc62122a4765f3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165653_0079_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165653_0079_D.JPG.npy",
+          "sha256": "ec43d6e2dccb0b2f32bdde47261f9f5112f1a0228e2c6a170072e2a7802819b7",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165701_0081_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165701_0081_D.JPG.npy",
+          "sha256": "f64e01ee4ef523b3913eb5e281a61ca759035573b5659083835e4287ee43c227",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165705_0082_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165705_0082_D.JPG.npy",
+          "sha256": "36e86d1d0112372d8fa61e344424dc2db34ebbce011837773376ab45dd6289dd",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165709_0083_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165709_0083_D.JPG.npy",
+          "sha256": "a72a081542c1f5f3886d2e946ae5da44a0e56deda715f2e264d02bb08e378bed",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165713_0084_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165713_0084_D.JPG.npy",
+          "sha256": "354955ca097e56824eed145c34ead72316802688f7b44cb74e0e72e7ac7e029d",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165717_0085_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165717_0085_D.JPG.npy",
+          "sha256": "f6eff0d9940aebdf3fe8fe2a0c69e7ee9e7ffd11a3938fa2840539aed6e0dd46",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165721_0086_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165721_0086_D.JPG.npy",
+          "sha256": "6f37b2ffe23a5582eade14b8399538f2dfd967e90fd9aaa64f69df629fb9fdf1",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165725_0087_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165725_0087_D.JPG.npy",
+          "sha256": "aeaedfc8ca3d128144027cf38093dbf1cd00081c49ea987f19733cda746543b3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165729_0088_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165729_0088_D.JPG.npy",
+          "sha256": "6168c440160880388c6f00f540e19fd7d1c8e0d32064daf1ee1a334ef30017e3",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165737_0090_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165737_0090_D.JPG.npy",
+          "sha256": "8ed068a9c338325c7b4ee283fbae65645d10cf5f92dcb277bb5e426836f27229",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165741_0091_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165741_0091_D.JPG.npy",
+          "sha256": "52874f10c2963baea6920cbf6dfcf8316a8d848ae4012c141f26477555e5b9a0",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165745_0092_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165745_0092_D.JPG.npy",
+          "sha256": "c535340ae49fff24de682127cd42a723ac8193a91fdefde28804a80b22ca5c33",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165749_0093_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165749_0093_D.JPG.npy",
+          "sha256": "98a3ef3032f147505dea83660900249d7e3b15be803e9b30829d6afd1122ddd0",
+          "shape": [
+            1025,
+            1414
+          ]
+        },
+        {
+          "bytes": 5797528,
+          "dtype": "float32",
+          "image_name": "DJI_20260602165753_0094_D.JPG",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "relative_path": "estimated_depths/DJI_20260602165753_0094_D.JPG.npy",
+          "sha256": "0ce2b0059704ca357ca24967deeb5fd54fe3a0585d1113815939c0b5698fdc00",
+          "shape": [
+            1025,
+            1414
+          ]
+        }
+      ],
+      "depth_scales": {
+        "enabled_depth_count": 75,
+        "enabled_depth_names": [
+          "DJI_20260602165038_0001_D.JPG",
+          "DJI_20260602165042_0002_D.JPG",
+          "DJI_20260602165050_0004_D.JPG",
+          "DJI_20260602165054_0005_D.JPG",
+          "DJI_20260602165102_0007_D.JPG",
+          "DJI_20260602165106_0008_D.JPG",
+          "DJI_20260602165110_0009_D.JPG",
+          "DJI_20260602165114_0010_D.JPG",
+          "DJI_20260602165118_0011_D.JPG",
+          "DJI_20260602165122_0012_D.JPG",
+          "DJI_20260602165130_0014_D.JPG",
+          "DJI_20260602165206_0023_D.JPG",
+          "DJI_20260602165210_0024_D.JPG",
+          "DJI_20260602165229_0025_D.JPG",
+          "DJI_20260602165233_0026_D.JPG",
+          "DJI_20260602165237_0027_D.JPG",
+          "DJI_20260602165241_0028_D.JPG",
+          "DJI_20260602165245_0029_D.JPG",
+          "DJI_20260602165249_0030_D.JPG",
+          "DJI_20260602165253_0031_D.JPG",
+          "DJI_20260602165301_0033_D.JPG",
+          "DJI_20260602165305_0034_D.JPG",
+          "DJI_20260602165309_0035_D.JPG",
+          "DJI_20260602165313_0036_D.JPG",
+          "DJI_20260602165321_0038_D.JPG",
+          "DJI_20260602165325_0039_D.JPG",
+          "DJI_20260602165329_0040_D.JPG",
+          "DJI_20260602165348_0041_D.JPG",
+          "DJI_20260602165353_0042_D.JPG",
+          "DJI_20260602165357_0043_D.JPG",
+          "DJI_20260602165401_0044_D.JPG",
+          "DJI_20260602165409_0046_D.JPG",
+          "DJI_20260602165413_0047_D.JPG",
+          "DJI_20260602165417_0048_D.JPG",
+          "DJI_20260602165421_0049_D.JPG",
+          "DJI_20260602165425_0050_D.JPG",
+          "DJI_20260602165429_0051_D.JPG",
+          "DJI_20260602165433_0052_D.JPG",
+          "DJI_20260602165437_0053_D.JPG",
+          "DJI_20260602165445_0055_D.JPG",
+          "DJI_20260602165449_0056_D.JPG",
+          "DJI_20260602165453_0057_D.JPG",
+          "DJI_20260602165457_0058_D.JPG",
+          "DJI_20260602165501_0059_D.JPG",
+          "DJI_20260602165517_0060_D.JPG",
+          "DJI_20260602165522_0061_D.JPG",
+          "DJI_20260602165526_0062_D.JPG",
+          "DJI_20260602165530_0063_D.JPG",
+          "DJI_20260602165538_0065_D.JPG",
+          "DJI_20260602165542_0066_D.JPG",
+          "DJI_20260602165546_0067_D.JPG",
+          "DJI_20260602165550_0068_D.JPG",
+          "DJI_20260602165554_0069_D.JPG",
+          "DJI_20260602165558_0070_D.JPG",
+          "DJI_20260602165606_0072_D.JPG",
+          "DJI_20260602165610_0073_D.JPG",
+          "DJI_20260602165614_0074_D.JPG",
+          "DJI_20260602165618_0075_D.JPG",
+          "DJI_20260602165640_0076_D.JPG",
+          "DJI_20260602165645_0077_D.JPG",
+          "DJI_20260602165649_0078_D.JPG",
+          "DJI_20260602165653_0079_D.JPG",
+          "DJI_20260602165701_0081_D.JPG",
+          "DJI_20260602165705_0082_D.JPG",
+          "DJI_20260602165709_0083_D.JPG",
+          "DJI_20260602165713_0084_D.JPG",
+          "DJI_20260602165717_0085_D.JPG",
+          "DJI_20260602165721_0086_D.JPG",
+          "DJI_20260602165725_0087_D.JPG",
+          "DJI_20260602165729_0088_D.JPG",
+          "DJI_20260602165737_0090_D.JPG",
+          "DJI_20260602165741_0091_D.JPG",
+          "DJI_20260602165745_0092_D.JPG",
+          "DJI_20260602165749_0093_D.JPG",
+          "DJI_20260602165753_0094_D.JPG"
+        ],
+        "median_scale": 0.01960788048349369,
+        "official_lower_bound_factor": 0.2,
+        "official_upper_bound_factor": 5.0,
+        "path": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602/estimated_depth_scales.json",
+        "point_max_error": 1.5,
+        "record_count": 82,
+        "rejected_depth_count": 7,
+        "rejected_depth_names": [
+          "DJI_20260602165126_0013_D.JPG",
+          "DJI_20260602165138_0016_D.JPG",
+          "DJI_20260602165142_0017_D.JPG",
+          "DJI_20260602165146_0018_D.JPG",
+          "DJI_20260602165150_0019_D.JPG",
+          "DJI_20260602165154_0020_D.JPG",
+          "DJI_20260602165158_0021_D.JPG"
+        ],
+        "sha256": "44f14019a3ece235307f42231a8dd2acc14d0907742af2673fb2eeac32cf7df7",
+        "thresholds_selected_from_results": false,
+        "zero_scale_count": 0
+      },
+      "formal_input_manifest": {
+        "canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+        "file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+        "heldout_view_count": 12,
+        "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
+        "train_view_count": 82
+      },
+      "input_class": "rgb_colmap_external_geometry_prior",
+      "method_id": "citygaussian_v2",
+      "passed": true,
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "scene": "gcp_3000_20260602",
+      "schema": "m3m_gcp_native_quarter_citygaussian_v2_depth_prior_v1",
+      "status": "PASS",
+      "training_images": [
+        {
+          "bytes": 973887,
+          "height": 1025,
+          "image_name": "DJI_20260602165038_0001_D.JPG",
+          "sha256": "87d8772980bbad2eceae430a88e8733bda06b4eadd0f34448de4187b1149a446",
+          "width": 1414
+        },
+        {
+          "bytes": 953082,
+          "height": 1025,
+          "image_name": "DJI_20260602165042_0002_D.JPG",
+          "sha256": "c4dad3fafaa790e7675c4cf8746f366a4c6e024002b94fe7b86d54056076d018",
+          "width": 1414
+        },
+        {
+          "bytes": 912912,
+          "height": 1025,
+          "image_name": "DJI_20260602165050_0004_D.JPG",
+          "sha256": "85d652fd4fbd93b9a043f8c1c2a33fca64103941160bb4880c364e4c5b978c62",
+          "width": 1414
+        },
+        {
+          "bytes": 885835,
+          "height": 1025,
+          "image_name": "DJI_20260602165054_0005_D.JPG",
+          "sha256": "f824538a4cae88ad793519147b509fbbac7eba25044a2122c19c6029ce89a496",
+          "width": 1414
+        },
+        {
+          "bytes": 903951,
+          "height": 1025,
+          "image_name": "DJI_20260602165102_0007_D.JPG",
+          "sha256": "a5216cfc90d1f289280f65790017681c807c6b491785d7c003629c7076fa5b45",
+          "width": 1414
+        },
+        {
+          "bytes": 915350,
+          "height": 1025,
+          "image_name": "DJI_20260602165106_0008_D.JPG",
+          "sha256": "d42054b866cb151bdd11767ccd27ba008f4307ba7d32195b09acdb8d27ba6613",
+          "width": 1414
+        },
+        {
+          "bytes": 926378,
+          "height": 1025,
+          "image_name": "DJI_20260602165110_0009_D.JPG",
+          "sha256": "639aec4c51458886ab9730cdfc10a171f6fcbd988ddbce0dc2bc7cf1637abe99",
+          "width": 1414
+        },
+        {
+          "bytes": 941030,
+          "height": 1025,
+          "image_name": "DJI_20260602165114_0010_D.JPG",
+          "sha256": "2e156b92ed608c78b7ca4a94655c465a665e7361dd898d97ca4270d00b25fdaf",
+          "width": 1414
+        },
+        {
+          "bytes": 956712,
+          "height": 1025,
+          "image_name": "DJI_20260602165118_0011_D.JPG",
+          "sha256": "1e1dbd5df545644801ac89bb7e40098d723176f39c49c9807f768d7b014214ea",
+          "width": 1414
+        },
+        {
+          "bytes": 937785,
+          "height": 1025,
+          "image_name": "DJI_20260602165122_0012_D.JPG",
+          "sha256": "46020247743542820184367e87d8a6e3193beb3f1d860f8e4b5e890bbf296518",
+          "width": 1414
+        },
+        {
+          "bytes": 951269,
+          "height": 1025,
+          "image_name": "DJI_20260602165126_0013_D.JPG",
+          "sha256": "da35486dad13cce6a874872baf2009ab8f9ab82b65c56252ba9f4b9cd3d9afc2",
+          "width": 1414
+        },
+        {
+          "bytes": 992374,
+          "height": 1025,
+          "image_name": "DJI_20260602165130_0014_D.JPG",
+          "sha256": "1f38e4b7af770651cccd74d743c293a09f6ca710cff8ae99788daf35d48f0e24",
+          "width": 1414
+        },
+        {
+          "bytes": 971310,
+          "height": 1025,
+          "image_name": "DJI_20260602165138_0016_D.JPG",
+          "sha256": "fd96e04ac058136256312e1e741a1aae0894366a321f7960dd02534850f67da8",
+          "width": 1414
+        },
+        {
+          "bytes": 970280,
+          "height": 1025,
+          "image_name": "DJI_20260602165142_0017_D.JPG",
+          "sha256": "b5d8f1197f7619727a8713e3b1ca609dd87b0234440b8e2781fa72ca169bf036",
+          "width": 1414
+        },
+        {
+          "bytes": 938351,
+          "height": 1025,
+          "image_name": "DJI_20260602165146_0018_D.JPG",
+          "sha256": "14bb34caf368c6d5349574bbc7e4801f6d5c6882bfee87541343b55f591114ea",
+          "width": 1414
+        },
+        {
+          "bytes": 908423,
+          "height": 1025,
+          "image_name": "DJI_20260602165150_0019_D.JPG",
+          "sha256": "09a8604c7c1372f66730589efe6db99314f415e38681df109256a59addaddd75",
+          "width": 1414
+        },
+        {
+          "bytes": 882435,
+          "height": 1025,
+          "image_name": "DJI_20260602165154_0020_D.JPG",
+          "sha256": "261e4212f0c8d1851ed36da6e6cfa88ea2f7c603ac47fdb2b6ca3beb5fc193a1",
+          "width": 1414
+        },
+        {
+          "bytes": 867419,
+          "height": 1025,
+          "image_name": "DJI_20260602165158_0021_D.JPG",
+          "sha256": "d80fc82d93a06d75646f463e1834c7ea77350228a8528d6499bbade60ff52dba",
+          "width": 1414
+        },
+        {
+          "bytes": 874816,
+          "height": 1025,
+          "image_name": "DJI_20260602165206_0023_D.JPG",
+          "sha256": "a81b54fa3b37d246caf1274ac5339435219f3e38cb60263e5a6cd1b4a6c78787",
+          "width": 1414
+        },
+        {
+          "bytes": 889265,
+          "height": 1025,
+          "image_name": "DJI_20260602165210_0024_D.JPG",
+          "sha256": "0935e094c3842df576b0d900ae5b9be1ac1267a10783b5b5ce16b22794f23080",
+          "width": 1414
+        },
+        {
+          "bytes": 980284,
+          "height": 1025,
+          "image_name": "DJI_20260602165229_0025_D.JPG",
+          "sha256": "1858998f7d6629ac42e5f66f7b17e90069d22527f59b056c802ec73947004e54",
+          "width": 1414
+        },
+        {
+          "bytes": 995918,
+          "height": 1025,
+          "image_name": "DJI_20260602165233_0026_D.JPG",
+          "sha256": "5ced6d0d5b239e0dc67f323e6f127182fc08360802ca233bcadb56f7a6923278",
+          "width": 1414
+        },
+        {
+          "bytes": 1024934,
+          "height": 1025,
+          "image_name": "DJI_20260602165237_0027_D.JPG",
+          "sha256": "a21002e9612cac08135b17b66a43f7f3a560267fef815da548bba048889ed1f8",
+          "width": 1414
+        },
+        {
+          "bytes": 1034239,
+          "height": 1025,
+          "image_name": "DJI_20260602165241_0028_D.JPG",
+          "sha256": "d940b3e9086d2500fe62a292320b11cbabe1eba4197f0586f47714c63c9022bc",
+          "width": 1414
+        },
+        {
+          "bytes": 1052905,
+          "height": 1025,
+          "image_name": "DJI_20260602165245_0029_D.JPG",
+          "sha256": "9dfaca1acf57cd7d3ffd775c8b5f1550e5b5344feebb88bb69d4400106c39573",
+          "width": 1414
+        },
+        {
+          "bytes": 1048322,
+          "height": 1025,
+          "image_name": "DJI_20260602165249_0030_D.JPG",
+          "sha256": "39fa048ad1ae096f40de0a5c27c283aa9570e2ffb80ffc2dbebfa58d4c4984f9",
+          "width": 1414
+        },
+        {
+          "bytes": 1060035,
+          "height": 1025,
+          "image_name": "DJI_20260602165253_0031_D.JPG",
+          "sha256": "e3b3b740ddbc42359170d6bd6e18d929783effbe8d9222f58e6264ac323b82f8",
+          "width": 1414
+        },
+        {
+          "bytes": 1051943,
+          "height": 1025,
+          "image_name": "DJI_20260602165301_0033_D.JPG",
+          "sha256": "9cfe46d3ca9e85e48aefa33104d95883cda60624fc7d11e6e51ba0de61903e29",
+          "width": 1414
+        },
+        {
+          "bytes": 1041389,
+          "height": 1025,
+          "image_name": "DJI_20260602165305_0034_D.JPG",
+          "sha256": "bc6e9d6dd883a53a79ce4c2451d03e456176a53c8adaec005fefbbe5c6431314",
+          "width": 1414
+        },
+        {
+          "bytes": 1048759,
+          "height": 1025,
+          "image_name": "DJI_20260602165309_0035_D.JPG",
+          "sha256": "3ca173a1c2c74ab870b3a78e8e45923e095c711da73c1a833f4b4d24e9b0af38",
+          "width": 1414
+        },
+        {
+          "bytes": 1032038,
+          "height": 1025,
+          "image_name": "DJI_20260602165313_0036_D.JPG",
+          "sha256": "85c14e43a86592f48b6c95eef3dee41f288c6fd8c3c803f3376fbb49c103d41c",
+          "width": 1414
+        },
+        {
+          "bytes": 996644,
+          "height": 1025,
+          "image_name": "DJI_20260602165321_0038_D.JPG",
+          "sha256": "837dc77991fa1a9ad675a28bb0069ff22fdbea4074ae59bcb0e962c5d7e6b443",
+          "width": 1414
+        },
+        {
+          "bytes": 980062,
+          "height": 1025,
+          "image_name": "DJI_20260602165325_0039_D.JPG",
+          "sha256": "f91e1458e9e36640a75cc18917439caf5ae23cbdcb63dfec771c13828e0461b9",
+          "width": 1414
+        },
+        {
+          "bytes": 978282,
+          "height": 1025,
+          "image_name": "DJI_20260602165329_0040_D.JPG",
+          "sha256": "6cfe6f2a8281c2ed1750a7afb0abee46da07cc1f9dfe6d059a40ccc0750e6600",
+          "width": 1414
+        },
+        {
+          "bytes": 989497,
+          "height": 1025,
+          "image_name": "DJI_20260602165348_0041_D.JPG",
+          "sha256": "3c57dd73d2f7b417dedfaedaacf1494a471e5bc658300ffbf08a47ca73ba8fb4",
+          "width": 1414
+        },
+        {
+          "bytes": 971763,
+          "height": 1025,
+          "image_name": "DJI_20260602165353_0042_D.JPG",
+          "sha256": "571b29a25e03dd90a10e89f410a71bcc192656476805e776e947e088020465dd",
+          "width": 1414
+        },
+        {
+          "bytes": 1070784,
+          "height": 1025,
+          "image_name": "DJI_20260602165357_0043_D.JPG",
+          "sha256": "4359bdd2892420746fd9c4da2c8120cad01bf42d571259582f5754985375984e",
+          "width": 1414
+        },
+        {
+          "bytes": 1105401,
+          "height": 1025,
+          "image_name": "DJI_20260602165401_0044_D.JPG",
+          "sha256": "e4a478ae68f46989cd32e7682ddbb4283af7c07df442f8905102d11bd67d4c37",
+          "width": 1414
+        },
+        {
+          "bytes": 1102526,
+          "height": 1025,
+          "image_name": "DJI_20260602165409_0046_D.JPG",
+          "sha256": "2ad057ec92dc615ed9373795b895db70c67527bb09f5d9e8632de11f03ba7e2c",
+          "width": 1414
+        },
+        {
+          "bytes": 1047508,
+          "height": 1025,
+          "image_name": "DJI_20260602165413_0047_D.JPG",
+          "sha256": "19c290fb42ec203b8e0e07e8bb7b0096e5b58cad96428cd67f59f4ed7d66fb63",
+          "width": 1414
+        },
+        {
+          "bytes": 982623,
+          "height": 1025,
+          "image_name": "DJI_20260602165417_0048_D.JPG",
+          "sha256": "8f5b71d337cef88e5c7202d3f2ae9f5a14d3b89ff8f399c66b03ffb5e863f449",
+          "width": 1414
+        },
+        {
+          "bytes": 955392,
+          "height": 1025,
+          "image_name": "DJI_20260602165421_0049_D.JPG",
+          "sha256": "be4b9d3474fa42b5e6ac3855e8ccb4323bb16f034e7fd976cc1447d4b5db42a8",
+          "width": 1414
+        },
+        {
+          "bytes": 958824,
+          "height": 1025,
+          "image_name": "DJI_20260602165425_0050_D.JPG",
+          "sha256": "68ec07b81c7c130aa203f8095714b9ac04a4daa407fad333fd33dba3ec362eb7",
+          "width": 1414
+        },
+        {
+          "bytes": 947876,
+          "height": 1025,
+          "image_name": "DJI_20260602165429_0051_D.JPG",
+          "sha256": "b160fd42835b3b5a6cc4720913be1102f7c51456403471e4c16f25d3374902e7",
+          "width": 1414
+        },
+        {
+          "bytes": 944852,
+          "height": 1025,
+          "image_name": "DJI_20260602165433_0052_D.JPG",
+          "sha256": "79e3825acb5c44db82d50ca8a445d5b01bb437851dfe2312ab25290f63567374",
+          "width": 1414
+        },
+        {
+          "bytes": 992612,
+          "height": 1025,
+          "image_name": "DJI_20260602165437_0053_D.JPG",
+          "sha256": "cb58e5cab3d8e55f3713c7eb911b044de64854570550c2c6e895c072312285d0",
+          "width": 1414
+        },
+        {
+          "bytes": 1098943,
+          "height": 1025,
+          "image_name": "DJI_20260602165445_0055_D.JPG",
+          "sha256": "1c49723f8618f2ec168dc23b32baf576dcc3f93abb2fafff2b712f90265ea945",
+          "width": 1414
+        },
+        {
+          "bytes": 1065483,
+          "height": 1025,
+          "image_name": "DJI_20260602165449_0056_D.JPG",
+          "sha256": "fd0893e62db4dd3c314022a397ca0cb9004b4999fdcd0caee73d92b57588bb0b",
+          "width": 1414
+        },
+        {
+          "bytes": 968942,
+          "height": 1025,
+          "image_name": "DJI_20260602165453_0057_D.JPG",
+          "sha256": "a586213995d4585ca714bd90be587f1087d6fb1c310fa5ec07dcf08f16614785",
+          "width": 1414
+        },
+        {
+          "bytes": 966587,
+          "height": 1025,
+          "image_name": "DJI_20260602165457_0058_D.JPG",
+          "sha256": "df75046fddc6836c973e7ac4a3e7b7f660527479656579d5190bd6faccff98b5",
+          "width": 1414
+        },
+        {
+          "bytes": 947236,
+          "height": 1025,
+          "image_name": "DJI_20260602165501_0059_D.JPG",
+          "sha256": "fa3c64349765ee3cfb5a5cc76000ad1f0d6fbf2cf518085e47725841bcd19dd0",
+          "width": 1414
+        },
+        {
+          "bytes": 1042862,
+          "height": 1025,
+          "image_name": "DJI_20260602165517_0060_D.JPG",
+          "sha256": "2b8f58541d915455c6512b9f0be971a0760ea351a8f540a8382a7a635f2452f7",
+          "width": 1414
+        },
+        {
+          "bytes": 1026474,
+          "height": 1025,
+          "image_name": "DJI_20260602165522_0061_D.JPG",
+          "sha256": "77b7eca33776043c323daca25b73d4d2a63ac0e4aac50fab6c5b3c6e858822ae",
+          "width": 1414
+        },
+        {
+          "bytes": 1018254,
+          "height": 1025,
+          "image_name": "DJI_20260602165526_0062_D.JPG",
+          "sha256": "d62917f0fcd5d36f951f01505f8b762a28e46ab175c77227e2b577611e71fa50",
+          "width": 1414
+        },
+        {
+          "bytes": 977359,
+          "height": 1025,
+          "image_name": "DJI_20260602165530_0063_D.JPG",
+          "sha256": "097d8b35a4baaa0ddadf2640940dca0ad24a1a618c5c2381f6b3b74586be896e",
+          "width": 1414
+        },
+        {
+          "bytes": 994092,
+          "height": 1025,
+          "image_name": "DJI_20260602165538_0065_D.JPG",
+          "sha256": "5c6c8705e426f3dc15e4fdd5a443ea943419339253ac961584e6abac374c7351",
+          "width": 1414
+        },
+        {
+          "bytes": 1025070,
+          "height": 1025,
+          "image_name": "DJI_20260602165542_0066_D.JPG",
+          "sha256": "e1c823fb26f9cb5ca5415fb435034d9b78d23f92bce38ae1173efbd1b33c59c7",
+          "width": 1414
+        },
+        {
+          "bytes": 1017780,
+          "height": 1025,
+          "image_name": "DJI_20260602165546_0067_D.JPG",
+          "sha256": "8d4b09d0c79775b71e85d7debba90359db178283d4149d8401a72c45a7dc39fd",
+          "width": 1414
+        },
+        {
+          "bytes": 1025569,
+          "height": 1025,
+          "image_name": "DJI_20260602165550_0068_D.JPG",
+          "sha256": "461500b4b2d78f89d348ecc9fea2f2182891f642d21727e9a79cd132f01d6a4c",
+          "width": 1414
+        },
+        {
+          "bytes": 1007081,
+          "height": 1025,
+          "image_name": "DJI_20260602165554_0069_D.JPG",
+          "sha256": "27a1540f71b0849960db073eafa48b9d01ef96a0275b8aaf83f6a3c0e0683d04",
+          "width": 1414
+        },
+        {
+          "bytes": 1004070,
+          "height": 1025,
+          "image_name": "DJI_20260602165558_0070_D.JPG",
+          "sha256": "5470ca6521f85b17fd4848936073b1e7330fa464bf22b7247f85f93aed51837f",
+          "width": 1414
+        },
+        {
+          "bytes": 975782,
+          "height": 1025,
+          "image_name": "DJI_20260602165606_0072_D.JPG",
+          "sha256": "4750c8f14b9f748c6bc5410ad96bb83949cadf7b9b47b215d0c4dc3e37f0b9fd",
+          "width": 1414
+        },
+        {
+          "bytes": 984502,
+          "height": 1025,
+          "image_name": "DJI_20260602165610_0073_D.JPG",
+          "sha256": "9dc2fc7cf8c8c60a26f35a371f326a438b2955562f61eb89faba6f5f3117c2c3",
+          "width": 1414
+        },
+        {
+          "bytes": 1011219,
+          "height": 1025,
+          "image_name": "DJI_20260602165614_0074_D.JPG",
+          "sha256": "dd4fbef55d2b54a86fdeeefeddc7c5c6d1b52726bd05d97c663c315cb744353e",
+          "width": 1414
+        },
+        {
+          "bytes": 995883,
+          "height": 1025,
+          "image_name": "DJI_20260602165618_0075_D.JPG",
+          "sha256": "9d92ef244f02315dab7e478fa98fad4e8f62657c10d0b1ed7ed33e1b86565c00",
+          "width": 1414
+        },
+        {
+          "bytes": 1002786,
+          "height": 1025,
+          "image_name": "DJI_20260602165640_0076_D.JPG",
+          "sha256": "051917d26c8e839cd971b8e742f1db8b6e16668b27f4f398762b94731760db88",
+          "width": 1414
+        },
+        {
+          "bytes": 997569,
+          "height": 1025,
+          "image_name": "DJI_20260602165645_0077_D.JPG",
+          "sha256": "d474b2371735cf3c6a421ed204e4bd21e00d207d4024613b058ed6b4d1e5a270",
+          "width": 1414
+        },
+        {
+          "bytes": 1066604,
+          "height": 1025,
+          "image_name": "DJI_20260602165649_0078_D.JPG",
+          "sha256": "e5457bc65453bac6811d7b508965351efaff41b2d04b7607bdaee82686ee8307",
+          "width": 1414
+        },
+        {
+          "bytes": 1004634,
+          "height": 1025,
+          "image_name": "DJI_20260602165653_0079_D.JPG",
+          "sha256": "003efcc8e299e8ed792a6dd93828ecfff39d148d5fcdeaea6e25c57a7a4b1ba0",
+          "width": 1414
+        },
+        {
+          "bytes": 1051591,
+          "height": 1025,
+          "image_name": "DJI_20260602165701_0081_D.JPG",
+          "sha256": "21741b676180a2e16aafe162b1d68f416322aae21feb3357b6f0c353da3da992",
+          "width": 1414
+        },
+        {
+          "bytes": 1028334,
+          "height": 1025,
+          "image_name": "DJI_20260602165705_0082_D.JPG",
+          "sha256": "09f067da86fb3c5ef992ee7b1b01ef963eef7ab1b4b986ff4130116f6e3afa5c",
+          "width": 1414
+        },
+        {
+          "bytes": 1037627,
+          "height": 1025,
+          "image_name": "DJI_20260602165709_0083_D.JPG",
+          "sha256": "099de873c9963f01716ca3e4ebb293d68c8de0c6f2c83f8a36f9fd768ab6c851",
+          "width": 1414
+        },
+        {
+          "bytes": 963151,
+          "height": 1025,
+          "image_name": "DJI_20260602165713_0084_D.JPG",
+          "sha256": "4794d63e541103b6042520f115f7e0825e1eb1e1d75546e6c45bc50c8600f003",
+          "width": 1414
+        },
+        {
+          "bytes": 984706,
+          "height": 1025,
+          "image_name": "DJI_20260602165717_0085_D.JPG",
+          "sha256": "d253732a3d73e696a4946b8d40c1c5c291327be780ba4c1c4c717c71e61749a0",
+          "width": 1414
+        },
+        {
+          "bytes": 981617,
+          "height": 1025,
+          "image_name": "DJI_20260602165721_0086_D.JPG",
+          "sha256": "52477518114b606bd46b26e587f56af61da7db0da9066fde520edd515345e0d0",
+          "width": 1414
+        },
+        {
+          "bytes": 979392,
+          "height": 1025,
+          "image_name": "DJI_20260602165725_0087_D.JPG",
+          "sha256": "262305c334c35c90e77021c9e6a70e898d9f73538c85c869ef87aee298a2cd1b",
+          "width": 1414
+        },
+        {
+          "bytes": 994412,
+          "height": 1025,
+          "image_name": "DJI_20260602165729_0088_D.JPG",
+          "sha256": "9a32d83415db97b86ce8b2c819dd75f6902752c5c4eb076011e37aefe1eceef3",
+          "width": 1414
+        },
+        {
+          "bytes": 1136570,
+          "height": 1025,
+          "image_name": "DJI_20260602165737_0090_D.JPG",
+          "sha256": "09c1f6d9164b754151f8574d2f1be8f66f2ccbea7fba9431600c23f548856b50",
+          "width": 1414
+        },
+        {
+          "bytes": 1126976,
+          "height": 1025,
+          "image_name": "DJI_20260602165741_0091_D.JPG",
+          "sha256": "6102ce25d8b00d11c535f2822c7fc811830de04218dfbb18b7d2e27679e3edb5",
+          "width": 1414
+        },
+        {
+          "bytes": 1024455,
+          "height": 1025,
+          "image_name": "DJI_20260602165745_0092_D.JPG",
+          "sha256": "23f58f5f9d07beca44e43bf41b149a5473f6daf2426264e4f7a1a657a4b123e8",
+          "width": 1414
+        },
+        {
+          "bytes": 998696,
+          "height": 1025,
+          "image_name": "DJI_20260602165749_0093_D.JPG",
+          "sha256": "187b427450bc2d1e1955740539975ace77388169fb0314bd54e76f9ee60d7a72",
+          "width": 1414
+        },
+        {
+          "bytes": 994938,
+          "height": 1025,
+          "image_name": "DJI_20260602165753_0094_D.JPG",
+          "sha256": "ef52d967e46eddaa451d1a538b22dbaa8486d8cb7db5a4bdb1fd05b9010c310c",
+          "width": 1414
+        }
+      ]
+    },
+    "manifest_sha256": "eeb19e41fd75b9e41272fcf0395498917731474610f8f09b5029cdfb2c83417d"
+  },
+  "formal_training_unlock_candidate": {
+    "full_scene_matrix_allowed": false,
+    "official_budget": {
+      "coarse_steps": 30000,
+      "fine_steps": 60000,
+      "total_steps": 90000
+    },
+    "resume_allowed": false,
+    "scene": "gcp_3000_20260602",
+    "seed": 0,
+    "single_fresh_run_allowed": true
+  },
+  "frozen_input": {
+    "height": 1025,
+    "heldout_test_camera_count": 12,
+    "manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "manifest_file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "scene": "gcp_3000_20260602",
+    "track_compatibility_evidence_sha256": "e8e48b14e276cdd8867769cecde739a0800b9951cca8de056824567f578e5163",
+    "train_camera_count": 82,
+    "width": 1414
+  },
+  "method_id": "citygaussian_v2",
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "raw_moment_conformance": {
+    "camera_z_definition": "per-ray 2D surfel intersection z from the frozen CityGaussianV2 rasterizer",
+    "common_primary_planes": [
+      "A",
+      "M1"
+    ],
+    "diagnostic_evaluation_only_planes": [
+      "M2",
+      "H"
+    ],
+    "report_sha256": "3c6f45d76fbe364ccdc8938a691206369687ecb8983af7f2d2b83911c6d5e5af",
+    "runtime": {
+      "extension": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/eval-py310-torch2.7.1-cu128-v1/lib/python3.10/site-packages/diff_trim_surfel_rasterization/_C.cpython-310-x86_64-linux-gnu.so",
+      "extension_sha256": "5c1136292db90c940dae3761b98734ce0eb4799ed8c113d4b19872ea058a4758",
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "package": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/eval-py310-torch2.7.1-cu128-v1/lib/python3.10/site-packages/diff_trim_surfel_rasterization/__init__.py",
+      "python": "3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]",
+      "torch": "2.7.1+cu128",
+      "torch_cuda": "12.8"
+    },
+    "status": "PASS"
+  },
+  "real_3k_pipeline_packet_smoke": {
+    "export_resource_summary_sha256": "d9dd7403abe13f86aaa28770d95ef277f48160233ee03e303fc0eff972901dcc",
+    "pipeline": {
+      "block_checkpoint": {
+        "bytes": 27971087,
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/fine/blocks/block_0/checkpoints/epoch=1-step=4.ckpt",
+        "sha256": "2761478632202c3146fec1dc15a00132149f42b3e3a5485fc68ec06f03221260"
+      },
+      "block_dim": [
+        1,
+        1
+      ],
+      "coarse_checkpoint": {
+        "bytes": 27970767,
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/coarse/checkpoints/epoch=1-step=4.ckpt",
+        "sha256": "3f560111480295ae0fc188d8cda09d5ef3a37e46bc699ebbae50c06f87e26651"
+      },
+      "coarse_steps": 4,
+      "commands": {
+        "coarse": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "main.py",
+          "fit",
+          "--config",
+          "configs/citygsv2_mc_aerial_coarse_sh2.yaml",
+          "--seed_everything=0",
+          "--data.path=/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602",
+          "--data.parser.init_args.down_sample_factor=1",
+          "--logger=tensorboard",
+          "--output=/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline",
+          "--name=coarse",
+          "--trainer.max_steps=4",
+          "--model.gaussian.init_args.optimization.means_lr_scheduler.init_args.max_steps=4",
+          "--model.metric.init_args.depth_loss_weight.max_steps=4",
+          "--save_iterations=[4]"
+        ],
+        "fine": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "main.py",
+          "fit",
+          "--config",
+          "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/runtime/fine.yaml",
+          "--data.parser.block_id",
+          "0",
+          "-n=fine",
+          "--project",
+          "m3m-gcp-native-quarter",
+          "--logger",
+          "wandb"
+        ],
+        "fine_config": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "main.py",
+          "fit",
+          "--config",
+          "configs/citygsv2_mc_aerial_sh2_trim.yaml",
+          "--seed_everything=0",
+          "--model.initialize_from=/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/coarse/checkpoints/epoch=1-step=4.ckpt",
+          "--data.path=/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602",
+          "--data.parser.init_args.down_sample_factor=1",
+          "--data.parser.init_args.block_dim=[1,1]",
+          "--data.parser.init_args.content_threshold=0.05",
+          "--logger=tensorboard",
+          "--output=/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline",
+          "--name=fine",
+          "--trainer.max_steps=4",
+          "--model.gaussian.init_args.optimization.means_lr_scheduler.init_args.max_steps=4",
+          "--model.metric.init_args.depth_loss_weight.max_steps=4",
+          "--save_iterations=[4]",
+          "--print_config"
+        ],
+        "merge": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "utils/merge_citygs_ckpts.py",
+          "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/fine"
+        ],
+        "partition": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+          "utils/partition_citygs.py",
+          "--config_path",
+          "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/runtime/fine.yaml",
+          "--force"
+        ]
+      },
+      "content_threshold": 0.05,
+      "down_sample_factor": 1.0,
+      "fine_steps": 4,
+      "merged_checkpoint": {
+        "bytes": 27970813,
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/fine/checkpoints/epoch=1-step=4.ckpt",
+        "sha256": "fc2f778e7403901efc8b4e5008c626d478f62ba18ae7cbb65ab70625c46b1895"
+      },
+      "method_id": "citygaussian_v2",
+      "mode": "qualification",
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "resolved_fine_config": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/runtime/fine.yaml",
+        "sha256": "c4c36610002494e6af7fb7e0f20b011b175b7a6c74abc23f70e4ad8c4ded13c4"
+      },
+      "schema": "m3m_gcp_native_quarter_citygaussian_v2_pipeline_run_v1",
+      "seed": 0,
+      "status": "PIPELINE_PASS"
+    },
+    "pipeline_resource_summary_sha256": "bd7d3eb59fb9377569851a4f38287ada24a17758afeae220653dbb24d09d1f86",
+    "pipeline_summary_sha256": "8839b330a756823deff50ef33f66f7caa06d6e08aa5ccbffea4c7981eb57c5bb",
+    "qualification": {
+      "all_packet_recomputations_passed": true,
+      "depth_prior_manifest_sha256": "eeb19e41fd75b9e41272fcf0395498917731474610f8f09b5029cdfb2c83417d",
+      "evaluation": {
+        "checkpoint_coverage_rate": 1.0,
+        "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+        "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+        "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+        "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+        "method_id": "citygaussian_v2",
+        "method_specific_sim3_fitted": false,
+        "observation_failure_counts": {},
+        "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/evaluation/packets/depth_export_manifest.json",
+        "packet_manifest_sha256": "e26dc3838933011d7b3367454be14ae3b4532c678ad81324f363833823205c79",
+        "physical_surface_claim": false,
+        "point_counts": {
+          "checkpoint_passed": 4,
+          "checkpoint_total": 4,
+          "control_passed": 5,
+          "control_total": 5
+        },
+        "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+        "ranking_eligible": true,
+        "ranking_exclusion_reason": "",
+        "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+        "residual_statistics": {
+          "all": {
+            "count": 9,
+            "max_3d_m": 0.16453580310404803,
+            "median_3d_m": 0.05352985735009372,
+            "p95_3d_m": 0.1467651980844616,
+            "rmse_3d_m": 0.0787816686899371,
+            "rmse_h_m": 0.058522886426262674,
+            "rmse_z_m": 0.052741094849365566
+          },
+          "checkpoint": {
+            "count": 4,
+            "max_3d_m": 0.16453580310404803,
+            "median_3d_m": 0.0825551274063085,
+            "p95_3d_m": 0.15787182622170312,
+            "rmse_3d_m": 0.1055610309045747,
+            "rmse_h_m": 0.08371131067235404,
+            "rmse_z_m": 0.06430822428860243
+          },
+          "control": {
+            "count": 5,
+            "max_3d_m": 0.0655130291392718,
+            "median_3d_m": 0.05352985735009372,
+            "p95_3d_m": 0.06436331649315846,
+            "rmse_3d_m": 0.04751091855898568,
+            "rmse_h_m": 0.023639035441479654,
+            "rmse_z_m": 0.041212660502751325
+          }
+        },
+        "scene": "gcp_3000_20260602",
+        "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+        "status": "COMPLETE_RANKED"
+      },
+      "evaluation_camera_domain_is_frozen_94_camera_scene": true,
+      "export_resource": {
+        "allocated_gpu_count": 1,
+        "baseline_device_memory_used_mib_by_gpu": {
+          "0": 0.0
+        },
+        "camera_load_child_exit_code": 0,
+        "cgroup_memory_baseline_bytes": 94299254784,
+        "cgroup_memory_limit_bytes": 118111600640,
+        "cgroup_observed_peak_bytes": 98699907072,
+        "controlled_termination_details": null,
+        "controlled_termination_initiator": null,
+        "controlled_termination_signal": null,
+        "ended_utc": "2026-08-18T22:30:58.833Z",
+        "estimated_gpu_energy_wh": 4.713133413130676,
+        "failure_reason": null,
+        "failure_stage": null,
+        "fd_last_ten_max": 47,
+        "fd_last_ten_min": 46,
+        "fd_peak": 47,
+        "gnu_time_wrapper_exit_code": 0,
+        "gpu_hours": 0.052131660555799805,
+        "gpu_memory_total_mib_per_device": [
+          97887.0
+        ],
+        "gpu_sample_count": 186,
+        "jpeg_fd_peak": 0,
+        "max_gpu_utilization_percent": 8.0,
+        "mean_gpu_utilization_percent": 0.12365591397849462,
+        "memory_events_after": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_events_before": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_events_delta": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "outer_probe_exit_code": 0,
+        "peak_device_memory_used_mib": 1175.0,
+        "peak_gpu_memory_mib": 1175.0,
+        "probe_complete": true,
+        "process_maximum_rss_kib": 1826992,
+        "process_tree_sampled_peak_rss_kib": 1828044,
+        "rlimit_nofile_soft": 65536,
+        "sampler_errors": [],
+        "schema": "gs_gcp_resource_probe_summary_v2",
+        "status": "PASS",
+        "timeout_implementation": "resource_probe_internal_deadline",
+        "timeout_triggered": false,
+        "usr_bin_timeout_exit_code": null,
+        "usr_bin_timeout_used": false,
+        "wall_seconds": 187.6739780008793
+      },
+      "formal_training_started": false,
+      "mapping_csv_sha256": "c03187c95726e049b0dd358fcce8271f2b3eb33ee5bbefb777a5ad39a7546680",
+      "merged_checkpoint": {
+        "bytes": 27970813,
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3/pipeline/fine/checkpoints/epoch=1-step=4.ckpt",
+        "sha256": "fc2f778e7403901efc8b4e5008c626d478f62ba18ae7cbb65ab70625c46b1895"
+      },
+      "method_id": "citygaussian_v2",
+      "packet_bytes": 2920735635,
+      "packet_count": 66,
+      "packet_manifest_sha256": "e26dc3838933011d7b3367454be14ae3b4532c678ad81324f363833823205c79",
+      "passed": true,
+      "pipeline_resource": {
+        "allocated_gpu_count": 1,
+        "baseline_device_memory_used_mib_by_gpu": {
+          "0": 0.0
+        },
+        "camera_load_child_exit_code": 0,
+        "cgroup_memory_baseline_bytes": 94173761536,
+        "cgroup_memory_limit_bytes": 118111600640,
+        "cgroup_observed_peak_bytes": 98024906752,
+        "controlled_termination_details": null,
+        "controlled_termination_initiator": null,
+        "controlled_termination_signal": null,
+        "ended_utc": "2026-08-18T22:20:53.483Z",
+        "estimated_gpu_energy_wh": 0.6027048132496576,
+        "failure_reason": null,
+        "failure_stage": null,
+        "fd_last_ten_max": 69,
+        "fd_last_ten_min": 11,
+        "fd_peak": 69,
+        "gnu_time_wrapper_exit_code": 0,
+        "gpu_hours": 0.009975712872627709,
+        "gpu_memory_total_mib_per_device": [
+          97887.0
+        ],
+        "gpu_sample_count": 34,
+        "jpeg_fd_peak": 1,
+        "max_gpu_utilization_percent": 16.0,
+        "mean_gpu_utilization_percent": 1.088235294117647,
+        "memory_events_after": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_events_before": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_events_delta": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "outer_probe_exit_code": 0,
+        "peak_device_memory_used_mib": 1619.0,
+        "peak_gpu_memory_mib": 1619.0,
+        "probe_complete": true,
+        "process_maximum_rss_kib": 4187968,
+        "process_tree_sampled_peak_rss_kib": 4212344,
+        "rlimit_nofile_soft": 65536,
+        "sampler_errors": [],
+        "schema": "gs_gcp_resource_probe_summary_v2",
+        "status": "PASS",
+        "timeout_implementation": "resource_probe_internal_deadline",
+        "timeout_triggered": false,
+        "usr_bin_timeout_exit_code": null,
+        "usr_bin_timeout_used": false,
+        "wall_seconds": 35.91256634145975
+      },
+      "pipeline_summary_sha256": "8839b330a756823deff50ef33f66f7caa06d6e08aa5ccbffea4c7981eb57c5bb",
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "qualification_only": true,
+      "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/qualification-4x4-packet-20260818-v3",
+      "schema": "m3m_native_quarter_citygaussian_v2_gpu_real_3k_qualification_v1",
+      "status": "PASS_NOT_FORMAL_RESULT",
+      "training_access_boundary": {
+        "gcp_annotations_opened": 0,
+        "heldout_rgb_opened": 0,
+        "isolated_dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602",
+        "lidar_opened": 0,
+        "only_training_rgb_and_train_only_colmap_supplied_to_prior_commands": true,
+        "training_rgb_opened": 82
+      },
+      "variance_validation_failing_pixel_total": 0
+    },
+    "qualification_validation_sha256": "b5b4fb36790a9f93e34f48f8383ccc3d599f6ea861e370154069f4f2ab1e2bc5",
+    "status": "PASS_NOT_FORMAL_RESULT"
+  },
+  "recipe_basis": {
+    "block_dim": [
+      1,
+      1
+    ],
+    "coarse_steps": 30000,
+    "content_threshold": 0.05,
+    "down_sample_factor": 1.0,
+    "fine_steps": 60000,
+    "result_or_truth_used": false,
+    "source": "official MatrixCity aerial coarse/fine route reduced to one 1x1 block before results",
+    "total_steps": 90000
+  },
+  "runtime": {
+    "evaluation_environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/eval-py310-torch2.7.1-cu128-v1",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "server": "AutoDL-901",
+    "training_environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1"
+  },
+  "schema": "m3m_gcp_native_quarter_citygaussian_v2_gpu_real_3k_qualification_v1",
+  "source": {
+    "evaluation_adapter_diff_names": [
+      "internal/renderers/sep_depth_trim_2dgs_renderer.py"
+    ],
+    "evaluation_rasterizer_diff_names": [
+      "cuda_rasterizer/auxiliary.h",
+      "cuda_rasterizer/forward.cu",
+      "rasterize_points.cu"
+    ],
+    "official_repository_commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+    "official_repository_tree": "be088977358cb36bac000caec396eff3758c74b2",
+    "official_training_source_clean": true,
+    "training_diff_names": []
+  },
+  "status": "PASS"
+}

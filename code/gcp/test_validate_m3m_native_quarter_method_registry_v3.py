@@ -20,14 +20,14 @@ def validate_mutation(tmp_path: Path, value: dict) -> dict:
     return validate_registry(REPO_ROOT, path)
 
 
-def test_current_registry_passes_with_no_open_gate() -> None:
+def test_current_registry_passes_with_citygaussian_gate() -> None:
     result = validate_registry(REPO_ROOT, REGISTRY)
     assert result["passed"] is True
     assert result["status"] == "PASS"
     assert result["method_count"] == 11
     assert result["active_method_count"] == 10
     assert result["candidate_method_count"] == 8
-    assert result["training_allowed_methods"] == []
+    assert result["training_allowed_methods"] == ["citygaussian_v2"]
 
 
 def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
@@ -38,15 +38,15 @@ def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
     assert "global training lock missing" in result["errors"]
 
 
-def test_completed_qgs_is_not_launchable_while_no_gate_is_open(tmp_path: Path) -> None:
+def test_completed_qgs_is_not_launchable_while_citygaussian_gate_is_open(tmp_path: Path) -> None:
     value = load_registry()
     method = next(item for item in value["methods"] if item["method_id"] == "qgs")
     assert method["formal_3k_result"]["status"] == "COMPLETE_RANKED"
     assert method["three_k_training_allowed"] is False
-    assert value["current_one_use_launch_gate"] is None
+    assert value["current_one_use_launch_gate"]["method_id"] == "citygaussian_v2"
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is True
-    assert result["training_allowed_methods"] == []
+    assert result["training_allowed_methods"] == ["citygaussian_v2"]
 
 
 def test_training_flag_without_gate_fails_closed(tmp_path: Path) -> None:

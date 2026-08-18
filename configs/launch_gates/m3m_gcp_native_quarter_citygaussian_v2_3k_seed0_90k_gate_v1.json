@@ -1,0 +1,56 @@
+{
+  "schema": "m3m_gcp_native_quarter_one_use_method_launch_gate_v1",
+  "status": "AUTHORIZED_NOT_STARTED",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
+  "method_id": "citygaussian_v2",
+  "scene": "gcp_3000_20260602",
+  "seed": 0,
+  "official_budget": {
+    "type": "coarse_plus_fine_iterations",
+    "value": 90000,
+    "coarse_iterations": 30000,
+    "fine_iterations": 60000
+  },
+  "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z",
+  "source": {
+    "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+    "tree": "be088977358cb36bac000caec396eff3758c74b2",
+    "frozen_official_source_clean": true,
+    "training_source_patch_required": false,
+    "training_renderer_or_rasterizer_modified": false
+  },
+  "recipe": "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
+  "recipe_sha256": "2ee37a3e85de03a3fe436b1b842c8caef439e8bedd2835be1167fc46bce6c188",
+  "adapter_config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
+  "adapter_config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+  "qualification_report": "docs/protocol_evidence/citygaussian_v2_native_quarter_gpu_real_3k_qualification_v1.json",
+  "qualification_report_sha256": "a61e63e2aa8bd95150082a99e3162ffc049c88a791ba3500e6143bfa8bb61f3d",
+  "qualification_gates": {
+    "source_frozen": true,
+    "recipe_frozen": true,
+    "environment_ready": true,
+    "adapter_conformant": true,
+    "synthetic_preflight_pass": true,
+    "geometry_branch_smoke_pass": true,
+    "real_camera_preflight_pass": true,
+    "evaluator_preflight_pass": true,
+    "truth_deny_pass": true
+  },
+  "source_scene_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/gcp_3000_20260602",
+  "training_input_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/train",
+  "denied_truth_roots": [
+    "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2"
+  ],
+  "gcp_truth_training_access": false,
+  "lidar_training_access": false,
+  "heldout_rgb_training_access": false,
+  "single_fresh_run_allowed": true,
+  "resume_allowed": false,
+  "overwrite_allowed": false,
+  "result_driven_retry_allowed": false,
+  "six_scene_matrix_allowed": false,
+  "global_training_allowed": false,
+  "consumption_rule": "The first creation of the exact run_root consumes this gate whether the process succeeds, fails, or is OOM-killed."
+}

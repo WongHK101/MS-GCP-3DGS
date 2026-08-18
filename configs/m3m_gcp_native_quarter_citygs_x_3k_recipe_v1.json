@@ -81,14 +81,15 @@
     "default_voxel_size": 0.001,
     "test_iterations": [100000],
     "save_iterations": [100000],
-    "formal_checkpoint": "point_cloud/iteration_100000/point_cloud.ply",
+    "formal_checkpoint": "point_cloud/iteration_100000/point_cloud_rk0_ws1.ply",
+    "formal_checkpoint_layout": "official distributed saver output for the frozen one-GPU world_size=1 route; no merge, rename, or checkpoint mutation",
     "resume_allowed": false,
     "result_driven_retry_allowed": false,
     "gcp_lidar_or_heldout_rgb_visible_to_training": false
   },
   "execution": {
     "entrypoint": "code/gcp/run_citygs_x_training.py",
-    "entrypoint_sha256": "c2be3e333aeee242fd71d3c1946fd9eddbab46d7897145987c8bc28ccfdc380c",
+    "entrypoint_sha256": "3daa8fd2baff28505716dfe0b5a6b33c5e91c1b5f49ece4e5cd898a6724bed3d",
     "mode": "formal",
     "iterations": 100000,
     "preexisting_model_path_allowed": false,
