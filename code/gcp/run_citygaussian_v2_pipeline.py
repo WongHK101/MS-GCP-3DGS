@@ -233,15 +233,23 @@ def main() -> int:
     state_path.write_text("PARTITION_PASS\n", encoding="utf-8")
 
     state_path.write_text("FINE_RUNNING\n", encoding="utf-8")
+    # block_dim is frozen to [1, 1], so this is the exact single command that
+    # upstream train_citygs_partitions.py constructs for block 0. Running it
+    # directly makes the worker return code observable; the upstream scheduler
+    # can return zero even when its ProcessPool worker fails before training.
     fine_command = [
         str(python),
-        "utils/train_citygs_partitions.py",
-        "--config_name",
-        fine_name,
-        "--config_dir",
-        str(runtime),
-        "--project_name",
+        "main.py",
+        "fit",
+        "--config",
+        str(fine_config),
+        "--data.parser.block_id",
+        "0",
+        f"-n={fine_name}",
+        "--project",
         "m3m-gcp-native-quarter",
+        "--logger",
+        "wandb",
     ]
     run_checked(
         fine_command,

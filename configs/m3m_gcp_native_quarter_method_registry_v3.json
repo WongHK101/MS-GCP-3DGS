@@ -383,7 +383,7 @@
       "input_class": "rgb_colmap_external_geometry_prior",
       "route_selection": "official single-block custom-scene route for the 3K scene; no result-driven repartitioning",
       "recipe": "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-      "recipe_sha256": "215a87b5ff1df7996563bfd5a3fa7d313991ceff9646f5ea374a146e643deac4",
+      "recipe_sha256": "77f4560ee047c3fade38b5e1e2f787cf4b74ad140580a296b661d1a90d5bfce9",
       "adapter_config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
       "adapter_config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
       "external_priors": [
