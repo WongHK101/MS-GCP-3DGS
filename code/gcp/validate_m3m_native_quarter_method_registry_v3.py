@@ -502,12 +502,30 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     metro_recipe_relative = "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json"
     metro_adapter_relative = "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json"
     require(metro_method.get("recipe") == metro_recipe_relative, "MetroGS recipe path mismatch")
+    require(
+        metro_method.get("recipe_sha256")
+        == "07c4ce5c4f2d13f43b3419d08ecbfa2f53161e87472acbb1a863ea5342d1d34d",
+        "MetroGS recipe recorded SHA mismatch",
+    )
     require(metro_method.get("renderer_adapter") == metro_adapter_relative, "MetroGS adapter path mismatch")
+    require(
+        metro_method.get("renderer_adapter_sha256")
+        == "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
+        "MetroGS adapter recorded SHA mismatch",
+    )
     metro_recipe_path = repo_root / metro_recipe_relative
     metro_adapter_path = repo_root / metro_adapter_relative
     require(metro_recipe_path.is_file(), "MetroGS recipe file missing")
     require(metro_adapter_path.is_file(), "MetroGS adapter file missing")
     if metro_recipe_path.is_file() and metro_adapter_path.is_file():
+        require(
+            file_sha256(metro_recipe_path) == metro_method.get("recipe_sha256"),
+            "MetroGS recipe file SHA mismatch",
+        )
+        require(
+            file_sha256(metro_adapter_path) == metro_method.get("renderer_adapter_sha256"),
+            "MetroGS adapter file SHA mismatch",
+        )
         metro_recipe = json.loads(metro_recipe_path.read_text(encoding="utf-8"))
         metro_adapter = json.loads(metro_adapter_path.read_text(encoding="utf-8"))
         require(

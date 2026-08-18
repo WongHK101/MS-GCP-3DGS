@@ -431,7 +431,9 @@
         "pi3_weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
       },
       "recipe": "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
+      "recipe_sha256": "07c4ce5c4f2d13f43b3419d08ecbfa2f53161e87472acbb1a863ea5342d1d34d",
       "renderer_adapter": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
+      "renderer_adapter_sha256": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
       "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_CHAIN_QUEUED",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": false,

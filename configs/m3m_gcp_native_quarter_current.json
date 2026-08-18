@@ -102,7 +102,16 @@
     "code/gcp/materialize_gsprior_normalized_scene.py",
     "configs/m3m_gcp_native_quarter_sof_3k_recipe_v1.json",
     "configs/m3m_gcp_native_quarter_sof_renderer_adapter_v1.json",
-    "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json"
+    "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json",
+    "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
+    "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
+    "docs/protocol_evidence/metrogs_native_quarter_track_closure_v1.json",
+    "code/gcp/prepare_metrogs_training_priors.py",
+    "code/gcp/run_metrogs_training.py",
+    "code/gcp/export_metrogs_depth_maps.py",
+    "code/gcp/test_metrogs_raw_moments_cuda.py",
+    "patches/metrogs/native_quarter_raw_moments_renderer_8cf9ac1_v1.patch",
+    "patches/metrogs/native_quarter_raw_moments_rasterizer_8cf9ac1_v1.patch"
   ],
   "current_repository_components_with_independent_v1_suffixes": [
     "configs/m3m_gcp_native_quarter_3dgs_3k_recipe_v1.json",
