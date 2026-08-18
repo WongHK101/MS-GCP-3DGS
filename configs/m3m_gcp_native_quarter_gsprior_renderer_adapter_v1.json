@@ -8,6 +8,12 @@
     "repository_tree": "779073585e88b85217d522d0ab345365346cd17f"
   },
   "scope": "evaluation-only renderer copy; official training renderer, native rasterizer, checkpoint, and formal model remain unchanged",
+  "source_python_compatibility": {
+    "path": "patches/gsprior/python_indentation_compat_dataset_readers_dcb7c89_v1.patch",
+    "sha256": "b49457a649c0ccfd2ca9a41bf5b029b42a60900bd8c594fad8bed9bd7a2cc314",
+    "scope": "syntax-only indentation repair required to import the frozen dataset reader",
+    "algorithm_or_hyperparameter_change": false
+  },
   "renderer_patch": {
     "path": "patches/gsprior/native_quarter_raw_moments_renderer_dcb7c89_v1.patch",
     "sha256": "dd633a35cb33ceb78b92f5499b30702d4a19bd4aea2a87edd372bb7d2d97c18b"

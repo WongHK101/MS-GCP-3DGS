@@ -163,9 +163,6 @@ def assert_close(
 
 def run(eval_repo: Path) -> dict[str, Any]:
     sys.path.insert(0, str(eval_repo))
-    sys.path.insert(
-        0, str(eval_repo / "submodule_cityx" / "diff-gaussian-rasterization")
-    )
     import torch
     import diff_gaussian_rasterization
 

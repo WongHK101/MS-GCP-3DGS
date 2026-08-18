@@ -1,0 +1,13 @@
+diff --git a/scene/dataset_readers.py b/scene/dataset_readers.py
+index ef9b000..5af5b1d 100644
+--- a/scene/dataset_readers.py
++++ b/scene/dataset_readers.py
+@@ -194,7 +194,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
+             print(f"xyz {xyz.shape}")
+         except:
+             xyz, rgb, _ = read_points3D_text(txt_path)
+-       storePly(ply_path, xyz, rgb)
++        storePly(ply_path, xyz, rgb)
+     try:
+         pcd = fetchPly(ply_path)
+     except:

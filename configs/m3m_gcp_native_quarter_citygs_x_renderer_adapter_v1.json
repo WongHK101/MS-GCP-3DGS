@@ -74,7 +74,7 @@
   },
   "conformance": {
     "script": "code/gcp/test_citygs_x_raw_moments_cuda.py",
-    "script_sha256": "7de177b0ea8af27903dc18359c7f73fbecf759920a313cf6f1fa867e31f26910",
+    "script_sha256": "87da1d238949ec4994852804f9a6523eb35e2760d0516103c0c7520873f39f1f",
     "cuda_status": "PENDING_UNTIL_QGS_RELEASES_GPU",
     "required_cases": [
       "single_layer",

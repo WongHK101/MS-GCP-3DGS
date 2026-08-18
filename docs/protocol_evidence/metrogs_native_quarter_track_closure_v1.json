@@ -1,0 +1,56 @@
+{
+  "access_boundary": {
+    "formal_training_started": false,
+    "gcp_annotations_opened": 0,
+    "heldout_rgb_opened": 0,
+    "lidar_opened": 0
+  },
+  "derived_model": {
+    "camera_count": 1,
+    "image_count": 82,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/sparse/0",
+    "point_count": 61292,
+    "sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "c0ce229da0adbe69f4796d749ed071e1cb5a87d50774c81d22dc1c369590199d",
+      "points3D.bin": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955"
+    },
+    "track_element_count": 341681
+  },
+  "original_model": {
+    "camera_count": 1,
+    "image_count": 94,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/gcp_3000_20260602/sparse/0",
+    "point_count": 61302,
+    "sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+      "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    }
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "role": "derived train-only compatibility model for consumers requiring a fully consistent pycolmap reconstruction",
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_gcp_native_quarter_colmap_train_track_closure_v1",
+  "status": "PASS",
+  "track_closure": {
+    "kept_point_count": 61292,
+    "kept_track_element_count": 341681,
+    "policy": "retain only observations whose image is in the frozen 82-view training split; remove points with no remaining training observation",
+    "removed_heldout_image_records": 12,
+    "removed_point_ids_sha256": "1472bcf7632cae88c9ed95fc5fafe34fb22231d7b9fa905a6cbd550d003ec992",
+    "removed_track_element_count": 51980,
+    "removed_train_unobserved_point_count": 10
+  },
+  "validation": {
+    "all_tracks_reciprocal": true,
+    "all_tracks_reference_selected_images": true,
+    "camera_file_byte_identical_to_formal_train": true,
+    "heldout_image_records_absent": true,
+    "image_pixels_resized_cropped_padded_or_reencoded": false,
+    "maximum_qvec_or_tvec_absolute_difference": 0.0,
+    "retained_point_xyz_rgb_error_byte_values_unchanged": true,
+    "train_image_name_set_exact": true
+  }
+}

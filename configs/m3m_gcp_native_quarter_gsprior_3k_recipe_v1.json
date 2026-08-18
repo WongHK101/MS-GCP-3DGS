@@ -40,6 +40,12 @@
       "scope": "replace hard-coded author's DTU/output paths with supplied source/model paths and preserve an existing deterministic points3D PLY",
       "algorithm_or_hyperparameter_change": false
     },
+    "python_syntax_compatibility_patch": {
+      "path": "patches/gsprior/python_indentation_compat_dataset_readers_dcb7c89_v1.patch",
+      "sha256": "b49457a649c0ccfd2ca9a41bf5b029b42a60900bd8c594fad8bed9bd7a2cc314",
+      "scope": "repair the frozen source's seven-space storePly indentation so scene/dataset_readers.py parses under Python",
+      "algorithm_or_hyperparameter_change": false
+    },
     "simple_knn_cuda12_build_copy_patch": {
       "path": "patches/gsprior/simple_knn_dcb7c89_cuda12_cfloat_v1.patch",
       "sha256": "408921284eceb87e9566bf1f5572f825f35b5fc9597e5bc3f03043d0ff158c69",
@@ -119,7 +125,7 @@
   },
   "evaluation_adapter": {
     "config": "configs/m3m_gcp_native_quarter_gsprior_renderer_adapter_v1.json",
-    "config_sha256": "3112b7fcac2c6bf9261f6940b8f87464267cdba0c39ca0637554642e2460d0c2",
+    "config_sha256": "f6ceac12c6c04caa0ab56d2edbb62626ea8ab8a2777526a7c7cd14e9404046ee",
     "renderer_patch": "patches/gsprior/native_quarter_raw_moments_renderer_dcb7c89_v1.patch",
     "renderer_patch_sha256": "dd633a35cb33ceb78b92f5499b30702d4a19bd4aea2a87edd372bb7d2d97c18b",
     "native_rasterizer_modified": false,

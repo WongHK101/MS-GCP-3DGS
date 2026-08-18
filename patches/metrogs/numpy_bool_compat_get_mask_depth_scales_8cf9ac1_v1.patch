@@ -1,0 +1,12 @@
+diff --git a/utils/get_mask_depth_scales.py b/utils/get_mask_depth_scales.py
+index 54ab805..d0d7d0e 100644
+--- a/utils/get_mask_depth_scales.py
++++ b/utils/get_mask_depth_scales.py
+@@ -100,6 +100,6 @@ def get_scales(key, cameras, images, points3d_ordered, points3d_error_ordered,
+         # get depth values of these 2D points from the depth map
+         invmonodepth = cv2.remap(invmonodepthmap, maps[..., 0], maps[..., 1], interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)[..., 0]
+-        mask = cv2.remap(maskmap, maps[..., 0], maps[..., 1], interpolation=cv2.INTER_NEAREST, borderMode=cv2.BORDER_REPLICATE)[..., 0].astype(np.bool)
++        mask = cv2.remap(maskmap, maps[..., 0], maps[..., 1], interpolation=cv2.INTER_NEAREST, borderMode=cv2.BORDER_REPLICATE)[..., 0].astype(np.bool_)
+ 
+         invcolmapdepth = invcolmapdepth[mask]
+         invmonodepth = invmonodepth[mask]
