@@ -1,0 +1,86 @@
+{
+  "schema": "m3m_gcp_native_quarter_rade_gs_renderer_adapter_v1",
+  "adapter_id": "rade_gs_raw_metric_depth_accumulators_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
+  "scope": "evaluation-only renderer/rasterizer copy; the official three-channel training rasterizer and trained checkpoint remain unchanged",
+  "source": {
+    "repository_commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+    "repository_tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+    "train_git_blob": "b5164c401cba89c264506b9b718a4099cb1f34d3",
+    "renderer_git_blob": "11567028dd0357ffadb48d831978f3093e843a1c",
+    "arguments_git_blob": "c6e016b46eb2e3c49fef849bda77b85e39db728d"
+  },
+  "patches": [
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/rade_gs/native_quarter_raw_moments_renderer_d72f207_v1.patch",
+      "sha256": "0f05b45a10b77754ea63c82317fe3426d931be326f9c4ee3d916d98336954709"
+    },
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/rade_gs/native_quarter_raw_moments_rasterizer_d72f207_v1.patch",
+      "sha256": "e08e7065609c367c81cc0c6b106a011b298441c99040c7e29f5177219292d71a"
+    }
+  ],
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "plane_sources": {
+      "accumulated_alpha": "native RaDe-GS rendered_alpha, equal to one minus final transmittance",
+      "weighted_camera_z_sum": "evaluation-only feature channel 3, sum of native compositing weight times Gaussian-center camera z",
+      "weighted_camera_z_second_moment": "evaluation-only feature channel 4, sum of native compositing weight times Gaussian-center camera z squared",
+      "weighted_inverse_camera_z_sum": "evaluation-only feature channel 5, sum of native compositing weight divided by positive Gaussian-center camera z"
+    },
+    "camera_z_definition": "z component of means3D transformed by the frozen RaDe-GS world_view_transform; the same center coordinate used for rasterizer ordering",
+    "alpha_compositing": "official alpha cap 0.99, alpha cutoff 1/255, and early termination threshold 1e-4 are unchanged",
+    "native_plane_depth_primary": false,
+    "native_plane_depth_role": "family-specific diagnostic only; RaDe-GS expected/median plane-depth outputs are not substituted for common-track M1/A",
+    "common_primary": "bilinear(M1) / bilinear(A)",
+    "physical_surface_claim": false,
+    "derived_packet_policy": "derive normalized fields on CPU from the four raw float32 accumulators"
+  },
+  "training_identity": {
+    "official_training_rasterizer_channels": 3,
+    "evaluation_adapter_rasterizer_channels": 6,
+    "training_renderer_patch_allowed": false,
+    "training_rasterizer_patch_allowed": false,
+    "checkpoint_mutation_allowed": false,
+    "evaluation_copy_required": true
+  },
+  "target_gpu_evidence": {
+    "server": "AutoDL-901",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "compute_capability": "12.0",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "official_training_rasterizer_extension_sha256": "f038c5af16b28b64b7d36659da737a726159795176d58019e00689c1a3439776",
+    "official_training_warp_patch_ncc_extension_sha256": "b8c407a757f53f86f21453922b26eb7753cb5890fe5d20564fc0b86efa2017e1",
+    "official_training_fused_ssim_extension_sha256": "a239949d1403d67e6ea8e704f54151ee5cf464529072d74135aadb3851513705",
+    "official_training_simple_knn_extension_sha256": "ecc09b743cd565b0120f40674f40a27071570e922dfbe3d20a88a8dd5267a767",
+    "evaluation_adapter_extension_sha256": "5d7c2e7418f652aa753cdd27bc0b76c37c579d239f783ae89f87ce7fca1561cd",
+    "raw_moment_conformance_sha256": "e06e25640d6e753b8ac202e7d63f3b665fb18b4d2960a9f1fe98a5f4da2847c1",
+    "qualification_packet_manifest_sha256": "d8e95726653f8297db0c5c84e7028aca3ed0ea8c654644b8e26c12b29423e820"
+  },
+  "patched_linux_file_sha256": {
+    "gaussian_renderer/__init__.py": "a0e9b8fd9970017822a817a949a4e3a9fa8c1fe68f71b1d1e67cde9cab833443",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/config.h": "4bdbf430b6d3c32090dfb05f3227c28b682d8b96736b3a5214e31ebae917b083",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/render_forward.cu": "597896677107334092ca6885dbecf109704f18d31aee03a2ea6bf152ac4db066"
+  },
+  "qualification": {
+    "fresh_exact_source_patch_check": "PASS",
+    "gpu_official_training_extension_build": "PASS",
+    "gpu_evaluation_adapter_build": "PASS",
+    "synthetic_raw_moment_conformance": "PASS",
+    "geometry_branch_smoke": "PASS_NOT_FORMAL_RESULT",
+    "real_3k_packet_camera_preflight": "PASS_NOT_FORMAL_RESULT",
+    "common_evaluator": "COMPLETE_RANKED_QUALIFICATION_ONLY"
+  },
+  "qualification_report": "docs/protocol_evidence/rade_gs_native_quarter_gpu_real_3k_qualification_v1.json",
+  "qualification_report_sha256": "de52f116f924830aacdebf6453ce2213f7fbf5962534bc321e0da592388477e4"
+}

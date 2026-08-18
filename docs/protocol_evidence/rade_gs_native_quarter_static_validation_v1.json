@@ -1,0 +1,13 @@
+{
+  "schema": "m3m_gcp_native_quarter_rade_gs_static_validation_v1",
+  "status": "PASS",
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "rade_gs",
+  "recipe_sha256": "82524b5f0698d44639a2dc1f0dee7ea48699782113d04cc21784400e990393d2",
+  "adapter_sha256": "7eb4afd438d360c880fd626acd01ef34886daddb110865454260bb955dc6cf3a",
+  "qualification_sha256": "de52f116f924830aacdebf6453ce2213f7fbf5962534bc321e0da592388477e4",
+  "truth_deny_sha256": "4ebda6791bf03ae713372708db0b138ced24f71d6e78d51af5b0f30f4f037740",
+  "gate_sha256": "5d83bbf26db458e6f3dffc43de1ef64b7b75ccd523e780a5ab2c09ca112eaedd",
+  "errors": []
+}

@@ -20,14 +20,14 @@ def validate_mutation(tmp_path: Path, value: dict) -> dict:
     return validate_registry(REPO_ROOT, path)
 
 
-def test_current_registry_passes_with_only_the_pgsr_one_use_gate() -> None:
+def test_current_registry_passes_with_only_the_rade_gs_one_use_gate() -> None:
     result = validate_registry(REPO_ROOT, REGISTRY)
     assert result["passed"] is True
     assert result["status"] == "PASS"
     assert result["method_count"] == 11
     assert result["active_method_count"] == 10
     assert result["candidate_method_count"] == 8
-    assert result["training_allowed_methods"] == ["pgsr"]
+    assert result["training_allowed_methods"] == ["rade_gs"]
 
 
 def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
@@ -38,14 +38,14 @@ def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
     assert "global training lock missing" in result["errors"]
 
 
-def test_pgsr_cannot_remain_unlocked_without_one_use_gate(tmp_path: Path) -> None:
+def test_rade_gs_cannot_remain_unlocked_without_one_use_gate(tmp_path: Path) -> None:
     value = load_registry()
     value["current_one_use_launch_gate"] = None
     value["per_method_training_allowed_methods"] = []
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is False
-    assert "method allowlist must contain only PGSR" in result["errors"]
-    assert "PGSR one-use launch gate is absent" in result["errors"]
+    assert "method allowlist must contain only RaDe-GS" in result["errors"]
+    assert "RaDe-GS one-use launch gate is absent" in result["errors"]
 
 
 def test_one_use_gate_hash_is_bound(tmp_path: Path) -> None:

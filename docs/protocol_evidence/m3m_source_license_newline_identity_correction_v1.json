@@ -1,0 +1,93 @@
+{
+  "schema": "m3m_source_license_newline_identity_correction_v1",
+  "status": "PASS_NON_SEMANTIC_PROVENANCE_CORRECTION",
+  "passed": true,
+  "scope": "license text file byte identity only; source commit/tree, executable source, training, checkpoints, metric packets, and evaluator semantics are unchanged",
+  "cause": "The initial registry copied SHA-256 values from a rejected Windows transport checkout whose text files had CRLF line endings. The accepted AutoDL-901 Linux checkouts reconstructed from verified Git objects use the frozen Git LF bytes.",
+  "consumed_launch_evidence_policy": "Do not rewrite the already-consumed PGSR recipe, gate, qualification report, or formal launch records. Preserve their legacy value and correct the active registry with explicit LF and legacy-CRLF fields.",
+  "licensed_method_count_audited": 6,
+  "methods": [
+    {
+      "method_id": "pgsr",
+      "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+      "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
+      "license_path": "LICENSE.md",
+      "frozen_linux_lf_bytes": 992,
+      "lf_count": 17,
+      "cr_count": 0,
+      "frozen_linux_lf_sha256": "c7ec1a2c15c1cacf02452c8f2265dc1a4106bb21a42bf5c38ebe91306f764c93",
+      "legacy_windows_crlf_bytes": 1009,
+      "legacy_windows_crlf_sha256": "9ffea520f58708375e5310593326a988b29a6a7990f56a245545c59f199d7bc4",
+      "legacy_hash_reproduced_by_lf_to_crlf_only": true
+    },
+    {
+      "method_id": "rade_gs",
+      "commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+      "tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+      "license_path": "LICENSE.md",
+      "frozen_linux_lf_bytes": 4275,
+      "lf_count": 83,
+      "cr_count": 0,
+      "frozen_linux_lf_sha256": "cd5c95b3cfff3acc1bd412420c770f88809331c3db6872df11a970147aa8e81f",
+      "legacy_windows_crlf_bytes": 4358,
+      "legacy_windows_crlf_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
+      "legacy_hash_reproduced_by_lf_to_crlf_only": true
+    },
+    {
+      "method_id": "qgs",
+      "commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+      "tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
+      "license_path": "LICENSE.md",
+      "frozen_linux_lf_bytes": 4275,
+      "lf_count": 83,
+      "cr_count": 0,
+      "frozen_linux_lf_sha256": "cd5c95b3cfff3acc1bd412420c770f88809331c3db6872df11a970147aa8e81f",
+      "legacy_windows_crlf_bytes": 4358,
+      "legacy_windows_crlf_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
+      "legacy_hash_reproduced_by_lf_to_crlf_only": true
+    },
+    {
+      "method_id": "sof",
+      "commit": "b9eb4170c843014f5f96d54924976161bd675469",
+      "tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
+      "license_path": "LICENSE.md",
+      "frozen_linux_lf_bytes": 4662,
+      "lf_count": 90,
+      "cr_count": 0,
+      "frozen_linux_lf_sha256": "c5ba70a2194af2aefe85dfe3da68608dcb3abd21a3aa53b55aa297c2f0b60eb3",
+      "legacy_windows_crlf_bytes": 4752,
+      "legacy_windows_crlf_sha256": "6ccb9140a9f4bb8f399b1f090414c9e528a673e6961da42cc66a01ea3b20e681",
+      "legacy_hash_reproduced_by_lf_to_crlf_only": true
+    },
+    {
+      "method_id": "citygaussian_v2",
+      "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+      "tree": "be088977358cb36bac000caec396eff3758c74b2",
+      "license_path": "LICENSE.md",
+      "frozen_linux_lf_bytes": 20849,
+      "lf_count": 437,
+      "cr_count": 0,
+      "frozen_linux_lf_sha256": "1349a4b6148492b44f629e64eed676612e234fe9a839e4f3b277c1482c8849f1",
+      "legacy_windows_crlf_bytes": 21286,
+      "legacy_windows_crlf_sha256": "047d2259741a3ebb30d8c8a43d4ba79b5b229a069acd1d2bea49f22b297d8e98",
+      "legacy_hash_reproduced_by_lf_to_crlf_only": true
+    },
+    {
+      "method_id": "metrogs",
+      "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+      "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+      "license_path": "LICENSE",
+      "frozen_linux_lf_bytes": 1065,
+      "lf_count": 21,
+      "cr_count": 0,
+      "frozen_linux_lf_sha256": "2394c4dfa12529640ec4ff3af328da64cd002923d331402da2cc5f66b13c105c",
+      "legacy_windows_crlf_bytes": 1086,
+      "legacy_windows_crlf_sha256": "75f69d4573d4d5f9e8ba07bc5dede592431b84bb315b6a260f8f551072968963",
+      "legacy_hash_reproduced_by_lf_to_crlf_only": true
+    }
+  ],
+  "protocol_semantics_changed": false,
+  "formal_result_changed": false,
+  "source_identity_changed": false,
+  "errors": []
+}

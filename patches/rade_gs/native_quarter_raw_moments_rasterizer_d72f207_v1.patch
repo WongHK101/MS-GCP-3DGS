@@ -1,0 +1,26 @@
+diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/config.h b/submodules/diff-gaussian-rasterization/cuda_rasterizer/config.h
+--- a/submodules/diff-gaussian-rasterization/cuda_rasterizer/config.h
++++ b/submodules/diff-gaussian-rasterization/cuda_rasterizer/config.h
+@@ -12,7 +12,7 @@
+ #ifndef CUDA_RASTERIZER_CONFIG_H_INCLUDED
+ #define CUDA_RASTERIZER_CONFIG_H_INCLUDED
+ 
+-constexpr int NUM_CHANNELS      = 3;
++constexpr int NUM_CHANNELS      = 6;
+ constexpr int BLOCK_X           = 16;
+ constexpr int BLOCK_Y           = 16;
+ constexpr int BLOCK_SIZE        = BLOCK_X * BLOCK_Y;
+diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/render_forward.cu b/submodules/diff-gaussian-rasterization/cuda_rasterizer/render_forward.cu
+--- a/submodules/diff-gaussian-rasterization/cuda_rasterizer/render_forward.cu
++++ b/submodules/diff-gaussian-rasterization/cuda_rasterizer/render_forward.cu
+@@ -535,7 +535,9 @@ __global__ void __launch_bounds__(BLOCK_X* BLOCK_Y)
+         n_contrib[pix_id + H * W] = max_contributor;
+ #pragma unroll
+         for (int ch = 0; ch < CHANNELS; ch++)
+-            out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
++            // Auxiliary metric channels have a zero background. RGB retains
++            // the upstream background and all compositing weights unchanged.
++            out_color[ch * H * W + pix_id] = C[ch] + (ch < 3 ? T * bg_color[ch] : 0.f);
+         out_alpha[pix_id] = 1.f - T; // 1 - T;
+ 
+         if constexpr (GEOMETRY) {

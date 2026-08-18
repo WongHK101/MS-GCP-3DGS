@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v3",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "EIGHT_METHOD_3K_BATCH_PGSR_ONE_USE_GATE_OPEN",
+  "status": "EIGHT_METHOD_3K_BATCH_PGSR_COMPLETE_RADE_GS_ONE_USE_GATE_OPEN",
   "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
   "execution_plan": {
     "path": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
@@ -16,7 +16,9 @@
     "repository_evidence_sha256": "70abe47727a6b78974fe5528a93b8deb9f98e19ba45bfbcfd6c58e60ed7941ca",
     "method_count": 8,
     "all_commits_trees_archives_and_clean_linux_checkouts_verified": true,
-    "windows_crlf_transport_worktrees_rejected": true
+    "windows_crlf_transport_worktrees_rejected": true,
+    "license_newline_identity_correction": "docs/protocol_evidence/m3m_source_license_newline_identity_correction_v1.json",
+    "license_newline_identity_correction_sha256": "c31f795cf8b61b35c4fde839020d1a451ece03776aab64cdbd73e931f9615a1b"
   },
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
@@ -166,14 +168,15 @@
     {
       "method_id": "pgsr",
       "display_name": "PGSR",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "planar_gaussian_surfel",
       "source": {
         "official_repository": "https://github.com/zju3dv/PGSR",
         "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
         "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
         "license_file": "LICENSE.md",
-        "license_sha256": "9ffea520f58708375e5310593326a988b29a6a7990f56a245545c59f199d7bc4",
+        "frozen_linux_license_sha256": "c7ec1a2c15c1cacf02452c8f2265dc1a4106bb21a42bf5c38ebe91306f764c93",
+        "legacy_rejected_windows_crlf_license_sha256": "9ffea520f58708375e5310593326a988b29a6a7990f56a245545c59f199d7bc4",
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "c03b9ba9576c5fb7e2b9b944dde322baa6be693c6066fcea1bfb71deb4b3312b"
       },
@@ -187,10 +190,20 @@
       "truth_deny_report": "docs/protocol_evidence/pgsr_native_quarter_truth_deny_v1.json",
       "truth_deny_report_sha256": "1108bc61712a6d4066f94c612b03bc8ca6053a38495fbb79a432cc0c6904fc46",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/pgsr_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "48ab33cfd22f170f24a2bd170f69e4f6e8f84281c42475aad62e9a6e43c28d5f",
+        "final_checkpoint_sha256": "c545036afc31b7ca5430e81b011d8cb2e7fc6ce75eabe647f2c902b7c4652880",
+        "packet_manifest_sha256": "0c6d08e7224927442436e652c1da26ee98a8d1d79ffedbf4de9eda6d00a6851d",
+        "checkpoint_rmse_3d_m": 0.017072238331071056,
+        "checkpoint_rmse_h_m": 0.015980762959801918,
+        "checkpoint_rmse_z_m": 0.006006374684908933,
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "rade_gs",
@@ -202,16 +215,25 @@
         "commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
         "tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
         "license_file": "LICENSE.md",
-        "license_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
+        "frozen_linux_license_sha256": "cd5c95b3cfff3acc1bd412420c770f88809331c3db6872df11a970147aa8e81f",
+        "legacy_rejected_windows_crlf_license_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "9c7f3a118a3af460888d6883d680099caf7a85f7d30695fb653c2c9e7f0f370a"
       },
       "input_class": "rgb_colmap_only",
-      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "recipe": "configs/m3m_gcp_native_quarter_rade_gs_3k_recipe_v1.json",
+      "recipe_sha256": "82524b5f0698d44639a2dc1f0dee7ea48699782113d04cc21784400e990393d2",
+      "adapter_config": "configs/m3m_gcp_native_quarter_rade_gs_renderer_adapter_v1.json",
+      "adapter_config_sha256": "7eb4afd438d360c880fd626acd01ef34886daddb110865454260bb955dc6cf3a",
+      "qualification_report": "docs/protocol_evidence/rade_gs_native_quarter_gpu_real_3k_qualification_v1.json",
+      "qualification_report_sha256": "de52f116f924830aacdebf6453ce2213f7fbf5962534bc321e0da592388477e4",
+      "truth_deny_report": "docs/protocol_evidence/rade_gs_native_quarter_truth_deny_v1.json",
+      "truth_deny_report_sha256": "4ebda6791bf03ae713372708db0b138ced24f71d6e78d51af5b0f30f4f037740",
+      "technical_qualification_status": "TECHNICALLY_QUALIFIED",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
-      "technical_full_matrix_eligibility": false,
+      "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": false
+      "three_k_training_allowed": true
     },
     {
       "method_id": "qgs",
@@ -223,7 +245,8 @@
         "commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
         "tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
         "license_file": "LICENSE.md",
-        "license_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
+        "frozen_linux_license_sha256": "cd5c95b3cfff3acc1bd412420c770f88809331c3db6872df11a970147aa8e81f",
+        "legacy_rejected_windows_crlf_license_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "b9ad60493bf6400905dd31dc4c5e95a9959cf2afd05c7e74d7cd3d06ab6a477d"
       },
@@ -266,7 +289,8 @@
         "commit": "b9eb4170c843014f5f96d54924976161bd675469",
         "tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
         "license_file": "LICENSE.md",
-        "license_sha256": "6ccb9140a9f4bb8f399b1f090414c9e528a673e6961da42cc66a01ea3b20e681",
+        "frozen_linux_license_sha256": "c5ba70a2194af2aefe85dfe3da68608dcb3abd21a3aa53b55aa297c2f0b60eb3",
+        "legacy_rejected_windows_crlf_license_sha256": "6ccb9140a9f4bb8f399b1f090414c9e528a673e6961da42cc66a01ea3b20e681",
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "e8ef7ed2a46e356b961522d791b85ef8ff8a7ef46135cb5c04d1d1e10535e52e"
       },
@@ -287,7 +311,8 @@
         "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
         "tree": "be088977358cb36bac000caec396eff3758c74b2",
         "license_file": "LICENSE.md",
-        "license_sha256": "047d2259741a3ebb30d8c8a43d4ba79b5b229a069acd1d2bea49f22b297d8e98",
+        "frozen_linux_license_sha256": "1349a4b6148492b44f629e64eed676612e234fe9a839e4f3b277c1482c8849f1",
+        "legacy_rejected_windows_crlf_license_sha256": "047d2259741a3ebb30d8c8a43d4ba79b5b229a069acd1d2bea49f22b297d8e98",
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "124bd8f37a8182c5b41abb5b9c55e9651bec4225132a215e1a6abafb824bd6f7"
       },
@@ -339,7 +364,8 @@
         "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
         "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
         "license_file": "LICENSE",
-        "license_sha256": "75f69d4573d4d5f9e8ba07bc5dede592431b84bb315b6a260f8f551072968963",
+        "frozen_linux_license_sha256": "2394c4dfa12529640ec4ff3af328da64cd002923d331402da2cc5f66b13c105c",
+        "legacy_rejected_windows_crlf_license_sha256": "75f69d4573d4d5f9e8ba07bc5dede592431b84bb315b6a260f8f551072968963",
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "9a330d64a4d29994ae58a2cd1e4197795dcb18e374a5403d2707dd8c01cbe77c"
       },
@@ -387,11 +413,11 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["pgsr"],
+  "per_method_training_allowed_methods": ["rade_gs"],
   "current_one_use_launch_gate": {
-    "method_id": "pgsr",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_pgsr_3k_seed0_30k_gate_v1.json",
-    "sha256": "c9261844fb6e7338bad9b0edc6e3a87e00b23ff36a9f7e163cfd997e728c46f3"
+    "method_id": "rade_gs",
+    "path": "configs/launch_gates/m3m_gcp_native_quarter_rade_gs_3k_seed0_30k_gate_v1.json",
+    "sha256": "5d83bbf26db458e6f3dffc43de1ef64b7b75ccd523e780a5ab2c09ca112eaedd"
   },
   "batch_controller": {
     "preparation_allowed": true,
