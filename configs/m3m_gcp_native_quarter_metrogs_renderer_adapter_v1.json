@@ -36,8 +36,8 @@
   "rasterizer": {
     "module": "dist_2dgs",
     "official_training_extension_sha256": "1d4e1de031da51f2f5c73e54177f7508d5b253f17c68b709d1d97f189642a49c",
-    "evaluation_extension_sha256": null,
-    "evaluation_extension_status": "PENDING_ISOLATED_CUDA_BUILD",
+    "evaluation_extension_sha256": "12b1bc70fdf04be5eb64954b457d52a93663a0f85b6b836287c0080803c716c4",
+    "evaluation_extension_status": "ISOLATED_CUDA_BUILD_PASS_CONFORMANCE_PENDING",
     "native_num_auxiliary_channels": 7,
     "evaluation_num_auxiliary_channels": 9,
     "native_alpha_cap": 0.99,
