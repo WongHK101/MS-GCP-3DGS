@@ -52,7 +52,7 @@
     "training_rgb_only": true,
     "heldout_rgb_gcp_lidar_used": false,
     "preparation_entrypoint": "code/gcp/prepare_citygaussian_v2_depth_prior.py",
-    "preparation_entrypoint_sha256": "16f00ed9064bbf47600bf40bc4eec62f500ec4149646f1150f04d0413edefd28"
+    "preparation_entrypoint_sha256": "824a0704ff895c8af291bb105b71857bafd33b88f4e0c3d48fb468dfb37c3f4b"
   },
   "training": {
     "official_route": "MatrixCity aerial coarse 30K followed by trim-2DGS fine 60K, one 1x1 block, then official checkpoint merge",

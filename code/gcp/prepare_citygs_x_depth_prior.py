@@ -103,7 +103,9 @@ def main() -> int:
     args = parser.parse_args()
 
     city_repo = args.city_repo.resolve()
-    python = args.python.resolve()
+    # Keep the virtual-environment launcher path lexical. Resolving its symlink
+    # to /usr/bin/python bypasses the environment's pyvenv.cfg and packages.
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     formal_manifest_path = args.formal_input_manifest.resolve()
     da2_root = args.da2_root.resolve()

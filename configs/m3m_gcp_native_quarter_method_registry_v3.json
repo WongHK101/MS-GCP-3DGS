@@ -359,7 +359,7 @@
       "input_class": "rgb_colmap_external_geometry_prior",
       "route_selection": "official single-block custom-scene route for the 3K scene; no result-driven repartitioning",
       "recipe": "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-      "recipe_sha256": "6090506a05d40df668a8db7851e0f34111597f6451e50dfd15696e0b073c2189",
+      "recipe_sha256": "1e47363b01045343de1c5134ff8275b72a972e66e2ecf3ec29ec340a89e92e10",
       "adapter_config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
       "adapter_config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
       "external_priors": [
@@ -393,7 +393,7 @@
       },
       "input_class": "rgb_colmap_external_geometry_prior",
       "recipe": "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
-      "recipe_sha256": "4d36b431610f27bb470afa694ad529cc4d7e968bb9c17dad5fbc6ca14839a7ed",
+      "recipe_sha256": "630dce7cb0718225d9239fd7a13cc251527916671802470284d0464bfb92b28e",
       "adapter_config": "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
       "adapter_config_sha256": "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
       "external_priors": [

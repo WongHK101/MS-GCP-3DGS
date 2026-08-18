@@ -43,7 +43,7 @@
     "training_rgb_only": true,
     "heldout_rgb_gcp_lidar_used": false,
     "preparation_entrypoint": "code/gcp/prepare_citygs_x_depth_prior.py",
-    "preparation_entrypoint_sha256": "c3a437ade18fe3302c56a29550a6d423e45c98b47fdf22e10c97d9db9aceea2b"
+    "preparation_entrypoint_sha256": "54db04a8cb84a187e58c37b68a8ae36bc8754bd7a7b47927b0b0bc80c0cc72cb"
   },
   "compatibility": {
     "camera_utils_patch": "patches/citygs_x/native_quarter_case_insensitive_prior_suffix_27617f2_v1.patch",

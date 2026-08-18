@@ -469,13 +469,13 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     city_recipe_refs = {
         "citygaussian_v2": (
             "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-            "6090506a05d40df668a8db7851e0f34111597f6451e50dfd15696e0b073c2189",
+            "1e47363b01045343de1c5134ff8275b72a972e66e2ecf3ec29ec340a89e92e10",
             "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
             "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
         ),
         "citygs_x": (
             "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
-            "4d36b431610f27bb470afa694ad529cc4d7e968bb9c17dad5fbc6ca14839a7ed",
+            "630dce7cb0718225d9239fd7a13cc251527916671802470284d0464bfb92b28e",
             "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
             "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
         ),
@@ -505,6 +505,25 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                 prior.get("weight_sha256") == "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
                 f"{method_id}: Depth Anything V2 weight mismatch",
             )
+            expected_preparation_entrypoint = {
+                "citygaussian_v2": "code/gcp/prepare_citygaussian_v2_depth_prior.py",
+                "citygs_x": "code/gcp/prepare_citygs_x_depth_prior.py",
+            }[method_id]
+            preparation_entrypoint = repo_root / expected_preparation_entrypoint
+            require(
+                prior.get("preparation_entrypoint") == expected_preparation_entrypoint,
+                f"{method_id}: preparation entrypoint path mismatch",
+            )
+            require(
+                preparation_entrypoint.is_file(),
+                f"{method_id}: preparation entrypoint missing",
+            )
+            if preparation_entrypoint.is_file():
+                require(
+                    prior.get("preparation_entrypoint_sha256")
+                    == file_sha256(preparation_entrypoint),
+                    f"{method_id}: preparation entrypoint SHA mismatch",
+                )
         if adapter_path.is_file():
             require(file_sha256(adapter_path) == adapter_sha, f"{method_id}: adapter file SHA mismatch")
         priors = method.get("external_priors", [])
