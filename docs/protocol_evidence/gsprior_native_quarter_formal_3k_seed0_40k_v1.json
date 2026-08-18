@@ -1,0 +1,243 @@
+{
+  "artifact_retention": {
+    "large_checkpoint_and_packets_remain_on_autodl_901": true,
+    "local_model_mirror_created": false
+  },
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "created_utc": "2026-08-18T21:18:30.210399+00:00",
+  "evaluation": {
+    "checkpoint_coverage_rate": 1.0,
+    "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+    "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+    "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "method_id": "gsprior",
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2341,
+        "sha256": "47c24120177e4a65de2fee7848d1a68e6750b009db9bc5814989a5ac68f77ca1"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1368,
+        "sha256": "81a96ff6ba35eadc15ae8c81c79efa4f4ae49ff99f423dac8bac0d873c56b0ca"
+      },
+      "observation_samples.csv": {
+        "bytes": 52554,
+        "sha256": "454c61221d4de76dade4b72b7563c2219369e776a4832f744a775adb8dccc24e"
+      },
+      "point_results.csv": {
+        "bytes": 4415,
+        "sha256": "587ab6f16ffc75d8e1031fedab7d73270d6b01e283c43c22c96d4bdb689f7cbc"
+      }
+    },
+    "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/packets/depth_export_manifest.json",
+    "packet_manifest_sha256": "453289f8ab4dc6d788e53f6000809e601516b27b998e62bcf74296c786d4c74b",
+    "physical_surface_claim": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+    "residual_statistics": {
+      "all": {
+        "count": 9,
+        "max_3d_m": 0.04167684566603291,
+        "median_3d_m": 0.02064887189751512,
+        "p95_3d_m": 0.037693755955902394,
+        "rmse_3d_m": 0.025681696231028395,
+        "rmse_h_m": 0.015176559618566166,
+        "rmse_z_m": 0.020717662982270103
+      },
+      "checkpoint": {
+        "count": 4,
+        "max_3d_m": 0.028189096246444473,
+        "median_3d_m": 0.02020744308074794,
+        "p95_3d_m": 0.027058062594105068,
+        "rmse_3d_m": 0.02053981378998312,
+        "rmse_h_m": 0.0164160117238935,
+        "rmse_z_m": 0.012344979125465219
+      },
+      "control": {
+        "count": 5,
+        "max_3d_m": 0.04167684566603291,
+        "median_3d_m": 0.028875105485061562,
+        "p95_3d_m": 0.039685300810967654,
+        "rmse_3d_m": 0.029149304930363745,
+        "rmse_h_m": 0.014106806109300605,
+        "rmse_z_m": 0.025508429965756953
+      }
+    },
+    "scene": "gcp_3000_20260602",
+    "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+    "status": "COMPLETE_RANKED"
+  },
+  "final_gpu_compute_process_count": 0,
+  "formal_result_status": "COMPLETE_RANKED",
+  "input": {
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "gcp_truth_training_access": false,
+    "height": 1025,
+    "heldout_rgb_training_access": false,
+    "heldout_test_view_count": 12,
+    "lidar_training_access": false,
+    "normalization_evidence_sha256": "19927ba2a7cac94e68d444e3899874c7427a342f71ea8bc2a638aa99da8c7cee",
+    "normalized_training_copy": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_3000_20260602/train",
+    "normalized_units_per_original_colmap_unit": 0.011518037504309981,
+    "release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "train_view_count": 82,
+    "training_downsample": 1.0,
+    "width": 1414
+  },
+  "iterations": 40000,
+  "method_id": "gsprior",
+  "packet_export": {
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "benchmark_commit": "793c7de8c90d4af25d9397d6dec3c64968ef0e17",
+    "benchmark_tree": "e331402ba85035f3c2eb381b7f263ad7cc335f15",
+    "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+    "evaluation_camera_domain_is_frozen_normalized_94_camera_scene": true,
+    "evaluation_snapshot_is_separate_from_formal_model": true,
+    "exporter_sha256": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb",
+    "manifest_sha256": "453289f8ab4dc6d788e53f6000809e601516b27b998e62bcf74296c786d4c74b",
+    "mapping_csv_sha256": "03a9a74905c01fe6fa81d062e33192f3937fa1e8f89a57361efdae5c2cc7ccf0",
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "packet_bytes": 2738559004,
+    "packet_count": 66,
+    "packet_identity_aggregate_sha256": "227f1cbcf78d6685e5913ce965d4c35febc1d5bc9f7d3c8cef89946cbe5f0e1f",
+    "packet_recomputation_all_passed": true,
+    "peak_gpu_memory_mib": 4763.0,
+    "raw_camera_z_to_protocol_scale": 86.82034588147555,
+    "raw_moment_conformance_sha256": "4c6ba32b1471977d06a797f772d50ad7eccd8e7baab9236f92682d6ddce7d298",
+    "renderer_patch_sha256": "dd633a35cb33ceb78b92f5499b30702d4a19bd4aea2a87edd372bb7d2d97c18b",
+    "resource_summary_sha256": "e149ba4d39d6a6021765d0be1b66db8811c79e54ce9ec99f7078a4d0d67576c4",
+    "status": "PASS",
+    "valid_pixel_count_max": 1449350,
+    "valid_pixel_count_min": 1449350,
+    "validation_report_sha256": "1e1d980c13ce8ffc5080fb3ec31462d7f3bd25b1b64fe9b5f010024900a50212",
+    "variance_nonnegativity_unresolved_total": 210,
+    "variance_validation_fail_pixel_total": 0,
+    "wall_seconds": 226.77410595491529
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe": {
+    "iterations": 40000,
+    "resolution": 1,
+    "resume_allowed": false,
+    "scene_internal_tsdf_prior_only": true,
+    "tsdf_iterations": [
+      20000,
+      30000,
+      40000
+    ],
+    "tsdf_truncation_values": [
+      96,
+      48,
+      24
+    ]
+  },
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "run": {
+    "adapter_config_sha256": "f6ceac12c6c04caa0ab56d2edbb62626ea8ab8a2777526a7c7cd14e9404046ee",
+    "formal_launch_gate_sha256": "0f8dc00433c8718920a4a3bae547b214a136e57aea48fdda3835ce9784ff5351",
+    "launch_check_sha256": "ddb26e86de662733ec1e735565181276411a9aa2d4d358e95bc29d774cc1fd70",
+    "launcher_sha256": "64523890be3f7a2d2b7f99e4a1d9e897a99f3053b91d1542e532279703b3d89a",
+    "qualification_report_sha256": "b9b4b9f94e9e592d4acec8a98b291a233ec5c3effdbe02d10f7ae68bc4c8b778",
+    "recipe_sha256": "e02cfb0bb4db86b915c859c61ad16f98f9c15407f68661c56cb1c2b1642645f0",
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_native_quarter_gsprior_formal_3k_run_v1",
+  "seed": 0,
+  "single_seed_only": true,
+  "source": {
+    "environment_freeze_sha256": "3fb6f595c7d67ddae5da6369ed395fb4e305167ca02a2db6f856ee97af04938a",
+    "official_repository_commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+    "official_repository_tree": "779073585e88b85217d522d0ab345365346cd17f",
+    "python_syntax_patch_sha256": "b49457a649c0ccfd2ca9a41bf5b029b42a60900bd8c594fad8bed9bd7a2cc314",
+    "training_compatibility_diff_names": [
+      "scene/dataset_readers.py",
+      "train.py"
+    ],
+    "training_path_patch_sha256": "970f0df544f3e76d960eae68ed609ade5b99b3d3e9a04057b6776e70b1924f0f",
+    "training_renderer_or_rasterizer_modified": false
+  },
+  "statistical_significance_claim": false,
+  "status": "PASS",
+  "training": {
+    "cgroup_observed_peak_bytes": 94911205376,
+    "command_record_sha256": "0db69c6520ac2982f70b2caaa1b0c97576fc9de437eda8c006746d2bfdf46715",
+    "estimated_gpu_energy_wh": 624.8236628775295,
+    "fd_peak": 51,
+    "final_ply_bytes": 437765428,
+    "final_ply_relative_path": "model/point_cloud/iteration_40000/point_cloud.ply",
+    "final_ply_sha256": "8aa5474fe45c7f99409fed16191b677325a2060c83584f702eac5f88699bb1a0",
+    "gaussian_vertex_count": 1765177,
+    "gpu_hours": 2.6901200726586914,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "peak_gpu_memory_mib": 14145.0,
+    "process_maximum_rss_kib": 12073752,
+    "process_tree_sampled_peak_rss_kib": 11492492,
+    "resource_status": "PASS",
+    "resource_summary_sha256": "23cdeb771258fa1fee51164a4de8975474c0df231d03b8c997e39fca7146949b",
+    "sampler_errors": [],
+    "tsdf_artifacts": [
+      {
+        "bytes": 256000128,
+        "relative_path": "model/tsdf_model_20000.npy",
+        "sha256": "f6866bbe8b88e33df8cd747e617883be754f1688d8b3beacd8888a6f839eed87"
+      },
+      {
+        "bytes": 256000128,
+        "relative_path": "model/tsdf_model_30000.npy",
+        "sha256": "6b672554cd5486a74067c99e1f01b62523315563ab901a0cfe0624d4e8eba338"
+      },
+      {
+        "bytes": 256000128,
+        "relative_path": "model/tsdf_model_40000.npy",
+        "sha256": "61a441c5f1078596a95b46700269951ae3331549b1d4caacd45187e634927781"
+      }
+    ],
+    "wall_seconds": 9684.432261571288
+  }
+}

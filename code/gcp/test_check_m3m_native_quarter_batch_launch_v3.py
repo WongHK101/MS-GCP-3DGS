@@ -31,18 +31,18 @@ def load_qgs_gate_fixture() -> tuple[dict, dict]:
     return registry, gate
 
 
-def test_current_gsprior_one_use_gate_authorizes_exact_frozen_run() -> None:
+def test_current_sof_one_use_gate_authorizes_exact_frozen_run() -> None:
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
     gate_ref = registry["current_one_use_launch_gate"]
-    assert gate_ref["method_id"] == "gsprior"
+    assert gate_ref["method_id"] == "sof"
     gate = json.loads((REPO_ROOT / gate_ref["path"]).read_text(encoding="utf-8"))
     result = check_launch(
         registry,
         REPO_ROOT,
-        method_id="gsprior",
+        method_id="sof",
         scene="gcp_3000_20260602",
         seed=0,
-        budget_value=40000,
+        budget_value=30000,
         run_root=gate["run_root"],
         run_root_exists=False,
     )
@@ -91,11 +91,11 @@ def test_non_allowlisted_method_is_denied() -> None:
     result = check_launch(
         registry,
         REPO_ROOT,
-        method_id="gsprior",
+        method_id="sof",
         scene="gcp_3000_20260602",
         seed=0,
         budget_value=30000,
-        run_root="/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/not-created",
+        run_root="/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/not-created",
         run_root_exists=False,
     )
     assert result["passed"] is False

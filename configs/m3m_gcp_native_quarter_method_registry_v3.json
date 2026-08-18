@@ -288,7 +288,7 @@
     {
       "method_id": "gsprior",
       "display_name": "GSPrior",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "self_constrained_tsdf_prior_gaussians",
       "source": {
         "official_repository": "https://github.com/takeshie/GSPrior",
@@ -309,10 +309,20 @@
       "truth_deny_report": "docs/protocol_evidence/gsprior_native_quarter_truth_deny_v1.json",
       "truth_deny_report_sha256": "63f005775b37e5438bd6aad46b0aa10ffd3ca188e1ea534f13b08091a7802146",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/gsprior_native_quarter_formal_3k_seed0_40k_v1.json",
+        "report_sha256": "bbeb42448c7f2eebccce81806278fb2454740d255ad700ef5ca3e8545bd99faa",
+        "final_checkpoint_sha256": "8aa5474fe45c7f99409fed16191b677325a2060c83584f702eac5f88699bb1a0",
+        "packet_manifest_sha256": "453289f8ab4dc6d788e53f6000809e601516b27b998e62bcf74296c786d4c74b",
+        "checkpoint_rmse_3d_m": 0.02053981378998312,
+        "checkpoint_rmse_h_m": 0.0164160117238935,
+        "checkpoint_rmse_z_m": 0.012344979125465219,
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "sof",
@@ -343,7 +353,7 @@
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": false
+      "three_k_training_allowed": true
     },
     {
       "method_id": "citygaussian_v2",
@@ -485,11 +495,11 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["gsprior"],
+  "per_method_training_allowed_methods": ["sof"],
   "current_one_use_launch_gate": {
-    "method_id": "gsprior",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_gsprior_3k_seed0_40k_gate_v1.json",
-    "sha256": "0f8dc00433c8718920a4a3bae547b214a136e57aea48fdda3835ce9784ff5351"
+    "method_id": "sof",
+    "path": "configs/launch_gates/m3m_gcp_native_quarter_sof_3k_seed0_30k_gate_v1.json",
+    "sha256": "07f8d43fb0c6137f5dbb05b942a1cb5ab63cd76ed499a19d8acf23c309b395bf"
   },
   "batch_controller": {
     "preparation_allowed": true,
