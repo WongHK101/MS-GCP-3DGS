@@ -21,7 +21,7 @@
   "input_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
-    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef412edc5f827be0ebd",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
     "scene": "gcp_3000_20260602",
     "train_view_count": 82,
     "heldout_view_count": 12,
