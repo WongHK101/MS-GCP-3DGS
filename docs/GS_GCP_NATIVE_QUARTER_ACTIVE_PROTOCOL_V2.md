@@ -240,7 +240,11 @@ GOF 原生 opacity level set/mesh 仍只属于诊断次轨，正式公共结果�
 证据保留。PGSR、RaDe-GS、QGS、GSPrior、SOF、CityGaussianV2、CityGS-X 和
 MetroGS 进入同一个 seed-0 3K 批次，但仍须各自通过一次性资格门。技术资格
 `TECHNICALLY_QUALIFIED` 与场景结果 `COMPLETE_RANKED` / `INCOMPLETE_UNRANKED`
-分开记录；当前方法级训练 allowlist 为空。
+分开记录。PGSR 已通过冻结源码、原生 1/4 recipe、truth-deny、CUDA 原始矩一致性、
+冻结 3K 真实 packet-camera 和端到端评测预检；当前仅 PGSR 的 seed-0、30K、固定
+3K run root 一次性门禁开放，其他方法及六场景矩阵仍锁定。PGSR 的邻接相机仍采用
+上游的视角小于 30 度且最近 8 个规则，但去除不适用于该米制大场景的固定 1.5 距离
+截断；该决定只使用冻结输入相机几何，在训练和任何真值评测前确定。
 
 当前实现入口：
 
@@ -252,6 +256,7 @@ MetroGS 进入同一个 seed-0 3K 批次，但仍须各自通过一次性资格�
 - 3DGS renderer 补丁静态验证：`code/gcp/validate_3dgs_native_quarter_renderer_adapter.py`
 - 2DGS 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_2dgs_static.py`
 - GOF 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_gof_static.py`
+- PGSR 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_pgsr_static.py`
 - v3 十 active 方法登记验证：`code/gcp/validate_m3m_native_quarter_method_registry_v3.py`
 - v3 批次逐方法一次性 fail-closed 门禁：`code/gcp/check_m3m_native_quarter_batch_launch_v3.py`
 

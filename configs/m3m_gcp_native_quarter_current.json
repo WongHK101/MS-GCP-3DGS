@@ -53,7 +53,15 @@
     "code/gcp/validate_m3m_native_quarter_method_registry_v3.py",
     "code/gcp/test_validate_m3m_native_quarter_method_registry_v3.py",
     "code/gcp/check_m3m_native_quarter_batch_launch_v3.py",
-    "code/gcp/test_check_m3m_native_quarter_batch_launch_v3.py"
+    "code/gcp/test_check_m3m_native_quarter_batch_launch_v3.py",
+    "configs/m3m_gcp_native_quarter_pgsr_3k_recipe_v1.json",
+    "configs/m3m_gcp_native_quarter_pgsr_renderer_adapter_v1.json",
+    "configs/launch_gates/m3m_gcp_native_quarter_pgsr_3k_seed0_30k_gate_v1.json",
+    "docs/protocol_evidence/pgsr_native_quarter_gpu_real_3k_qualification_v1.json",
+    "docs/protocol_evidence/pgsr_native_quarter_truth_deny_v1.json",
+    "docs/protocol_evidence/pgsr_native_quarter_static_validation_v1.json",
+    "code/gcp/validate_m3m_native_quarter_pgsr_static.py",
+    "code/gcp/test_validate_m3m_native_quarter_pgsr_static.py"
   ],
   "current_repository_components_with_independent_v1_suffixes": [
     "configs/m3m_gcp_native_quarter_3dgs_3k_recipe_v1.json",
@@ -85,6 +93,14 @@
     "patches/gof/native_quarter_raw_moments_renderer_5245b20_v1.patch",
     "patches/gof/native_quarter_raw_moments_rasterizer_5245b20_v1.patch",
     "patches/gof/simple_knn_vendored_cuda12_cfloat_v1.patch",
+    "patches/pgsr/native_quarter_colmap_sparse0_loader_de24f1a_v1.patch",
+    "patches/pgsr/native_quarter_raw_moments_renderer_de24f1a_v1.patch",
+    "patches/pgsr/native_quarter_raw_moments_rasterizer_de24f1a_v1.patch",
+    "patches/pgsr/simple_knn_e72e4c9_cuda12_cfloat_v1.patch",
+    "compat/pgsr/pytorch3d_transforms_minimal_v1/pytorch3d/__init__.py",
+    "compat/pgsr/pytorch3d_transforms_minimal_v1/pytorch3d/transforms/__init__.py",
+    "compat/pgsr/pytorch3d_transforms_minimal_v1/test_quaternion_to_matrix.py",
+    "code/gcp/test_pgsr_raw_moments_cuda.py",
     "docs/protocol_evidence/m3m_native_quarter_three_method_closure_v1.json",
     "docs/protocol_evidence/m3m_native_quarter_three_method_point_results_v1.csv",
     "docs/m3m_native_quarter_three_method_preliminary_evidence_v1.md"

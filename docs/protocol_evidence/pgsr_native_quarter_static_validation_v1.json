@@ -1,0 +1,13 @@
+{
+  "schema": "m3m_gcp_native_quarter_pgsr_static_validation_v1",
+  "status": "PASS",
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "pgsr",
+  "recipe_sha256": "ffa153ce396444dbbafedcb9fa9f11fef69ffb6f502315b4f02c14f25b1dabdd",
+  "adapter_sha256": "1cbebcf6239a74c9d54aa6c28067f6a837461badb548f22f957d50e24e23acc7",
+  "qualification_sha256": "9f06e19d865602c1c3e0e73c1c7ab2be7dc00177a81207045becfaf691a80fdd",
+  "truth_deny_sha256": "1108bc61712a6d4066f94c612b03bc8ca6053a38495fbb79a432cc0c6904fc46",
+  "gate_sha256": "c9261844fb6e7338bad9b0edc6e3a87e00b23ff36a9f7e163cfd997e728c46f3",
+  "errors": []
+}

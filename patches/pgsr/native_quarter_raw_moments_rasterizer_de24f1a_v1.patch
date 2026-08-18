@@ -1,0 +1,13 @@
+diff --git a/cuda_rasterizer/config.h b/cuda_rasterizer/config.h
+index 37ba6ff..9da125e 100644
+--- a/cuda_rasterizer/config.h
++++ b/cuda_rasterizer/config.h
+@@ -13,7 +13,7 @@
+ #define CUDA_RASTERIZER_CONFIG_H_INCLUDED
+ 
+ #define NUM_CHANNELS 3 // Default 3, RGB
+-#define NUM_ALL_MAP 5
++#define NUM_ALL_MAP 8
+ #define BLOCK_X 16
+ #define BLOCK_Y 16
+ 

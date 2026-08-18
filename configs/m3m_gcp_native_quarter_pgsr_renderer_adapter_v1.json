@@ -1,0 +1,91 @@
+{
+  "schema": "m3m_gcp_native_quarter_pgsr_renderer_adapter_v1",
+  "adapter_id": "pgsr_raw_metric_depth_accumulators_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
+  "scope": "evaluation-only renderer/rasterizer copy; the official five-channel training rasterizer and trained checkpoint remain unchanged",
+  "source": {
+    "repository_commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+    "repository_tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
+    "renderer_git_blob": "50d10f39767242c0c32aa0db0b7cfeca0018e53b",
+    "loader_git_blob": "94b6c8782fccc13c9ea840b1647b27a1c6fb9b29",
+    "rasterizer_config_git_blob": "37ba6ff9abc9cedc22fbf20a323e3b7f576e1322"
+  },
+  "patches": [
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/pgsr/native_quarter_raw_moments_renderer_de24f1a_v1.patch",
+      "sha256": "322ce10b9d21bd69892ddebf1dc02fc0a8515a220fc26a1fa6f93e6c0f3e7f00"
+    },
+    {
+      "apply_root": "official_repository_root/submodules/diff-plane-rasterization",
+      "path": "patches/pgsr/native_quarter_raw_moments_rasterizer_de24f1a_v1.patch",
+      "sha256": "f5e2ee4e4873d5e2a66df48a4cbb01a6b623051e86ac273ff73a12b174ca0757"
+    },
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/pgsr/native_quarter_colmap_sparse0_loader_de24f1a_v1.patch",
+      "sha256": "59e5bed434cc8413e83a44b68c47b942754d598d815c9683c7099ba47f93d51e"
+    }
+  ],
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "plane_sources": {
+      "accumulated_alpha": "native PGSR all-map channel 3, the official sum of alpha-times-transmittance weights",
+      "weighted_camera_z_sum": "evaluation-only all-map channel 5, sum of official compositing weight times Gaussian-center camera z",
+      "weighted_camera_z_second_moment": "evaluation-only all-map channel 6, sum of official compositing weight times Gaussian-center camera z squared",
+      "weighted_inverse_camera_z_sum": "evaluation-only all-map channel 7, sum of official compositing weight divided by positive Gaussian-center camera z"
+    },
+    "camera_z_definition": "z component of means3D transformed by the frozen PGSR world_view_transform; identical support coordinate used for rasterizer depth sorting",
+    "alpha_compositing": "official alpha cap 0.99, alpha cutoff 1/255, and early termination threshold 1e-4 are unchanged",
+    "native_plane_depth_primary": false,
+    "native_plane_depth_role": "family-specific diagnostic only; it is a merged plane-intersection estimate and is not substituted for common-track M1/A",
+    "common_primary": "bilinear(M1) / bilinear(A)",
+    "physical_surface_claim": false,
+    "derived_packet_policy": "derive normalized fields on CPU from the four raw float32 accumulators"
+  },
+  "training_identity": {
+    "official_training_rasterizer_channels": 5,
+    "evaluation_adapter_rasterizer_channels": 8,
+    "training_renderer_patch_allowed": false,
+    "training_rasterizer_patch_allowed": false,
+    "checkpoint_mutation_allowed": false,
+    "evaluation_copy_required": true
+  },
+  "target_gpu_evidence": {
+    "server": "AutoDL-901",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "compute_capability": "12.0",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "official_training_rasterizer_extension_sha256": "77dc4a33bdf0cee341b6f9b7175d16d4b659a75583afcbfb965404d3b7a7fe0b",
+    "official_training_simple_knn_extension_sha256": "0101823fe21e37304ca4cbd74bfeae44ac15711b86dd23c649f5100b7202c257",
+    "evaluation_adapter_extension_sha256": "c24ca4c48790adde9201d314d463d546575a86ef0005a32981a07e00049ea435",
+    "raw_moment_conformance_sha256": "d89771bc52aeda7e3cef40e07bce1da5c9bbd3149071e27708619b02c1bbf2a9",
+    "qualification_packet_manifest_sha256": "0bf0ebe4d7c8479189ceba80194ab15b425c9b6a29c53656616ad2f766851ade"
+  },
+  "patched_linux_file_sha256": {
+    "gaussian_renderer/__init__.py": "833a4ab591accf0365f3f4d4a12633beb82d175c516b605833919ba07e4b71e8",
+    "scene/dataset_readers.py": "2c51048f9358f2a86af863eeda3897f11fea10dc7d8234fd6e6953ec38872281",
+    "submodules/diff-plane-rasterization/cuda_rasterizer/config.h": "1f4268c9bdbc4bd9ec5c5d4a0460ae3a9e72e178e8e64e2a2438be035391b5d3"
+  },
+  "qualification": {
+    "fresh_exact_source_patch_check": "PASS",
+    "renderer_python_import": "PASS",
+    "gpu_official_training_extension_build": "PASS",
+    "gpu_evaluation_adapter_build": "PASS",
+    "synthetic_raw_moment_conformance": "PASS",
+    "one_iteration_loader_training_smoke": "PASS_NOT_FORMAL_RESULT",
+    "geometry_branch_smoke": "PASS_NOT_FORMAL_RESULT",
+    "real_3k_packet_camera_preflight": "PASS_NOT_FORMAL_RESULT",
+    "common_evaluator": "COMPLETE_RANKED_QUALIFICATION_ONLY"
+  },
+  "qualification_report": "docs/protocol_evidence/pgsr_native_quarter_gpu_real_3k_qualification_v1.json",
+  "qualification_report_sha256": "9f06e19d865602c1c3e0e73c1c7ab2be7dc00177a81207045becfaf691a80fdd"
+}

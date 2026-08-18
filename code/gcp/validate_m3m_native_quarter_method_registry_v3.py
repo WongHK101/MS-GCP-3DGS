@@ -112,7 +112,10 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
 
     require(value.get("schema") == "m3m_gcp_native_quarter_method_registry_v3", "unknown schema")
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol semantics changed")
-    require(value.get("status") == "EIGHT_METHOD_3K_BATCH_PREPARATION_ACTIVE", "unexpected registry status")
+    require(
+        value.get("status") == "EIGHT_METHOD_3K_BATCH_PGSR_ONE_USE_GATE_OPEN",
+        "unexpected registry status",
+    )
     require(value.get("batch_id") == "m3m-gcp-3k-eight-method-seed0-20260818", "batch identity mismatch")
 
     plan = value.get("execution_plan", {})
@@ -176,7 +179,16 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(scope.get("six_scene_matrix_status") == "LOCKED_PENDING_3K_BATCH_CLOSURE", "six-scene matrix unlocked")
 
     boundary = value.get("training_data_boundary", {})
-    require(str(boundary.get("allowed_scene_root", "")).endswith("/gcp_3000_20260602"), "training scene allow-root mismatch")
+    require(
+        str(boundary.get("allowed_source_scene_root", "")).endswith("/gcp_3000_20260602"),
+        "source scene allow-root mismatch",
+    )
+    require(
+        str(boundary.get("formal_training_input_root", "")).endswith(
+            "/formal_inputs/gcp_3000_20260602/train"
+        ),
+        "formal training input root mismatch",
+    )
     require(len(boundary.get("denied_truth_roots", [])) >= 2, "truth deny roots missing")
     require(boundary.get("gcp_truth_training_access") is False, "GCP truth training access enabled")
     require(boundary.get("lidar_training_access") is False, "LiDAR training access enabled")
@@ -196,15 +208,57 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
         method = by_id.get(method_id, {})
         require(method.get("lifecycle_role") == "ACTIVE_3K_CANDIDATE", f"{method_id}: lifecycle role mismatch")
         require(method.get("formal_3k_result", {}).get("status") == "NOT_ATTEMPTED", f"{method_id}: premature formal result")
-        require(method.get("three_k_training_allowed") is False, f"{method_id}: training unlocked without a method gate")
         require(method.get("six_scene_run_allowed") is False, f"{method_id}: six-scene run unlocked")
-        require(method.get("technical_full_matrix_eligibility") is False, f"{method_id}: premature matrix eligibility")
         source = method.get("source", {})
         expected_url, expected_commit, expected_tree = EXPECTED_SOURCE_IDENTITIES[method_id]
         require(source.get("official_repository") == expected_url, f"{method_id}: official repository mismatch")
         require(source.get("commit") == expected_commit, f"{method_id}: source commit mismatch")
         require(source.get("tree") == expected_tree, f"{method_id}: source tree mismatch")
         require(is_sha256(source.get("transfer_archive_sha256")), f"{method_id}: transfer archive SHA malformed")
+        if method_id == "pgsr":
+            require(
+                method.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED",
+                "pgsr: technical qualification missing",
+            )
+            require(method.get("three_k_training_allowed") is True, "pgsr: one-use training gate is not open")
+            require(
+                method.get("technical_full_matrix_eligibility") is True,
+                "pgsr: technical matrix eligibility missing",
+            )
+            expected_refs = {
+                "recipe": (
+                    "configs/m3m_gcp_native_quarter_pgsr_3k_recipe_v1.json",
+                    "ffa153ce396444dbbafedcb9fa9f11fef69ffb6f502315b4f02c14f25b1dabdd",
+                ),
+                "adapter_config": (
+                    "configs/m3m_gcp_native_quarter_pgsr_renderer_adapter_v1.json",
+                    "1cbebcf6239a74c9d54aa6c28067f6a837461badb548f22f957d50e24e23acc7",
+                ),
+                "qualification_report": (
+                    "docs/protocol_evidence/pgsr_native_quarter_gpu_real_3k_qualification_v1.json",
+                    "9f06e19d865602c1c3e0e73c1c7ab2be7dc00177a81207045becfaf691a80fdd",
+                ),
+                "truth_deny_report": (
+                    "docs/protocol_evidence/pgsr_native_quarter_truth_deny_v1.json",
+                    "1108bc61712a6d4066f94c612b03bc8ca6053a38495fbb79a432cc0c6904fc46",
+                ),
+            }
+            for key, (relative, expected_sha) in expected_refs.items():
+                require(method.get(key) == relative, f"pgsr: {key} path mismatch")
+                require(method.get(f"{key}_sha256") == expected_sha, f"pgsr: {key} SHA mismatch")
+                referenced = repo_root / relative
+                require(referenced.is_file(), f"pgsr: {key} file missing")
+                if referenced.is_file():
+                    require(file_sha256(referenced) == expected_sha, f"pgsr: {key} file SHA mismatch")
+        else:
+            require(
+                method.get("three_k_training_allowed") is False,
+                f"{method_id}: training unlocked without a method gate",
+            )
+            require(
+                method.get("technical_full_matrix_eligibility") is False,
+                f"{method_id}: premature matrix eligibility",
+            )
 
     for method_id in ("gsprior", "citygs_x"):
         license_status = str(by_id.get(method_id, {}).get("source", {}).get("license_status", ""))
@@ -243,8 +297,27 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             require(file_sha256(report_path) == expected_sha, f"{method_id}: formal report file SHA mismatch")
 
     require(value.get("global_training_allowed") is False, "global training lock missing")
-    require(value.get("per_method_training_allowed_methods") == [], "method allowlist must be empty before a signed gate")
-    require(value.get("current_one_use_launch_gate") is None, "a method launch gate is unexpectedly open")
+    require(
+        value.get("per_method_training_allowed_methods") == ["pgsr"],
+        "method allowlist must contain only PGSR",
+    )
+    gate_ref = value.get("current_one_use_launch_gate", {})
+    require(isinstance(gate_ref, dict), "PGSR one-use launch gate is absent")
+    if isinstance(gate_ref, dict):
+        require(gate_ref.get("method_id") == "pgsr", "one-use gate method mismatch")
+        require(
+            gate_ref.get("path")
+            == "configs/launch_gates/m3m_gcp_native_quarter_pgsr_3k_seed0_30k_gate_v1.json",
+            "one-use gate path mismatch",
+        )
+        require(
+            gate_ref.get("sha256") == "c9261844fb6e7338bad9b0edc6e3a87e00b23ff36a9f7e163cfd997e728c46f3",
+            "one-use gate recorded SHA mismatch",
+        )
+        gate_path = repo_root / str(gate_ref.get("path", ""))
+        require(gate_path.is_file(), "one-use gate file missing")
+        if gate_path.is_file():
+            require(file_sha256(gate_path) == gate_ref.get("sha256"), "one-use gate file SHA mismatch")
     controller = value.get("batch_controller", {})
     require(controller.get("formal_training_requires_method_gate") is True, "method launch-gate requirement missing")
     require(controller.get("maximum_concurrent_formal_trainings") == 1, "formal concurrency is not one")

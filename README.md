@@ -44,9 +44,11 @@ Training authorization and completed-result state are owned only by
 [`configs/m3m_gcp_native_quarter_method_registry_v3.json`](configs/m3m_gcp_native_quarter_method_registry_v3.json).
 At this revision, original 3DGS and 2DGS retain completed and re-locked 3K
 formal runs; eight additional methods are in one gated seed-0 3K batch, GOF is
-historical-complete-retired, and the six-scene matrix remains locked. Older clean-R4 and
-native-quarter-v1 execution assets are provenance only and cannot authorize or
-supply a new result.
+historical-complete-retired, and the six-scene matrix remains locked. PGSR has passed
+its technical qualification and is the sole method on the current one-use 3K/30K
+training allowlist; the other seven batch methods remain locked. Older clean-R4 and
+native-quarter-v1 execution assets are provenance only and cannot authorize or supply
+a new result.
 
 ## Repository Layout
 

@@ -111,10 +111,18 @@ def check_launch(
         require(gate.get("qualification_gates", {}).get(key) is True, f"qualification gate did not pass: {key}")
 
     boundary = registry.get("training_data_boundary", {})
-    require(gate.get("training_input_root") == boundary.get("allowed_scene_root"), "training input root mismatch")
+    require(
+        gate.get("source_scene_root") == boundary.get("allowed_source_scene_root"),
+        "source scene root mismatch",
+    )
+    require(
+        gate.get("training_input_root") == boundary.get("formal_training_input_root"),
+        "formal training input root mismatch",
+    )
     require(gate.get("denied_truth_roots") == boundary.get("denied_truth_roots"), "truth deny roots mismatch")
     require(gate.get("gcp_truth_training_access") is False, "gate enables GCP truth access")
     require(gate.get("lidar_training_access") is False, "gate enables LiDAR access")
+    require(gate.get("heldout_rgb_training_access") is False, "gate enables held-out RGB access")
 
     pure_run = PurePosixPath(run_root)
     expected_parent = PurePosixPath("/root/autodl-tmp/runs/m3m-gcp-native-quarter") / method_id / scene
