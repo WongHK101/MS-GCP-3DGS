@@ -1,0 +1,105 @@
+{
+  "schema": "m3m_gcp_native_quarter_metrogs_renderer_adapter_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "metrogs",
+  "status": "FROZEN_PRE_RESULT_CUDA_CONFORMANCE_PENDING",
+  "scope": "evaluation-only MetroGS renderer and dist-2dgs rasterizer copies; official training source, training extensions, checkpoint, native sorting, compositing, support, culling, and optimization remain unchanged",
+  "source": {
+    "repository_commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+    "repository_tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+    "renderer_blob": "98c721196b52b3e70c593c8208b00c469a1b2d23",
+    "dist_2dgs_subtree": "a9e26cf0c3a9e295de8859b680844cf077d6f0be",
+    "dist_2dgs_blobs": {
+      "cuda_rasterizer/auxiliary.h": "d601c68d3c28c32a0e6a90e78f60308529207957",
+      "cuda_rasterizer/forward.cu": "fcae265b42cbc45395fb29cc8424d80685b7f3b2",
+      "rasterize_points.cu": "219db1d25c2d25d4b67b6a7149f0d84788131089"
+    },
+    "original_linux_file_sha256": {
+      "internal/renderers/metrogs_renderer.py": "9b114c392c54dac97b1920d57de06d731d2b187fb0f89e0cfd59829a19e4379f",
+      "submodules/dist-2dgs/cuda_rasterizer/auxiliary.h": "90cd461aefca9bf40fc9f3a780a134cf24d59db301889339e251565f31dab8ad",
+      "submodules/dist-2dgs/cuda_rasterizer/forward.cu": "2b524b64b0c66745914341e40eeaf3674db260215629341e2832db2099ee49b8",
+      "submodules/dist-2dgs/rasterize_points.cu": "b86ab247074e8f2381afa231ccd8bf3cec6dff39c3a5544b7f82495fd46c7d50"
+    }
+  },
+  "patches": [
+    {
+      "apply_root": "evaluation-only MetroGS repository copy",
+      "path": "patches/metrogs/native_quarter_raw_moments_renderer_8cf9ac1_v1.patch",
+      "sha256": "d7cc203ef57c59b14bffa3748e938c3fb4339858e86ac7e4cec643d39e3f5475"
+    },
+    {
+      "apply_root": "evaluation-only MetroGS repository copy",
+      "path": "patches/metrogs/native_quarter_raw_moments_rasterizer_8cf9ac1_v1.patch",
+      "sha256": "1d46e9039aa7e9973e7e25d2537412e496e9a95443afb0bfb67fb9ac895c006f"
+    }
+  ],
+  "rasterizer": {
+    "module": "dist_2dgs",
+    "official_training_extension_sha256": "1d4e1de031da51f2f5c73e54177f7508d5b253f17c68b709d1d97f189642a49c",
+    "evaluation_extension_sha256": null,
+    "evaluation_extension_status": "PENDING_ISOLATED_CUDA_BUILD",
+    "native_num_auxiliary_channels": 7,
+    "evaluation_num_auxiliary_channels": 9,
+    "native_alpha_cap": 0.99,
+    "native_alpha_cutoff": "1/255",
+    "native_early_termination_transmittance": 0.0001,
+    "native_near_plane": 0.2,
+    "native_far_plane": 100.0,
+    "native_backface_cull": true,
+    "sorting_compositing_culling_support_and_training_gradients_changed": false
+  },
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "order": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "plane_sources": {
+      "accumulated_alpha": "native allmap channel 1, equal to one minus final transmittance",
+      "weighted_camera_z_sum": "native allmap channel 0, sum of native T*alpha times per-ray 2D-surfel-intersection camera z",
+      "weighted_camera_z_second_moment": "evaluation-only channel 7, same native T*alpha times camera z squared",
+      "weighted_inverse_camera_z_sum": "evaluation-only channel 8, same native T*alpha divided by positive camera z"
+    },
+    "camera_z_definition": "positive per-ray 2D surfel intersection z computed by the frozen MetroGS dist-2dgs rasterizer",
+    "primary_track_uses_native_A_and_M1_planes_only": true,
+    "normalization_policy": "derive expected, variance, and harmonic diagnostics on CPU from the four raw float32 accumulators"
+  },
+  "coordinate_unit_contract": {
+    "renderer_units": "frozen original COLMAP units",
+    "protocol_units": "frozen original COLMAP units before the single public Sim(3)",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "patched_linux_file_sha256": {
+    "internal/renderers/metrogs_renderer.py": "da71d0ae2ff1c6f6f9058c33275ee896fe6549cfea59dad9ac1bc4a8b97c896f",
+    "submodules/dist-2dgs/cuda_rasterizer/auxiliary.h": "1e8e9514f8cdd8e81cc5d85214aae1fda584031651713065f90bed5aeb695000",
+    "submodules/dist-2dgs/cuda_rasterizer/forward.cu": "307db18608c857a7b029347f54f134e94d9524fe2a18cef78f02d132b5c78a66",
+    "submodules/dist-2dgs/rasterize_points.cu": "f8e437573ef8c50fa8e12b10f5bcba8fe7f14ef3ab6c8f2b422ac523545fc062"
+  },
+  "exporter": {
+    "script": "code/gcp/export_metrogs_depth_maps.py",
+    "script_sha256": "14b2a33430d4f037ce7298d36d49eedfe2f3999cb263200d5048751c9196d96c",
+    "cpu_test": "code/gcp/test_export_metrogs_depth_maps.py",
+    "cpu_test_sha256": "26341069d754fe96fa367683e124967eae9b032c66656ef9f9e4245b8035b5ba"
+  },
+  "conformance": {
+    "script": "code/gcp/test_metrogs_raw_moments_cuda.py",
+    "script_sha256": "3d53c9724810d4c2cc18375034c9b878f1801fa432e1ed2180e91b6c59bf00b1",
+    "cuda_status": "PENDING_UNTIL_QUEUED_FORMAL_GPU_WORK_RELEASES_GPU",
+    "required_cases": [
+      "single_layer",
+      "front_back_two_layer",
+      "variance_nonnegative"
+    ]
+  },
+  "claims": {
+    "formal_primary_is_A_M1_expected_render_support_camera_z": true,
+    "physical_surface_claim": false,
+    "checkpoint_mutated": false,
+    "training_semantics_changed": false,
+    "method_specific_sim3_fitted": false,
+    "gcp_lidar_or_heldout_rgb_read_by_adapter": false
+  }
+}

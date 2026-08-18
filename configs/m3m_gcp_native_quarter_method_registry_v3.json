@@ -392,9 +392,15 @@
         "route": "Pi3-Align with Xname=Pi3 plus MoGe-2 depth regularization",
         "selection_basis": "the frozen upstream run_para.sh default is Pi3; selected before any M3M-GCP result",
         "best_of_routes_allowed": false,
-        "freeze_status": "PENDING_EXACT_WEIGHT_SHA256_AND_COMMAND"
+        "freeze_status": "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT",
+        "moge_source_revision": "b135031bae30b5ac2ae141a0e68717795ce38340",
+        "moge_weight_sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+        "pi3_source_revision": "ae722e7039287d0c8fde9f11f197f804f44b510c",
+        "pi3_weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
       },
-      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_AND_PRIOR_PENDING",
+      "recipe": "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
+      "renderer_adapter": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
+      "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_CHAIN_QUEUED",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": false,
       "six_scene_run_allowed": false,

@@ -1,0 +1,143 @@
+{
+  "schema": "m3m_gcp_native_quarter_metrogs_recipe_v1",
+  "recipe_id": "m3m_gcp_native_quarter_metrogs_3k_150k_seed0_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "FROZEN_PRE_RESULT_QUALIFICATION_PENDING",
+  "method": {
+    "method_id": "metrogs",
+    "display_name": "MetroGS",
+    "official_repository": "https://github.com/M3phist0/MetroGS",
+    "input_class": "rgb_colmap_external_geometry_prior",
+    "external_geometry_priors": [
+      "MoGe-2 ViT-L Normal monocular depth",
+      "Pi3-Align pointmap initialization"
+    ]
+  },
+  "source_provenance": {
+    "repository_commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+    "repository_tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+    "license_file": "LICENSE",
+    "license_sha256": "2394c4dfa12529640ec4ff3af328da64cd002923d331402da2cc5f66b13c105c",
+    "license_status": "present_at_frozen_commit",
+    "selection_rule": "frozen official upstream main and MatrixCity-Aerial route before any MetroGS M3M-GCP result"
+  },
+  "input_release": {
+    "base_directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "base_release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "method_training_copy": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602",
+    "scene": "gcp_3000_20260602",
+    "train_view_count": 82,
+    "heldout_view_count": 12,
+    "loaded_width": 1414,
+    "loaded_height": 1025,
+    "down_sample_factor": 1.0,
+    "image_transform": "none; byte-identical frozen native-quarter JPEGs",
+    "track_closure": {
+      "rule": "remove all observations owned by the 12 held-out image IDs from the training sparse model before any external-prior preprocessing",
+      "evidence": "docs/protocol_evidence/metrogs_native_quarter_track_closure_v1.json",
+      "evidence_sha256": "273a4e34157eebc9fcbbd8e57009edfc1a870c2985d382bbefda7af1b1381b72"
+    },
+    "gcp_lidar_or_heldout_rgb_visible_to_training": false
+  },
+  "external_prior_route": {
+    "selection_time": "before any MetroGS M3M-GCP result",
+    "best_of_routes_allowed": false,
+    "moge": {
+      "source_revision": "b135031bae30b5ac2ae141a0e68717795ce38340",
+      "model": "MoGe-2 ViT-L Normal",
+      "weight_bytes": 1323815904,
+      "weight_sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+      "output": "estimated_mask_depths plus estimated_mask_depth_scales.json for exactly 82 training views"
+    },
+    "multi_view": {
+      "generator": "frozen upstream MatrixCity route",
+      "maximum_camera_distance": 1.5,
+      "truth_or_heldout_access": false
+    },
+    "pi3_align": {
+      "source_revision": "ae722e7039287d0c8fde9f11f197f804f44b510c",
+      "xname": "Pi3",
+      "weight_bytes": 3834909248,
+      "weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d",
+      "split_num": 4,
+      "loop_enable": false,
+      "use_dbow": false,
+      "output": "additional_points/metrogs_pi3_merged.ply"
+    },
+    "preparation_script": "code/gcp/prepare_metrogs_training_priors.py",
+    "preparation_script_sha256": "0cbbf854509218791d40283d4a18855a638a25fd173cfd2260f4ba35a4244f5a",
+    "compatibility_patch": {
+      "path": "patches/metrogs/numpy_bool_compat_get_mask_depth_scales_8cf9ac1_v1.patch",
+      "sha256": "40baaacce2f71493fdc3da22790e5a111066c2e1fa766ceae37c282de5d374c2",
+      "scope": "replace removed NumPy np.bool alias with bool in prior preprocessing only",
+      "algorithm_or_hyperparameter_change": false
+    }
+  },
+  "training": {
+    "official_route": "configs/metrogs/train/MatrixCity-Aerial.yaml through main_bsz.py",
+    "official_config_sha256": "86e8cbc1e44f177c80e69151f06c08782cab1b50ec145e4e6fdd44797ef814e3",
+    "official_budget": {
+      "type": "effective image iterations",
+      "value": 150000
+    },
+    "batch_size": 4,
+    "optimizer_steps": 37500,
+    "budget_semantics": "the frozen batch-size CLI divides trainer.max_steps by batch size while method schedules and saved iteration labels use trainer.global_step times batch size",
+    "seed": 0,
+    "single_gpu": true,
+    "resolution": 1,
+    "eval_holdout": false,
+    "use_multi_view": true,
+    "single_view_from": 0,
+    "multi_view_from": 50000,
+    "depth_loss_type": "l1+ssim",
+    "depth_loss_weight_init": 0.5,
+    "depth_loss_weight_final_factor": 0.005,
+    "use_appearance_model": true,
+    "density_voxel_size": 0.1,
+    "densify_until_iteration": 50000,
+    "aabb": "frozen upstream robust MAD estimator for this custom scene; MatrixCity numeric AABB is not imported",
+    "formal_checkpoint_iteration": 150000,
+    "resume_allowed": false,
+    "gcp_lidar_or_heldout_rgb_visible_to_training": false
+  },
+  "qualification": {
+    "effective_iterations": 8,
+    "optimizer_steps": 2,
+    "single_view_from": 0,
+    "multi_view_from": 4,
+    "purpose": "execute one official single-view depth step and one multi-view geometry step before the one-use formal launch gate opens",
+    "status": "QUEUED_AFTER_TRAINING_PRIOR_PASS"
+  },
+  "execution": {
+    "wrapper": "code/gcp/run_metrogs_training.py",
+    "wrapper_sha256": "be7ec1a00aeb41947118f2d651725ec4a7211074642d572484c71cfe72c73252",
+    "formal_command_template": "python code/gcp/run_metrogs_training.py --repo <clean_official_train> --python <frozen_python> --dataset <metrogs_training_copy> --model_path <new_run_root>/model --prior_manifest <prior_pass_json> --prior_pass_marker <prior_pass_marker> --additional_ply <pi3_merged_ply> --mode formal --iterations 150000",
+    "working_directory": "clean official training source",
+    "training_source_patch": null,
+    "preexisting_checkpoint_allowed": false,
+    "overwrite_allowed": false,
+    "result_driven_retry_allowed": false,
+    "one_use_method_gate_required": true
+  },
+  "evaluation_adapter": {
+    "config": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
+    "config_sha256": "2ce73e7f44bd85f0b3a02040af234a87e25b927b65298803e68d1cb7307977ae",
+    "exporter": "code/gcp/export_metrogs_depth_maps.py",
+    "exporter_sha256": "14b2a33430d4f037ce7298d36d49eedfe2f3999cb263200d5048751c9196d96c",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1",
+    "python": "3.10.12",
+    "pytorch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "training_dist_2dgs_extension_sha256": "1d4e1de031da51f2f5c73e54177f7508d5b253f17c68b709d1d97f189642a49c",
+    "simple_knn_extension_sha256": "5cd1fdfd3e000b9a95ba5607d90c53cebb22d6a10862c5b28a0eb41b117e4828",
+    "propagation_extension_sha256": "ab9b6b1099280619ad7c3b7ae7891e6b54c963df4bd086c3424bf4c52bc47e40",
+    "tinycudann_sm120_extension_sha256": "3dacbc601a2b75b276e624a374d2b3576a39ea6397993c35840eddaa29df80a4"
+  }
+}

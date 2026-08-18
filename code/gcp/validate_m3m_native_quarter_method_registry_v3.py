@@ -363,6 +363,45 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     metro_route = by_id.get("metrogs", {}).get("selected_external_prior_route", {})
     require(str(metro_route.get("route", "")).startswith("Pi3-Align with Xname=Pi3"), "MetroGS Pi3 route not frozen")
     require(metro_route.get("best_of_routes_allowed") is False, "MetroGS best-of-routes enabled")
+    require(
+        metro_route.get("freeze_status") == "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT",
+        "MetroGS exact prior route is not frozen",
+    )
+    require(
+        metro_route.get("moge_weight_sha256")
+        == "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+        "MetroGS MoGe weight identity mismatch",
+    )
+    require(
+        metro_route.get("pi3_weight_sha256")
+        == "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d",
+        "MetroGS Pi3 weight identity mismatch",
+    )
+    metro_method = by_id.get("metrogs", {})
+    metro_recipe_relative = "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json"
+    metro_adapter_relative = "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json"
+    require(metro_method.get("recipe") == metro_recipe_relative, "MetroGS recipe path mismatch")
+    require(metro_method.get("renderer_adapter") == metro_adapter_relative, "MetroGS adapter path mismatch")
+    metro_recipe_path = repo_root / metro_recipe_relative
+    metro_adapter_path = repo_root / metro_adapter_relative
+    require(metro_recipe_path.is_file(), "MetroGS recipe file missing")
+    require(metro_adapter_path.is_file(), "MetroGS adapter file missing")
+    if metro_recipe_path.is_file() and metro_adapter_path.is_file():
+        metro_recipe = json.loads(metro_recipe_path.read_text(encoding="utf-8"))
+        metro_adapter = json.loads(metro_adapter_path.read_text(encoding="utf-8"))
+        require(
+            metro_recipe.get("status") == "FROZEN_PRE_RESULT_QUALIFICATION_PENDING",
+            "MetroGS recipe pre-result status mismatch",
+        )
+        require(
+            metro_adapter.get("status") == "FROZEN_PRE_RESULT_CUDA_CONFORMANCE_PENDING",
+            "MetroGS adapter pre-result status mismatch",
+        )
+        require(
+            metro_recipe.get("evaluation_adapter", {}).get("config_sha256")
+            == file_sha256(metro_adapter_path),
+            "MetroGS recipe records the wrong adapter SHA",
+        )
 
     for method_id in ("3dgs_original", "2dgs"):
         method = by_id.get(method_id, {})

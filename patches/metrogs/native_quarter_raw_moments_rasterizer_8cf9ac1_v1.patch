@@ -1,0 +1,60 @@
+diff --git a/submodules/dist-2dgs/cuda_rasterizer/auxiliary.h b/submodules/dist-2dgs/cuda_rasterizer/auxiliary.h
+--- a/submodules/dist-2dgs/cuda_rasterizer/auxiliary.h
++++ b/submodules/dist-2dgs/cuda_rasterizer/auxiliary.h
+@@ -27,7 +27,8 @@
+ #define NORMAL_OFFSET 2 
+ #define MIDDEPTH_OFFSET 5
+ #define DISTORTION_OFFSET 6
+-#define MEDIAN_WEIGHT_OFFSET 7
++#define METRIC_DEPTH_SECOND_MOMENT_OFFSET 7
++#define METRIC_INVERSE_DEPTH_OFFSET 8
+ 
+ // distortion helper macros
+ #define BACKFACE_CULL 1
+diff --git a/submodules/dist-2dgs/cuda_rasterizer/forward.cu b/submodules/dist-2dgs/cuda_rasterizer/forward.cu
+--- a/submodules/dist-2dgs/cuda_rasterizer/forward.cu
++++ b/submodules/dist-2dgs/cuda_rasterizer/forward.cu
+@@ -340,7 +340,8 @@ renderCUDA(
+ 	float M2 = {0};
+ 	float distortion = {0};
+ 	float median_depth = {0};
+-	// float median_weight = {0};
++	float metric_depth_second_moment = {0};
++	float metric_inverse_depth = {0};
+ 	float median_contributor = {-1};
+ 
+ #endif
+@@ -440,6 +441,9 @@ renderCUDA(
+ 			float m = far_n / (far_n - near_n) * (1 - near_n / depth);
+ 			distortion += (m * m * A + M2 - 2 * m * M1) * w;
+ 			D  += depth * w;
++			metric_depth_second_moment += depth * depth * w;
++			if (depth > 0.0f)
++				metric_inverse_depth += w / depth;
+ 			M1 += m * w;
+ 			M2 += m * m * w;
+ 
+@@ -495,7 +499,8 @@ renderCUDA(
+ 		for (int ch=0; ch<3; ch++) out_others[pix_id + (NORMAL_OFFSET+ch) * H * W] = N[ch];
+ 		out_others[pix_id + MIDDEPTH_OFFSET * H * W] = median_depth;
+ 		out_others[pix_id + DISTORTION_OFFSET * H * W] = distortion;
+-		// out_others[pix_id + MEDIAN_WEIGHT_OFFSET * H * W] = median_weight;
++		out_others[pix_id + METRIC_DEPTH_SECOND_MOMENT_OFFSET * H * W] = metric_depth_second_moment;
++		out_others[pix_id + METRIC_INVERSE_DEPTH_OFFSET * H * W] = metric_inverse_depth;
+ #endif
+ 	}
+ }
+diff --git a/submodules/dist-2dgs/rasterize_points.cu b/submodules/dist-2dgs/rasterize_points.cu
+--- a/submodules/dist-2dgs/rasterize_points.cu
++++ b/submodules/dist-2dgs/rasterize_points.cu
+@@ -357,7 +357,9 @@ RenderGaussiansCUDA(
+   auto float_opts = means2D.options().dtype(torch::kFloat32);
+ 
+   torch::Tensor out_color = torch::full({NUM_CHANNELS, H, W}, 0.0, float_opts);
+-  torch::Tensor out_others = torch::full({3+3+1, H, W}, 0.0, float_opts);
++  // Preserve the seven native auxiliary planes and append evaluation-only
++  // camera-z second-moment and inverse-depth accumulators.
++  torch::Tensor out_others = torch::full({3+3+1+2, H, W}, 0.0, float_opts);
+ 
+   torch::Tensor accum_max_count = torch::full({P}, 0.0, float_opts);
+ 
