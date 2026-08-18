@@ -99,6 +99,9 @@
   "evaluation_adapter": {
     "config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
     "config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+    "exporter": "code/gcp/export_citygaussian_v2_depth_maps.py",
+    "exporter_sha256": "0c6bc3263deb7bad8034553ff1c8c35a7b50f3bc000f2a651de24c51292136f6",
+    "trusted_checkpoint_torch_load_compatibility": "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1 for the pipeline's own merged Lightning checkpoint",
     "raw_camera_z_to_protocol_scale": 1.0,
     "method_specific_sim3_allowed": false
   },

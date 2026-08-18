@@ -23,6 +23,11 @@ from typing import Any, Iterable, Sequence
 import numpy as np
 from tqdm import tqdm
 
+# The adapter loads a full Lightning checkpoint generated moments earlier by
+# the frozen CityGaussianV2 pipeline. PyTorch 2.6 changed torch.load's default
+# to weights_only=True, which rejects trusted NumPy metadata in that checkpoint.
+os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from export_gaussian_depth_maps import (  # noqa: E402
     RAW_ACCUMULATOR_TENSOR_NAMES,

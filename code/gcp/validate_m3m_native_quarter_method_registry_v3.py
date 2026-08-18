@@ -470,7 +470,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     city_recipe_refs = {
         "citygaussian_v2": (
             "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-            "77f4560ee047c3fade38b5e1e2f787cf4b74ad140580a296b661d1a90d5bfce9",
+            "2ee37a3e85de03a3fe436b1b842c8caef439e8bedd2835be1167fc46bce6c188",
             "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
             "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
         ),
@@ -613,6 +613,19 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                     and scheduler_compatibility.get("algorithm_or_hyperparameter_change") is False,
                     "citygaussian_v2: one-block observable scheduler compatibility is missing",
                 )
+                evaluation_adapter = recipe.get("evaluation_adapter", {})
+                exporter_relative = "code/gcp/export_citygaussian_v2_depth_maps.py"
+                exporter_path = repo_root / exporter_relative
+                require(
+                    evaluation_adapter.get("exporter") == exporter_relative,
+                    "citygaussian_v2: exporter path mismatch",
+                )
+                require(exporter_path.is_file(), "citygaussian_v2: exporter missing")
+                if exporter_path.is_file():
+                    require(
+                        evaluation_adapter.get("exporter_sha256") == file_sha256(exporter_path),
+                        "citygaussian_v2: exporter SHA mismatch",
+                    )
         if adapter_path.is_file():
             require(file_sha256(adapter_path) == adapter_sha, f"{method_id}: adapter file SHA mismatch")
         priors = method.get("external_priors", [])
