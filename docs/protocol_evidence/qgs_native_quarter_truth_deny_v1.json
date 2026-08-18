@@ -1,0 +1,30 @@
+{
+  "schema": "m3m_gcp_native_quarter_qgs_truth_deny_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "qgs",
+  "scene": "gcp_3000_20260602",
+  "status": "PASS",
+  "passed": true,
+  "formal_training_input_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/train",
+  "formal_training_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+  "allowed_training_content": [
+    "82 frozen native-quarter RGB JPEG files",
+    "frozen train-only COLMAP PINHOLE cameras.bin and images.bin",
+    "frozen shared sparse initialization points3D.ply"
+  ],
+  "denied_truth_roots": [
+    "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2"
+  ],
+  "heldout_rgb_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/test",
+  "heldout_rgb_visible_to_training": false,
+  "gcp_annotations_visible_to_training": false,
+  "gcp_coordinates_visible_to_training": false,
+  "lidar_visible_to_training": false,
+  "orthophoto_truth_visible_to_training": false,
+  "training_command_contains_only_formal_train_root": true,
+  "qualification_evaluator_separation": "The 94-camera real-camera qualification evaluator runs only after the 12-iteration qualification checkpoint and packets are frozen. Its output is non-benchmark and cannot select the formal recipe.",
+  "recipe_selection_basis": "published upstream Tanks-and-Temples custom-scene settings plus the frozen benchmark input contract",
+  "result_driven_recipe_selection": false,
+  "errors": []
+}

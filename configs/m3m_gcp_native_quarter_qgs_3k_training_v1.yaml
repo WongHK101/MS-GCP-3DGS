@@ -1,0 +1,42 @@
+case_name: gcp_3000_20260602
+root_dir: /root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/input-view
+model_path: /root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/model
+pipeline:
+  depth_ratio: 0.1
+  reciprocal_z: false
+  occlusion_awared_denom: false
+dataset:
+  use_alpha: false
+  eval: false
+  downsample: 1.0
+  ncc_scale: 1.0
+  type: all
+  kernel_size: -1
+  undistortion: true
+  white_background: false
+  multi_view_max_dis: 1000000000.0
+  multi_view_min_dis: 0.01
+  multi_view_max_angle: 30
+gs_model:
+  sigma: 3.0
+  sh_degree: 3
+  multi_view_num: 8
+  use_app: false
+optimizer:
+  iterations: 30000
+  position_lr_max_steps: 30000
+  percent_dense: 0.0005
+  densify_grad_threshold: 0.3
+  densification_interval: 100
+  opacity_reset_interval: 3000
+  densify_from_iter: 500
+  densify_until_iter: 15000
+  normal_from_iter: 7000
+  multi_view_weight_from_iter: 7000
+  multi_view_weight_until_iter: 30000
+  dist_from_iter: 3000
+  multi_view_ncc_weight: 0.5
+  multi_view_geo_weight: 0.03
+  curvature_clamp_threshold: -5.0
+  lambda_dist: 1000.0
+  lambda_normal: 0.05

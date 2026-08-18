@@ -1,0 +1,95 @@
+{
+  "schema": "m3m_gcp_native_quarter_qgs_renderer_adapter_v1",
+  "adapter_id": "qgs_raw_metric_depth_accumulators_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "GPU_BUILD_SYNTHETIC_AND_REAL_3K_PACKET_EVALUATOR_PREFLIGHT_PASS",
+  "scope": "evaluation-only renderer/rasterizer copy; official QGS training code, 13-channel rasterizer, compositing, and checkpoint remain unchanged",
+  "source": {
+    "repository_commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+    "repository_tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
+    "train_git_blob": "bd2e403ff006a11713040c780ed8791dcca2bcee",
+    "renderer_git_blob": "0a8b8ad82fc7fc1e0ec3550bb4e1497dcedf2ad9",
+    "base_config_git_blob": "a67f58d9c88ef7d2f02c746d34d8421906937758"
+  },
+  "patches": [
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/qgs/native_quarter_raw_moments_renderer_74d05c9_v1.patch",
+      "sha256": "07ac09c592f32e752ffd2b404b297f3f6f35cccdb7dd7f45a515412b8a51e07c"
+    },
+    {
+      "apply_root": "official_repository_root",
+      "path": "patches/qgs/native_quarter_raw_moments_rasterizer_74d05c9_v1.patch",
+      "sha256": "93583335870ab1bf573e6425c341bb1577eb2920f1b96d3cebad46889d221928"
+    }
+  ],
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "planes": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "native_channel_mapping": {
+      "accumulated_alpha": 7,
+      "weighted_camera_z_sum": 6,
+      "weighted_camera_z_second_moment": 8,
+      "weighted_inverse_camera_z_sum": 9
+    },
+    "camera_z_definition": "QGS rasterizer depths[id], the Gaussian-center camera-z coordinate used by the native visibility and resorting path",
+    "native_compositing_preserved": true,
+    "native_pixel_resorting_preserved": true,
+    "native_cutoffs_and_early_termination_preserved": true,
+    "native_quadric_intersection_depth_primary": false,
+    "native_quadric_intersection_depth_role": "family-specific diagnostic only; it is not substituted for common-track M1/A",
+    "common_primary": "bilinear(M1) / bilinear(A)",
+    "physical_surface_claim": false,
+    "derived_packet_policy": "derive normalized fields on CPU from four raw float32 accumulators"
+  },
+  "training_identity": {
+    "official_training_rasterizer_channels": 13,
+    "evaluation_adapter_rasterizer_channels": 13,
+    "evaluation_adapter_reuses_native_auxiliary_slots": true,
+    "training_renderer_patch_allowed": false,
+    "training_rasterizer_patch_allowed": false,
+    "checkpoint_mutation_allowed": false,
+    "evaluation_copy_required": true
+  },
+  "evaluation_camera_loading": {
+    "adapter": "code/gcp/export_qgs_depth_maps.py",
+    "adapter_sha256": "61de4e71d091476fcebcfbe607be5dc50f3bafa37b416e7c6e2b6f4271c03e2f",
+    "formal_camera_domain": "frozen 94-camera COLMAP evaluation scene",
+    "training_camera_domain": "frozen 82-camera train-only COLMAP scene",
+    "checkpoint_source_is_unchanged": true,
+    "heldout_rgb_loaded_for_training": false
+  },
+  "target_gpu_evidence": {
+    "server": "AutoDL-901",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "compute_capability": "12.0",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "official_training_rasterizer_extension_sha256": "d201dc8ae06230a2d842fc4bdcfc70128bb1e8ad1451d4ebf7b421d4f892c086",
+    "official_training_simple_knn_extension_sha256": "f69ef8322b7d25dd927d610c647a55628cfc738583dbd96d770317ff12892550",
+    "evaluation_adapter_extension_sha256": "20dcec46572dbcec8a8fd3ca3490857ee887c9b0b3936e7f2393e92d2c01094e",
+    "raw_moment_conformance_sha256": "5c04974691588a8c9314ebb9bce0d325467ae95db642a03675feb4a90451ee73",
+    "qualification_packet_manifest_sha256": "89a3a6a0c09e4bef079c1a0783d33ba68239874c2c7de2dc887fc6f2dd80c7c8"
+  },
+  "patched_linux_file_sha256": {
+    "gaussian_renderer/__init__.py": "9b78e52eb0383669930477bf3b482b130089da04416d9968ee27cf69d95e1adf",
+    "submodules/diff-quadratic-rasterization/cuda_rasterizer/forward.cu": "5a8574185204566504b56c3684655308637238b327b2a4e21f028c333fa325f5",
+    "submodules/diff-quadratic-rasterization/cuda_rasterizer/stopthepop_QGS/resorted_render.cuh": "ea522c4dbc60bdd55f9863808778071bf7f909db52f0e5317acb3a979b1585b3"
+  },
+  "qualification": {
+    "fresh_exact_source_patch_check": "PASS",
+    "gpu_official_training_extension_build": "PASS",
+    "gpu_evaluation_adapter_build": "PASS",
+    "synthetic_raw_moment_conformance": "PASS",
+    "geometry_branch_smoke": "PASS_NOT_FORMAL_RESULT",
+    "real_3k_packet_camera_preflight": "PASS_NOT_FORMAL_RESULT",
+    "common_evaluator": "COMPLETE_RANKED_QUALIFICATION_ONLY"
+  },
+  "qualification_report": "docs/protocol_evidence/qgs_native_quarter_gpu_real_3k_qualification_v1.json",
+  "qualification_report_sha256": "193f62c1d8cca2eab1a6529377e5095331bd3cf08608de251c61564ad34cd135"
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "m3m_gcp_native_quarter_qgs_static_validation_v1",
+  "status": "PASS",
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "qgs",
+  "recipe_sha256": "ef7f12d60a9ed739dcac8ba0407eec2882e5a29c14f87d479ce830531f55b720",
+  "training_yaml_sha256": "399f8f7f3b8f14613beae46b44a7ea6904a69152edf22189b818dea06deb0ebd",
+  "training_entrypoint_sha256": "3e0490b6d3871d6d1e47183161a186c46def35867a57365b3ca23e6b201a975b",
+  "exporter_sha256": "61de4e71d091476fcebcfbe607be5dc50f3bafa37b416e7c6e2b6f4271c03e2f",
+  "adapter_sha256": "0d785d7c3442c86d0121dfc2782b577c199443073cb35122888f26221e3d4061",
+  "qualification_sha256": "193f62c1d8cca2eab1a6529377e5095331bd3cf08608de251c61564ad34cd135",
+  "truth_deny_sha256": "f0ca27ed879a35526549fa6fe15f9041ece2963561b285d40bbb6fa8327a5764",
+  "gate_sha256": "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5",
+  "errors": []
+}

@@ -1,0 +1,227 @@
+{
+  "artifact_retention": {
+    "large_checkpoint_and_packets_remain_on_autodl_901": true,
+    "local_model_mirror_created": false
+  },
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "created_utc": "2026-08-18T10:53:40.753377+00:00",
+  "evaluation": {
+    "checkpoint_coverage_rate": 1.0,
+    "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+    "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+    "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "method_id": "rade_gs",
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2339,
+        "sha256": "5b025c4c830410f0e023a57415021210e539b1224e3bdba37b8b324efb42c2b5"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1368,
+        "sha256": "5003698d6860c4842fca5f5fa88623f121448cf598676f2960dca202e9325d75"
+      },
+      "observation_samples.csv": {
+        "bytes": 52521,
+        "sha256": "ae349324b45dff651ab637cd2cfe60000bacfd0f25db28d8bf7781f0b3e78e91"
+      },
+      "point_results.csv": {
+        "bytes": 4410,
+        "sha256": "664647cc3c1f44b72ea37f9f7e7797a256de2ade9bce39d284bd7f1087c276bb"
+      }
+    },
+    "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/rade_gs/gcp_3000_20260602/seed0-30k-20260818T102000Z/formal_evaluation/packets/depth_export_manifest.json",
+    "packet_manifest_sha256": "d1f00d6dcca7a7ef01e80e0d2d6cdc6fe2839d9eb858987f01009e0d094a2b6b",
+    "physical_surface_claim": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+    "residual_statistics": {
+      "all": {
+        "count": 9,
+        "max_3d_m": 0.04839985513030901,
+        "median_3d_m": 0.01986994335073802,
+        "p95_3d_m": 0.04425309682379794,
+        "rmse_3d_m": 0.026992255163661348,
+        "rmse_h_m": 0.013561686769849623,
+        "rmse_z_m": 0.023338005287013894
+      },
+      "checkpoint": {
+        "count": 4,
+        "max_3d_m": 0.04839985513030901,
+        "median_3d_m": 0.016556272892718132,
+        "p95_3d_m": 0.04412036836337335,
+        "rmse_3d_m": 0.027561369465752293,
+        "rmse_h_m": 0.014500187946403512,
+        "rmse_z_m": 0.023438720876930913
+      },
+      "control": {
+        "count": 5,
+        "max_3d_m": 0.038032959364031345,
+        "median_3d_m": 0.02350859306580007,
+        "p95_3d_m": 0.0364099965210325,
+        "rmse_3d_m": 0.026528174464410522,
+        "rmse_h_m": 0.01276128779134399,
+        "rmse_z_m": 0.023257118788033423
+      }
+    },
+    "scene": "gcp_3000_20260602",
+    "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+    "status": "COMPLETE_RANKED"
+  },
+  "evaluation_runtime": {
+    "benchmark_commit": "0aef7bf5359f36222515104f2b9ff67bf11c96a8",
+    "benchmark_tree": "7cf7f2fb603ea6d75f7773d1cb3ec369a7bb0054",
+    "evaluator_source_sha256": "353624ab44f8be066a8fd57ba02eaf0d2e5b306973afb7aec21d9a97312d4d8f",
+    "geometric_median_absolute_tolerance": 1e-10,
+    "geometric_median_iteration_guard": 65536,
+    "geometric_median_update_rule_changed": false,
+    "guard_only_robustness_reason": "the unchanged deterministic modified-Weiszfeld update converged at iteration 4170 for one valid frozen four-view RaDe-GS packet group",
+    "protocol_source_sha256": "ba2fdeaec6baecef79b3b0f2e59e78426c82b5a71dc288d7733bfa8fc4aca241"
+  },
+  "final_gpu_compute_process_count": 0,
+  "input": {
+    "all_train_image_hashes_verified_before_launch": true,
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "gcp_truth_training_access": false,
+    "height": 1025,
+    "heldout_rgb_training_access": false,
+    "heldout_test_view_count": 12,
+    "lidar_training_access": false,
+    "official_eval_argument": false,
+    "release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "train_view_count": 82,
+    "training_resolution_argument": 1,
+    "width": 1414
+  },
+  "iterations": 30000,
+  "method_id": "rade_gs",
+  "packet_export": {
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "benchmark_commit": "f7cd05287427e42489668bae923c04f234cf213f",
+    "benchmark_tree": "6a2e90da5182802cf799de304bce26699be07253",
+    "evaluation_adapter_extension_sha256": "5d7c2e7418f652aa753cdd27bc0b76c37c579d239f783ae89f87ce7fca1561cd",
+    "evaluation_snapshot_is_separate_from_formal_model": true,
+    "manifest_sha256": "d1f00d6dcca7a7ef01e80e0d2d6cdc6fe2839d9eb858987f01009e0d094a2b6b",
+    "mapping_csv_sha256": "115595f58f92a6fa62027388180be751c36e1852971c8179d381022dd6db1d52",
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "packet_bytes": 2747055503,
+    "packet_count": 66,
+    "packet_identity_aggregate_sha256": "95eb9dd55bcb36a73f17b0feb7bdf50ea218a58f77df29cf3bb19bf334a9b284",
+    "packet_recomputation_all_passed": true,
+    "peak_gpu_memory_mib": 5375.0,
+    "rasterizer_patch_sha256": "e08e7065609c367c81cc0c6b106a011b298441c99040c7e29f5177219292d71a",
+    "raw_moment_conformance_sha256": "e06e25640d6e753b8ac202e7d63f3b665fb18b4d2960a9f1fe98a5f4da2847c1",
+    "renderer_patch_sha256": "0f05b45a10b77754ea63c82317fe3426d931be326f9c4ee3d916d98336954709",
+    "resource_status": "PASS",
+    "resource_summary_sha256": "781ed1e49bd44b1f1a6e7826d9eea7140f5bb220a0a71d7838a87087523f7c84",
+    "status": "PASS",
+    "valid_pixel_count_max": 1449350,
+    "valid_pixel_count_min": 1449336,
+    "validation_report_sha256": "9bdcc9a9ee62b615c4e5ba1a7623d586f41b93234a5e4523ad8a843237b13855",
+    "variance_nonnegativity_unresolved_total": 1790,
+    "variance_validation_fail_pixel_total": 0,
+    "wall_seconds": 224.73482631146908
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe": {
+    "depth_ratio": 0.0,
+    "iterations": 30000,
+    "kernel_size": 0.0,
+    "multi_view_max_dis": 1000000000.0,
+    "neighbor_rule": "retain upstream angle<30deg and nearest-8; disable arbitrary absolute distance cap",
+    "regularization_from_iter": 7000,
+    "resolution": 1,
+    "resume_allowed": false,
+    "use_decoupled_appearance": 3
+  },
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "run": {
+    "adapter_config_sha256": "7eb4afd438d360c880fd626acd01ef34886daddb110865454260bb955dc6cf3a",
+    "formal_launch_gate_sha256": "5d83bbf26db458e6f3dffc43de1ef64b7b75ccd523e780a5ab2c09ca112eaedd",
+    "launch_check_sha256": "c54c38829f9a67fe40013ce93e1446a97bb2498d049bb522fa9ddbcbd511fec3",
+    "launcher_sha256": "4291da125a96ca5c1c4e52d39679155eaa054d0aa56d2f8dc0485465435f0f4c",
+    "qualification_report_sha256": "de52f116f924830aacdebf6453ce2213f7fbf5962534bc321e0da592388477e4",
+    "recipe_sha256": "82524b5f0698d44639a2dc1f0dee7ea48699782113d04cc21784400e990393d2",
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/rade_gs/gcp_3000_20260602/seed0-30k-20260818T102000Z"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_native_quarter_rade_gs_formal_3k_run_v1",
+  "seed": 0,
+  "single_seed_only": true,
+  "source": {
+    "environment_freeze_sha256": "69f074df90baedda6ba7ce13f6f7250009ee6d85ba57dae16558600e9bdbb7e3",
+    "official_repository_commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+    "official_repository_tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+    "official_training_fused_ssim_extension_sha256": "a239949d1403d67e6ea8e704f54151ee5cf464529072d74135aadb3851513705",
+    "official_training_rasterizer_extension_sha256": "f038c5af16b28b64b7d36659da737a726159795176d58019e00689c1a3439776",
+    "official_training_simple_knn_extension_sha256": "ecc09b743cd565b0120f40674f40a27071570e922dfbe3d20a88a8dd5267a767",
+    "official_training_source_modified": false,
+    "official_training_warp_patch_ncc_extension_sha256": "b8c407a757f53f86f21453922b26eb7753cb5890fe5d20564fc0b86efa2017e1",
+    "training_compatibility_diff_names": []
+  },
+  "statistical_significance_claim": false,
+  "status": "PASS",
+  "training": {
+    "cfg_args_sha256": "6bd7681a876802b9aa11166ba43a687a81b705a3c5055f155b1eb1084eae4f79",
+    "cgroup_observed_peak_bytes": 33177194496,
+    "command_record_sha256": "603e80c7634f8ec1ca14115fbe6c01efe5a3e40fc72ed3e1bfbaed6e1a95794f",
+    "estimated_gpu_energy_wh": 84.91223951052149,
+    "fd_peak": 130,
+    "final_ply_bytes": 635689449,
+    "final_ply_relative_path": "model/point_cloud/iteration_30000/point_cloud.ply",
+    "final_ply_sha256": "37168235bbf81084d1cb0763b92026b6eac4f866498bd90205ac08266d50f222",
+    "gaussian_vertex_count": 2522571,
+    "gpu_hours": 0.2572351172556066,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "neighbor_validation_sha256": "585aefa2d4dcf79f97f510d70f85870655c6ff2eb66428b31efade442b5d569d",
+    "peak_gpu_memory_mib": 50077.0,
+    "process_maximum_rss_kib": 11430404,
+    "process_tree_sampled_peak_rss_kib": 11373348,
+    "resource_status": "PASS",
+    "resource_summary_sha256": "65c81ed417badf7f94ceab37a9243d83810f19c5249b0fefc0fff5c150e8dd77",
+    "sampler_errors": [],
+    "wall_seconds": 926.0464221201837
+  }
+}

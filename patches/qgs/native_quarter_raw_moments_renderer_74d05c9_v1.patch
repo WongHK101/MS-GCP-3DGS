@@ -1,0 +1,32 @@
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 0a8b8ad..0225b90 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -28,7 +28,8 @@ def render(viewpoint_camera,
+            stop_z_gradient = False,
+            app_model=None,
+            return_depth=True,
+-           return_normal=True
++           return_normal=True,
++           return_raw_metric_depth_accumulators=False
+            ):
+     """
+     Render the scene. 
+@@ -134,6 +135,17 @@ def render(viewpoint_camera,
+         "aabb": aabb,
+         "n_touched": n_touched
+     }
++
++    if return_raw_metric_depth_accumulators:
++        rets["raw_metric_depth_accumulators"] = torch.cat(
++            (
++                rendered_image[7:8, ...],
++                rendered_image[6:7, ...],
++                rendered_image[8:9, ...],
++                rendered_image[9:10, ...],
++            ),
++            dim=0,
++        )
+     
+     render_dist = rendered_image[8:9]
+     render_dist = torch.nan_to_num(render_dist)
