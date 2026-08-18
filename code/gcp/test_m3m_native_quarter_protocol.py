@@ -76,6 +76,32 @@ def test_geometric_median_near_degenerate_group_reaches_frozen_tolerance() -> No
     assert np.linalg.norm(default_result - points[1]) < 1.0e-7
 
 
+def test_geometric_median_four_view_packet_regression_reaches_frozen_tolerance() -> None:
+    # Frozen RaDe-GS 3K packet regression.  The unchanged modified-Weiszfeld
+    # update reaches the absolute 1e-10 tolerance at iteration 4170, just beyond
+    # the former implementation guard of 4096 iterations.
+    points = np.asarray(
+        [
+            [12.924747417264676, 30.044835727831796, -39.61414259344466],
+            [12.913852623772824, 30.038136772890635, -39.612114736357796],
+            [12.903471085080968, 30.031902677279426, -39.609624149713845],
+            [12.912246773431642, 30.02825297311048, -39.60914071091546],
+        ],
+        dtype=np.float64,
+    )
+    try:
+        geometric_median(points, max_iterations=4096)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("4096 iterations unexpectedly met the frozen tolerance")
+
+    default_result = geometric_median(points)
+    long_budget_result = geometric_median(points, max_iterations=131072)
+    assert np.array_equal(default_result, long_budget_result)
+    assert np.linalg.norm(default_result - points[1]) < 1.5e-5
+
+
 def test_coverage_gate_uses_fraction_and_view_classes() -> None:
     passed = coverage_gate(
         10,

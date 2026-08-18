@@ -196,14 +196,15 @@ def half_pixel_sensitivity(
 def geometric_median(
     points: np.ndarray | Sequence[Sequence[float]],
     tolerance: float = 1.0e-10,
-    max_iterations: int = 4096,
+    max_iterations: int = 65536,
 ) -> np.ndarray:
     """Compute a rotation-equivariant geometric median with Weiszfeld updates.
 
-    The larger iteration guard is required for near-degenerate view groups whose
-    minimizer coincides with a sample.  It leaves the update rule and absolute
-    convergence tolerance unchanged; it only permits the same iteration to
-    reach that tolerance instead of raising after 512 steps.
+    The large iteration guard is required for near-degenerate view groups whose
+    minimizer coincides with, or lies very close to, a sample.  It leaves the
+    update rule and absolute convergence tolerance unchanged; it only permits
+    the same deterministic iteration to reach that tolerance instead of
+    rejecting a valid method packet.
     """
 
     values = np.asarray(points, dtype=np.float64)
