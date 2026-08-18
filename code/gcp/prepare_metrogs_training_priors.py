@@ -220,10 +220,17 @@ def validate_segments(
         images = image_files(block / "images")
         if not images:
             raise RuntimeError(f"empty MetroGS segment: {block}")
-        sparse = block / "sparse" / "0"
+        upstream_sparse = block / "sparse" / "0"
+        sparse = block / "sparse_closed" / "0"
         for filename in ("cameras.bin", "images.bin", "points3D.bin"):
+            if not (upstream_sparse / filename).is_file():
+                raise FileNotFoundError(upstream_sparse / filename)
             if not (sparse / filename).is_file():
                 raise FileNotFoundError(sparse / filename)
+        closure_manifest = block / "track_closure_manifest.json"
+        closure = json.loads(closure_manifest.read_text(encoding="utf-8"))
+        if closure.get("status") != "PASS" or closure.get("passed") is not True:
+            raise RuntimeError(f"block track closure failed: {block}")
         hashes = [sha256(path) for path in images]
         copied_hashes.update(hashes)
         rows.append(
@@ -233,12 +240,28 @@ def validate_segments(
                 "image_hash_aggregate_sha256": hashlib.sha256(
                     "\n".join(sorted(hashes)).encode("ascii")
                 ).hexdigest(),
+                "upstream_sparse": {
+                    filename: {
+                        "bytes": (upstream_sparse / filename).stat().st_size,
+                        "sha256": sha256(upstream_sparse / filename),
+                    }
+                    for filename in ("cameras.bin", "images.bin", "points3D.bin")
+                },
                 "sparse": {
                     filename: {
                         "bytes": (sparse / filename).stat().st_size,
                         "sha256": sha256(sparse / filename),
                     }
                     for filename in ("cameras.bin", "images.bin", "points3D.bin")
+                },
+                "track_closure_manifest": {
+                    "path": str(closure_manifest),
+                    "bytes": closure_manifest.stat().st_size,
+                    "sha256": sha256(closure_manifest),
+                    "removed_point_count": int(closure["removed_point_count"]),
+                    "removed_track_element_count": int(
+                        closure["removed_track_element_count"]
+                    ),
                 },
             }
         )
@@ -276,6 +299,8 @@ def main() -> int:
     parser.add_argument("--moge_weight", type=Path, required=True)
     parser.add_argument("--pi3_weight", type=Path, required=True)
     parser.add_argument("--compatibility_patch", type=Path, required=True)
+    parser.add_argument("--colmap_io", type=Path, required=True)
+    parser.add_argument("--subset_track_closure_tool", type=Path, required=True)
     parser.add_argument("--additional_ply", type=Path, required=True)
     parser.add_argument("--evidence_output", type=Path, required=True)
     parser.add_argument("--expected_repo_commit", required=True)
@@ -298,6 +323,8 @@ def main() -> int:
     moge_weight = args.moge_weight.resolve()
     pi3_weight = args.pi3_weight.resolve()
     patch = args.compatibility_patch.resolve()
+    colmap_io = args.colmap_io.resolve()
+    subset_track_closure_tool = args.subset_track_closure_tool.resolve()
     additional_ply = args.additional_ply.resolve()
     evidence_output = args.evidence_output.resolve()
 
@@ -314,6 +341,8 @@ def main() -> int:
         moge_weight,
         pi3_weight,
         patch,
+        colmap_io,
+        subset_track_closure_tool,
         dataset / "images",
         dataset / "sparse" / "0" / "cameras.bin",
         dataset / "sparse" / "0" / "images.bin",
@@ -459,6 +488,27 @@ def main() -> int:
         env=env,
     )
     segment_root = dataset / "segments"
+    commands["segment_track_closure"] = []
+    for block_idx in range(args.split_num):
+        block = segment_root / f"block_{block_idx}"
+        commands["segment_track_closure"].append(
+            run_checked(
+                [
+                    python,
+                    subset_track_closure_tool,
+                    "--input_model",
+                    block / "sparse" / "0",
+                    "--output_model",
+                    block / "sparse_closed" / "0",
+                    "--output_manifest",
+                    block / "track_closure_manifest.json",
+                    "--colmap_io",
+                    colmap_io,
+                ],
+                cwd=repo,
+                env=env,
+            )
+        )
     segment_rows = validate_segments(segment_root, source_image_hashes, args.split_num)
 
     pi3_template_path = repo / "pointmap" / "Pi3-Align" / "configs" / "mc_aerial.yaml"
@@ -482,7 +532,7 @@ def main() -> int:
                 "--image_dir",
                 block / "images",
                 "--sparse_dir",
-                block / "sparse",
+                block / "sparse_closed",
                 "--save_dir",
                 block / "output",
                 "--config",
@@ -529,6 +579,8 @@ def main() -> int:
             "runtime_status": repo_status,
             "compatibility_patch": str(patch),
             "compatibility_patch_sha256": sha256(patch),
+            "subset_track_closure_tool": str(subset_track_closure_tool),
+            "subset_track_closure_tool_sha256": sha256(subset_track_closure_tool),
             "patched_depth_scale_script_sha256": sha256(
                 repo / "utils" / "get_mask_depth_scales.py"
             ),
