@@ -1,0 +1,67 @@
+{
+  "access_boundary": {
+    "gcp_annotations_opened": 0,
+    "heldout_image_records_used": 0,
+    "heldout_rgb_opened": 0,
+    "lidar_opened": 0,
+    "note": "The byte-identical original points3D.bin retains upstream track metadata, but official scale fitting reads only point xyz/error and selected training-image observations.",
+    "training_image_records_used": 82
+  },
+  "authoritative_training_camera_model_replaced": false,
+  "coordinate_transform": {
+    "operation": "none",
+    "point3D_ids_policy": "direct copy from the 94-view native-quarter model",
+    "source_and_target_pixel_domain": "the same frozen native-quarter undistorted PINHOLE domain",
+    "xys_policy": "direct copy from the 94-view native-quarter model"
+  },
+  "derived_model": {
+    "camera_count": 1,
+    "effective_observation_count": 341681,
+    "heldout_image_record_count": 0,
+    "image_count": 82,
+    "keypoint_count": 823174,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-track-compat-v3/gcp_3000_20260602/sparse/0",
+    "point_count": 61302,
+    "sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "c0ce229da0adbe69f4796d749ed071e1cb5a87d50774c81d22dc1c369590199d",
+      "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    }
+  },
+  "formal_train_model": {
+    "effective_observation_count": 0,
+    "image_count": 82,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/train/sparse/0",
+    "sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "8fa4e794d02efc67bec94a4a4371b440e010badce7f46603830452e7a7dcb82a"
+    }
+  },
+  "original_model": {
+    "image_count": 94,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/gcp_3000_20260602/sparse/0",
+    "point_count": 61302,
+    "sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+      "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    }
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "role": "derived non-authoritative training-only compatibility view for official monocular-depth scale fitting",
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_gcp_native_quarter_citygaussian_colmap_track_view_v1",
+  "status": "PASS",
+  "validation": {
+    "camera_files_byte_identical": true,
+    "formal_cameras_bin_byte_identical": true,
+    "heldout_image_records_absent": true,
+    "maximum_qvec_or_tvec_absolute_difference": 0.0,
+    "no_pixel_rescaling_or_resampling": true,
+    "original_points3d_bin_byte_identical": true,
+    "source_effective_observation_count": 341681,
+    "source_keypoint_count": 823174,
+    "train_name_set_exact": true
+  }
+}

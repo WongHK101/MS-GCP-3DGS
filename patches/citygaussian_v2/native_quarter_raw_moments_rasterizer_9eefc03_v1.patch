@@ -1,0 +1,58 @@
+diff --git a/cuda_rasterizer/auxiliary.h b/cuda_rasterizer/auxiliary.h
+index 49c7f98..de9fcb0 100644
+--- a/cuda_rasterizer/auxiliary.h
++++ b/cuda_rasterizer/auxiliary.h
+@@ -26,6 +26,8 @@
+ #define MIDDEPTH_OFFSET 5
+ #define DISTORTION_OFFSET 6
+ #define MEDIAN_WEIGHT_OFFSET 7
++#define DEPTH_SECOND_MOMENT_OFFSET 8
++#define INVERSE_DEPTH_MOMENT_OFFSET 9
+ 
+ // distortion helper macros
+ #define BACKFACE_CULL 1
+diff --git a/cuda_rasterizer/forward.cu b/cuda_rasterizer/forward.cu
+index 5ab302e..16b1554 100644
+--- a/cuda_rasterizer/forward.cu
++++ b/cuda_rasterizer/forward.cu
+@@ -320,6 +320,8 @@ renderCUDA(
+ #if RENDER_AXUTILITY
+ 	// render axutility ouput
+ 	float D = { 0 };
++	float D2 = { 0 };
++	float Hinv = { 0 };
+ 	float N[3] = {0};
+ 	float dist1 = {0};
+ 	float dist2 = {0};
+@@ -440,6 +442,8 @@ renderCUDA(
+ 
+ 			// Render depth map
+ 			D += depth * alpha * T;
++			D2 += depth * depth * alpha * T;
++			Hinv += alpha * T / depth;
+ 			// Efficient implementation of distortion loss, see 2DGS' paper appendix.
+ 			dist1 += mapped_depth * alpha * T;
+ 			dist2 += mapped_depth * mapped_depth * alpha * T;
+@@ -465,6 +469,8 @@ renderCUDA(
+ 		out_others[pix_id + MIDDEPTH_OFFSET * H * W] = median_depth;
+ 		out_others[pix_id + DISTORTION_OFFSET * H * W] = distortion;
+ 		out_others[pix_id + MEDIAN_WEIGHT_OFFSET * H * W] = median_weight;
++		out_others[pix_id + DEPTH_SECOND_MOMENT_OFFSET * H * W] = D2;
++		out_others[pix_id + INVERSE_DEPTH_MOMENT_OFFSET * H * W] = Hinv;
+ #endif
+ 	}
+ }
+diff --git a/rasterize_points.cu b/rasterize_points.cu
+index 5c77fcf..7be7a5f 100644
+--- a/rasterize_points.cu
++++ b/rasterize_points.cu
+@@ -89,8 +89,8 @@ RasterizeGaussiansCUDA(
+   auto int_opts = means3D.options().dtype(torch::kInt32);
+   auto float_opts = means3D.options().dtype(torch::kFloat32);
+ 
+   torch::Tensor out_color = torch::full({NUM_CHANNELS, H, W}, 0.0, float_opts);
+-  torch::Tensor out_others = torch::full({3+3+2, H, W}, 0.0, float_opts);
++  torch::Tensor out_others = torch::full({3+3+2+2, H, W}, 0.0, float_opts);
+   torch::Tensor radii = torch::full({P}, 0, means3D.options().dtype(torch::kInt32));
+ 
+   torch::Tensor transmittance = torch::full({P}, 0.0, float_opts);

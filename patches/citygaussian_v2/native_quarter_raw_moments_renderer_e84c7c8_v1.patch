@@ -1,0 +1,24 @@
+diff --git a/internal/renderers/sep_depth_trim_2dgs_renderer.py b/internal/renderers/sep_depth_trim_2dgs_renderer.py
+index 581a96e..c2f38e9 100644
+--- a/internal/renderers/sep_depth_trim_2dgs_renderer.py
++++ b/internal/renderers/sep_depth_trim_2dgs_renderer.py
+@@ -47,6 +47,7 @@ class SepDepthTrim2DGSRenderer(Renderer):
+             bg_color: torch.Tensor,
+             scaling_modifier=1.0,
+             record_transmittance=False,
++            return_raw_metric_depth_accumulators=False,
+             **kwargs,
+     ):
+         """
+@@ -153,6 +154,11 @@ class SepDepthTrim2DGSRenderer(Renderer):
+             'surf_normal': surf_normal,
+         })
+ 
++        if return_raw_metric_depth_accumulators:
++            rets['raw_metric_depth_accumulators'] = torch.cat(
++                (render_alpha, allmap[0:1], allmap[8:9], allmap[9:10]), dim=0
++            )
++
+         return rets
+     
+     def before_training_step(

@@ -1,0 +1,89 @@
+{
+  "schema": "m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "citygaussian_v2",
+  "status": "FROZEN_PRE_RESULT_CUDA_CONFORMANCE_PENDING",
+  "scope": "evaluation-only renderer and trim-surfel rasterizer copies; official training renderer, official rasterizer extension, checkpoint, sorting, trimming, and optimization remain unchanged",
+  "source": {
+    "repository_commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+    "repository_tree": "be088977358cb36bac000caec396eff3758c74b2",
+    "renderer_blob": "581a96e45cb2b2386e66da33ccddd806efd8983a",
+    "trim_surfel_repository": "https://github.com/DekuLiuTesla/diff-surfel-rasterization",
+    "trim_surfel_commit": "9eefc03858a30bb3e5f98eccc56f077420ee2aaf",
+    "trim_surfel_tree": "bceff6478e1292e06f0aebac712ad431a558df44",
+    "rasterizer_blobs": {
+      "cuda_rasterizer/auxiliary.h": "49c7f989ff7fa91474483da4d2b465c4ee741049",
+      "cuda_rasterizer/forward.cu": "5ab302ed6097250f0ef15a94671abde8748d0a99",
+      "rasterize_points.cu": "5c77fcf821cd6c75433614e1756709cf7b37fada"
+    }
+  },
+  "patches": [
+    {
+      "apply_root": "evaluation-only CityGaussianV2 repository copy",
+      "path": "patches/citygaussian_v2/native_quarter_raw_moments_renderer_e84c7c8_v1.patch",
+      "sha256": "5b08f2a9b4a275b191230e8d20802261a4ed35c7120a3ecf2181060f264ebc64"
+    },
+    {
+      "apply_root": "evaluation-only trim-surfel rasterizer source copy",
+      "path": "patches/citygaussian_v2/native_quarter_raw_moments_rasterizer_9eefc03_v1.patch",
+      "sha256": "cb92c91b5af52c003bf91c6ae96d47894c4e55050adaac2e1d685dab60407412"
+    }
+  ],
+  "rasterizer": {
+    "module": "diff_trim_surfel_rasterization",
+    "official_training_extension_sha256": "caf6b4c055bcd4296720580bac52430d5438fb0702c5ebbfa46a417caf076f1b",
+    "evaluation_extension_sha256": "5c1136292db90c940dae3761b98734ce0eb4799ed8c113d4b19872ea058a4758",
+    "native_alpha_cap": 0.99,
+    "native_alpha_cutoff": "1/255",
+    "native_early_termination_transmittance": 0.0001,
+    "native_near_plane": 0.2,
+    "native_far_plane": 100.0,
+    "native_backface_cull": true,
+    "native_low_pass_depth_rule": "use per-ray surfel intersection z when rho3d <= rho2d, otherwise use Tw.z",
+    "sorting_compositing_culling_support_and_training_gradients_changed": false
+  },
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "order": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "plane_sources": {
+      "accumulated_alpha": "native allmap channel 1, equal to one minus final transmittance",
+      "weighted_camera_z_sum": "native allmap channel 0, sum of T*alpha times per-ray surfel-intersection camera z",
+      "weighted_camera_z_second_moment": "evaluation-only channel 8, same native T*alpha times camera z squared",
+      "weighted_inverse_camera_z_sum": "evaluation-only channel 9, same native T*alpha divided by positive camera z"
+    },
+    "native_channel_7": "CityGaussianV2 median-contributor weight; retained but never substituted for protocol accumulated alpha",
+    "camera_z_definition": "positive per-ray 2D surfel intersection z computed inside the frozen official rasterizer",
+    "normalization_policy": "derive expected, variance, and harmonic diagnostics on CPU from the four raw float32 accumulators"
+  },
+  "coordinate_unit_contract": {
+    "renderer_units": "frozen original COLMAP units",
+    "protocol_units": "frozen original COLMAP units before the single public Sim(3)",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "patched_linux_file_sha256": {
+    "internal/renderers/sep_depth_trim_2dgs_renderer.py": "e1cf2d09c90d425d503770fe3342739787921b339b181dba19da6ac6e1d21209",
+    "cuda_rasterizer/auxiliary.h": "3262de5f888dc42d9b82dabbd122adc200058e19d3e7ed3eee83ed0d7931c1cf",
+    "cuda_rasterizer/forward.cu": "a32600371e52f8b38ee3c98218d8870a822d514f99df8ea9e9e9178b879087ed",
+    "rasterize_points.cu": "eb19ef9e6e93598f8f2ee8b8c16a3348c5d4235088dc2272adef772aada56a9d"
+  },
+  "conformance": {
+    "script": "code/gcp/test_citygaussian_v2_raw_moments_cuda.py",
+    "script_sha256": "f57426f14fe890a4b85f494e6b4e476884de8ca218e7da549e13a2e03e864714",
+    "cuda_status": "PENDING_UNTIL_QGS_RELEASES_GPU",
+    "required_cases": ["single_layer", "front_back_two_layer", "variance_nonnegative"]
+  },
+  "claims": {
+    "formal_primary_is_A_M1_expected_render_support_camera_z": true,
+    "physical_surface_claim": false,
+    "checkpoint_mutated": false,
+    "training_semantics_changed": false,
+    "method_specific_sim3_fitted": false,
+    "gcp_lidar_or_heldout_rgb_read_by_adapter": false
+  }
+}

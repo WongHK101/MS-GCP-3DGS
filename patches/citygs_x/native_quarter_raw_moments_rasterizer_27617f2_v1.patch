@@ -1,0 +1,50 @@
+diff --git a/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h b/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h
+index 4fe2075..335386b 100644
+--- a/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h
++++ b/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h
+@@ -21,9 +21,9 @@
+ #define ONE_DIM_BLOCK_SIZE 256
+ // #define ONE_DIM_BLOCK_SIZE 128
+ // #define ONE_DIM_BLOCK_SIZE 64
+-#define NUM_ALL_MAP 5
++#define NUM_ALL_MAP 8
+ // Currently, I need to change the block size here and rebuild the project to take effect;
+ // To rebuild, there is a environment setting bug: the compiler cannot notive my changes in the header file. 
+ // Therefore, I must delelte the build folder and rebuild the project from scratch. 
+ // TODO: fix the environment setting but and try to make it more flexible in the future.
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu b/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu
+index 54065f5..4140eef 100644
+--- a/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu
++++ b/submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu
+@@ -405,6 +405,21 @@ renderCUDA(
+ 			if (render_geo) {
+ 					for (int ch = 0; ch < ALL_MAP; ch++)
+ 						All_map[ch] += all_map[collected_id[j] * ALL_MAP + ch] * alpha * T;
++
++					// Evaluation-only raw camera-z moments. Channels 0..4 retain the
++					// native CityGS-X normal/alpha/distance semantics unchanged.
++					const int gaussian_id = collected_id[j];
++					const float plane_denominator = -(
++						all_map[gaussian_id * ALL_MAP + 0] * ray.x +
++						all_map[gaussian_id * ALL_MAP + 1] * ray.y +
++						all_map[gaussian_id * ALL_MAP + 2] + 1.0e-8f);
++					const float camera_z =
++						all_map[gaussian_id * ALL_MAP + 4] / plane_denominator;
++					const float metric_weight = alpha * T;
++					All_map[5] += camera_z * metric_weight;
++					All_map[6] += camera_z * camera_z * metric_weight;
++					if (camera_z > 0.0f)
++						All_map[7] += metric_weight / camera_z;
+ 				}
+ 			if (T > 0.5)
+ 				{
+@@ -655,4 +670,4 @@ void FORWARD::filter_preprocess(int P, int M,
+ 		grid,
+ 		prefiltered
+ 		);
+-}
+\ No newline at end of file
++}

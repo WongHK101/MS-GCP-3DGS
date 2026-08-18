@@ -1,0 +1,93 @@
+{
+  "schema": "m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "citygs_x",
+  "status": "FROZEN_PRE_RESULT_CUDA_CONFORMANCE_PENDING",
+  "scope": "evaluation-only renderer and rasterizer copies; official CityGS-X training source, extension, checkpoint, sorting, compositing, culling, and optimization remain unchanged",
+  "source": {
+    "repository_commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+    "repository_tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+    "renderer_blob": "30b9734205da47870a6ee06e0eabaf81a7052570",
+    "rasterizer_blobs": {
+      "cuda_rasterizer/config.h": "4fe2075e65b80f5d4d9b760e5e7bb29e5b2d455a",
+      "cuda_rasterizer/forward.cu": "54065f5c64e038119ebf0fda12c7bf47dfcff03c"
+    }
+  },
+  "patches": [
+    {
+      "apply_root": "evaluation-only CityGS-X repository copy",
+      "path": "patches/citygs_x/native_quarter_raw_moments_renderer_27617f2_v1.patch",
+      "sha256": "37a9221aadcb705c05ae3465e07d6b76e910d71f3d26f420dd3f3528886a5aa4"
+    },
+    {
+      "apply_root": "evaluation-only CityGS-X repository copy",
+      "path": "patches/citygs_x/native_quarter_raw_moments_rasterizer_27617f2_v1.patch",
+      "sha256": "25f46975485fd201797abfcd1923f3a93ea6af7d4e8bde2937922b68e2da02d2"
+    }
+  ],
+  "rasterizer": {
+    "module": "diff_gaussian_rasterization",
+    "official_training_extension_sha256": "5eea2d12365696133da2226348436269427b2e45f11f8bade5a7e6b112badf39",
+    "official_simple_knn_extension_sha256": "3b65302b72bff14b7cfc8f5531e97c41eb5f857c860fcb06cfa170c81e4f9d86",
+    "evaluation_extension_sha256": "8ce5582fe3875f2becf6cdfda65eaa63c58dd0387f4980b4e573fd2e03b79ba8",
+    "native_accumulated_alpha_channel": 3,
+    "evaluation_weighted_camera_z_channel": 5,
+    "evaluation_weighted_camera_z_second_moment_channel": 6,
+    "evaluation_weighted_inverse_camera_z_channel": 7,
+    "native_channels_0_through_4_unchanged": true,
+    "sorting_compositing_culling_support_and_training_gradients_changed": false
+  },
+  "cuda128_build_compatibility": {
+    "scope": "isolated simple-knn build copy only; neither official training source nor method semantics are changed",
+    "source_blob": "e72e4c96ea9d161514835fc2fcee62b94954f2d9",
+    "patch": "patches/citygs_x/cuda128_cfloat_simple_knn_build_only_27617f2_v1.patch",
+    "patch_sha256": "2a07f78b381016eb7b4b4344185b4af6675b6df90c1583eb9f2942e488da1406",
+    "patched_linux_file_sha256": "d3b23e5056b55afee478afe91036238283ee1dcbfa728c657829ab4b7a5a188d"
+  },
+  "raw_output": {
+    "payload_key": "raw_metric_depth_accumulators",
+    "order": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "plane_sources": {
+      "accumulated_alpha": "native out_all_map channel 3, generated from a per-Gaussian unit alpha feature under the frozen native T*alpha path",
+      "weighted_camera_z_sum": "evaluation-only channel 5, same native T*alpha times per-ray Gaussian plane-intersection camera z",
+      "weighted_camera_z_second_moment": "evaluation-only channel 6, same native T*alpha times camera z squared",
+      "weighted_inverse_camera_z_sum": "evaluation-only channel 7, same native T*alpha divided by positive camera z"
+    },
+    "camera_z_definition": "local_distance divided by minus the dot product of the camera-space Gaussian plane normal and the pixel ray, matching CityGS-X's native plane-depth equation",
+    "normalization_policy": "derive expected, variance, and harmonic diagnostics on CPU from the four raw float32 accumulators"
+  },
+  "coordinate_unit_contract": {
+    "renderer_units": "frozen original COLMAP units",
+    "protocol_units": "frozen original COLMAP units before the single public Sim(3)",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "patched_linux_file_sha256": {
+    "gaussian_renderer/__init__.py": "7b802445a10de10f78c49ad9d96b62ae744abdd6400c87ae5197495f1d20c10c",
+    "submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h": "c1226b64d32ba3218224b6537bf25669e507fd82a8006054976cac4ac5be0dc0",
+    "submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "6c67049e65df40e43828eed3a0df5ee76b94949e6d9065eee0f73e26b108297d"
+  },
+  "conformance": {
+    "script": "code/gcp/test_citygs_x_raw_moments_cuda.py",
+    "script_sha256": "7de177b0ea8af27903dc18359c7f73fbecf759920a313cf6f1fa867e31f26910",
+    "cuda_status": "PENDING_UNTIL_QGS_RELEASES_GPU",
+    "required_cases": [
+      "single_layer",
+      "front_back_two_layer",
+      "variance_nonnegative"
+    ]
+  },
+  "claims": {
+    "formal_primary_is_A_M1_expected_render_support_camera_z": true,
+    "physical_surface_claim": false,
+    "checkpoint_mutated": false,
+    "training_semantics_changed": false,
+    "method_specific_sim3_fitted": false,
+    "gcp_lidar_or_heldout_rgb_read_by_adapter": false
+  }
+}

@@ -1,0 +1,15 @@
+diff --git a/utils/camera_utils.py b/utils/camera_utils.py
+--- a/utils/camera_utils.py
++++ b/utils/camera_utils.py
+@@ -96,7 +96,10 @@ def loadCam(args, id, cam_info, decompressed_image=None, return_image=False, de
+                 mask_path = cam_info.image_path.replace('rgbs','mask')
+                 mask_path = mask_path.replace('jpg','png')
+ 
+-            depth_path = depth_path.replace('jpg','png')
++            # Preserve the official PNG prior convention for source images whose
++            # frozen extension is upper-case (for example, DJI ``.JPG`` files).
++            depth_path = os.path.splitext(depth_path.replace('jpg','png'))[0] + '.png'
++            mask_path = os.path.splitext(mask_path)[0] + '.png'
+             _normal_path = cam_info.image_path.replace('rgbs','normals')
+             
+             resolution = (round(orig_w/(args.resolution)), round(orig_h/(args.resolution)))

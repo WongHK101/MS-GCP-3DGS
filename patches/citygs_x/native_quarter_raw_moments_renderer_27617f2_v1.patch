@@ -1,0 +1,50 @@
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 30b9734..2b3d979 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -1451,7 +1451,7 @@ def render_final(batched_cameras, batched_screenspace_pkg, batched_strategies,
+                         pts_in_cam = xyz_redistributed_nearest @ batched_cameras_nearest[cam_id].world_view_transform[:3,:3] + batched_cameras_nearest[cam_id].world_view_transform[3,:3]
+                         depth_z = pts_in_cam[:, 2]
+                         local_distance = (local_normal * pts_in_cam).sum(-1).abs()
+-                        input_all_map_1 = torch.zeros((means2D_redistributed_nearest.shape[0], 5)).cuda().float()
++                        input_all_map_1 = torch.zeros((means2D_redistributed_nearest.shape[0], 8)).cuda().float()
+                         input_all_map_1[:, :3] = local_normal
+                         input_all_map_1[:, 3] = 1.0
+                         input_all_map_1[:, 4] = local_distance
+@@ -1491,10 +1491,13 @@ def render_final(batched_cameras, batched_screenspace_pkg, batched_strategies,
+                         "rendered_distance": rendered_distance,
+                         # "depth_normal": depth_normal,
+                         # "scales_redistributed": scales_redistributed,
+-                        "rendered_alpha": rendered_alpha
++                        "rendered_alpha": rendered_alpha,
++                        "raw_metric_depth_accumulators": torch.cat(
++                            [rendered_alpha, out_all_map_nearest[5:8]], dim=0
++                        )
+                             }
+             else: 
+-                input_all_map = torch.zeros((means2D_redistributed.shape[0], 5)).cuda().float()
++                input_all_map = torch.zeros((means2D_redistributed.shape[0], 8)).cuda().float()
+             # render
+             if timers is not None:
+                 timers.start("forward_render_gaussians")
+@@ -1512,7 +1515,7 @@ def render_final(batched_cameras, batched_screenspace_pkg, batched_strategies,
+             pts_in_cam = xyz_redistributed @ batched_cameras[cam_id].world_view_transform[:3,:3] + batched_cameras[cam_id].world_view_transform[3,:3]
+             depth_z = pts_in_cam[:, 2]
+             local_distance = (local_normal * pts_in_cam).sum(-1).abs()
+-            input_all_map = torch.zeros((means2D_redistributed.shape[0], 5)).cuda().float()
++            input_all_map = torch.zeros((means2D_redistributed.shape[0], 8)).cuda().float()
+             input_all_map[:, :3] = local_normal
+             input_all_map[:, 3] = 1.0
+             input_all_map[:, 4] = local_distance
+@@ -1555,7 +1558,10 @@ def render_final(batched_cameras, batched_screenspace_pkg, batched_strategies,
+                         "rendered_distance": rendered_distance,
+                         "depth_normal": depth_normal,
+                         "scales_redistributed": scales_redistributed,
+-                        "rendered_alpha": rendered_alpha
++                        "rendered_alpha": rendered_alpha,
++                        "raw_metric_depth_accumulators": torch.cat(
++                            [rendered_alpha, out_all_map[5:8]], dim=0
++                        )
+                         }
+         batched_rendered_image.append(rendered_image)
+         batched_out_all_map.append(out_all_map)
