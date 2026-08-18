@@ -1,0 +1,29 @@
+{
+  "schema": "m3m_gcp_native_quarter_sof_truth_deny_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "sof",
+  "scene": "gcp_3000_20260602",
+  "status": "PASS",
+  "passed": true,
+  "formal_training_input_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/train",
+  "allowed_training_content": [
+    "82 frozen native-quarter RGB JPEG files",
+    "train-only COLMAP PINHOLE intrinsics and image measurements",
+    "train-only camera extrinsics and shared sparse initialization"
+  ],
+  "denied_truth_roots": [
+    "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2"
+  ],
+  "heldout_rgb_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/test",
+  "heldout_rgb_visible_to_training": false,
+  "gcp_annotations_visible_to_training": false,
+  "gcp_coordinates_visible_to_training": false,
+  "lidar_visible_to_training": false,
+  "orthophoto_truth_visible_to_training": false,
+  "training_command_contains_only_formal_train_root": true,
+  "qualification_evaluator_separation": "The frozen 94-camera domain and GCP truth may be accessed only after a qualification checkpoint and all packets are frozen; qualification scores cannot select or change the formal recipe.",
+  "recipe_selection_basis": "official SOF Tanks-and-Temples unbounded-scene training route, selected for aerial-scale geometry before any SOF M3M-GCP score",
+  "result_driven_recipe_selection": false,
+  "errors": []
+}

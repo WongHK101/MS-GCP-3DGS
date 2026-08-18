@@ -1,0 +1,58 @@
+{
+  "schema": "m3m_gcp_native_quarter_sof_renderer_adapter_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "sof",
+  "status": "FROZEN_PRE_RESULT_CONFORMANCE_PENDING",
+  "source": {
+    "repository_commit": "b9eb4170c843014f5f96d54924976161bd675469",
+    "repository_tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707"
+  },
+  "scope": "evaluation-only renderer copy; official training renderer, native hierarchical rasterizer, checkpoint, and formal model remain unchanged",
+  "renderer_patch": {
+    "path": "patches/sof/native_quarter_raw_moments_renderer_b9eb417_v1.patch",
+    "sha256": "9ca87eaf77119e34f536705e52d6bc204e8f3b79de68b44bed1caf6730e22bf1"
+  },
+  "rasterizer_patch": null,
+  "rasterizer": {
+    "module": "diff_gaussian_rasterization",
+    "native_extension_sha256": "be8dc6a8745b54279f8d676ae7987f3034c3c86bf53234556733b66a4210cf8b",
+    "source_modified": false,
+    "native_config": "configs/hierarchical.json",
+    "native_config_sha256": "8240401c9ec5be481899cfc466615e489088b452cea9c86fdf04163c2bd1fe80",
+    "native_sort_mode": "HIER",
+    "native_sort_order": "PTD_MAX",
+    "native_queue_sizes": {"per_pixel": 4, "tile_2x2": 8, "tile_4x4": 64},
+    "native_alpha_cap": 0.99,
+    "native_alpha_cutoff": "1/255",
+    "native_early_termination_transmittance": 0.0001,
+    "sorting_compositing_culling_and_support_changed": false
+  },
+  "evaluation_channel_mapping": {
+    "strategy": "two auxiliary calls to the unchanged native three-channel hierarchical compositor",
+    "zero_background_required": true,
+    "first_call_precomputed_channels": ["one_for_accumulated_alpha", "gaussian_center_camera_z", "gaussian_center_camera_z_squared"],
+    "second_call_precomputed_channels": ["inverse_positive_gaussian_center_camera_z", "zero", "zero"],
+    "raw_output_order": ["accumulated_alpha", "weighted_camera_z_sum", "weighted_camera_z_second_moment", "weighted_inverse_camera_z_sum"],
+    "sof_native_output_channel_7": "method-specific post-median opacity-field value; deliberately not substituted for protocol accumulated alpha",
+    "native_rgb_weight_accumulation": "feature_times_alpha_times_transmittance under native HIER/PTD_MAX ordering",
+    "auxiliary_feature_values_affect_sorting_or_support": false
+  },
+  "coordinate_unit_contract": {
+    "renderer_units": "frozen_original_colmap_units",
+    "protocol_units": "frozen_original_colmap_units_before_global_sim3",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "exporter": {
+    "path": "code/gcp/export_gaussian_depth_maps.py",
+    "sha256": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb"
+  },
+  "claims": {
+    "formal_primary_is_A_M1_expected_gaussian_center_camera_z": true,
+    "physical_surface_claim": false,
+    "checkpoint_mutated": false,
+    "training_semantics_changed": false,
+    "method_specific_sim3_fitted": false,
+    "gcp_or_lidar_read": false
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "m3m_gcp_native_quarter_sof_cpu_preparation_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "sof",
+  "status": "PASS",
+  "source": {
+    "repository_commit": "b9eb4170c843014f5f96d54924976161bd675469",
+    "repository_tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
+    "license_file": "LICENSE.md",
+    "license_sha256": "c5ba70a2194af2aefe85dfe3da68608dcb3abd21a3aa53b55aa297c2f0b60eb3",
+    "official_training_worktree_clean": true,
+    "evaluation_adapter_worktree_clean_before_renderer_patch": true
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/sof/py310-torch2.7.1-cu128-v1",
+    "python": "3.10.12",
+    "pytorch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "environment_freeze_sha256": "9cd3f61d5cbce393120029c1f57e35e4b7a3fd64521855ab71ff4d622c304d10",
+    "simple_knn_extension_sha256": "ffdab01d67433b0f42457bf691ce51632eaf5e50e7e8317b29edf1d932f753fe",
+    "native_rasterizer_extension_sha256": "be8dc6a8745b54279f8d676ae7987f3034c3c86bf53234556733b66a4210cf8b",
+    "fused_ssim_extension_sha256": "a239949d1403d67e6ea8e704f54151ee5cf464529072d74135aadb3851513705"
+  },
+  "build": {
+    "isolated_build_copy_only": true,
+    "official_source_modified_for_build": false,
+    "native_hierarchical_config_sha256": "8240401c9ec5be481899cfc466615e489088b452cea9c86fdf04163c2bd1fe80",
+    "import_check": "SOF_IMPORT_PASS torch=2.7.1+cu128 cuda=12.8 HIER/PTD enum availability",
+    "gpu_training_or_conformance_started": false
+  }
+}
