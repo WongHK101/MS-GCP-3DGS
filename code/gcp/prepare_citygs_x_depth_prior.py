@@ -102,7 +102,7 @@ def main() -> int:
     parser.add_argument("--resolution", type=int, default=1)
     parser.add_argument("--pixel_thred", type=float, default=1.0)
     parser.add_argument("--multi_view_num", type=int, default=8)
-    parser.add_argument("--multi_view_max_angle", type=float, default=15.0)
+    parser.add_argument("--multi_view_max_angle", type=int, default=15)
     parser.add_argument("--multi_view_min_dis", type=float, default=0.01)
     parser.add_argument("--multi_view_max_dis", type=float, default=25.0)
     args = parser.parse_args()
@@ -138,7 +138,7 @@ def main() -> int:
     }
     expected_neighbor_route = {
         "multi_view_num": 8,
-        "multi_view_max_angle_deg": 15.0,
+        "multi_view_max_angle_deg": 15,
         "multi_view_min_dis": 0.01,
         "multi_view_max_dis": 25.0,
     }
