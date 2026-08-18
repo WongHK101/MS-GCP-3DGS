@@ -1,0 +1,63 @@
+{
+  "schema": "m3m_gcp_native_quarter_gsprior_renderer_adapter_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "gsprior",
+  "status": "FROZEN_PRE_RESULT_CONFORMANCE_PENDING",
+  "source": {
+    "repository_commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+    "repository_tree": "779073585e88b85217d522d0ab345365346cd17f"
+  },
+  "scope": "evaluation-only renderer copy; official training renderer, native rasterizer, checkpoint, and formal model remain unchanged",
+  "renderer_patch": {
+    "path": "patches/gsprior/native_quarter_raw_moments_renderer_dcb7c89_v1.patch",
+    "sha256": "dd633a35cb33ceb78b92f5499b30702d4a19bd4aea2a87edd372bb7d2d97c18b"
+  },
+  "rasterizer_patch": null,
+  "rasterizer": {
+    "module": "diff_plane_rasterization",
+    "native_num_all_map_channels": 5,
+    "native_extension_sha256": "6fb0657961c4562290327a31626b258bf45fb2e5d6ce045758ad755be8697a59",
+    "source_modified": false,
+    "native_alpha_cap": 0.99,
+    "native_alpha_cutoff": "1/255",
+    "native_early_termination_transmittance": 0.0001,
+    "sorting_compositing_and_support_changed": false
+  },
+  "evaluation_channel_mapping": {
+    "input_all_map_0": "gaussian_center_camera_z_normalized_units",
+    "input_all_map_1": "gaussian_center_camera_z_squared_normalized_units",
+    "input_all_map_2": "inverse_gaussian_center_camera_z_normalized_units",
+    "input_all_map_3": "one_for_accumulated_alpha",
+    "input_all_map_4": "zero_unused_in_evaluation_only_path",
+    "raw_output_order": [
+      "accumulated_alpha",
+      "weighted_camera_z_sum",
+      "weighted_camera_z_second_moment",
+      "weighted_inverse_camera_z_sum"
+    ],
+    "native_training_plane_normal_and_distance_channels_repurposed_only_when_explicit_eval_flag_is_true": true
+  },
+  "coordinate_unit_contract": {
+    "renderer_units": "gsprior_getNerfppNorm_normalized_units",
+    "protocol_units": "frozen_original_colmap_units_before_global_sim3",
+    "raw_camera_z_to_protocol_scale": 86.82034588147555,
+    "A_conversion": "unchanged",
+    "M1_conversion": "multiply_by_scale",
+    "M2_conversion": "multiply_by_scale_squared",
+    "H_conversion": "divide_by_scale",
+    "exporter": "code/gcp/export_gaussian_depth_maps.py",
+    "exporter_sha256": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb"
+  },
+  "normalization_evidence": {
+    "path": "docs/protocol_evidence/gsprior_native_quarter_normalized_input_v1.json",
+    "sha256": "19927ba2a7cac94e68d444e3899874c7427a342f71ea8bc2a638aa99da8c7cee"
+  },
+  "claims": {
+    "formal_primary_is_A_M1_expected_gaussian_center_camera_z": true,
+    "physical_surface_claim": false,
+    "checkpoint_mutated": false,
+    "training_semantics_changed": false,
+    "method_specific_sim3_fitted": false,
+    "gcp_or_lidar_read": false
+  }
+}

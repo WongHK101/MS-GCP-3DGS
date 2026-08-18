@@ -1,0 +1,49 @@
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 5ae8759..8b2fd52 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -32,7 +32,8 @@ def render_normal(viewpoint_cam, depth, offset=None, normal=None, scale=1):
+     return normal_ref
+ 
+ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, 
+-           app_model: AppModel=None, return_plane = True, return_depth_normal = True, iteration = None):
++           app_model: AppModel=None, return_plane = True, return_depth_normal = True, iteration = None,
++           return_raw_metric_depth_accumulators = False):
+     """
+     Render the scene. 
+     
+@@ -135,9 +136,15 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor,
+     depth_z = pts_in_cam[:, 2]
+     local_distance = (local_normal * pts_in_cam).sum(-1).abs()
+     input_all_map = torch.zeros((means3D.shape[0], 5)).cuda().float()
+-    input_all_map[:, :3] = local_normal
+-    input_all_map[:, 3] = 1.0
+-    input_all_map[:, 4] = local_distance
++    if return_raw_metric_depth_accumulators:
++        input_all_map[:, 0] = depth_z
++        input_all_map[:, 1] = depth_z * depth_z
++        input_all_map[:, 2] = torch.where(depth_z > 0.0, depth_z.reciprocal(), 0.0)
++        input_all_map[:, 3] = 1.0
++    else:
++        input_all_map[:, :3] = local_normal
++        input_all_map[:, 3] = 1.0
++        input_all_map[:, 4] = local_distance
+ 
+     rendered_image, radii, out_observe, out_all_map, plane_depth = rasterizer(
+         means3D = means3D,
+@@ -178,9 +186,14 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor,
+         app_image = torch.exp(appear_ab[0]) * rendered_image + appear_ab[1]
+         return_dict.update({"app_image": app_image})   
+ 
+-    if return_depth_normal:
++    if return_depth_normal and not return_raw_metric_depth_accumulators:
+         depth_normal = render_normal(viewpoint_camera, plane_depth.squeeze()) * (rendered_alpha).detach()
+         return_dict.update({"depth_normal": depth_normal})
++
++    if return_raw_metric_depth_accumulators:
++        return_dict["raw_metric_depth_accumulators"] = torch.cat(
++            (out_all_map[3:4], out_all_map[0:1], out_all_map[1:2], out_all_map[2:3]), dim=0
++        )
+     
+     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
+     # They will be excluded from value updates used in the splitting criteria.

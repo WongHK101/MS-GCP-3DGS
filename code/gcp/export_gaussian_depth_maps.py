@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+import math
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence
 
@@ -198,6 +199,29 @@ def derive_packet_from_raw_accumulators(
     )
 
 
+def convert_raw_camera_z_units(
+    raw_accumulators: np.ndarray,
+    *,
+    camera_z_to_protocol_scale: float,
+) -> np.ndarray:
+    """Convert A/M1/M2/H from renderer units into protocol COLMAP units."""
+
+    raw = np.asarray(raw_accumulators, dtype=np.float32)
+    if raw.ndim != 3 or raw.shape[0] != len(RAW_ACCUMULATOR_TENSOR_NAMES):
+        raise ValueError(
+            "raw_metric_depth_accumulators must have shape "
+            f"({len(RAW_ACCUMULATOR_TENSOR_NAMES)}, H, W), got {raw.shape}"
+        )
+    scale = float(camera_z_to_protocol_scale)
+    if not math.isfinite(scale) or scale <= 0.0:
+        raise ValueError(f"camera_z_to_protocol_scale must be finite and positive, got {scale}")
+    converted = raw.copy()
+    converted[1] *= scale
+    converted[2] *= scale * scale
+    converted[3] /= scale
+    return converted
+
+
 def collect_views(
     scene: Any,
     camera_sets: str,
@@ -304,6 +328,10 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
                     if bool(getattr(dataset, "train_test_exp", False)):
                         raw_packet = raw_packet[..., raw_packet.shape[-1] // 2 :]
                     raw_packet_np = raw_packet.detach().squeeze().cpu().numpy().astype(np.float32)
+                    raw_packet_np = convert_raw_camera_z_units(
+                        raw_packet_np,
+                        camera_z_to_protocol_scale=float(args.raw_camera_z_to_protocol_scale),
+                    )
                     packet_payload = derive_packet_from_raw_accumulators(
                         raw_packet_np,
                         numerical_support_floor=float(args.numerical_support_floor),
@@ -504,6 +532,14 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "depth_second_moment_available": True,
         "depth_scale_for_evaluator": 1.0,
         "depth_offset_for_evaluator": 0.0,
+        "raw_camera_z_to_protocol_scale": float(args.raw_camera_z_to_protocol_scale),
+        "raw_camera_z_unit_conversion": {
+            "A": "unchanged",
+            "M1": "multiply_by_scale",
+            "M2": "multiply_by_scale_squared",
+            "H": "divide_by_scale",
+            "packets_are_in_protocol_colmap_units": True,
+        },
         "rendered_view_count": len(rows),
         "depth_index": rows,
         "packet_index": rows,
@@ -576,6 +612,15 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--numerical_support_floor", type=float, default=DEFAULT_NUMERICAL_SUPPORT_FLOOR)
     parser.add_argument("--normalization_epsilon", type=float, default=DEFAULT_NORMALIZATION_EPSILON)
     parser.add_argument("--variance_clamp_tolerance", type=float, default=DEFAULT_VARIANCE_CLAMP_TOLERANCE)
+    parser.add_argument(
+        "--raw_camera_z_to_protocol_scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Positive factor converting renderer camera-z units to the frozen protocol COLMAP units; "
+            "A is unchanged, M1 is multiplied by s, M2 by s^2, and H divided by s."
+        ),
+    )
     parser.add_argument("--image_list_csv", default="", help="Optional CSV that restricts export to listed image names.")
     parser.add_argument("--image_name_column", default="image_name")
     parser.add_argument("--image_list_status_column", default="")

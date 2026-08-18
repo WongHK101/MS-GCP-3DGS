@@ -10,6 +10,7 @@ import numpy as np
 
 from export_gaussian_depth_maps import (
     collect_views,
+    convert_raw_camera_z_units,
     derive_packet_from_raw_accumulators,
     parse_train_repo,
     read_allowlist,
@@ -90,6 +91,28 @@ def test_raw_renderer_accumulators_are_derived_on_cpu() -> None:
     assert bool(packet["metric_depth_valid_mask"][0, 0])
 
 
+def test_raw_renderer_accumulators_are_reversibly_scaled_to_protocol_units() -> None:
+    normalized = np.asarray([[[0.7]], [[1.3]], [[3.1]], [[0.5]]], dtype=np.float32)
+    converted = convert_raw_camera_z_units(
+        normalized,
+        camera_z_to_protocol_scale=10.0,
+    )
+    assert np.allclose(converted[:, 0, 0], [0.7, 13.0, 310.0, 0.05])
+    packet = derive_packet_from_raw_accumulators(
+        converted,
+        numerical_support_floor=1.0e-6,
+        variance_clamp_tolerance=1.0e-6,
+    )
+    assert np.isclose(packet["alpha_normalized_expected_camera_z"][0, 0], 13.0 / 0.7)
+    assert np.isclose(packet["harmonic_camera_z"][0, 0], 14.0)
+    try:
+        convert_raw_camera_z_units(normalized, camera_z_to_protocol_scale=0.0)
+    except ValueError as exc:
+        assert "finite and positive" in str(exc)
+    else:
+        raise AssertionError("zero camera-z conversion scale was accepted")
+
+
 def test_rasterizer_repository_infers_3dgs_or_2dgs_layout() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -124,6 +147,7 @@ def main() -> int:
         test_train_repository_must_be_explicit,
         test_explicit_train_repository_is_resolved,
         test_raw_renderer_accumulators_are_derived_on_cpu,
+        test_raw_renderer_accumulators_are_reversibly_scaled_to_protocol_units,
         test_rasterizer_repository_infers_3dgs_or_2dgs_layout,
         test_rasterizer_repository_cannot_escape_train_repo,
     ]

@@ -1,0 +1,68 @@
+{
+  "schema": "m3m_gsprior_native_quarter_normalized_input_evidence_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "gsprior",
+  "scene": "gcp_3000_20260602",
+  "status": "PASS",
+  "reason": "Frozen GSPrior fixes its TSDF volume to [-1,1]^3; use its own training-camera getNerfppNorm rule and reverse the camera-z scale before common evaluation.",
+  "source_data_release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "remote_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_3000_20260602",
+  "remote_release_manifest": "NORMALIZED_INPUT_RELEASE_MANIFEST.json",
+  "remote_release_manifest_sha256": "a5996cf32d06021c528c341afd653a67656bee9710566416275662dc5f827be0",
+  "train_normalization_manifest_sha256": "ab45789d57595edc93831f3afb3c509c02ae21482034ea669f693c6d6d17e513",
+  "evaluation_camera_normalization_manifest_sha256": "9081a0ca53432e727ae1bdf4b5a7f7d954277a6bb098883b113371c30b4b6a94",
+  "materializer_sha256": "f09a7a033e6f2744cec6b094ca41f5329006f566ac0cb37cb011a241beef06f0",
+  "transform": {
+    "rule": "upstream_gsprior_getNerfppNorm_training_camera_mean_max_distance_times_1p1",
+    "reference_camera_count": 82,
+    "reference_camera_names_sha256": "4619dccd8bfb219dd3563736b5633fefa9f0b21aaa08b3bd67d72ddec8579abf",
+    "center_original_colmap": [
+      0.03562615363961879,
+      0.08042738254354947,
+      -0.0023165841768797266
+    ],
+    "translate_original_colmap": [
+      -0.03562615363961879,
+      -0.08042738254354947,
+      0.0023165841768797266
+    ],
+    "diagonal_original_colmap": 78.92758716497777,
+    "radius_original_colmap": 86.82034588147555,
+    "normalized_units_per_original_colmap_unit": 0.011518037504309981,
+    "original_colmap_units_per_normalized_unit": 86.82034588147555
+  },
+  "train": {
+    "camera_count": 82,
+    "point_count": 61302,
+    "source_points_kind": "frozen_points3D_ply_only",
+    "source_points3D_ply_sha256": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d",
+    "normalized_points3D_ply_sha256": "835a0fb7f73050ae4d61db93788781a474e2b6d1a0877f11b2a1aeb811213299",
+    "normalized_images_bin_sha256": "1b121afda36744cce6ff21fe6771c076bc358523d6e7fd6b4cbc78cb0cca7cfb",
+    "normalized_camera_radius_max": 0.9090909090909092
+  },
+  "evaluation_camera_domain": {
+    "camera_count": 94,
+    "point_count": 61302,
+    "normalized_images_bin_sha256": "0f59fe69c46c862d59326b2acc70c5324844ba9c555cceffbb77aac90ce3741b",
+    "normalized_points3D_bin_sha256": "ef416ae289f748d3731e867005ca9e3adccb7370adbae3676e6fef08f868d99a",
+    "normalized_camera_radius_max": 0.9090909090909092
+  },
+  "validation": {
+    "camera_center_transform_max_abs_residual": 1.3030360118727822e-16,
+    "point_inverse_transform_max_abs_residual": 5.652929924562308e-06,
+    "intrinsics_bytes_unchanged": true,
+    "image_names_measurements_and_tracks_unchanged": true,
+    "image_pixels_resized_cropped_padded_or_reencoded": false,
+    "train_and_evaluation_use_identical_transform": true,
+    "gcp_or_lidar_used": false,
+    "heldout_rgb_used_for_transform": false
+  },
+  "unit_reversal": {
+    "scale": 86.82034588147555,
+    "A": "unchanged",
+    "M1": "multiply by scale",
+    "M2": "multiply by scale squared",
+    "H": "divide by scale",
+    "common_evaluator_receives_original_colmap_units": true
+  }
+}
