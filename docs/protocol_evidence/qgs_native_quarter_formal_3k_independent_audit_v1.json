@@ -1,0 +1,58 @@
+{
+  "schema": "m3m_gcp_native_quarter_formal_result_independent_audit_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "qgs",
+  "scene": "gcp_3000_20260602",
+  "seed": 0,
+  "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+  "review_verdict": "PASS_WITH_REQUIRED_CHANGES",
+  "required_changes_resolution_status": "COMPLETE",
+  "result_validity": {
+    "status": "COMPLETE_RANKED",
+    "rerun_required": false,
+    "formal_evidence": "docs/protocol_evidence/qgs_native_quarter_formal_3k_seed0_30k_v1.json",
+    "formal_evidence_sha256": "4ce11551ceec9a057a0d24102f8e733996133df7de6d744fd1af5c6f7d0dccf1",
+    "checkpoint_rmse_3d_m": 0.024134399151363475,
+    "checkpoint_rmse_h_m": 0.014369772715102341,
+    "checkpoint_rmse_z_m": 0.019390174174401694,
+    "checkpoint_coverage": "4/4"
+  },
+  "independent_recomputation": {
+    "final_ply_sha256": "041c7a623dfd3cd9a9799ad7b785f54bfbc76d050d04bc315ee5316cf76bef81",
+    "final_ply_bytes": 1941135861,
+    "final_ply_vertex_count": 7465901,
+    "packet_count": 66,
+    "packet_identity_and_size_recomputed": "66/66 PASS",
+    "raw_plane_formula_recomputation": "66/66 PASS",
+    "formal_observation_count": 147,
+    "formal_observation_valid_count": 147,
+    "public_sim3_identity_recomputed": "PASS"
+  },
+  "variance_wording_correction": {
+    "required_public_wording": "All 66 packets passed raw-plane formula and variance forward-consistency checks, with zero consistency-failing pixels. Separately, 34,114 nonnegativity-unresolved pixels were masked from the diagnostic-only variance view.",
+    "valid_pixel_total_across_66_packets": 95656393,
+    "variance_forward_consistency_failing_pixel_total": 0,
+    "variance_nonnegativity_unresolved_total": 34114,
+    "variance_nonnegativity_unresolved_percent": 0.035663063314545,
+    "primary_metric_effect": "none; formal P1 camera-z uses A and M1, while the unresolved pixels are excluded only from the diagnostic variance view",
+    "forbidden_overstatement": "Do not summarize this as variance having no anomalies."
+  },
+  "lightweight_local_archive": {
+    "archive_filename": "qgs_3k_light_audit_v1.tar.gz",
+    "archive_sha256": "61511a947673b4396d008211d4c70904d7a954c9c92c539f645e5b1b01d9f160",
+    "archived_file_count_excluding_sha256s_manifest": 56,
+    "extracted_file_count_including_sha256s_manifest": 57,
+    "extracted_total_bytes": 8428261,
+    "formal_evidence_sha256_reverified_after_download": "4ce11551ceec9a057a0d24102f8e733996133df7de6d744fd1af5c6f7d0dccf1",
+    "scope": "evaluator outputs, packet manifest and mapping, formal validation, resource and command records, training configuration, adjacency validation, formal evidence, and a complete SHA-256 manifest",
+    "excluded_large_payloads": "the 1.94 GB final PLY and 66 packet payload files remain at the immutable 901 run root"
+  },
+  "publication_boundary": {
+    "scene_count": 1,
+    "seed_count": 1,
+    "independent_checkpoint_count": 4,
+    "primary_depth_semantics": "alpha-normalized expected camera-z",
+    "surface_interpretation": "non-physical expected camera-z surface",
+    "statistical_significance_claim_allowed_from_this_result_alone": false
+  }
+}
