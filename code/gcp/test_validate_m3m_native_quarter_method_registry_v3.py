@@ -38,14 +38,26 @@ def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
     assert "global training lock missing" in result["errors"]
 
 
-def test_qgs_cannot_remain_unlocked_without_one_use_gate(tmp_path: Path) -> None:
+def test_consumed_gate_can_be_closed_while_no_method_is_launchable(tmp_path: Path) -> None:
     value = load_registry()
     value["current_one_use_launch_gate"] = None
     value["per_method_training_allowed_methods"] = []
+    value["status"] = "EIGHT_METHOD_3K_BATCH_ACTIVE"
+    method = next(item for item in value["methods"] if item["method_id"] == "qgs")
+    method["three_k_training_allowed"] = False
+    result = validate_mutation(tmp_path, value)
+    assert result["passed"] is True
+    assert result["training_allowed_methods"] == []
+
+
+def test_training_flag_without_gate_fails_closed(tmp_path: Path) -> None:
+    value = load_registry()
+    value["current_one_use_launch_gate"] = None
+    value["per_method_training_allowed_methods"] = []
+    value["status"] = "EIGHT_METHOD_3K_BATCH_ACTIVE"
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is False
-    assert "method allowlist must contain only QGS" in result["errors"]
-    assert "QGS one-use launch gate is absent" in result["errors"]
+    assert "method training flags disagree with the allowlist" in result["errors"]
 
 
 def test_one_use_gate_hash_is_bound(tmp_path: Path) -> None:
@@ -53,7 +65,6 @@ def test_one_use_gate_hash_is_bound(tmp_path: Path) -> None:
     value["current_one_use_launch_gate"]["sha256"] = "0" * 64
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is False
-    assert "one-use gate recorded SHA mismatch" in result["errors"]
     assert "one-use gate file SHA mismatch" in result["errors"]
 
 

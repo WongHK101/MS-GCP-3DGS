@@ -121,7 +121,11 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(value.get("schema") == "m3m_gcp_native_quarter_method_registry_v3", "unknown schema")
     require(value.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", "protocol semantics changed")
     require(
-        value.get("status") == "EIGHT_METHOD_3K_BATCH_PGSR_AND_RADE_GS_COMPLETE_QGS_ONE_USE_GATE_OPEN",
+        value.get("status")
+        in {
+            "EIGHT_METHOD_3K_BATCH_PGSR_AND_RADE_GS_COMPLETE_QGS_ONE_USE_GATE_OPEN",
+            "EIGHT_METHOD_3K_BATCH_ACTIVE",
+        },
         "unexpected registry status",
     )
     require(value.get("batch_id") == "m3m-gcp-3k-eight-method-seed0-20260818", "batch identity mismatch")
@@ -310,11 +314,6 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             require(formal.get("status") == "COMPLETE_RANKED", "rade_gs: formal result not complete-ranked")
             require(formal.get("rerun_allowed") is False, "rade_gs: formal rerun was enabled")
         elif method_id == "qgs":
-            require(method.get("lifecycle_role") == "ACTIVE_3K_CANDIDATE", "qgs: lifecycle role mismatch")
-            require(method.get("formal_3k_result", {}).get("status") == "NOT_ATTEMPTED", "qgs: premature formal result")
-            require(method.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED", "qgs: qualification missing")
-            require(method.get("three_k_training_allowed") is True, "qgs: one-use training gate is not open")
-            require(method.get("technical_full_matrix_eligibility") is True, "qgs: technical matrix eligibility missing")
             expected_refs = {
                 "recipe": (
                     "configs/m3m_gcp_native_quarter_qgs_3k_recipe_v1.json",
@@ -340,17 +339,54 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                 require(referenced.is_file(), f"qgs: {key} file missing")
                 if referenced.is_file():
                     require(file_sha256(referenced) == expected_sha, f"qgs: {key} file SHA mismatch")
+            formal = method.get("formal_3k_result", {})
+            require(method.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED", "qgs: qualification missing")
+            require(method.get("technical_full_matrix_eligibility") is True, "qgs: technical matrix eligibility missing")
+            if formal.get("status") == "NOT_ATTEMPTED":
+                require(method.get("lifecycle_role") == "ACTIVE_3K_CANDIDATE", "qgs: lifecycle role mismatch")
+            elif formal.get("status") == "COMPLETE_RANKED":
+                require(
+                    method.get("lifecycle_role") == "ACTIVE_3K_COMPLETE_RANKED",
+                    "qgs: completed lifecycle role missing",
+                )
+                require(method.get("three_k_training_allowed") is False, "qgs: completed method remains launchable")
+                require(formal.get("rerun_allowed") is False, "qgs: formal rerun was enabled")
+            elif formal.get("status") == "INCOMPLETE_UNRANKED":
+                require(
+                    method.get("lifecycle_role") == "ACTIVE_3K_INCOMPLETE_UNRANKED",
+                    "qgs: incomplete lifecycle role missing",
+                )
+                require(method.get("three_k_training_allowed") is False, "qgs: terminal method remains launchable")
+                require(formal.get("rerun_allowed") is False, "qgs: formal rerun was enabled")
+            else:
+                require(False, "qgs: unknown formal result status")
         else:
-            require(method.get("lifecycle_role") == "ACTIVE_3K_CANDIDATE", f"{method_id}: lifecycle role mismatch")
-            require(method.get("formal_3k_result", {}).get("status") == "NOT_ATTEMPTED", f"{method_id}: premature formal result")
-            require(
-                method.get("three_k_training_allowed") is False,
-                f"{method_id}: training unlocked without a method gate",
-            )
-            require(
-                method.get("technical_full_matrix_eligibility") is False,
-                f"{method_id}: premature matrix eligibility",
-            )
+            formal = method.get("formal_3k_result", {})
+            if formal.get("status") == "NOT_ATTEMPTED":
+                require(method.get("lifecycle_role") == "ACTIVE_3K_CANDIDATE", f"{method_id}: lifecycle role mismatch")
+                qualified = method.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED"
+                require(
+                    method.get("technical_full_matrix_eligibility") is qualified,
+                    f"{method_id}: technical matrix eligibility disagrees with qualification",
+                )
+            elif formal.get("status") == "COMPLETE_RANKED":
+                require(
+                    method.get("lifecycle_role") == "ACTIVE_3K_COMPLETE_RANKED",
+                    f"{method_id}: completed lifecycle role missing",
+                )
+                require(method.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED", f"{method_id}: qualification missing")
+                require(method.get("technical_full_matrix_eligibility") is True, f"{method_id}: technical matrix eligibility missing")
+                require(method.get("three_k_training_allowed") is False, f"{method_id}: completed method remains launchable")
+                require(formal.get("rerun_allowed") is False, f"{method_id}: formal rerun was enabled")
+            elif formal.get("status") == "INCOMPLETE_UNRANKED":
+                require(
+                    method.get("lifecycle_role") == "ACTIVE_3K_INCOMPLETE_UNRANKED",
+                    f"{method_id}: incomplete lifecycle role missing",
+                )
+                require(method.get("three_k_training_allowed") is False, f"{method_id}: terminal method remains launchable")
+                require(formal.get("rerun_allowed") is False, f"{method_id}: formal rerun was enabled")
+            else:
+                require(False, f"{method_id}: unknown formal result status")
 
     for method_id in ("gsprior", "citygs_x"):
         license_status = str(by_id.get(method_id, {}).get("source", {}).get("license_status", ""))
@@ -427,28 +463,49 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
         if report_path.is_file():
             require(file_sha256(report_path) == expected_sha, f"{method_id}: formal report file SHA mismatch")
 
+    for method_id in EXPECTED_CANDIDATES:
+        if method_id in EXPECTED_FORMAL_REPORTS:
+            continue
+        method_report = by_id.get(method_id, {}).get("formal_3k_result", {})
+        if method_report.get("status") == "NOT_ATTEMPTED":
+            continue
+        report_name = method_report.get("report")
+        report_sha = method_report.get("report_sha256")
+        require(isinstance(report_name, str) and bool(report_name), f"{method_id}: formal report path missing")
+        require(is_sha256(report_sha), f"{method_id}: formal report SHA malformed")
+        if isinstance(report_name, str) and report_name:
+            report_path = repo_root / report_name
+            require(report_path.is_file(), f"{method_id}: formal report missing")
+            if report_path.is_file() and is_sha256(report_sha):
+                require(file_sha256(report_path) == report_sha, f"{method_id}: formal report file SHA mismatch")
+
     require(value.get("global_training_allowed") is False, "global training lock missing")
-    require(
-        value.get("per_method_training_allowed_methods") == ["qgs"],
-        "method allowlist must contain only QGS",
+    allowlist = value.get("per_method_training_allowed_methods")
+    require(isinstance(allowlist, list) and len(allowlist) <= 1, "method allowlist must contain at most one method")
+    allowlist = allowlist if isinstance(allowlist, list) else []
+    training_flags = sorted(
+        method_id for method_id, method in by_id.items() if method.get("three_k_training_allowed") is True
     )
-    gate_ref = value.get("current_one_use_launch_gate", {})
-    require(isinstance(gate_ref, dict), "QGS one-use launch gate is absent")
-    if isinstance(gate_ref, dict):
-        require(gate_ref.get("method_id") == "qgs", "one-use gate method mismatch")
-        require(
-            gate_ref.get("path")
-            == "configs/launch_gates/m3m_gcp_native_quarter_qgs_3k_seed0_30k_gate_v1.json",
-            "one-use gate path mismatch",
-        )
-        require(
-            gate_ref.get("sha256") == "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5",
-            "one-use gate recorded SHA mismatch",
-        )
-        gate_path = repo_root / str(gate_ref.get("path", ""))
-        require(gate_path.is_file(), "one-use gate file missing")
-        if gate_path.is_file():
-            require(file_sha256(gate_path) == gate_ref.get("sha256"), "one-use gate file SHA mismatch")
+    require(training_flags == sorted(allowlist), "method training flags disagree with the allowlist")
+    gate_ref = value.get("current_one_use_launch_gate")
+    if not allowlist:
+        require(gate_ref is None, "one-use gate must be absent while the allowlist is empty")
+        require(value.get("status") == "EIGHT_METHOD_3K_BATCH_ACTIVE", "no-gate registry must use the active status")
+    else:
+        method_id = str(allowlist[0])
+        require(method_id in EXPECTED_CANDIDATES, "one-use gate targets a non-candidate method")
+        gated = by_id.get(method_id, {})
+        require(gated.get("lifecycle_role") == "ACTIVE_3K_CANDIDATE", "gated method is not an active 3K candidate")
+        require(gated.get("technical_qualification_status") == "TECHNICALLY_QUALIFIED", "gated method is not technically qualified")
+        require(gated.get("formal_3k_result", {}).get("status") == "NOT_ATTEMPTED", "gated method already has a formal result")
+        require(isinstance(gate_ref, dict), "current one-use launch gate is absent")
+        if isinstance(gate_ref, dict):
+            require(gate_ref.get("method_id") == method_id, "one-use gate method mismatch")
+            require(is_sha256(gate_ref.get("sha256")), "one-use gate recorded SHA malformed")
+            gate_path = repo_root / str(gate_ref.get("path", ""))
+            require(gate_path.is_file(), "one-use gate file missing")
+            if gate_path.is_file():
+                require(file_sha256(gate_path) == gate_ref.get("sha256"), "one-use gate file SHA mismatch")
     controller = value.get("batch_controller", {})
     require(controller.get("formal_training_requires_method_gate") is True, "method launch-gate requirement missing")
     require(controller.get("maximum_concurrent_formal_trainings") == 1, "formal concurrency is not one")

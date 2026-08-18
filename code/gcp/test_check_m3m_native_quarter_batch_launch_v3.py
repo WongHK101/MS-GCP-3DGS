@@ -10,11 +10,29 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = REPO_ROOT / "configs" / "m3m_gcp_native_quarter_method_registry_v3.json"
 
 
-def test_exact_qgs_one_use_gate_authorizes_only_the_frozen_run() -> None:
+QGS_GATE_PATH = "configs/launch_gates/m3m_gcp_native_quarter_qgs_3k_seed0_30k_gate_v1.json"
+QGS_GATE_SHA256 = "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5"
+
+
+def load_qgs_gate_fixture() -> tuple[dict, dict]:
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
-    gate = json.loads(
-        (REPO_ROOT / registry["current_one_use_launch_gate"]["path"]).read_text(encoding="utf-8")
-    )
+    method = next(item for item in registry["methods"] if item["method_id"] == "qgs")
+    method["lifecycle_role"] = "ACTIVE_3K_CANDIDATE"
+    method["technical_qualification_status"] = "TECHNICALLY_QUALIFIED"
+    method["formal_3k_result"] = {"status": "NOT_ATTEMPTED"}
+    method["three_k_training_allowed"] = True
+    registry["per_method_training_allowed_methods"] = ["qgs"]
+    registry["current_one_use_launch_gate"] = {
+        "method_id": "qgs",
+        "path": QGS_GATE_PATH,
+        "sha256": QGS_GATE_SHA256,
+    }
+    gate = json.loads((REPO_ROOT / QGS_GATE_PATH).read_text(encoding="utf-8"))
+    return registry, gate
+
+
+def test_exact_qgs_one_use_gate_authorizes_only_the_frozen_run() -> None:
+    registry, gate = load_qgs_gate_fixture()
     result = check_launch(
         registry,
         REPO_ROOT,
@@ -31,7 +49,7 @@ def test_exact_qgs_one_use_gate_authorizes_only_the_frozen_run() -> None:
 
 
 def test_wrong_run_root_seed_and_budget_fail_closed() -> None:
-    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    registry, _ = load_qgs_gate_fixture()
     result = check_launch(
         registry,
         REPO_ROOT,
@@ -49,7 +67,7 @@ def test_wrong_run_root_seed_and_budget_fail_closed() -> None:
 
 
 def test_non_allowlisted_method_is_denied() -> None:
-    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    registry, _ = load_qgs_gate_fixture()
     result = check_launch(
         registry,
         REPO_ROOT,
@@ -66,10 +84,7 @@ def test_non_allowlisted_method_is_denied() -> None:
 
 
 def test_existing_run_root_is_always_denied() -> None:
-    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
-    gate = json.loads(
-        (REPO_ROOT / registry["current_one_use_launch_gate"]["path"]).read_text(encoding="utf-8")
-    )
+    registry, gate = load_qgs_gate_fixture()
     result = check_launch(
         registry,
         REPO_ROOT,
