@@ -60,6 +60,7 @@
     "docs/protocol_evidence/pgsr_native_quarter_gpu_real_3k_qualification_v1.json",
     "docs/protocol_evidence/pgsr_native_quarter_truth_deny_v1.json",
     "docs/protocol_evidence/pgsr_native_quarter_static_validation_v1.json",
+    "docs/protocol_evidence/pgsr_native_quarter_formal_3k_seed0_30k_v1.json",
     "code/gcp/validate_m3m_native_quarter_pgsr_static.py",
     "code/gcp/test_validate_m3m_native_quarter_pgsr_static.py",
     "configs/m3m_gcp_native_quarter_rade_gs_3k_recipe_v1.json",

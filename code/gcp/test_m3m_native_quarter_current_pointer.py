@@ -84,3 +84,19 @@ def test_superseded_protocol_cannot_reenter_active_namespace() -> None:
         text = path.read_text(encoding="utf-8")
         for token in forbidden_tokens:
             assert token not in text, f"{token} leaked into {path.relative_to(REPO_ROOT)}"
+
+
+def test_every_registered_formal_report_is_owned_by_the_current_pointer() -> None:
+    pointer = load_json(POINTER_PATH)
+    registry = load_json(REPO_ROOT / pointer["method_registry"])
+    current_components = {
+        *pointer["current_batch_execution_components"],
+        *pointer["current_repository_components_with_independent_v1_suffixes"],
+    }
+    for method in registry["methods"]:
+        report = method.get("formal_3k_result", {}).get("report")
+        if report is not None:
+            assert report in current_components, (
+                f"{method['method_id']}: registered formal report is not owned by "
+                "the current protocol pointer"
+            )
