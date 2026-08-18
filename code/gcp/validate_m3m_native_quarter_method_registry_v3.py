@@ -394,6 +394,39 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(by_id.get("citygs_x", {}).get("internal_numeric_reporting_allowed") is True, "CityGS-X internal numeric-reporting authorization missing")
     require(by_id.get("citygs_x", {}).get("redistribution_allowed") is False, "CityGS-X redistribution was enabled")
 
+    pending_rgb_method_refs = {
+        "gsprior": (
+            "configs/m3m_gcp_native_quarter_gsprior_3k_recipe_v1.json",
+            "e02cfb0bb4db86b915c859c61ad16f98f9c15407f68661c56cb1c2b1642645f0",
+            "configs/m3m_gcp_native_quarter_gsprior_renderer_adapter_v1.json",
+            "f6ceac12c6c04caa0ab56d2edbb62626ea8ab8a2777526a7c7cd14e9404046ee",
+            "docs/protocol_evidence/gsprior_native_quarter_truth_deny_v1.json",
+            "63f005775b37e5438bd6aad46b0aa10ffd3ca188e1ea534f13b08091a7802146",
+        ),
+        "sof": (
+            "configs/m3m_gcp_native_quarter_sof_3k_recipe_v1.json",
+            "2cf9babe6bddc216e9d3ab23275dfc8fb145accf229ee7d641e07c762fe4b424",
+            "configs/m3m_gcp_native_quarter_sof_renderer_adapter_v1.json",
+            "014f19cec9a8c2d44b619565a9abac70a5e97950469eec47b87b26aa96978371",
+            "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json",
+            "517571e84ca1fa95c4b1d51d3da4dc0b1db3fcb8e91b8a82b247d5cc63a213cf",
+        ),
+    }
+    for method_id, refs in pending_rgb_method_refs.items():
+        method = by_id.get(method_id, {})
+        require(method.get("input_class") == "rgb_colmap_only", f"{method_id}: input stratum mismatch")
+        for key, relative, expected_sha in (
+            ("recipe", refs[0], refs[1]),
+            ("adapter_config", refs[2], refs[3]),
+            ("truth_deny_report", refs[4], refs[5]),
+        ):
+            require(method.get(key) == relative, f"{method_id}: {key} path mismatch")
+            require(method.get(f"{key}_sha256") == expected_sha, f"{method_id}: {key} SHA mismatch")
+            path = repo_root / relative
+            require(path.is_file(), f"{method_id}: {key} file missing")
+            if path.is_file():
+                require(file_sha256(path) == expected_sha, f"{method_id}: {key} file SHA mismatch")
+
     require(
         by_id.get("citygaussian_v2", {}).get("input_class") == "rgb_colmap_external_geometry_prior",
         "CityGaussianV2 input stratum mismatch",
