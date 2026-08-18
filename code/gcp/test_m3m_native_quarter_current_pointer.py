@@ -94,9 +94,20 @@ def test_every_registered_formal_report_is_owned_by_the_current_pointer() -> Non
         *pointer["current_repository_components_with_independent_v1_suffixes"],
     }
     for method in registry["methods"]:
+        qualification_report = method.get("qualification_report")
+        if qualification_report is not None:
+            assert qualification_report in current_components, (
+                f"{method['method_id']}: registered qualification report is not owned by "
+                "the current protocol pointer"
+            )
         report = method.get("formal_3k_result", {}).get("report")
         if report is not None:
             assert report in current_components, (
                 f"{method['method_id']}: registered formal report is not owned by "
                 "the current protocol pointer"
             )
+    gate = registry.get("current_one_use_launch_gate")
+    if gate is not None:
+        assert gate["path"] in current_components, (
+            "current one-use launch gate is not owned by the current protocol pointer"
+        )
