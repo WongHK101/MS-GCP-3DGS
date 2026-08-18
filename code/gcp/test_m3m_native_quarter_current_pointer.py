@@ -23,14 +23,24 @@ def test_current_pointer_selects_one_consistent_protocol() -> None:
     document_path = REPO_ROOT / pointer["protocol_document"]
     release_pin_path = REPO_ROOT / pointer["protocol_release_pin"]
     registry_path = REPO_ROOT / pointer["method_registry"]
+    batch_plan_path = REPO_ROOT / pointer["batch_execution_plan"]
+    registry_validation_path = REPO_ROOT / pointer["method_registry_validation"]
     assert document_path.is_file()
     assert release_pin_path.is_file()
     assert registry_path.is_file()
+    assert batch_plan_path.is_file()
+    assert registry_validation_path.is_file()
 
     release_pin = load_json(release_pin_path)
     registry = load_json(registry_path)
     assert release_pin["protocol_id"] == PROTOCOL_ID
     assert registry["protocol_id"] == PROTOCOL_ID
+    assert registry["schema"] == "m3m_gcp_native_quarter_method_registry_v3"
+    assert registry["execution_plan"]["path"] == pointer["batch_execution_plan"]
+    validation = load_json(registry_validation_path)
+    assert validation["schema"] == "m3m_gcp_native_quarter_method_registry_validation_v3"
+    assert validation["passed"] is True
+    assert validation["batch_id"] == registry["batch_id"]
     assert (
         pointer["source_data_release"]["directory_name"]
         == release_pin["source_data_directory_name"]
@@ -54,6 +64,8 @@ def test_superseded_protocol_cannot_reenter_active_namespace() -> None:
     for relative_path in pointer["tombstoned_legacy_entrypoints"]:
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
         assert "SUPERSEDED_DO_NOT_USE" in text, relative_path
+    for relative_path in pointer["current_batch_execution_components"]:
+        assert (REPO_ROOT / relative_path).is_file(), relative_path
     for relative_path in pointer["current_repository_components_with_independent_v1_suffixes"]:
         assert (REPO_ROOT / relative_path).is_file(), relative_path
 

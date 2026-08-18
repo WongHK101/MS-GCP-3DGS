@@ -4,14 +4,17 @@
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
   "protocol_document": "docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md",
   "protocol_release_pin": "configs/m3m_gcp_native_quarter_protocol_release_v2.json",
-  "method_registry": "configs/m3m_gcp_native_quarter_method_registry_v2.json",
+  "method_registry": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
+  "batch_execution_plan": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
+  "method_registry_validation": "docs/protocol_evidence/m3m_native_quarter_method_registry_validation_v3.json",
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
   },
   "state_ownership": {
     "protocol_semantics": "protocol_document and protocol_release_pin",
-    "training_authorization_and_results": "method_registry"
+    "training_authorization_and_results": "method_registry",
+    "batch_scope_order_and_failure_policy": "batch_execution_plan"
   },
   "superseded_protocol_ids": [
     "m3m_gcp_native_quarter_geometry_v1"
@@ -20,7 +23,18 @@
     "docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V1.md",
     "configs/m3m_gcp_native_quarter_protocol_release_v1.json",
     "configs/m3m_gcp_native_quarter_method_registry_v1.json",
+    "configs/m3m_gcp_native_quarter_method_registry_v2.json",
     "docs/protocol_evidence/m3m_native_quarter_protocol_release_validation_v1.json",
+    "docs/protocol_evidence/m3m_native_quarter_method_registry_validation_v2.json",
+    "code/gcp/validate_m3m_native_quarter_method_registry.py",
+    "code/gcp/test_validate_m3m_native_quarter_method_registry.py",
+    "code/gcp/check_m3m_native_quarter_formal_launch.py",
+    "code/gcp/test_check_m3m_native_quarter_formal_launch.py",
+    "code/gcp/check_m3m_native_quarter_explicit_scene_launch.py",
+    "code/gcp/test_check_m3m_native_quarter_explicit_scene_launch.py",
+    "code/gcp/check_m3m_native_quarter_preiteration_compatibility_retry.py",
+    "code/gcp/test_check_m3m_native_quarter_preiteration_compatibility_retry.py",
+    "code/gcp/build_m3m_native_quarter_three_method_closure.py",
     "docs/protocol_evidence/native_quarter_evaluator_end_to_end_cpu_smoke_v1.json",
     "docs/protocol_evidence/3dgs_native_quarter_adapter_cpu_preflight_v1.json"
   ],
@@ -30,6 +44,16 @@
     "docs/GS_GCP_STAGE0_5_COMMON_MEASUREMENT_PROTOCOL.md",
     "docs/GS_GCP_ORIGINAL_3DGS_PATH_BACKED_CAMERA_COMPATIBILITY.md",
     "docs/GCP_V1_3_COMPLETE_EXPERIMENT_PLAN.md"
+  ],
+  "current_batch_execution_components": [
+    "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
+    "configs/m3m_gcp_native_quarter_method_registry_v3.json",
+    "docs/protocol_evidence/m3m_native_quarter_method_registry_validation_v3.json",
+    "docs/protocol_evidence/m3m_eight_method_source_freeze_v1.json",
+    "code/gcp/validate_m3m_native_quarter_method_registry_v3.py",
+    "code/gcp/test_validate_m3m_native_quarter_method_registry_v3.py",
+    "code/gcp/check_m3m_native_quarter_batch_launch_v3.py",
+    "code/gcp/test_check_m3m_native_quarter_batch_launch_v3.py"
   ],
   "current_repository_components_with_independent_v1_suffixes": [
     "configs/m3m_gcp_native_quarter_3dgs_3k_recipe_v1.json",

@@ -1,0 +1,12 @@
+{
+  "schema": "m3m_gcp_native_quarter_method_registry_validation_v3",
+  "status": "PASS",
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
+  "method_count": 11,
+  "active_method_count": 10,
+  "candidate_method_count": 8,
+  "training_allowed_methods": [],
+  "errors": []
+}

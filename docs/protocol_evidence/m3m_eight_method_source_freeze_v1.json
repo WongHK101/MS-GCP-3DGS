@@ -1,0 +1,91 @@
+{
+  "schema": "m3m_gcp_eight_method_source_freeze_evidence_v1",
+  "status": "PASS",
+  "passed": true,
+  "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "remote_source_root": "/root/autodl-tmp/build/m3m-gcp-native-quarter/source-freeze-v1",
+  "remote_inventory": "/root/autodl-tmp/build/m3m-gcp-native-quarter/source-freeze-v1/SOURCE_FREEZE_INVENTORY.json",
+  "remote_inventory_sha256": "654020e982a5201490da55c27b388ef186cc3786486efc6f6af988babfd367ee",
+  "transport": {
+    "all_eight_archives_rehashed_identically_on_901": true,
+    "windows_checkout_crlf_conversion_detected": true,
+    "converted_transport_worktrees_accepted_as_source": false,
+    "clean_linux_checkouts_recreated_from_verified_git_objects": true,
+    "all_final_git_status_checks_clean": true
+  },
+  "methods": [
+    {
+      "method_id": "pgsr",
+      "official_repository": "https://github.com/zju3dv/PGSR",
+      "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+      "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
+      "transfer_archive_sha256": "c03b9ba9576c5fb7e2b9b944dde322baa6be693c6066fcea1bfb71deb4b3312b",
+      "clean": true,
+      "license_status": "present_at_frozen_commit"
+    },
+    {
+      "method_id": "rade_gs",
+      "official_repository": "https://github.com/HKUST-SAIL/RaDe-GS",
+      "commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+      "tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+      "transfer_archive_sha256": "9c7f3a118a3af460888d6883d680099caf7a85f7d30695fb653c2c9e7f0f370a",
+      "clean": true,
+      "license_status": "present_at_frozen_commit"
+    },
+    {
+      "method_id": "qgs",
+      "official_repository": "https://github.com/will-zzy/QGS",
+      "commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+      "tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
+      "transfer_archive_sha256": "b9ad60493bf6400905dd31dc4c5e95a9959cf2afd05c7e74d7cd3d06ab6a477d",
+      "clean": true,
+      "license_status": "present_at_frozen_commit"
+    },
+    {
+      "method_id": "gsprior",
+      "official_repository": "https://github.com/takeshie/GSPrior",
+      "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+      "tree": "779073585e88b85217d522d0ab345365346cd17f",
+      "transfer_archive_sha256": "0f6aaabd6a4d2f4d4000bfc43645ba762681a4250abb6cb36245df17d47ef3c3",
+      "clean": true,
+      "license_status": "missing_at_frozen_commit_internal_test_only_redistribution_blocked"
+    },
+    {
+      "method_id": "sof",
+      "official_repository": "https://github.com/r4dl/SOF",
+      "commit": "b9eb4170c843014f5f96d54924976161bd675469",
+      "tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
+      "transfer_archive_sha256": "e8ef7ed2a46e356b961522d791b85ef8ff8a7ef46135cb5c04d1d1e10535e52e",
+      "clean": true,
+      "license_status": "present_at_frozen_commit"
+    },
+    {
+      "method_id": "citygaussian_v2",
+      "official_repository": "https://github.com/Linketic/CityGaussian",
+      "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+      "tree": "be088977358cb36bac000caec396eff3758c74b2",
+      "transfer_archive_sha256": "124bd8f37a8182c5b41abb5b9c55e9651bec4225132a215e1a6abafb824bd6f7",
+      "clean": true,
+      "license_status": "present_at_frozen_commit"
+    },
+    {
+      "method_id": "citygs_x",
+      "official_repository": "https://github.com/gyy456/CityGS-X",
+      "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+      "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+      "transfer_archive_sha256": "2249bfef08137170992b15cd5abc8ed267a18b7f172d94aacd53746332766ebc",
+      "clean": true,
+      "license_status": "missing_at_frozen_commit_internal_test_only_redistribution_blocked"
+    },
+    {
+      "method_id": "metrogs",
+      "official_repository": "https://github.com/M3phist0/MetroGS",
+      "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+      "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+      "transfer_archive_sha256": "9a330d64a4d29994ae58a2cd1e4197795dcb18e374a5403d2707dd8c01cbe77c",
+      "clean": true,
+      "license_status": "present_at_frozen_commit"
+    }
+  ]
+}

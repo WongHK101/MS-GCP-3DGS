@@ -120,8 +120,9 @@ bin 边界附近的非相邻 bin，实际夹角仍可能小于 90°。本规则�
 
 ## 7. 方法池与输入信息分层
 
-候选池固定为 3DGS、2DGS、PGSR、RaDe-GS、GOF、QGS、CityGaussianV2、CityGS-X、
-MetroGS；机器登记为 `configs/m3m_gcp_native_quarter_method_registry_v2.json`。
+当前 active benchmark 池固定为 3DGS、2DGS、PGSR、RaDe-GS、QGS、GSPrior、SOF、
+CityGaussianV2、CityGS-X、MetroGS；GOF 只作为 `historical_complete_retired` 保留，
+不再执行或扩展。机器登记为 `configs/m3m_gcp_native_quarter_method_registry_v3.json`。
 
 结果必须标注 `rgb_colmap_only` 或 `rgb_colmap_external_geometry_prior`。CityGS-X、
 MetroGS 的外部先验型号、权重 SHA、输入分辨率、命令及成本未冻结前不得资格运行。
@@ -160,7 +161,7 @@ checkpoint RMSE 为 3D `0.2659138270 m`、水平 `0.0929837769 m`、高程
 
 因此这里的全局 `TRAINING HOLD` 不否定已完成的正式结果，也不阻止后续方法在通过全部门禁后
 获得一次方法级授权。当前没有方法处于运行授权状态；实时资格和结果状态只以
-`configs/m3m_gcp_native_quarter_method_registry_v2.json` 为准。
+`configs/m3m_gcp_native_quarter_method_registry_v3.json` 为准。
 
 ### 8.1 2DGS 方法级正式状态
 
@@ -186,8 +187,9 @@ GPU 官方训练扩展与隔离评测扩展均构建通过；单层/双层合成
 - checkpoint RMSE 为 3D `0.0339083127 m`、水平 `0.0128695182 m`、高程
   `0.0313711519 m`；正式报告为
   `docs/protocol_evidence/2dgs_native_quarter_formal_3k_seed0_30k_v1.json`；
-- 运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`、
-  `full_scene_matrix_eligible=false`。其他方法与六场景矩阵仍保持锁定。
+- 运行完成后已重新锁定：`three_k_training_allowed=false`、`rerun_allowed=false`。
+  GOF 当前为 `historical_complete_retired`，不得重跑或进入六场景 active matrix；
+  其他候选和六场景执行权限仍保持逐方法锁定。
 
 该结果只有一个 seed，可作为本 benchmark 的正式单次结果，但不得用于宣称方法间细小差异
 具有统计显著性。本次只是执行状态更新，没有修改 v2 的输入、算子、覆盖、Sim(3) 或排名规则。
@@ -234,7 +236,11 @@ GOF 原生 opacity level set/mesh 仍只属于诊断次轨，正式公共结果�
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
 冻结 3K 真实 packet-camera 预检及端到端评测全部通过后，才可单独解锁其 3K 资格实验。
 解锁某一方法不自动解锁其他方法或六场景矩阵。
-3DGS、2DGS 和 GOF 的 3K 正式运行均已完成并重锁；当前方法级训练 allowlist 为空。
+3DGS 和 2DGS 的 3K 正式结果复用且保持重锁；GOF 的既有 3K 结果仅作为历史完成
+证据保留。PGSR、RaDe-GS、QGS、GSPrior、SOF、CityGaussianV2、CityGS-X 和
+MetroGS 进入同一个 seed-0 3K 批次，但仍须各自通过一次性资格门。技术资格
+`TECHNICALLY_QUALIFIED` 与场景结果 `COMPLETE_RANKED` / `INCOMPLETE_UNRANKED`
+分开记录；当前方法级训练 allowlist 为空。
 
 当前实现入口：
 
@@ -246,8 +252,8 @@ GOF 原生 opacity level set/mesh 仍只属于诊断次轨，正式公共结果�
 - 3DGS renderer 补丁静态验证：`code/gcp/validate_3dgs_native_quarter_renderer_adapter.py`
 - 2DGS 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_2dgs_static.py`
 - GOF 配方/补丁静态验证：`code/gcp/validate_m3m_native_quarter_gof_static.py`
-- 九方法登记验证：`code/gcp/validate_m3m_native_quarter_method_registry.py`
-- 正式训练 fail-closed 门禁：`code/gcp/check_m3m_native_quarter_formal_launch.py`
+- v3 十 active 方法登记验证：`code/gcp/validate_m3m_native_quarter_method_registry_v3.py`
+- v3 批次逐方法一次性 fail-closed 门禁：`code/gcp/check_m3m_native_quarter_batch_launch_v3.py`
 
 任何实现若回退到整数像素、窗口中值、逐坐标中位数、逐方法 Sim(3)、相邻斜视 bin 即
 通过，或在 checkpoint 不完整时发布场景排名，均不属于 v2 协议。

@@ -41,9 +41,10 @@ contract is
 [`docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md`](docs/GS_GCP_NATIVE_QUARTER_ACTIVE_PROTOCOL_V2.md).
 
 Training authorization and completed-result state are owned only by
-[`configs/m3m_gcp_native_quarter_method_registry_v2.json`](configs/m3m_gcp_native_quarter_method_registry_v2.json).
-At this revision, original 3DGS has one completed and re-locked 3K formal run;
-all other methods and the six-scene matrix remain locked. Older clean-R4 and
+[`configs/m3m_gcp_native_quarter_method_registry_v3.json`](configs/m3m_gcp_native_quarter_method_registry_v3.json).
+At this revision, original 3DGS and 2DGS retain completed and re-locked 3K
+formal runs; eight additional methods are in one gated seed-0 3K batch, GOF is
+historical-complete-retired, and the six-scene matrix remains locked. Older clean-R4 and
 native-quarter-v1 execution assets are provenance only and cannot authorize or
 supply a new result.
 

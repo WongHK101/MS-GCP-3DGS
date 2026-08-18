@@ -1,0 +1,392 @@
+{
+  "schema": "m3m_gcp_native_quarter_method_registry_v3",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "EIGHT_METHOD_3K_BATCH_PREPARATION_ACTIVE",
+  "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
+  "execution_plan": {
+    "path": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
+    "sha256": "0ad8c070cb11b29b957d5b34d647955fb0b028eaa8e341a77e146cd1533c2615"
+  },
+  "source_freeze": {
+    "status": "PASS",
+    "remote_root": "/root/autodl-tmp/build/m3m-gcp-native-quarter/source-freeze-v1",
+    "remote_inventory": "/root/autodl-tmp/build/m3m-gcp-native-quarter/source-freeze-v1/SOURCE_FREEZE_INVENTORY.json",
+    "remote_inventory_sha256": "654020e982a5201490da55c27b388ef186cc3786486efc6f6af988babfd367ee",
+    "repository_evidence": "docs/protocol_evidence/m3m_eight_method_source_freeze_v1.json",
+    "repository_evidence_sha256": "70abe47727a6b78974fe5528a93b8deb9f98e19ba45bfbcfd6c58e60ed7941ca",
+    "method_count": 8,
+    "all_commits_trees_archives_and_clean_linux_checkouts_verified": true,
+    "windows_crlf_transport_worktrees_rejected": true
+  },
+  "source_data_release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "formal_scene": "gcp_3000_20260602",
+    "train_view_count": 82,
+    "heldout_test_view_count": 12,
+    "training_resolution_argument": 1
+  },
+  "formal_common_track": {
+    "name": "render_support_expected_camera_z",
+    "sample_operator": "bilinear(weighted_camera_z_sum) / bilinear(accumulated_alpha)",
+    "cross_method_primary": true,
+    "physical_surface_claim": false,
+    "native_surface_track": "secondary_family_specific",
+    "z50_and_mesh": "diagnostic_until_adapter_parity"
+  },
+  "coverage_and_ranking_contract": {
+    "minimum_valid_observations": "max(4, ceil(0.5 * frozen_formal_observation_count))",
+    "minimum_valid_nadir_observations": 2,
+    "minimum_valid_oblique_observations": 2,
+    "minimum_unique_oblique_azimuth_bins_45deg": 2,
+    "minimum_oblique_azimuth_bin_circular_separation": 2,
+    "ranked_scene_status": "COMPLETE_RANKED only when every formal checkpoint passes point-level coverage",
+    "incomplete_scene_status": "INCOMPLETE_UNRANKED; subset errors are diagnostic only"
+  },
+  "input_class_definitions": {
+    "rgb_colmap_only": "Frozen native-quarter RGB and frozen COLMAP cameras/sparse initialization only; scene-internal self-constraints may be reported separately but use no external truth.",
+    "rgb_colmap_external_geometry_prior": "Frozen native-quarter RGB/COLMAP plus a separately frozen public pretrained geometry or depth prior; report in a separate stratum."
+  },
+  "batch_execution_scope": {
+    "active_candidate_method_ids": [
+      "pgsr",
+      "rade_gs",
+      "qgs",
+      "gsprior",
+      "sof",
+      "citygaussian_v2",
+      "citygs_x",
+      "metrogs"
+    ],
+    "reused_complete_ranked_method_ids": ["3dgs_original", "2dgs"],
+    "historical_complete_retired_method_ids": ["gof"],
+    "formal_execution_order": [
+      "pgsr",
+      "rade_gs",
+      "qgs",
+      "gsprior",
+      "sof",
+      "citygaussian_v2",
+      "citygs_x",
+      "metrogs"
+    ],
+    "single_seed": 0,
+    "multi_seed_authorized": false,
+    "per_method_external_audit_pause": false,
+    "single_consolidated_audit_after_batch": true,
+    "six_scene_matrix_status": "LOCKED_PENDING_3K_BATCH_CLOSURE",
+    "non_red_line_method_failure_policy": "RECORD_AND_CONTINUE",
+    "technical_qualification_is_separate_from_result_completeness": true
+  },
+  "training_data_boundary": {
+    "allowed_scene_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/gcp_3000_20260602",
+    "denied_truth_roots": [
+      "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+      "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2"
+    ],
+    "gcp_truth_training_access": false,
+    "lidar_training_access": false,
+    "orthophoto_truth_training_access": false,
+    "result_driven_recipe_selection": false
+  },
+  "method_count": 11,
+  "active_benchmark_method_count": 10,
+  "active_benchmark_method_ids": [
+    "3dgs_original",
+    "2dgs",
+    "pgsr",
+    "rade_gs",
+    "qgs",
+    "gsprior",
+    "sof",
+    "citygaussian_v2",
+    "citygs_x",
+    "metrogs"
+  ],
+  "methods": [
+    {
+      "method_id": "3dgs_original",
+      "display_name": "3D Gaussian Splatting",
+      "lifecycle_role": "REUSED_COMPLETE_RANKED",
+      "representation_family": "3d_gaussian_ellipsoid",
+      "mechanism_deep_dive_selected": true,
+      "source": {
+        "official_repository": "https://github.com/graphdeco-inria/gaussian-splatting",
+        "commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+        "tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "TECHNICALLY_QUALIFIED",
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/3dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "b8311cc687d9ab5f3c49d58f4473d26a70281c7b577177e3742c0abe00163b40",
+        "final_checkpoint_sha256": "461b48e97f31ee6588b5ba3de52d29ed07b4709134f7a155c95bc7c38dba91ff",
+        "packet_manifest_sha256": "36639ae7e82c4f314b47ff1941f39557382a074845044b72f9655a579d4a42b7",
+        "checkpoint_rmse_3d_m": 0.04179960708774027,
+        "checkpoint_rmse_h_m": 0.02761108288832967,
+        "checkpoint_rmse_z_m": 0.03138208492792113,
+        "rerun_allowed": false
+      },
+      "technical_full_matrix_eligibility": true,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "2dgs",
+      "display_name": "2D Gaussian Splatting",
+      "lifecycle_role": "REUSED_COMPLETE_RANKED",
+      "representation_family": "2d_gaussian_surfel",
+      "mechanism_deep_dive_selected": true,
+      "source": {
+        "official_repository": "https://github.com/hbb1/2d-gaussian-splatting",
+        "commit": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98",
+        "tree": "ad1da88f43447bde046712835db70e271816282e",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "TECHNICALLY_QUALIFIED",
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/2dgs_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "d1967db9991e018eb3c8d3d01d95b42eb9dca162ed64d926a70a067567d7a79e",
+        "final_checkpoint_sha256": "3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193",
+        "packet_manifest_sha256": "a38e56a633aed6ff650a3a25a42d0f2c76f283c7cc2d9054bf9c55614d8492a2",
+        "checkpoint_rmse_3d_m": 0.03390831267596038,
+        "checkpoint_rmse_h_m": 0.01286951817621036,
+        "checkpoint_rmse_z_m": 0.031371151882627554,
+        "rerun_allowed": false
+      },
+      "technical_full_matrix_eligibility": true,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "pgsr",
+      "display_name": "PGSR",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "planar_gaussian_surfel",
+      "source": {
+        "official_repository": "https://github.com/zju3dv/PGSR",
+        "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+        "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013",
+        "license_file": "LICENSE.md",
+        "license_sha256": "9ffea520f58708375e5310593326a988b29a6a7990f56a245545c59f199d7bc4",
+        "license_status": "present_at_frozen_commit",
+        "transfer_archive_sha256": "c03b9ba9576c5fb7e2b9b944dde322baa6be693c6066fcea1bfb71deb4b3312b"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "rade_gs",
+      "display_name": "RaDe-GS",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "3d_gaussian_depth_rasterization",
+      "source": {
+        "official_repository": "https://github.com/HKUST-SAIL/RaDe-GS",
+        "commit": "d72f20792005ae1d6555a82aa2d15345f247604e",
+        "tree": "e37a9f1bfec5b593371402d19fb5259cbcb6efa1",
+        "license_file": "LICENSE.md",
+        "license_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
+        "license_status": "present_at_frozen_commit",
+        "transfer_archive_sha256": "9c7f3a118a3af460888d6883d680099caf7a85f7d30695fb653c2c9e7f0f370a"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "qgs",
+      "display_name": "Quadratic Gaussian Splatting",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "quadratic_gaussian_surfel",
+      "source": {
+        "official_repository": "https://github.com/will-zzy/QGS",
+        "commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+        "tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
+        "license_file": "LICENSE.md",
+        "license_sha256": "464f70c93c4acd29934d61f12eb5339f09c6a797434fcdc712edb20fd87cdaf6",
+        "license_status": "present_at_frozen_commit",
+        "transfer_archive_sha256": "b9ad60493bf6400905dd31dc4c5e95a9959cf2afd05c7e74d7cd3d06ab6a477d"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "gsprior",
+      "display_name": "GSPrior",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "self_constrained_tsdf_prior_gaussians",
+      "source": {
+        "official_repository": "https://github.com/takeshie/GSPrior",
+        "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+        "tree": "779073585e88b85217d522d0ab345365346cd17f",
+        "license_file": null,
+        "license_status": "missing_at_frozen_commit_internal_test_only_redistribution_blocked",
+        "transfer_archive_sha256": "0f6aaabd6a4d2f4d4000bfc43645ba762681a4250abb6cb36245df17d47ef3c3"
+      },
+      "input_class": "rgb_colmap_only",
+      "scene_internal_prior": "TSDF fused from the method's own training-time renderings and frozen RGB/COLMAP cameras; no GCP or LiDAR input",
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "sof",
+      "display_name": "Sorted Opacity Fields",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "sorted_opacity_field",
+      "mechanism_deep_dive_selected": true,
+      "source": {
+        "official_repository": "https://github.com/r4dl/SOF",
+        "commit": "b9eb4170c843014f5f96d54924976161bd675469",
+        "tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
+        "license_file": "LICENSE.md",
+        "license_sha256": "6ccb9140a9f4bb8f399b1f090414c9e528a673e6961da42cc66a01ea3b20e681",
+        "license_status": "present_at_frozen_commit",
+        "transfer_archive_sha256": "e8ef7ed2a46e356b961522d791b85ef8ff8a7ef46135cb5c04d1d1e10535e52e"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "citygaussian_v2",
+      "display_name": "CityGaussianV2",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "large_scale_2d_gaussian",
+      "source": {
+        "official_repository": "https://github.com/Linketic/CityGaussian",
+        "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+        "tree": "be088977358cb36bac000caec396eff3758c74b2",
+        "license_file": "LICENSE.md",
+        "license_sha256": "047d2259741a3ebb30d8c8a43d4ba79b5b229a069acd1d2bea49f22b297d8e98",
+        "license_status": "present_at_frozen_commit",
+        "transfer_archive_sha256": "124bd8f37a8182c5b41abb5b9c55e9651bec4225132a215e1a6abafb824bd6f7"
+      },
+      "input_class": "rgb_colmap_only",
+      "route_selection": "official single-block custom-scene route for the 3K scene; no result-driven repartitioning",
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "citygs_x",
+      "display_name": "CityGS-X",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "hierarchical_3d_gaussian",
+      "source": {
+        "official_repository": "https://github.com/gyy456/CityGS-X",
+        "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+        "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+        "license_file": null,
+        "license_status": "missing_at_frozen_commit_internal_test_only_redistribution_blocked",
+        "transfer_archive_sha256": "2249bfef08137170992b15cd5abc8ed267a18b7f172d94aacd53746332766ebc"
+      },
+      "input_class": "rgb_colmap_external_geometry_prior",
+      "external_priors": [
+        {
+          "name": "Depth Anything V2 Large",
+          "official_encoder": "vitl",
+          "official_command_mode": "--pred-only --grayscale",
+          "freeze_status": "PENDING_EXACT_REPOSITORY_COMMIT_WEIGHT_SHA256_AND_COMMAND"
+        }
+      ],
+      "redistribution_allowed": false,
+      "internal_numeric_reporting_allowed": true,
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_AND_PRIOR_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "metrogs",
+      "display_name": "MetroGS",
+      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "representation_family": "large_scale_2d_gaussian_with_pointmap_initialization",
+      "source": {
+        "official_repository": "https://github.com/M3phist0/MetroGS",
+        "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+        "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+        "license_file": "LICENSE",
+        "license_sha256": "75f69d4573d4d5f9e8ba07bc5dede592431b84bb315b6a260f8f551072968963",
+        "license_status": "present_at_frozen_commit",
+        "transfer_archive_sha256": "9a330d64a4d29994ae58a2cd1e4197795dcb18e374a5403d2707dd8c01cbe77c"
+      },
+      "input_class": "rgb_colmap_external_geometry_prior",
+      "selected_external_prior_route": {
+        "route": "Pi3-Align with Xname=Pi3 plus MoGe-2 depth regularization",
+        "selection_basis": "the frozen upstream run_para.sh default is Pi3; selected before any M3M-GCP result",
+        "best_of_routes_allowed": false,
+        "freeze_status": "PENDING_EXACT_WEIGHT_SHA256_AND_COMMAND"
+      },
+      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_AND_PRIOR_PENDING",
+      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    },
+    {
+      "method_id": "gof",
+      "display_name": "Gaussian Opacity Fields",
+      "lifecycle_role": "HISTORICAL_COMPLETE_RETIRED",
+      "representation_family": "implicit_opacity_level_set",
+      "source": {
+        "official_repository": "https://github.com/autonomousvision/gaussian-opacity-fields",
+        "commit": "5245b20e5d11acd6d1ff5af4b890dc2bedd99693",
+        "tree": "b398209f5721e3944d4f95477c962a78e2106198",
+        "license_status": "present_at_frozen_commit"
+      },
+      "input_class": "rgb_colmap_only",
+      "technical_qualification_status": "HISTORICAL_TECHNICALLY_QUALIFIED_RETIRED",
+      "formal_3k_result": {
+        "status": "HISTORICAL_COMPLETE_RETIRED",
+        "original_status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "04f72d495fba0c74cc2124246feea931ffcceaaba12005529b8ec2ad088eda8a",
+        "final_checkpoint_sha256": "c24c0ac4e35028e4984c3c03304e723b824dc22916213498bedc946629bce1b2",
+        "packet_manifest_sha256": "306d00a48af9485cb38885142a19801b3914844470e331c9f8ad4d5d142de688",
+        "checkpoint_rmse_3d_m": 0.07083863738939943,
+        "checkpoint_rmse_h_m": 0.02006203562696807,
+        "checkpoint_rmse_z_m": 0.06793840794196668,
+        "rerun_allowed": false
+      },
+      "technical_full_matrix_eligibility": false,
+      "six_scene_run_allowed": false,
+      "three_k_training_allowed": false
+    }
+  ],
+  "global_training_allowed": false,
+  "per_method_training_allowed_methods": [],
+  "current_one_use_launch_gate": null,
+  "batch_controller": {
+    "preparation_allowed": true,
+    "formal_training_requires_method_gate": true,
+    "maximum_concurrent_formal_trainings": 1,
+    "gate_consumed_after_first_launch_attempt": true,
+    "resume_allowed": false,
+    "result_driven_retry_allowed": false
+  },
+  "qualification_policy": "A method may consume only its own single-use 3K launch gate after source, recipe, environment, raw-moment adapter, synthetic conformance, frozen real-camera packet, evaluator, and truth-deny gates pass. Global training and the six-scene matrix remain locked."
+}
