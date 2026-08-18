@@ -1,0 +1,231 @@
+{
+  "artifact_retention": {
+    "large_checkpoint_and_packets_remain_on_autodl_901": true,
+    "local_model_mirror_created": false
+  },
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "created_utc": "2026-08-18T17:26:39.523463+00:00",
+  "evaluation": {
+    "checkpoint_coverage_rate": 1.0,
+    "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+    "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+    "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "method_id": "qgs",
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2332,
+        "sha256": "bebe3be02c9a0fa779d382095e45808466d211e950647d4eb0dfec3cac208f1f"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1364,
+        "sha256": "d6b9477906f3b8b4ac0829fac75d9b11850653950accfac8ff9eed23ae1c6d8f"
+      },
+      "observation_samples.csv": {
+        "bytes": 52570,
+        "sha256": "0b1333adb974c5f695d1f15f0a355a4655908605729654e015d0b2f6642e12fa"
+      },
+      "point_results.csv": {
+        "bytes": 4414,
+        "sha256": "26d1927e3debb8e11cdede18c1da964348a15e2016d516102c5ee8a4853062c8"
+      }
+    },
+    "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/packets/depth_export_manifest.json",
+    "packet_manifest_sha256": "4ae3f25f7caacdc158d223b7970255010de27b58545e193aa2557170b8d0d663",
+    "physical_surface_claim": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+    "residual_statistics": {
+      "all": {
+        "count": 9,
+        "max_3d_m": 0.04099983429978143,
+        "median_3d_m": 0.01885363743877902,
+        "p95_3d_m": 0.03923976120624364,
+        "rmse_3d_m": 0.024800782932654756,
+        "rmse_h_m": 0.014128463636479934,
+        "rmse_z_m": 0.020382967137915025
+      },
+      "checkpoint": {
+        "count": 4,
+        "max_3d_m": 0.04099983429978143,
+        "median_3d_m": 0.016082560342107803,
+        "p95_3d_m": 0.0379559754462615,
+        "rmse_3d_m": 0.024134399151363475,
+        "rmse_h_m": 0.014369772715102341,
+        "rmse_z_m": 0.019390174174401694
+      },
+      "control": {
+        "count": 5,
+        "max_3d_m": 0.03659965156593696,
+        "median_3d_m": 0.01885363743877902,
+        "p95_3d_m": 0.035767778992494864,
+        "rmse_3d_m": 0.025321266228467323,
+        "rmse_h_m": 0.013932407480483935,
+        "rmse_z_m": 0.021143664422485407
+      }
+    },
+    "scene": "gcp_3000_20260602",
+    "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+    "status": "COMPLETE_RANKED"
+  },
+  "evaluation_runtime": {
+    "benchmark_commit": "96ae50d3ded5586ac349275d323257d47d5cfb71",
+    "benchmark_tree": "5b6f0b55a24b32650ea3370dce804c67dfa53c6d",
+    "evaluator_source_sha256": "353624ab44f8be066a8fd57ba02eaf0d2e5b306973afb7aec21d9a97312d4d8f",
+    "geometric_median_absolute_tolerance": 1e-10,
+    "geometric_median_iteration_guard": 65536,
+    "protocol_source_sha256": "ba2fdeaec6baecef79b3b0f2e59e78426c82b5a71dc288d7733bfa8fc4aca241"
+  },
+  "final_gpu_compute_process_count": 0,
+  "input": {
+    "all_train_image_hashes_verified_before_launch": true,
+    "byte_preserving_qgs_input_alias": true,
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "gcp_truth_training_access": false,
+    "height": 1025,
+    "heldout_rgb_training_access": false,
+    "heldout_test_view_count": 12,
+    "lidar_training_access": false,
+    "official_eval_argument": false,
+    "qgs_internal_reencode_path_exercised": false,
+    "release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "train_view_count": 82,
+    "training_downsample": 1.0,
+    "width": 1414
+  },
+  "iterations": 30000,
+  "method_id": "qgs",
+  "packet_export": {
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "benchmark_commit": "96ae50d3ded5586ac349275d323257d47d5cfb71",
+    "benchmark_tree": "5b6f0b55a24b32650ea3370dce804c67dfa53c6d",
+    "evaluation_adapter_extension_sha256": "20dcec46572dbcec8a8fd3ca3490857ee887c9b0b3936e7f2393e92d2c01094e",
+    "evaluation_camera_domain_is_frozen_94_camera_scene": true,
+    "evaluation_snapshot_is_separate_from_formal_model": true,
+    "exporter_sha256": "61de4e71d091476fcebcfbe607be5dc50f3bafa37b416e7c6e2b6f4271c03e2f",
+    "manifest_sha256": "4ae3f25f7caacdc158d223b7970255010de27b58545e193aa2557170b8d0d663",
+    "mapping_csv_sha256": "45bd3d1b17dad586611515399ffb45203be812798286e676406c44ad0bef47f6",
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "packet_bytes": 2654051646,
+    "packet_count": 66,
+    "packet_identity_aggregate_sha256": "c138d30cf6734e03b71d85ebf422ed42fe2abbb8a88cddcecd716274a3808d55",
+    "packet_recomputation_all_passed": true,
+    "peak_gpu_memory_mib": 9765.0,
+    "rasterizer_patch_sha256": "93583335870ab1bf573e6425c341bb1577eb2920f1b96d3cebad46889d221928",
+    "raw_moment_conformance_sha256": "5c04974691588a8c9314ebb9bce0d325467ae95db642a03675feb4a90451ee73",
+    "renderer_patch_sha256": "07ac09c592f32e752ffd2b404b297f3f6f35cccdb7dd7f45a515412b8a51e07c",
+    "resource_status": "PASS",
+    "resource_summary_sha256": "820912451addf658534ddffffa9aa48c252f3e94474d5ea8290c99ac17af329b",
+    "status": "PASS",
+    "valid_pixel_count_max": 1449350,
+    "valid_pixel_count_min": 1448645,
+    "validation_report_sha256": "7b668a62833aea0ae94eeb23ee6812cb9215615e28ad396aecd7094c5991f019",
+    "variance_nonnegativity_unresolved_total": 34114,
+    "variance_validation_fail_pixel_total": 0,
+    "wall_seconds": 292.8690043799579
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe": {
+    "depth_ratio": 0.1,
+    "downsample": 1.0,
+    "iterations": 30000,
+    "multi_view_max_dis": 1000000000.0,
+    "ncc_scale": 1.0,
+    "neighbor_rule": "retain upstream angle<30deg and nearest-8; disable arbitrary absolute distance cap",
+    "regularization_from_iter": 7000,
+    "resume_allowed": false
+  },
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "run": {
+    "adapter_config_sha256": "0d785d7c3442c86d0121dfc2782b577c199443073cb35122888f26221e3d4061",
+    "formal_launch_gate_sha256": "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5",
+    "launch_check_sha256": "a005b2054fca581298b0325e60570e170a7c4c29969965c7fb70e9b5a98c9aaa",
+    "launcher_sha256": "cb4a7dac379fdd74b9fdaf19cba14ee2d108bbba6280f2f4244b90da36bba101",
+    "qualification_report_sha256": "193f62c1d8cca2eab1a6529377e5095331bd3cf08608de251c61564ad34cd135",
+    "recipe_sha256": "ef7f12d60a9ed739dcac8ba0407eec2882e5a29c14f87d479ce830531f55b720",
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z",
+    "training_entrypoint_sha256": "3e0490b6d3871d6d1e47183161a186c46def35867a57365b3ca23e6b201a975b",
+    "training_yaml_sha256": "399f8f7f3b8f14613beae46b44a7ea6904a69152edf22189b818dea06deb0ebd"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_native_quarter_qgs_formal_3k_run_v1",
+  "seed": 0,
+  "single_seed_only": true,
+  "source": {
+    "environment_freeze_sha256": "c7ca73f6cfe91ad0546c6d1aad0c9811a856441e56d711243eb187517c7711ad",
+    "external_entrypoint_calls_existing_training_function": true,
+    "official_repository_commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+    "official_repository_tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419",
+    "official_training_rasterizer_extension_sha256": "d201dc8ae06230a2d842fc4bdcfc70128bb1e8ad1451d4ebf7b421d4f892c086",
+    "official_training_simple_knn_extension_sha256": "f69ef8322b7d25dd927d610c647a55628cfc738583dbd96d770317ff12892550",
+    "official_training_source_modified": false,
+    "training_compatibility_diff_names": []
+  },
+  "statistical_significance_claim": false,
+  "status": "PASS",
+  "training": {
+    "cgroup_observed_peak_bytes": 88202977280,
+    "command_record_sha256": "871d26e66bd5a574fe27e1b8271472b903ce59c96c8e7d6e3be97025fad89217",
+    "estimated_gpu_energy_wh": 1123.3700514733152,
+    "fd_peak": 50,
+    "final_ply_bytes": 1941135861,
+    "final_ply_relative_path": "model/point_cloud/iteration_30000/point_cloud.ply",
+    "final_ply_sha256": "041c7a623dfd3cd9a9799ad7b785f54bfbc76d050d04bc315ee5316cf76bef81",
+    "gaussian_vertex_count": 7465901,
+    "gpu_hours": 6.233975979348438,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "neighbor_validation_sha256": "c2565c783b6512393efcb645fd5f6852bc6db22dab6474285fcf7c19b7b314ff",
+    "peak_gpu_memory_mib": 29841.0,
+    "process_maximum_rss_kib": 27600316,
+    "process_tree_sampled_peak_rss_kib": 27563088,
+    "resolved_config_sha256": "92b14dd16747aaafa1197911c84801692f6995806e72c2fbcdb9776afdf45686",
+    "resource_status": "PASS",
+    "resource_summary_sha256": "4aebbc28debe00308accaad464eaebad84bb99dc7f72dc780efc0e45768391c5",
+    "sampler_errors": [],
+    "wall_seconds": 22442.313525654376
+  }
+}

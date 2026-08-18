@@ -79,6 +79,7 @@
     "docs/protocol_evidence/qgs_native_quarter_gpu_real_3k_qualification_v1.json",
     "docs/protocol_evidence/qgs_native_quarter_truth_deny_v1.json",
     "docs/protocol_evidence/qgs_native_quarter_static_validation_v1.json",
+    "docs/protocol_evidence/qgs_native_quarter_formal_3k_seed0_30k_v1.json",
     "code/gcp/run_qgs_training.py",
     "code/gcp/export_qgs_depth_maps.py",
     "code/gcp/test_qgs_raw_moments_cuda.py",

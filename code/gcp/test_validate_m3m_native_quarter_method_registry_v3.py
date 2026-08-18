@@ -20,14 +20,14 @@ def validate_mutation(tmp_path: Path, value: dict) -> dict:
     return validate_registry(REPO_ROOT, path)
 
 
-def test_current_registry_passes_with_only_the_qgs_one_use_gate() -> None:
+def test_current_registry_passes_with_no_open_gate_after_qgs_completion() -> None:
     result = validate_registry(REPO_ROOT, REGISTRY)
     assert result["passed"] is True
     assert result["status"] == "PASS"
     assert result["method_count"] == 11
     assert result["active_method_count"] == 10
     assert result["candidate_method_count"] == 8
-    assert result["training_allowed_methods"] == ["qgs"]
+    assert result["training_allowed_methods"] == []
 
 
 def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
@@ -38,13 +38,12 @@ def test_global_training_unlock_fails_closed(tmp_path: Path) -> None:
     assert "global training lock missing" in result["errors"]
 
 
-def test_consumed_gate_can_be_closed_while_no_method_is_launchable(tmp_path: Path) -> None:
+def test_completed_qgs_gate_is_closed_and_method_is_not_launchable(tmp_path: Path) -> None:
     value = load_registry()
-    value["current_one_use_launch_gate"] = None
-    value["per_method_training_allowed_methods"] = []
-    value["status"] = "EIGHT_METHOD_3K_BATCH_ACTIVE"
     method = next(item for item in value["methods"] if item["method_id"] == "qgs")
-    method["three_k_training_allowed"] = False
+    assert method["formal_3k_result"]["status"] == "COMPLETE_RANKED"
+    assert method["three_k_training_allowed"] is False
+    assert value["current_one_use_launch_gate"] is None
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is True
     assert result["training_allowed_methods"] == []
@@ -52,9 +51,8 @@ def test_consumed_gate_can_be_closed_while_no_method_is_launchable(tmp_path: Pat
 
 def test_training_flag_without_gate_fails_closed(tmp_path: Path) -> None:
     value = load_registry()
-    value["current_one_use_launch_gate"] = None
-    value["per_method_training_allowed_methods"] = []
-    value["status"] = "EIGHT_METHOD_3K_BATCH_ACTIVE"
+    method = next(item for item in value["methods"] if item["method_id"] == "qgs")
+    method["three_k_training_allowed"] = True
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is False
     assert "method training flags disagree with the allowlist" in result["errors"]
@@ -62,7 +60,17 @@ def test_training_flag_without_gate_fails_closed(tmp_path: Path) -> None:
 
 def test_one_use_gate_hash_is_bound(tmp_path: Path) -> None:
     value = load_registry()
-    value["current_one_use_launch_gate"]["sha256"] = "0" * 64
+    method = next(item for item in value["methods"] if item["method_id"] == "qgs")
+    method["lifecycle_role"] = "ACTIVE_3K_CANDIDATE"
+    method["formal_3k_result"] = {"status": "NOT_ATTEMPTED"}
+    method["three_k_training_allowed"] = True
+    value["status"] = "EIGHT_METHOD_3K_BATCH_QGS_GATE_REPLAY_NEGATIVE_TEST"
+    value["per_method_training_allowed_methods"] = ["qgs"]
+    value["current_one_use_launch_gate"] = {
+        "method_id": "qgs",
+        "path": "configs/launch_gates/m3m_gcp_native_quarter_qgs_3k_seed0_30k_gate_v1.json",
+        "sha256": "0" * 64,
+    }
     result = validate_mutation(tmp_path, value)
     assert result["passed"] is False
     assert "one-use gate file SHA mismatch" in result["errors"]

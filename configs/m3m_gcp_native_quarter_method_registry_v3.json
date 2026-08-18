@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v3",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "EIGHT_METHOD_3K_BATCH_PGSR_AND_RADE_GS_COMPLETE_QGS_ONE_USE_GATE_OPEN",
+  "status": "EIGHT_METHOD_3K_BATCH_ACTIVE",
   "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
   "execution_plan": {
     "path": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
@@ -248,7 +248,7 @@
     {
       "method_id": "qgs",
       "display_name": "Quadratic Gaussian Splatting",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "quadratic_gaussian_surfel",
       "source": {
         "official_repository": "https://github.com/will-zzy/QGS",
@@ -270,10 +270,20 @@
       "truth_deny_report": "docs/protocol_evidence/qgs_native_quarter_truth_deny_v1.json",
       "truth_deny_report_sha256": "f0ca27ed879a35526549fa6fe15f9041ece2963561b285d40bbb6fa8327a5764",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/qgs_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "4ce11551ceec9a057a0d24102f8e733996133df7de6d744fd1af5c6f7d0dccf1",
+        "final_checkpoint_sha256": "041c7a623dfd3cd9a9799ad7b785f54bfbc76d050d04bc315ee5316cf76bef81",
+        "packet_manifest_sha256": "4ae3f25f7caacdc158d223b7970255010de27b58545e193aa2557170b8d0d663",
+        "checkpoint_rmse_3d_m": 0.024134399151363475,
+        "checkpoint_rmse_h_m": 0.014369772715102341,
+        "checkpoint_rmse_z_m": 0.019390174174401694,
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "gsprior",
@@ -471,12 +481,8 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["qgs"],
-  "current_one_use_launch_gate": {
-    "method_id": "qgs",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_qgs_3k_seed0_30k_gate_v1.json",
-    "sha256": "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5"
-  },
+  "per_method_training_allowed_methods": [],
+  "current_one_use_launch_gate": null,
   "batch_controller": {
     "preparation_allowed": true,
     "formal_training_requires_method_gate": true,
