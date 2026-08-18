@@ -1,0 +1,97 @@
+{
+  "schema": "m3m_gcp_native_quarter_citygaussian_v2_recipe_v1",
+  "recipe_id": "m3m_gcp_native_quarter_citygaussian_v2_3k_coarse30k_fine60k_seed0_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "FROZEN_PRE_RESULT_QUALIFICATION_PENDING",
+  "method": {
+    "method_id": "citygaussian_v2",
+    "display_name": "CityGaussianV2",
+    "official_repository": "https://github.com/Linketic/CityGaussian",
+    "input_class": "rgb_colmap_external_geometry_prior",
+    "route_selection": "official MatrixCity aerial coarse/fine route reduced to one spatial block for the 3K scene; selected before any CityGaussianV2 result"
+  },
+  "source_provenance": {
+    "repository_commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+    "repository_tree": "be088977358cb36bac000caec396eff3758c74b2",
+    "license_status": "present_at_frozen_commit",
+    "official_file_sha256": {
+      "configs/citygsv2_mc_aerial_coarse_sh2.yaml": "fdec7a1005500867e6008f77b4a8468d3c02c4b508015e7e8ebc96e23c7b5874",
+      "configs/citygsv2_mc_aerial_sh2_trim.yaml": "47365924cb23991c915aae1e7a658b4b00952cacee70e8741c253b42aa5e1912",
+      "main.py": "2f47ec59563b781a12d3bf933c98f87480e6c094911473a8dec7fb4db9f38758",
+      "utils/partition_citygs.py": "861ad90ddab387a99bbc738efdf1e0dcb84ea4c6f1047843058e2aa27150c041",
+      "utils/train_citygs_partitions.py": "1917d9b2ccabb6d33cacc61e496de04fc43a9a4346e51b4948b518806a446af0",
+      "utils/merge_citygs_ckpts.py": "4f8da366a3b5c13f6f2626718921a802aec0e837f86b7805431fac91ef6ac7ef"
+    },
+    "training_source_modified": false
+  },
+  "input_release": {
+    "base_directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "base_release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "training_dataset": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_3000_20260602",
+    "train_view_count": 82,
+    "heldout_view_count": 12,
+    "loaded_width": 1414,
+    "loaded_height": 1025,
+    "down_sample_factor": 1.0,
+    "image_transform": "none; byte-identical native-quarter JPEGs",
+    "track_compatibility_evidence": "docs/protocol_evidence/citygaussian_native_quarter_track_compatibility_v1.json",
+    "track_compatibility_evidence_sha256": "e8e48b14e276cdd8867769cecde739a0800b9951cca8de056824567f578e5163",
+    "training_track_rule": "select the 82 training image records directly from the frozen 94-view native-quarter PINHOLE model; copy xys and point3D IDs without pixel rescaling; retain the byte-identical original points3D.bin",
+    "authoritative_evaluation_camera_model_replaced": false
+  },
+  "external_geometry_prior": {
+    "name": "Depth Anything V2 Large",
+    "official_repository": "https://github.com/DepthAnything/Depth-Anything-V2",
+    "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+    "encoder": "vitl",
+    "command_mode": "--pred-only --grayscale",
+    "input_size": 518,
+    "run_py_sha256": "b8beab6341314bc864cfc0283e0e303f55571af4e2e456c3d3afbc4aae67249a",
+    "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+    "scale_fit_point_max_error": 1.5,
+    "training_rgb_only": true,
+    "heldout_rgb_gcp_lidar_used": false,
+    "preparation_entrypoint": "code/gcp/prepare_citygaussian_v2_depth_prior.py",
+    "preparation_entrypoint_sha256": "16f00ed9064bbf47600bf40bc4eec62f500ec4149646f1150f04d0413edefd28"
+  },
+  "training": {
+    "official_route": "MatrixCity aerial coarse 30K followed by trim-2DGS fine 60K, one 1x1 block, then official checkpoint merge",
+    "official_budget": {
+      "type": "two_stage_steps",
+      "coarse_steps": 30000,
+      "fine_steps": 60000
+    },
+    "seed": 0,
+    "coarse_config": "configs/citygsv2_mc_aerial_coarse_sh2.yaml",
+    "fine_config": "configs/citygsv2_mc_aerial_sh2_trim.yaml",
+    "block_dim": [1, 1],
+    "content_threshold": 0.05,
+    "coarse_save_iterations": [30000],
+    "fine_save_iterations": [30000, 60000],
+    "formal_checkpoint": "official merged fine-stage step-60000 checkpoint",
+    "resume_allowed": false,
+    "result_driven_retry_allowed": false,
+    "gcp_lidar_or_heldout_rgb_visible_to_training": false
+  },
+  "execution": {
+    "entrypoint": "code/gcp/run_citygaussian_v2_pipeline.py",
+    "entrypoint_sha256": "e7257fa1a68937f1c9fbbcfd6a019312f963423ff2fa9ac5b9797bf64251406c",
+    "mode": "formal",
+    "coarse_steps": 30000,
+    "fine_steps": 60000,
+    "preexisting_output_allowed": false,
+    "overwrite_allowed": false,
+    "one_use_method_gate_required": true
+  },
+  "evaluation_adapter": {
+    "config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
+    "config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1",
+    "single_gpu": true
+  }
+}

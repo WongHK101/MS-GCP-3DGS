@@ -394,8 +394,60 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(by_id.get("citygs_x", {}).get("internal_numeric_reporting_allowed") is True, "CityGS-X internal numeric-reporting authorization missing")
     require(by_id.get("citygs_x", {}).get("redistribution_allowed") is False, "CityGS-X redistribution was enabled")
 
+    require(
+        by_id.get("citygaussian_v2", {}).get("input_class") == "rgb_colmap_external_geometry_prior",
+        "CityGaussianV2 input stratum mismatch",
+    )
     require(by_id.get("citygs_x", {}).get("input_class") == "rgb_colmap_external_geometry_prior", "CityGS-X input stratum mismatch")
     require(by_id.get("metrogs", {}).get("input_class") == "rgb_colmap_external_geometry_prior", "MetroGS input stratum mismatch")
+    city_recipe_refs = {
+        "citygaussian_v2": (
+            "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
+            "6090506a05d40df668a8db7851e0f34111597f6451e50dfd15696e0b073c2189",
+            "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
+            "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+        ),
+        "citygs_x": (
+            "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
+            "4d36b431610f27bb470afa694ad529cc4d7e968bb9c17dad5fbc6ca14839a7ed",
+            "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
+            "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
+        ),
+    }
+    for method_id, (recipe_relative, recipe_sha, adapter_relative, adapter_sha) in city_recipe_refs.items():
+        method = by_id.get(method_id, {})
+        require(method.get("recipe") == recipe_relative, f"{method_id}: recipe path mismatch")
+        require(method.get("recipe_sha256") == recipe_sha, f"{method_id}: recipe SHA mismatch")
+        require(method.get("adapter_config") == adapter_relative, f"{method_id}: adapter path mismatch")
+        require(method.get("adapter_config_sha256") == adapter_sha, f"{method_id}: adapter SHA mismatch")
+        recipe_path = repo_root / recipe_relative
+        adapter_path = repo_root / adapter_relative
+        require(recipe_path.is_file(), f"{method_id}: recipe file missing")
+        require(adapter_path.is_file(), f"{method_id}: adapter file missing")
+        if recipe_path.is_file():
+            require(file_sha256(recipe_path) == recipe_sha, f"{method_id}: recipe file SHA mismatch")
+            recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+            require(recipe.get("protocol_id") == "m3m_gcp_native_quarter_geometry_v2", f"{method_id}: recipe protocol mismatch")
+            require(recipe.get("status") == "FROZEN_PRE_RESULT_QUALIFICATION_PENDING", f"{method_id}: recipe pre-result status mismatch")
+            require(recipe.get("method", {}).get("input_class") == "rgb_colmap_external_geometry_prior", f"{method_id}: recipe input stratum mismatch")
+            prior = recipe.get("external_geometry_prior", {})
+            require(
+                prior.get("repository_commit") == "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+                f"{method_id}: Depth Anything V2 commit mismatch",
+            )
+            require(
+                prior.get("weight_sha256") == "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+                f"{method_id}: Depth Anything V2 weight mismatch",
+            )
+        if adapter_path.is_file():
+            require(file_sha256(adapter_path) == adapter_sha, f"{method_id}: adapter file SHA mismatch")
+        priors = method.get("external_priors", [])
+        require(len(priors) == 1, f"{method_id}: external-prior inventory mismatch")
+        if len(priors) == 1:
+            prior = priors[0]
+            require(prior.get("repository_commit") == "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf", f"{method_id}: registered prior commit mismatch")
+            require(prior.get("weight_sha256") == "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345", f"{method_id}: registered prior weight mismatch")
+            require(prior.get("freeze_status") == "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT", f"{method_id}: prior route not frozen")
     metro_route = by_id.get("metrogs", {}).get("selected_external_prior_route", {})
     require(str(metro_route.get("route", "")).startswith("Pi3-Align with Xname=Pi3"), "MetroGS Pi3 route not frozen")
     require(metro_route.get("best_of_routes_allowed") is False, "MetroGS best-of-routes enabled")

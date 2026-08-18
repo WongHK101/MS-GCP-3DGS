@@ -1,0 +1,99 @@
+{
+  "schema": "m3m_gcp_native_quarter_citygs_x_recipe_v1",
+  "recipe_id": "m3m_gcp_native_quarter_citygs_x_3k_100k_seed0_v1",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "status": "FROZEN_PRE_RESULT_QUALIFICATION_PENDING",
+  "method": {
+    "method_id": "citygs_x",
+    "display_name": "CityGS-X",
+    "official_repository": "https://github.com/gyy456/CityGS-X",
+    "input_class": "rgb_colmap_external_geometry_prior",
+    "route_selection": "official 100K custom-scene all-block route with one available GPU; selected before any CityGS-X result"
+  },
+  "source_provenance": {
+    "repository_commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+    "repository_tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+    "license_status": "missing_at_frozen_commit_internal_numeric_test_only_no_code_environment_or_model_redistribution",
+    "official_train_py_sha256": "ba9658bc5bcbc7b0a7620aca776cc2736a045cccd5267276f21ed4e6557d4591"
+  },
+  "input_release": {
+    "base_directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "base_release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "training_dataset": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_3000_20260602/train/block_all",
+    "train_view_count": 82,
+    "heldout_view_count": 12,
+    "loaded_width": 1414,
+    "loaded_height": 1025,
+    "resolution": 1,
+    "image_transform": "none; byte-identical native-quarter JPEGs",
+    "track_compatibility_evidence": "docs/protocol_evidence/citygaussian_native_quarter_track_compatibility_v1.json",
+    "track_compatibility_evidence_sha256": "e8e48b14e276cdd8867769cecde739a0800b9951cca8de056824567f578e5163",
+    "training_track_rule": "select the same 82 direct native-quarter camera/image records and original points3D tracks; no pixel rescaling or point filtering"
+  },
+  "external_geometry_prior": {
+    "name": "Depth Anything V2 Large",
+    "official_repository": "https://github.com/DepthAnything/Depth-Anything-V2",
+    "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+    "encoder": "vitl",
+    "command_mode": "--pred-only --grayscale",
+    "input_size": 518,
+    "run_py_sha256": "b8beab6341314bc864cfc0283e0e303f55571af4e2e456c3d3afbc4aae67249a",
+    "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+    "pixel_threshold": 1,
+    "training_rgb_only": true,
+    "heldout_rgb_gcp_lidar_used": false,
+    "preparation_entrypoint": "code/gcp/prepare_citygs_x_depth_prior.py",
+    "preparation_entrypoint_sha256": "c3a437ade18fe3302c56a29550a6d423e45c98b47fdf22e10c97d9db9aceea2b"
+  },
+  "compatibility": {
+    "camera_utils_patch": "patches/citygs_x/native_quarter_case_insensitive_prior_suffix_27617f2_v1.patch",
+    "camera_utils_patch_sha256": "c96ca17794bf3dafae630e342e1bbf3862842262e97791b8baad614e56fc63d8",
+    "patched_camera_utils_sha256": "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3",
+    "scope": "accept the upstream prior filename case variants only; no algorithm or hyperparameter change",
+    "minimal_pytorch3d_transforms_namespace": "compat/citygs_x/pytorch3d_transforms_minimal_v1",
+    "training_renderer_or_rasterizer_modified": false
+  },
+  "training": {
+    "official_route": "official custom-scene CityGS-X route",
+    "official_budget": {"type": "iterations", "value": 100000},
+    "seed": 0,
+    "batch_size": 1,
+    "resolution": 1,
+    "single_view_weight_from_iter": 10000,
+    "depth_l1_weight_init": 0.5,
+    "depth_l1_weight_final": 0.01,
+    "depth_prior_loss_from_iter": 10000,
+    "multi_view_weight_from_iter": 30000,
+    "depth_prior_end_iter": 30000,
+    "multi_view_patch_size": 3,
+    "default_voxel_size": 0.001,
+    "test_iterations": [100000],
+    "save_iterations": [100000],
+    "formal_checkpoint": "point_cloud/iteration_100000/point_cloud.ply",
+    "resume_allowed": false,
+    "result_driven_retry_allowed": false,
+    "gcp_lidar_or_heldout_rgb_visible_to_training": false
+  },
+  "execution": {
+    "entrypoint": "code/gcp/run_citygs_x_training.py",
+    "entrypoint_sha256": "fc2f8de9e80c70f8fd4f8a691bcf720ca8239803a9d6b6ff5cff84ed3b81cf77",
+    "mode": "formal",
+    "iterations": 100000,
+    "preexisting_model_path_allowed": false,
+    "overwrite_allowed": false,
+    "one_use_method_gate_required": true
+  },
+  "evaluation_adapter": {
+    "config": "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
+    "config_sha256": "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "method_specific_sim3_allowed": false
+  },
+  "runtime": {
+    "server": "AutoDL-901",
+    "environment_root": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/py310-torch2.7.1-cu128-v1",
+    "single_gpu": true,
+    "redistribution_allowed": false,
+    "internal_numeric_reporting_allowed": true
+  }
+}

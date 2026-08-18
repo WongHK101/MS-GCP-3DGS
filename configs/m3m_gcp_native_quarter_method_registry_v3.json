@@ -334,8 +334,22 @@
         "license_status": "present_at_frozen_commit",
         "transfer_archive_sha256": "124bd8f37a8182c5b41abb5b9c55e9651bec4225132a215e1a6abafb824bd6f7"
       },
-      "input_class": "rgb_colmap_only",
+      "input_class": "rgb_colmap_external_geometry_prior",
       "route_selection": "official single-block custom-scene route for the 3K scene; no result-driven repartitioning",
+      "recipe": "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
+      "recipe_sha256": "6090506a05d40df668a8db7851e0f34111597f6451e50dfd15696e0b073c2189",
+      "adapter_config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
+      "adapter_config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+      "external_priors": [
+        {
+          "name": "Depth Anything V2 Large",
+          "official_encoder": "vitl",
+          "official_command_mode": "--pred-only --grayscale",
+          "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+          "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+          "freeze_status": "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT"
+        }
+      ],
       "technical_qualification_status": "SOURCE_FROZEN_RECIPE_PENDING",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": false,
@@ -356,12 +370,18 @@
         "transfer_archive_sha256": "2249bfef08137170992b15cd5abc8ed267a18b7f172d94aacd53746332766ebc"
       },
       "input_class": "rgb_colmap_external_geometry_prior",
+      "recipe": "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
+      "recipe_sha256": "4d36b431610f27bb470afa694ad529cc4d7e968bb9c17dad5fbc6ca14839a7ed",
+      "adapter_config": "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
+      "adapter_config_sha256": "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
       "external_priors": [
         {
           "name": "Depth Anything V2 Large",
           "official_encoder": "vitl",
           "official_command_mode": "--pred-only --grayscale",
-          "freeze_status": "PENDING_EXACT_REPOSITORY_COMMIT_WEIGHT_SHA256_AND_COMMAND"
+          "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+          "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+          "freeze_status": "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT"
         }
       ],
       "redistribution_allowed": false,
