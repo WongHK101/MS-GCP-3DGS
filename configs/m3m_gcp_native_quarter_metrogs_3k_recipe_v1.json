@@ -123,7 +123,7 @@
   },
   "evaluation_adapter": {
     "config": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
-    "config_sha256": "2ce73e7f44bd85f0b3a02040af234a87e25b927b65298803e68d1cb7307977ae",
+    "config_sha256": "164fda82f2643f75410da83afa36d20b172280318bf62ef8eb9dc7631aa19c9b",
     "exporter": "code/gcp/export_metrogs_depth_maps.py",
     "exporter_sha256": "14b2a33430d4f037ce7298d36d49eedfe2f3999cb263200d5048751c9196d96c",
     "raw_camera_z_to_protocol_scale": 1.0,

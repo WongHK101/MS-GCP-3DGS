@@ -73,10 +73,10 @@
     "method_specific_sim3_allowed": false
   },
   "patched_linux_file_sha256": {
-    "internal/renderers/metrogs_renderer.py": "da71d0ae2ff1c6f6f9058c33275ee896fe6549cfea59dad9ac1bc4a8b97c896f",
-    "submodules/dist-2dgs/cuda_rasterizer/auxiliary.h": "1e8e9514f8cdd8e81cc5d85214aae1fda584031651713065f90bed5aeb695000",
-    "submodules/dist-2dgs/cuda_rasterizer/forward.cu": "307db18608c857a7b029347f54f134e94d9524fe2a18cef78f02d132b5c78a66",
-    "submodules/dist-2dgs/rasterize_points.cu": "f8e437573ef8c50fa8e12b10f5bcba8fe7f14ef3ab6c8f2b422ac523545fc062"
+    "internal/renderers/metrogs_renderer.py": "5b2efbf811745cc0bac90f74d9a6fe2b804bdee05c7d2dfc9b560a838dcc90b4",
+    "submodules/dist-2dgs/cuda_rasterizer/auxiliary.h": "6c05765817acd1c09a9c42aa4a6f810c373b0fdd8ff486b9da935c19fdc8f456",
+    "submodules/dist-2dgs/cuda_rasterizer/forward.cu": "42b969a67cddbba76ff82ffff4b64a72c27f465067b21bb213242ab26b623917",
+    "submodules/dist-2dgs/rasterize_points.cu": "8484fc8f1df69cddc5433cf1bf0ccd8c162ee865f9c723c12c27d849d3532bbf"
   },
   "exporter": {
     "script": "code/gcp/export_metrogs_depth_maps.py",
