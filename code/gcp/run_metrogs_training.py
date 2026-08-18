@@ -163,7 +163,9 @@ def build_commands(
 
 def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     repo = args.repo.resolve()
-    python = args.python.resolve()
+    # Preserve the virtual-environment launcher instead of resolving its
+    # symlink to the system interpreter and losing the frozen packages.
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     model_path = args.model_path.resolve()
     prior_path = args.prior_manifest.resolve()
@@ -339,7 +341,7 @@ def main() -> int:
     validate_budget(args.mode, args.iterations)
     verified = verify_inputs(args)
     repo = args.repo.resolve()
-    python = args.python.resolve()
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     model_path = args.model_path.resolve()
     additional_ply = args.additional_ply.resolve()

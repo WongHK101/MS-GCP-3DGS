@@ -43,13 +43,16 @@
     "training_rgb_only": true,
     "heldout_rgb_gcp_lidar_used": false,
     "preparation_entrypoint": "code/gcp/prepare_citygs_x_depth_prior.py",
-    "preparation_entrypoint_sha256": "54db04a8cb84a187e58c37b68a8ae36bc8754bd7a7b47927b0b0bc80c0cc72cb"
+    "preparation_entrypoint_sha256": "036c0a97ca58f8474df6f657eaa221991eb81ade4abc133680eebb8a015cc3e3"
   },
   "compatibility": {
     "camera_utils_patch": "patches/citygs_x/native_quarter_case_insensitive_prior_suffix_27617f2_v1.patch",
     "camera_utils_patch_sha256": "c96ca17794bf3dafae630e342e1bbf3862842262e97791b8baad614e56fc63d8",
     "patched_camera_utils_sha256": "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3",
-    "scope": "accept the upstream prior filename case variants only; no algorithm or hyperparameter change",
+    "dataset_readers_patch": "patches/citygs_x/native_quarter_preserve_existing_image_suffix_27617f2_v1.patch",
+    "dataset_readers_patch_sha256": "49a336be3090ff1cad382fe3f0f2e0d69eca12aefbd2876bc8dacc4c38b79144",
+    "patched_dataset_readers_sha256": "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c",
+    "scope": "preserve an existing frozen upper-case JPEG path and accept upstream prior filename case variants only; no pixel, camera, algorithm, or hyperparameter change",
     "minimal_pytorch3d_transforms_namespace": "compat/citygs_x/pytorch3d_transforms_minimal_v1",
     "training_renderer_or_rasterizer_modified": false
   },
@@ -76,7 +79,7 @@
   },
   "execution": {
     "entrypoint": "code/gcp/run_citygs_x_training.py",
-    "entrypoint_sha256": "fc2f8de9e80c70f8fd4f8a691bcf720ca8239803a9d6b6ff5cff84ed3b81cf77",
+    "entrypoint_sha256": "ea1c68a74577a7023f8ad1eed30bd57c125681793326831e7dc0f7e8b2f13bac",
     "mode": "formal",
     "iterations": 100000,
     "preexisting_model_path_allowed": false,

@@ -102,7 +102,9 @@ def main() -> int:
     args = parser.parse_args()
 
     repo = args.repo.resolve()
-    python = args.python.resolve()
+    # Preserve the virtual-environment launcher instead of resolving its
+    # symlink to the system interpreter and losing the frozen packages.
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     output_root = args.output_root.resolve()
     if args.coarse_steps <= 0 or args.fine_steps <= 0:

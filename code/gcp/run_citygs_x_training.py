@@ -15,6 +15,7 @@ from typing import Any
 CITYGS_X_COMMIT = "27617f2486505e3b6fe75345edf7c2b11161bc2a"
 CITYGS_X_TREE = "f8b1b5148c1f47420ab698fd069bdb78acf901ab"
 CAMERA_UTILS_COMPAT_SHA256 = "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3"
+DATASET_READERS_COMPAT_SHA256 = "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c"
 FORMAL_MANIFEST_FILE_SHA256 = "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e"
 FORMAL_MANIFEST_CANONICAL_SHA256 = "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8"
 
@@ -91,7 +92,9 @@ def build_command(
 
 def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     repo = args.repo.resolve()
-    python = args.python.resolve()
+    # Preserve the virtual-environment launcher instead of resolving its
+    # symlink to the system interpreter and losing the frozen packages.
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     model_path = args.model_path.resolve()
     prior_path = args.prior_manifest.resolve()
@@ -101,6 +104,7 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     for required in (
         repo / ".git",
         repo / "train.py",
+        repo / "scene" / "dataset_readers.py",
         repo / "utils" / "camera_utils.py",
         python,
         dataset / "images",
@@ -120,11 +124,19 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("CityGS-X repository commit mismatch")
     if git_output(repo, "rev-parse", "HEAD^{tree}") != CITYGS_X_TREE:
         raise RuntimeError("CityGS-X repository tree mismatch")
-    if git_output(repo, "diff", "--name-only") != "utils/camera_utils.py":
+    if git_output(repo, "diff", "--name-only") != (
+        "scene/dataset_readers.py\nutils/camera_utils.py"
+    ):
         raise RuntimeError("unexpected CityGS-X training-runtime source diff")
     camera_hash = sha256(repo / "utils" / "camera_utils.py")
     if camera_hash != CAMERA_UTILS_COMPAT_SHA256:
         raise RuntimeError(f"CityGS-X camera_utils compatibility hash mismatch: {camera_hash}")
+    dataset_readers_hash = sha256(repo / "scene" / "dataset_readers.py")
+    if dataset_readers_hash != DATASET_READERS_COMPAT_SHA256:
+        raise RuntimeError(
+            "CityGS-X dataset_readers compatibility hash mismatch: "
+            f"{dataset_readers_hash}"
+        )
 
     prior = json.loads(prior_path.read_text(encoding="utf-8"))
     if prior.get("status") != "PASS" or prior.get("passed") is not True:
@@ -161,6 +173,7 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "prior_manifest": str(prior_path),
         "prior_manifest_sha256": sha256(prior_path),
         "camera_utils_sha256": camera_hash,
+        "dataset_readers_sha256": dataset_readers_hash,
         "training_image_count": image_count,
         "access_boundary": access,
     }
@@ -180,7 +193,7 @@ def main() -> int:
 
     verified = verify_inputs(args)
     repo = args.repo.resolve()
-    python = args.python.resolve()
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     model_path = args.model_path.resolve()
     compat = args.pytorch3d_compat.resolve()
@@ -230,8 +243,12 @@ def main() -> int:
         "source": {
             "commit": CITYGS_X_COMMIT,
             "tree": CITYGS_X_TREE,
-            "training_runtime_diff": ["utils/camera_utils.py"],
+            "training_runtime_diff": [
+                "scene/dataset_readers.py",
+                "utils/camera_utils.py",
+            ],
             "camera_utils_sha256": verified["camera_utils_sha256"],
+            "dataset_readers_sha256": verified["dataset_readers_sha256"],
         },
         "input": verified,
         "model_path": str(model_path),

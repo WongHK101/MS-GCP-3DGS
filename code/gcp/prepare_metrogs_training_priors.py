@@ -316,7 +316,9 @@ def main() -> int:
     args = parser.parse_args()
 
     repo = args.repo.resolve()
-    python = args.python.resolve()
+    # Preserve the virtual-environment launcher instead of resolving its
+    # symlink to the system interpreter and losing the frozen packages.
+    python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     manifest_path = args.formal_input_manifest.resolve()
     moge_path = args.moge_path.resolve()

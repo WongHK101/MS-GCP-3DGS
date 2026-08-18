@@ -75,7 +75,7 @@
   },
   "execution": {
     "entrypoint": "code/gcp/run_citygaussian_v2_pipeline.py",
-    "entrypoint_sha256": "e7257fa1a68937f1c9fbbcfd6a019312f963423ff2fa9ac5b9797bf64251406c",
+    "entrypoint_sha256": "96c465196fb18038e99ae04152f53319e5daeef36f4f1ad6ccab104b49a548a2",
     "mode": "formal",
     "coarse_steps": 30000,
     "fine_steps": 60000,

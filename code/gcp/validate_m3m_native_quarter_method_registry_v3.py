@@ -469,13 +469,13 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     city_recipe_refs = {
         "citygaussian_v2": (
             "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-            "1e47363b01045343de1c5134ff8275b72a972e66e2ecf3ec29ec340a89e92e10",
+            "f3dadccd3765cd95fdd59fdbdc5d77a1c60c7e2ecde09320148714d1b2c6dd7c",
             "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
             "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
         ),
         "citygs_x": (
             "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
-            "630dce7cb0718225d9239fd7a13cc251527916671802470284d0464bfb92b28e",
+            "351de0d69ae8d853158f804d1ba3258f59da4cedf1a73270f4c0e7aec510ec41",
             "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
             "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
         ),
@@ -524,6 +524,56 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                     == file_sha256(preparation_entrypoint),
                     f"{method_id}: preparation entrypoint SHA mismatch",
                 )
+            if method_id == "citygs_x":
+                compatibility = recipe.get("compatibility", {})
+                compatibility_paths = {
+                    "camera_utils_patch": "camera_utils_patch_sha256",
+                    "dataset_readers_patch": "dataset_readers_patch_sha256",
+                }
+                for path_key, sha_key in compatibility_paths.items():
+                    relative = compatibility.get(path_key)
+                    require(
+                        isinstance(relative, str) and bool(relative),
+                        f"citygs_x: {path_key} path missing",
+                    )
+                    if isinstance(relative, str) and relative:
+                        patch_path = repo_root / relative
+                        require(patch_path.is_file(), f"citygs_x: {path_key} missing")
+                        if patch_path.is_file():
+                            require(
+                                compatibility.get(sha_key) == file_sha256(patch_path),
+                                f"citygs_x: {path_key} SHA mismatch",
+                            )
+                require(
+                    compatibility.get("patched_camera_utils_sha256")
+                    == "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3",
+                    "citygs_x: patched camera_utils identity mismatch",
+                )
+                require(
+                    compatibility.get("patched_dataset_readers_sha256")
+                    == "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c",
+                    "citygs_x: patched dataset_readers identity mismatch",
+                )
+            expected_execution_entrypoint = {
+                "citygaussian_v2": "code/gcp/run_citygaussian_v2_pipeline.py",
+                "citygs_x": "code/gcp/run_citygs_x_training.py",
+            }[method_id]
+            execution_entrypoint = repo_root / expected_execution_entrypoint
+            execution = recipe.get("execution", {})
+            require(
+                execution.get("entrypoint") == expected_execution_entrypoint,
+                f"{method_id}: execution entrypoint path mismatch",
+            )
+            require(
+                execution_entrypoint.is_file(),
+                f"{method_id}: execution entrypoint missing",
+            )
+            if execution_entrypoint.is_file():
+                require(
+                    execution.get("entrypoint_sha256")
+                    == file_sha256(execution_entrypoint),
+                    f"{method_id}: execution entrypoint SHA mismatch",
+                )
         if adapter_path.is_file():
             require(file_sha256(adapter_path) == adapter_sha, f"{method_id}: adapter file SHA mismatch")
         priors = method.get("external_priors", [])
@@ -556,7 +606,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(metro_method.get("recipe") == metro_recipe_relative, "MetroGS recipe path mismatch")
     require(
         metro_method.get("recipe_sha256")
-        == "07c4ce5c4f2d13f43b3419d08ecbfa2f53161e87472acbb1a863ea5342d1d34d",
+        == "1864d720d53a082832ac69cfec0b81f9f4db42ebb5ceb638fa1e13c09de2d13c",
         "MetroGS recipe recorded SHA mismatch",
     )
     require(metro_method.get("renderer_adapter") == metro_adapter_relative, "MetroGS adapter path mismatch")
@@ -593,6 +643,32 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             == file_sha256(metro_adapter_path),
             "MetroGS recipe records the wrong adapter SHA",
         )
+        metro_preparation_path = repo_root / "code/gcp/prepare_metrogs_training_priors.py"
+        metro_wrapper_path = repo_root / "code/gcp/run_metrogs_training.py"
+        require(metro_preparation_path.is_file(), "MetroGS preparation script missing")
+        require(metro_wrapper_path.is_file(), "MetroGS training wrapper missing")
+        if metro_preparation_path.is_file():
+            require(
+                metro_recipe.get("external_prior_route", {}).get("preparation_script")
+                == "code/gcp/prepare_metrogs_training_priors.py",
+                "MetroGS preparation script path mismatch",
+            )
+            require(
+                metro_recipe.get("external_prior_route", {}).get("preparation_script_sha256")
+                == file_sha256(metro_preparation_path),
+                "MetroGS preparation script SHA mismatch",
+            )
+        if metro_wrapper_path.is_file():
+            require(
+                metro_recipe.get("execution", {}).get("wrapper")
+                == "code/gcp/run_metrogs_training.py",
+                "MetroGS training wrapper path mismatch",
+            )
+            require(
+                metro_recipe.get("execution", {}).get("wrapper_sha256")
+                == file_sha256(metro_wrapper_path),
+                "MetroGS training wrapper SHA mismatch",
+            )
 
     for method_id in ("3dgs_original", "2dgs"):
         method = by_id.get(method_id, {})

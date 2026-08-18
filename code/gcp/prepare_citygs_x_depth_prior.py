@@ -91,6 +91,7 @@ def main() -> int:
     parser.add_argument("--manifest_output", type=Path, required=True)
     parser.add_argument("--expected_city_commit", required=True)
     parser.add_argument("--expected_camera_utils_sha256", required=True)
+    parser.add_argument("--expected_dataset_readers_sha256", required=True)
     parser.add_argument("--expected_da2_commit", required=True)
     parser.add_argument("--expected_da2_run_sha256", required=True)
     parser.add_argument("--expected_da2_weight_sha256", required=True)
@@ -137,6 +138,7 @@ def main() -> int:
         city_repo / "utils" / "make_depth_scale.py",
         city_repo / "multi_view_precess.py",
         city_repo / "utils" / "camera_utils.py",
+        city_repo / "scene" / "dataset_readers.py",
         python,
         formal_manifest_path,
         image_dir,
@@ -164,12 +166,17 @@ def main() -> int:
         cwd=city_repo,
         text=True,
     ).splitlines()
-    if city_status != [" M utils/camera_utils.py"]:
+    if city_status != [" M scene/dataset_readers.py", " M utils/camera_utils.py"]:
         raise RuntimeError(f"unexpected CityGS-X training-runtime diff: {city_status}")
     camera_utils_hash = require_sha256(
         city_repo / "utils" / "camera_utils.py",
         args.expected_camera_utils_sha256,
         "CityGS-X case-insensitive prior-suffix compatibility file",
+    )
+    dataset_readers_hash = require_sha256(
+        city_repo / "scene" / "dataset_readers.py",
+        args.expected_dataset_readers_sha256,
+        "CityGS-X preserve-existing-image-suffix compatibility file",
     )
     sparse_hashes = {
         "cameras.bin": require_sha256(
@@ -347,11 +354,12 @@ def main() -> int:
         "citygs_x": {
             "repository_commit": city_commit,
             "camera_utils_sha256": camera_utils_hash,
+            "dataset_readers_sha256": dataset_readers_hash,
             "make_depth_scale_sha256": sha256(city_repo / "utils" / "make_depth_scale.py"),
             "multi_view_precess_sha256": sha256(city_repo / "multi_view_precess.py"),
             "resolution": args.resolution,
             "pixel_thred": args.pixel_thred,
-            "suffix_compatibility_scope": "I/O-only mapping of frozen upper-case image suffixes to official PNG prior filenames",
+            "suffix_compatibility_scope": "I/O-only preservation of an existing frozen upper-case JPEG path plus mapping to official PNG prior filenames",
         },
         "depth_anything_v2": {
             "repository_commit": args.expected_da2_commit,

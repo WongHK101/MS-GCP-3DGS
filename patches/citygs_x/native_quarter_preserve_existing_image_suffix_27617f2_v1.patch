@@ -1,0 +1,16 @@
+diff --git a/scene/dataset_readers.py b/scene/dataset_readers.py
+--- a/scene/dataset_readers.py
++++ b/scene/dataset_readers.py
+@@ -124,7 +124,11 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, depths_param
+             ), "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
+ 
+         image_path = os.path.join(images_folder, os.path.basename(extr.name))
+-        image_path = image_path.replace('JPG','jpg')
++        lowercase_jpg_compat_path = image_path.replace('JPG','jpg')
++        if not os.path.exists(image_path) and os.path.exists(
++            lowercase_jpg_compat_path
++        ):
++            image_path = lowercase_jpg_compat_path
+         image_name = os.path.basename(image_path).split(".")[0]
+         image = Image.open(
+             image_path
