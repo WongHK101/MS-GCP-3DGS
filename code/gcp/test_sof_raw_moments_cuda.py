@@ -145,27 +145,59 @@ def run(eval_repo: Path) -> dict[str, Any]:
         raise RuntimeError("CUDA is unavailable")
     extension = next(Path(diff_gaussian_rasterization.__file__).resolve().parent.glob("_C*.so"))
 
+    def isolated_checks(label: str, raw: dict[str, float | int], z: float, opacity: float) -> list[dict[str, Any]]:
+        alpha = float(raw["A"])
+        return [
+            assert_close(
+                f"{label}_A_input_response",
+                alpha,
+                opacity,
+                rtol=5e-4,
+            ),
+            assert_close(f"{label}_M1_identity", float(raw["M1"]), alpha * z),
+            assert_close(f"{label}_M2_identity", float(raw["M2"]), alpha * z * z),
+            assert_close(f"{label}_H_identity", float(raw["H"]), alpha / z),
+        ]
+
     single = raw_peak(rasterize_raw(torch, eval_repo, [20.0], [0.25]))
     single_checks = [
-        assert_close("single_A", float(single["A"]), 0.25),
-        assert_close("single_M1", float(single["M1"]), 5.0),
-        assert_close("single_M2", float(single["M2"]), 100.0),
-        assert_close("single_H", float(single["H"]), 0.0125),
+        *isolated_checks("single", single, 20.0, 0.25),
     ]
 
+    front = raw_peak(rasterize_raw(torch, eval_repo, [10.0], [0.4]))
+    back = raw_peak(rasterize_raw(torch, eval_repo, [30.0], [0.5]))
+    front_alpha = float(front["A"])
+    back_alpha = float(back["A"])
+    front_weight = front_alpha
+    back_weight = (1.0 - front_alpha) * back_alpha
+    expected_a = front_weight + back_weight
+    expected_m1 = front_weight * 10.0 + back_weight * 30.0
+    expected_m2 = front_weight * 100.0 + back_weight * 900.0
+    expected_h = front_weight / 10.0 + back_weight / 30.0
     two = raw_peak(rasterize_raw(torch, eval_repo, [10.0, 30.0], [0.4, 0.5]))
     two_checks = [
-        assert_close("two_A", float(two["A"]), 0.7),
-        assert_close("two_M1", float(two["M1"]), 13.0),
-        assert_close("two_M2", float(two["M2"]), 310.0),
-        assert_close("two_H", float(two["H"]), 0.05),
-        assert_close("two_expected_z", float(two["M1"]) / float(two["A"]), 13.0 / 0.7),
-        assert_close("two_harmonic_z", float(two["A"]) / float(two["H"]), 14.0),
+        *isolated_checks("front", front, 10.0, 0.4),
+        *isolated_checks("back", back, 30.0, 0.5),
+        assert_close("two_A_compositing", float(two["A"]), expected_a),
+        assert_close("two_M1_compositing", float(two["M1"]), expected_m1),
+        assert_close("two_M2_compositing", float(two["M2"]), expected_m2),
+        assert_close("two_H_compositing", float(two["H"]), expected_h),
+        assert_close(
+            "two_expected_z",
+            float(two["M1"]) / float(two["A"]),
+            expected_m1 / expected_a,
+        ),
+        assert_close(
+            "two_harmonic_z",
+            float(two["A"]) / float(two["H"]),
+            expected_a / expected_h,
+        ),
     ]
     variance = float(two["M2"]) / float(two["A"]) - (
         float(two["M1"]) / float(two["A"])
     ) ** 2
-    variance_check = assert_close("two_variance", variance, 97.95918367346938, atol=3e-4)
+    expected_variance = expected_m2 / expected_a - (expected_m1 / expected_a) ** 2
+    variance_check = assert_close("two_variance", variance, expected_variance, atol=3e-4)
 
     return {
         "schema": "m3m_gcp_native_quarter_sof_raw_moment_cuda_conformance_v1",
@@ -180,7 +212,18 @@ def run(eval_repo: Path) -> dict[str, Any]:
         "adapter_strategy": "two auxiliary native three-channel compositor passes with zero background",
         "primary_common_planes": ["A", "M1"],
         "single_layer": {"raw": single, "checks": single_checks},
-        "two_layer": {"raw": two, "checks": two_checks + [variance_check]},
+        "two_layer": {
+            "isolated_front_raw": front,
+            "isolated_back_raw": back,
+            "expected_from_isolated_native_alpha": {
+                "A": expected_a,
+                "M1": expected_m1,
+                "M2": expected_m2,
+                "H": expected_h,
+            },
+            "raw": two,
+            "checks": two_checks + [variance_check],
+        },
         "runtime": {
             "python": sys.version,
             "torch": str(torch.__version__),

@@ -330,7 +330,7 @@
       },
       "input_class": "rgb_colmap_only",
       "recipe": "configs/m3m_gcp_native_quarter_sof_3k_recipe_v1.json",
-      "recipe_sha256": "2cf9babe6bddc216e9d3ab23275dfc8fb145accf229ee7d641e07c762fe4b424",
+      "recipe_sha256": "0b9042e5c456f3e6885f27c8f0353de6c1d3e0d752cc77ed6f87f4bee7a8390e",
       "adapter_config": "configs/m3m_gcp_native_quarter_sof_renderer_adapter_v1.json",
       "adapter_config_sha256": "014f19cec9a8c2d44b619565a9abac70a5e97950469eec47b87b26aa96978371",
       "truth_deny_report": "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json",

@@ -422,7 +422,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
         ),
         "sof": (
             "configs/m3m_gcp_native_quarter_sof_3k_recipe_v1.json",
-            "2cf9babe6bddc216e9d3ab23275dfc8fb145accf229ee7d641e07c762fe4b424",
+            "0b9042e5c456f3e6885f27c8f0353de6c1d3e0d752cc77ed6f87f4bee7a8390e",
             "configs/m3m_gcp_native_quarter_sof_renderer_adapter_v1.json",
             "014f19cec9a8c2d44b619565a9abac70a5e97950469eec47b87b26aa96978371",
             "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json",
@@ -443,6 +443,22 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             require(path.is_file(), f"{method_id}: {key} file missing")
             if path.is_file():
                 require(file_sha256(path) == expected_sha, f"{method_id}: {key} file SHA mismatch")
+
+    sof_recipe_path = repo_root / pending_rgb_method_refs["sof"][0]
+    sof_conformance_path = repo_root / "code/gcp/test_sof_raw_moments_cuda.py"
+    if sof_recipe_path.is_file() and sof_conformance_path.is_file():
+        sof_recipe = json.loads(sof_recipe_path.read_text(encoding="utf-8"))
+        qualification = sof_recipe.get("qualification_inputs", {})
+        require(
+            qualification.get("cuda_conformance_script")
+            == "code/gcp/test_sof_raw_moments_cuda.py",
+            "sof: CUDA conformance script path mismatch",
+        )
+        require(
+            qualification.get("cuda_conformance_script_sha256")
+            == file_sha256(sof_conformance_path),
+            "sof: CUDA conformance script SHA mismatch",
+        )
 
     require(
         by_id.get("citygaussian_v2", {}).get("input_class") == "rgb_colmap_external_geometry_prior",

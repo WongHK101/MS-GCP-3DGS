@@ -123,7 +123,7 @@
     "truth_deny_evidence": "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json",
     "truth_deny_evidence_sha256": "517571e84ca1fa95c4b1d51d3da4dc0b1db3fcb8e91b8a82b247d5cc63a213cf",
     "cuda_conformance_script": "code/gcp/test_sof_raw_moments_cuda.py",
-    "cuda_conformance_script_sha256": "058d3e80638d2c6287d7f97a835a973c7e0295a1ae1ea54c2485d94b4656d5f7"
+    "cuda_conformance_script_sha256": "0cde782e7309c21342b2a2c451f346c778bb6e24d25828e7205dcc41ecaf71fe"
   },
   "runtime": {
     "server": "AutoDL-901",
