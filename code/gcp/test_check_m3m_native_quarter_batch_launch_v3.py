@@ -31,6 +31,26 @@ def load_qgs_gate_fixture() -> tuple[dict, dict]:
     return registry, gate
 
 
+def test_current_gsprior_one_use_gate_authorizes_exact_frozen_run() -> None:
+    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    gate_ref = registry["current_one_use_launch_gate"]
+    assert gate_ref["method_id"] == "gsprior"
+    gate = json.loads((REPO_ROOT / gate_ref["path"]).read_text(encoding="utf-8"))
+    result = check_launch(
+        registry,
+        REPO_ROOT,
+        method_id="gsprior",
+        scene="gcp_3000_20260602",
+        seed=0,
+        budget_value=40000,
+        run_root=gate["run_root"],
+        run_root_exists=False,
+    )
+    assert result["passed"] is True
+    assert result["status"] == "AUTHORIZED"
+    assert result["errors"] == []
+
+
 def test_exact_qgs_one_use_gate_authorizes_only_the_frozen_run() -> None:
     registry, gate = load_qgs_gate_fixture()
     result = check_launch(
@@ -80,7 +100,7 @@ def test_non_allowlisted_method_is_denied() -> None:
     )
     assert result["passed"] is False
     assert "method allowlist is not exact" in result["errors"]
-    assert "method is not technically qualified" in result["errors"]
+    assert "gate reference method mismatch" in result["errors"]
 
 
 def test_existing_run_root_is_always_denied() -> None:

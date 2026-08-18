@@ -124,6 +124,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
         value.get("status")
         in {
             "EIGHT_METHOD_3K_BATCH_PGSR_AND_RADE_GS_COMPLETE_QGS_ONE_USE_GATE_OPEN",
+            "EIGHT_METHOD_3K_BATCH_ONE_USE_GATE_OPEN",
             "EIGHT_METHOD_3K_BATCH_ACTIVE",
         },
         "unexpected registry status",
