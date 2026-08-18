@@ -101,6 +101,10 @@ def main() -> int:
     parser.add_argument("--input_size", type=int, default=518)
     parser.add_argument("--resolution", type=int, default=1)
     parser.add_argument("--pixel_thred", type=float, default=1.0)
+    parser.add_argument("--multi_view_num", type=int, default=8)
+    parser.add_argument("--multi_view_max_angle", type=float, default=15.0)
+    parser.add_argument("--multi_view_min_dis", type=float, default=0.01)
+    parser.add_argument("--multi_view_max_dis", type=float, default=25.0)
     args = parser.parse_args()
 
     city_repo = args.city_repo.resolve()
@@ -126,6 +130,23 @@ def main() -> int:
         raise ValueError("the native-quarter CityGS-X route requires resolution=1")
     if not math.isclose(args.pixel_thred, 1.0, rel_tol=0.0, abs_tol=0.0):
         raise ValueError("the frozen CityGS-X multi-view mask route requires pixel_thred=1")
+    neighbor_route = {
+        "multi_view_num": args.multi_view_num,
+        "multi_view_max_angle_deg": args.multi_view_max_angle,
+        "multi_view_min_dis": args.multi_view_min_dis,
+        "multi_view_max_dis": args.multi_view_max_dis,
+    }
+    expected_neighbor_route = {
+        "multi_view_num": 8,
+        "multi_view_max_angle_deg": 15.0,
+        "multi_view_min_dis": 0.01,
+        "multi_view_max_dis": 25.0,
+    }
+    if neighbor_route != expected_neighbor_route:
+        raise ValueError(
+            "the frozen CityGS-X aerial neighbor route must equal "
+            f"{expected_neighbor_route}, got {neighbor_route}"
+        )
     path_parts = {part.lower() for part in dataset.parts}
     if "train" not in path_parts or "matrixcity" not in str(dataset).lower():
         raise RuntimeError(
@@ -308,6 +329,14 @@ def main() -> int:
         "images",
         "--pixel_thred",
         str(args.pixel_thred),
+        "--multi_view_num",
+        str(args.multi_view_num),
+        "--multi_view_max_angle",
+        str(args.multi_view_max_angle),
+        "--multi_view_min_dis",
+        str(args.multi_view_min_dis),
+        "--multi_view_max_dis",
+        str(args.multi_view_max_dis),
     ]
     run_checked(mask_command, cwd=city_repo, env=env)
 
@@ -359,6 +388,8 @@ def main() -> int:
             "multi_view_precess_sha256": sha256(city_repo / "multi_view_precess.py"),
             "resolution": args.resolution,
             "pixel_thred": args.pixel_thred,
+            "multi_view_neighbor_selection": neighbor_route,
+            "neighbor_selection_basis": "upstream MatrixCity aerial command frozen before any CityGS-X result; uses training camera geometry only",
             "suffix_compatibility_scope": "I/O-only preservation of an existing frozen upper-case JPEG path plus mapping to official PNG prior filenames",
         },
         "depth_anything_v2": {

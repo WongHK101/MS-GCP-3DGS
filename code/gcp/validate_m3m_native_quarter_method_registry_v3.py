@@ -475,7 +475,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
         ),
         "citygs_x": (
             "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
-            "351de0d69ae8d853158f804d1ba3258f59da4cedf1a73270f4c0e7aec510ec41",
+            "119046ca00835fbb3021ad354786babd9fe63fbae3e26d4df06b11c1ef2b092d",
             "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
             "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
         ),
@@ -525,6 +525,29 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                     f"{method_id}: preparation entrypoint SHA mismatch",
                 )
             if method_id == "citygs_x":
+                expected_neighbor_route = {
+                    "multi_view_num": 8,
+                    "multi_view_max_angle_deg": 15.0,
+                    "multi_view_min_dis": 0.01,
+                    "multi_view_max_dis": 25.0,
+                }
+                external_geometry_prior = recipe.get("external_geometry_prior", {})
+                training_route = recipe.get("training", {})
+                for key, expected in expected_neighbor_route.items():
+                    require(
+                        external_geometry_prior.get(key) == expected,
+                        f"citygs_x: external-prior neighbor route mismatch for {key}",
+                    )
+                    require(
+                        training_route.get(key) == expected,
+                        f"citygs_x: training neighbor route mismatch for {key}",
+                    )
+                require(
+                    "upstream MatrixCity aerial" in str(
+                        external_geometry_prior.get("neighbor_selection_basis", "")
+                    ),
+                    "citygs_x: neighbor selection basis is not source-bound",
+                )
                 compatibility = recipe.get("compatibility", {})
                 compatibility_paths = {
                     "camera_utils_patch": "camera_utils_patch_sha256",

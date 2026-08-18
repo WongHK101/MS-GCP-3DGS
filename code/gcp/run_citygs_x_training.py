@@ -74,6 +74,14 @@ def build_command(
         "10000" if mode == "formal" else "0",
         "--multi_view_weight_from_iter",
         "30000" if mode == "formal" else "0",
+        "--multi_view_num",
+        "8",
+        "--multi_view_max_angle",
+        "15",
+        "--multi_view_min_dis",
+        "0.01",
+        "--multi_view_max_dis",
+        "25",
         "--default_voxel_size",
         "0.001",
         "--dpt_end_iter",
@@ -145,6 +153,14 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("unexpected prior method identity")
     if prior.get("citygs_x", {}).get("repository_commit") != CITYGS_X_COMMIT:
         raise RuntimeError("prior CityGS-X commit mismatch")
+    expected_neighbor_route = {
+        "multi_view_num": 8,
+        "multi_view_max_angle_deg": 15.0,
+        "multi_view_min_dis": 0.01,
+        "multi_view_max_dis": 25.0,
+    }
+    if prior.get("citygs_x", {}).get("multi_view_neighbor_selection") != expected_neighbor_route:
+        raise RuntimeError("prior CityGS-X multi-view neighbor route mismatch")
     if Path(prior.get("dataset", {}).get("path", "")).resolve() != dataset:
         raise RuntimeError("prior dataset path differs from training dataset")
     formal_manifest = prior.get("formal_input_manifest", {})
@@ -265,6 +281,10 @@ def main() -> int:
             "single_view_weight_from_iter": 10_000 if args.mode == "formal" else 0,
             "dpt_loss_from_iter": 10_000 if args.mode == "formal" else 0,
             "multi_view_weight_from_iter": 30_000 if args.mode == "formal" else 0,
+            "multi_view_num": 8,
+            "multi_view_max_angle_deg": 15.0,
+            "multi_view_min_dis": 0.01,
+            "multi_view_max_dis": 25.0,
             "dpt_end_iter": 30_000 if args.mode == "formal" else args.iterations,
             "depth_l1_weight_init": 0.5,
             "depth_l1_weight_final": 0.01,

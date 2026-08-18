@@ -8,7 +8,7 @@
     "display_name": "CityGS-X",
     "official_repository": "https://github.com/gyy456/CityGS-X",
     "input_class": "rgb_colmap_external_geometry_prior",
-    "route_selection": "official 100K custom-scene all-block route with one available GPU; selected before any CityGS-X result"
+    "route_selection": "official 100K custom-scene all-block schedule with the upstream MatrixCity aerial neighbor thresholds and one available GPU; selected before any CityGS-X result"
   },
   "source_provenance": {
     "repository_commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
@@ -40,10 +40,15 @@
     "run_py_sha256": "b8beab6341314bc864cfc0283e0e303f55571af4e2e456c3d3afbc4aae67249a",
     "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
     "pixel_threshold": 1,
+    "multi_view_num": 8,
+    "multi_view_max_angle_deg": 15.0,
+    "multi_view_min_dis": 0.01,
+    "multi_view_max_dis": 25.0,
+    "neighbor_selection_basis": "upstream MatrixCity aerial command, independently confirmed before any CityGS-X result to give 3--11 candidates for every frozen training view; no heldout RGB, GCP, LiDAR, or benchmark score used",
     "training_rgb_only": true,
     "heldout_rgb_gcp_lidar_used": false,
     "preparation_entrypoint": "code/gcp/prepare_citygs_x_depth_prior.py",
-    "preparation_entrypoint_sha256": "036c0a97ca58f8474df6f657eaa221991eb81ade4abc133680eebb8a015cc3e3"
+    "preparation_entrypoint_sha256": "5cdac629ef0344fe51666898da80a5b2bbb1b630d6538951aae5c3a5b6d4c9f6"
   },
   "compatibility": {
     "camera_utils_patch": "patches/citygs_x/native_quarter_case_insensitive_prior_suffix_27617f2_v1.patch",
@@ -57,7 +62,7 @@
     "training_renderer_or_rasterizer_modified": false
   },
   "training": {
-    "official_route": "official custom-scene CityGS-X route",
+    "official_route": "official 100K custom-scene schedule with upstream MatrixCity aerial multi-view neighbor thresholds",
     "official_budget": {"type": "iterations", "value": 100000},
     "seed": 0,
     "batch_size": 1,
@@ -67,6 +72,10 @@
     "depth_l1_weight_final": 0.01,
     "depth_prior_loss_from_iter": 10000,
     "multi_view_weight_from_iter": 30000,
+    "multi_view_num": 8,
+    "multi_view_max_angle_deg": 15.0,
+    "multi_view_min_dis": 0.01,
+    "multi_view_max_dis": 25.0,
     "depth_prior_end_iter": 30000,
     "multi_view_patch_size": 3,
     "default_voxel_size": 0.001,
@@ -79,7 +88,7 @@
   },
   "execution": {
     "entrypoint": "code/gcp/run_citygs_x_training.py",
-    "entrypoint_sha256": "ea1c68a74577a7023f8ad1eed30bd57c125681793326831e7dc0f7e8b2f13bac",
+    "entrypoint_sha256": "c2be3e333aeee242fd71d3c1946fd9eddbab46d7897145987c8bc28ccfdc380c",
     "mode": "formal",
     "iterations": 100000,
     "preexisting_model_path_allowed": false,
