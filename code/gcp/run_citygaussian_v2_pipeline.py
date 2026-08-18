@@ -142,6 +142,11 @@ def main() -> int:
     env["WANDB_MODE"] = "offline"
     env["WANDB_SILENT"] = "true"
     env["PYTHONUNBUFFERED"] = "1"
+    # The frozen upstream utilities load full Lightning checkpoints produced
+    # by this same trusted pipeline. PyTorch 2.6 changed torch.load's default
+    # to weights_only=True, which rejects those checkpoints before the fine
+    # stage. Restore the pre-2.6 behavior for this isolated subprocess tree.
+    env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 
     coarse_name = "coarse"
     fine_name = "fine"

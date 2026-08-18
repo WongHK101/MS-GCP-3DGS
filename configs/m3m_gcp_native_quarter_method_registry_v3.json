@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v3",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "EIGHT_METHOD_3K_BATCH_ONE_USE_GATE_OPEN",
+  "status": "EIGHT_METHOD_3K_BATCH_ACTIVE",
   "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
   "execution_plan": {
     "path": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
@@ -327,7 +327,7 @@
     {
       "method_id": "sof",
       "display_name": "Sorted Opacity Fields",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "sorted_opacity_field",
       "mechanism_deep_dive_selected": true,
       "source": {
@@ -350,10 +350,20 @@
       "truth_deny_report": "docs/protocol_evidence/sof_native_quarter_truth_deny_v1.json",
       "truth_deny_report_sha256": "517571e84ca1fa95c4b1d51d3da4dc0b1db3fcb8e91b8a82b247d5cc63a213cf",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/sof_native_quarter_formal_3k_seed0_30k_v1.json",
+        "report_sha256": "e4ffad78edaea1a4b8c01f016de17488af11f27266ce0c3a0d815d1910ab36fd",
+        "final_checkpoint_sha256": "0428d1da4b8fdfef93368e1cad7891bfd5003dd4a94379342acdbae520cfd032",
+        "packet_manifest_sha256": "7b56a30b14507c13e346a6f3e15db34a79a52cc2edcdfc6212aa5e0bacdeec48",
+        "checkpoint_rmse_3d_m": 0.08364592032358106,
+        "checkpoint_rmse_h_m": 0.019146408131997174,
+        "checkpoint_rmse_z_m": 0.08142514993797595,
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "citygaussian_v2",
@@ -373,7 +383,7 @@
       "input_class": "rgb_colmap_external_geometry_prior",
       "route_selection": "official single-block custom-scene route for the 3K scene; no result-driven repartitioning",
       "recipe": "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-      "recipe_sha256": "f3dadccd3765cd95fdd59fdbdc5d77a1c60c7e2ecde09320148714d1b2c6dd7c",
+      "recipe_sha256": "215a87b5ff1df7996563bfd5a3fa7d313991ceff9646f5ea374a146e643deac4",
       "adapter_config": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
       "adapter_config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
       "external_priors": [
@@ -495,12 +505,8 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["sof"],
-  "current_one_use_launch_gate": {
-    "method_id": "sof",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_sof_3k_seed0_30k_gate_v1.json",
-    "sha256": "07f8d43fb0c6137f5dbb05b942a1cb5ab63cd76ed499a19d8acf23c309b395bf"
-  },
+  "per_method_training_allowed_methods": [],
+  "current_one_use_launch_gate": null,
   "batch_controller": {
     "preparation_allowed": true,
     "formal_training_requires_method_gate": true,

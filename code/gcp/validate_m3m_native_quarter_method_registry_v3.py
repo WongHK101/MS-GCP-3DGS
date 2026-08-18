@@ -470,7 +470,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     city_recipe_refs = {
         "citygaussian_v2": (
             "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
-            "f3dadccd3765cd95fdd59fdbdc5d77a1c60c7e2ecde09320148714d1b2c6dd7c",
+            "215a87b5ff1df7996563bfd5a3fa7d313991ceff9646f5ea374a146e643deac4",
             "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
             "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
         ),
@@ -597,6 +597,14 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                     execution.get("entrypoint_sha256")
                     == file_sha256(execution_entrypoint),
                     f"{method_id}: execution entrypoint SHA mismatch",
+                )
+            if method_id == "citygaussian_v2":
+                torch_load_compatibility = execution.get("torch_load_compatibility", {})
+                require(
+                    torch_load_compatibility.get("environment_variable")
+                    == "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"
+                    and torch_load_compatibility.get("value") == "1",
+                    "citygaussian_v2: trusted-checkpoint torch.load compatibility is missing",
                 )
         if adapter_path.is_file():
             require(file_sha256(adapter_path) == adapter_sha, f"{method_id}: adapter file SHA mismatch")

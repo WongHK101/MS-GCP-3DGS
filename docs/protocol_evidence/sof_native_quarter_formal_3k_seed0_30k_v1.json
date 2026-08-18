@@ -1,0 +1,211 @@
+{
+  "artifact_retention": {
+    "large_checkpoint_and_packets_remain_on_autodl_901": true,
+    "local_model_mirror_created": false
+  },
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "created_utc": "2026-08-18T22:06:26.654606+00:00",
+  "evaluation": {
+    "checkpoint_coverage_rate": 1.0,
+    "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+    "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+    "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "method_id": "sof",
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2326,
+        "sha256": "dacb527463dbd24a03f45e6d3db703ace43f12835c9776a738017e7f00e01c4b"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1364,
+        "sha256": "240cb8471e3de31a00650b80a324b71246e7729d1e7b2cca18034da52d1ab42e"
+      },
+      "observation_samples.csv": {
+        "bytes": 52256,
+        "sha256": "69e5c054b5ff79769de0231f651f3ddc4fc5a098791efcbd9c29ec1636872a0c"
+      },
+      "point_results.csv": {
+        "bytes": 4375,
+        "sha256": "803065c07a783f268a8fe59d18041996d9ef380a4b22b05d9ce3db4674990310"
+      }
+    },
+    "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/formal_evaluation/packets/depth_export_manifest.json",
+    "packet_manifest_sha256": "7b56a30b14507c13e346a6f3e15db34a79a52cc2edcdfc6212aa5e0bacdeec48",
+    "physical_surface_claim": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+    "residual_statistics": {
+      "all": {
+        "count": 9,
+        "max_3d_m": 0.15421939178866825,
+        "median_3d_m": 0.03666992512415635,
+        "p95_3d_m": 0.15076466077062192,
+        "rmse_3d_m": 0.07785054269089205,
+        "rmse_h_m": 0.019766006499973805,
+        "rmse_z_m": 0.07529948196574396
+      },
+      "checkpoint": {
+        "count": 4,
+        "max_3d_m": 0.15421939178866825,
+        "median_3d_m": 0.03950626014945169,
+        "p95_3d_m": 0.13743787229658003,
+        "rmse_3d_m": 0.08364592032358106,
+        "rmse_h_m": 0.019146408131997174,
+        "rmse_z_m": 0.08142514993797595
+      },
+      "control": {
+        "count": 5,
+        "max_3d_m": 0.14558256424355245,
+        "median_3d_m": 0.029939458189108984,
+        "p95_3d_m": 0.12819318437363464,
+        "rmse_3d_m": 0.07288319837696774,
+        "rmse_h_m": 0.020248038617036616,
+        "rmse_z_m": 0.07001412384526016
+      }
+    },
+    "scene": "gcp_3000_20260602",
+    "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+    "status": "COMPLETE_RANKED"
+  },
+  "final_gpu_compute_process_count": 0,
+  "formal_result_status": "COMPLETE_RANKED",
+  "input": {
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "gcp_truth_training_access": false,
+    "height": 1025,
+    "heldout_rgb_training_access": false,
+    "heldout_test_view_count": 12,
+    "lidar_training_access": false,
+    "release_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "train_view_count": 82,
+    "training_downsample": 1.0,
+    "width": 1414
+  },
+  "iterations": 30000,
+  "method_id": "sof",
+  "packet_export": {
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "benchmark_commit": "a7127e58c68bc120392c27d7617295671a7ecbd3",
+    "benchmark_tree": "22b9dc8200229e7465263f56ad0a6f80cb30e80b",
+    "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+    "evaluation_camera_domain_is_frozen_94_camera_scene": true,
+    "evaluation_snapshot_is_separate_from_formal_model": true,
+    "exporter_sha256": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb",
+    "manifest_sha256": "7b56a30b14507c13e346a6f3e15db34a79a52cc2edcdfc6212aa5e0bacdeec48",
+    "mapping_csv_sha256": "6d17311b6327f7a92fcb270a55ade7515ea9b3f827c23de2ac5e3d078d7d5277",
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "packet_bytes": 2699291356,
+    "packet_count": 66,
+    "packet_identity_aggregate_sha256": "1384d1447d6347ee011cc88edc06508e0de8dbee0d80224d72f02be5a73746f1",
+    "packet_recomputation_all_passed": true,
+    "peak_gpu_memory_mib": 5045.0,
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "raw_moment_conformance_sha256": "2e40d3b132cb58be69e92b4d66edfd65dc7396c138a3f2595e4090e6b0bb5aee",
+    "renderer_patch_sha256": "9ca87eaf77119e34f536705e52d6bc204e8f3b79de68b44bed1caf6730e22bf1",
+    "resource_summary_sha256": "33fc8c298b5078ebfe592eac404c19b33b26f158d42c3cb94d7425f1774ed4dd",
+    "status": "PASS",
+    "valid_pixel_count_max": 1449350,
+    "valid_pixel_count_min": 1449343,
+    "validation_report_sha256": "29fdb40b89e745d4daeff2f1654e281275346ed170dff3cf6dce16810e1afd17",
+    "variance_nonnegativity_unresolved_total": 66,
+    "variance_validation_fail_pixel_total": 0,
+    "wall_seconds": 251.39454242959619
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe": {
+    "external_geometry_prior_used": false,
+    "iterations": 30000,
+    "native_sort_mode": "HIER",
+    "native_sort_order": "PTD_MAX",
+    "resolution": 1,
+    "resume_allowed": false,
+    "route": "official SOF_STD unbounded route"
+  },
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "run": {
+    "adapter_config_sha256": "014f19cec9a8c2d44b619565a9abac70a5e97950469eec47b87b26aa96978371",
+    "formal_launch_gate_sha256": "07f8d43fb0c6137f5dbb05b942a1cb5ab63cd76ed499a19d8acf23c309b395bf",
+    "launch_check_sha256": "dfb718175e96673c685410558aadffb3751f65c693cd6aef9c290ed7749b77d9",
+    "launcher_sha256": "bcabc4eba7cc17be796b0daaf12c67d008e041042218fc8af9b15322894034a0",
+    "qualification_report_sha256": "dedcab3aea6308df327d57c81cfa7a0f3834914403f2147fac2b8dd61b56b10d",
+    "recipe_sha256": "0b9042e5c456f3e6885f27c8f0353de6c1d3e0d752cc77ed6f87f4bee7a8390e",
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_native_quarter_sof_formal_3k_run_v1",
+  "seed": 0,
+  "single_seed_only": true,
+  "source": {
+    "environment_freeze_sha256": "9cd3f61d5cbce393120029c1f57e35e4b7a3fd64521855ab71ff4d622c304d10",
+    "official_repository_commit": "b9eb4170c843014f5f96d54924976161bd675469",
+    "official_repository_tree": "d5ece75b8255c5dd6abf97482ddbf34d20dca707",
+    "training_renderer_or_rasterizer_modified": false,
+    "training_source_modified": false
+  },
+  "statistical_significance_claim": false,
+  "status": "PASS",
+  "training": {
+    "cgroup_observed_peak_bytes": 102240247808,
+    "command_record_sha256": "0d13355808d293eaf5bbc75624252d1289a69d26f2c4394e8b75619c38ccd3c7",
+    "estimated_gpu_energy_wh": 179.90303800645094,
+    "fd_peak": 50,
+    "final_ply_bytes": 711559089,
+    "final_ply_relative_path": "model/point_cloud/iteration_30000/point_cloud.ply",
+    "final_ply_sha256": "0428d1da4b8fdfef93368e1cad7891bfd5003dd4a94379342acdbae520cfd032",
+    "gaussian_vertex_count": 2823641,
+    "gpu_hours": 0.6090322151345511,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "peak_gpu_memory_mib": 8291.0,
+    "process_maximum_rss_kib": 13385248,
+    "process_tree_sampled_peak_rss_kib": 13198932,
+    "resource_status": "PASS",
+    "resource_summary_sha256": "133f275b1a662311151bb6cbcbf6950521e2c38a540f1affbc9be70d266ba6e3",
+    "sampler_errors": [],
+    "wall_seconds": 2192.515974484384
+  }
+}

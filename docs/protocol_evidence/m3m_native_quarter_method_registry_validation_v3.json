@@ -7,8 +7,6 @@
   "method_count": 11,
   "active_method_count": 10,
   "candidate_method_count": 8,
-  "training_allowed_methods": [
-    "sof"
-  ],
+  "training_allowed_methods": [],
   "errors": []
 }

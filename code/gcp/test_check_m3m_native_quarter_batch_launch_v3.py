@@ -12,6 +12,8 @@ REGISTRY = REPO_ROOT / "configs" / "m3m_gcp_native_quarter_method_registry_v3.js
 
 QGS_GATE_PATH = "configs/launch_gates/m3m_gcp_native_quarter_qgs_3k_seed0_30k_gate_v1.json"
 QGS_GATE_SHA256 = "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5"
+SOF_GATE_PATH = "configs/launch_gates/m3m_gcp_native_quarter_sof_3k_seed0_30k_gate_v1.json"
+SOF_GATE_SHA256 = "07f8d43fb0c6137f5dbb05b942a1cb5ab63cd76ed499a19d8acf23c309b395bf"
 
 
 def load_qgs_gate_fixture() -> tuple[dict, dict]:
@@ -31,11 +33,25 @@ def load_qgs_gate_fixture() -> tuple[dict, dict]:
     return registry, gate
 
 
-def test_current_sof_one_use_gate_authorizes_exact_frozen_run() -> None:
+def load_sof_gate_fixture() -> tuple[dict, dict]:
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
-    gate_ref = registry["current_one_use_launch_gate"]
-    assert gate_ref["method_id"] == "sof"
-    gate = json.loads((REPO_ROOT / gate_ref["path"]).read_text(encoding="utf-8"))
+    method = next(item for item in registry["methods"] if item["method_id"] == "sof")
+    method["lifecycle_role"] = "ACTIVE_3K_CANDIDATE"
+    method["formal_3k_result"] = {"status": "NOT_ATTEMPTED"}
+    method["three_k_training_allowed"] = True
+    registry["status"] = "EIGHT_METHOD_3K_BATCH_ONE_USE_GATE_OPEN"
+    registry["per_method_training_allowed_methods"] = ["sof"]
+    registry["current_one_use_launch_gate"] = {
+        "method_id": "sof",
+        "path": SOF_GATE_PATH,
+        "sha256": SOF_GATE_SHA256,
+    }
+    gate = json.loads((REPO_ROOT / SOF_GATE_PATH).read_text(encoding="utf-8"))
+    return registry, gate
+
+
+def test_closed_sof_gate_replay_fixture_authorizes_only_its_frozen_run() -> None:
+    registry, gate = load_sof_gate_fixture()
     result = check_launch(
         registry,
         REPO_ROOT,
