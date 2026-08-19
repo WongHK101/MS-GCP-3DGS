@@ -1,0 +1,665 @@
+{
+  "schema": "m3m_gcp_native_quarter_rgb_quality_3k_preflight_v1",
+  "status": "PASS_STATIC_METRO_PENDING",
+  "passed": true,
+  "formal_launch_ready": false,
+  "contract_status": "REVIEW_CANDIDATE_NOT_FORMAL",
+  "scene": "gcp_3000_20260602",
+  "method_count": 10,
+  "inputs": {
+    "preflight_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/preflight.py",
+    "preflight_sha256": "dba3d98d7cc4896d0d5e6b5b965405c4a367f93c3da49b426384280d9c927586",
+    "contract_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/contract.json",
+    "contract_sha256": "ed0cb1784c75b0645883875113a637a7dadfa1eb12530d64c1e739ece2eadcbb",
+    "registry_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/registry.json",
+    "registry_sha256": "c4d1e9dccb4239d17ff445792f653ab3226c7f5876a2866bed111aeeb9f10139"
+  },
+  "pending": [
+    "metrogs:geometry_formal_completion",
+    "metrogs:formal_model"
+  ],
+  "errors": [],
+  "checks": [
+    {
+      "name": "input_manifest_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json"
+    },
+    {
+      "name": "input_manifest_file_sha256",
+      "passed": true,
+      "detail": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e"
+    },
+    {
+      "name": "input_manifest_canonical_sha256",
+      "passed": true,
+      "detail": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8"
+    },
+    {
+      "name": "heldout_view_count",
+      "passed": true,
+      "detail": 12
+    },
+    {
+      "name": "heldout_jpeg_identity",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "graphdeco_camera_image_inventory",
+      "passed": true,
+      "detail": 94
+    },
+    {
+      "name": "graphdeco_camera_image_identity",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "camera_model_cameras.bin_sha256",
+      "passed": true,
+      "detail": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+    },
+    {
+      "name": "camera_model_images.bin_sha256",
+      "passed": true,
+      "detail": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb"
+    },
+    {
+      "name": "camera_model_points3D.bin_sha256",
+      "passed": true,
+      "detail": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    },
+    {
+      "name": "graphdeco_camera_cameras.bin_sha256",
+      "passed": true,
+      "detail": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+    },
+    {
+      "name": "graphdeco_camera_images.bin_sha256",
+      "passed": true,
+      "detail": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb"
+    },
+    {
+      "name": "graphdeco_camera_points3D.bin_sha256",
+      "passed": true,
+      "detail": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    },
+    {
+      "name": "graphdeco_camera_points3D.ply_sha256",
+      "passed": true,
+      "detail": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d"
+    },
+    {
+      "name": "metric_source:metrics.py",
+      "passed": true,
+      "detail": "bda39191dde1fad93abf56a994d6f799bc02209b8ac5000b038e5ecf3345d6d3"
+    },
+    {
+      "name": "metric_source:utils/image_utils.py",
+      "passed": true,
+      "detail": "872a4507773b9378db9e0fefc90104dc474b27551af18ada73f000a7a00a4ba0"
+    },
+    {
+      "name": "metric_source:utils/loss_utils.py",
+      "passed": true,
+      "detail": "53e4824dd41f847bd9c1ce146162886d1d63460acafbfed9db1f3d84dfe63f5f"
+    },
+    {
+      "name": "metric_source:lpipsPyTorch/__init__.py",
+      "passed": true,
+      "detail": "a657ce7355782eb970f95fd0d2e26eec5b9023212d2b655814da6e15b70510b4"
+    },
+    {
+      "name": "metric_source:lpipsPyTorch/modules/lpips.py",
+      "passed": true,
+      "detail": "3bece0b9cf9943af5b043026458819d259df9bfe7c2a1d3ffc6c905e7e5aa2b4"
+    },
+    {
+      "name": "metric_source:lpipsPyTorch/modules/networks.py",
+      "passed": true,
+      "detail": "dfa6f152b0e3fbc23ac3bfaea52b46e9473e64ad539ea22ab030c57af51c7f14"
+    },
+    {
+      "name": "metric_source:lpipsPyTorch/modules/utils.py",
+      "passed": true,
+      "detail": "1bd4a7d4e7b43215497675ed852936fe4f27e7ea3068afe0b0e1f7cfb6c48570"
+    },
+    {
+      "name": "metric_weight:vgg16-397923af.pth",
+      "passed": true,
+      "detail": "397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0"
+    },
+    {
+      "name": "metric_weight:vgg.pth",
+      "passed": true,
+      "detail": "a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868"
+    },
+    {
+      "name": "metric_runtime",
+      "passed": true,
+      "detail": {
+        "python": "3.10.12",
+        "torch": "2.7.1+cu128",
+        "torchvision": "0.22.1+cu128",
+        "Pillow": "11.1.0",
+        "numpy": "1.26.4"
+      }
+    },
+    {
+      "name": "3dgs_original:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train"
+    },
+    {
+      "name": "3dgs_original:source_commit",
+      "passed": true,
+      "detail": "2eee0e26d2d5fd00ec462df47752223952f6bf4e"
+    },
+    {
+      "name": "3dgs_original:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "3dgs_original:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "3dgs_original:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/3dgs-original/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "3dgs_original:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/seed0-30k-20260810T073742Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "3dgs_original:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/seed0-30k-20260810T073742Z/model/point_cloud/iteration_30000/point_cloud.ply",
+        "bytes": 919975636
+      }
+    },
+    {
+      "name": "3dgs_original:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/seed0-30k-20260810T073742Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "2dgs:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/2dgs/335ad612f2e783a4e57b9cbc4d1e167bd599fc98/official-train"
+    },
+    {
+      "name": "2dgs:source_commit",
+      "passed": true,
+      "detail": "335ad612f2e783a4e57b9cbc4d1e167bd599fc98"
+    },
+    {
+      "name": "2dgs:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "2dgs:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "2dgs:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/2dgs/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "2dgs:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/2dgs/gcp_3000_20260602/seed0-30k-20260810T103434Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "2dgs:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/2dgs/gcp_3000_20260602/seed0-30k-20260810T103434Z/model/point_cloud/iteration_30000/point_cloud.ply",
+        "bytes": 398888073
+      }
+    },
+    {
+      "name": "2dgs:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/2dgs/gcp_3000_20260602/seed0-30k-20260810T103434Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "pgsr:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/train-loader-compat-v1"
+    },
+    {
+      "name": "pgsr:source_commit",
+      "passed": true,
+      "detail": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7"
+    },
+    {
+      "name": "pgsr:tracked_diff",
+      "passed": true,
+      "detail": "173addb7351cd3cfe1fbd56e7e2efed080adcd8a5b00a90756b872b4b9551bfd"
+    },
+    {
+      "name": "pgsr:patched_file:scene/dataset_readers.py",
+      "passed": true,
+      "detail": "2c51048f9358f2a86af863eeda3897f11fea10dc7d8234fd6e6953ec38872281"
+    },
+    {
+      "name": "pgsr:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "pgsr:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/pgsr/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "pgsr:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "pgsr:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
+        "bytes": 361152276
+      }
+    },
+    {
+      "name": "pgsr:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "rade_gs:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/rade_gs/d72f20792005ae1d6555a82aa2d15345f247604e/official-train"
+    },
+    {
+      "name": "rade_gs:source_commit",
+      "passed": true,
+      "detail": "d72f20792005ae1d6555a82aa2d15345f247604e"
+    },
+    {
+      "name": "rade_gs:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "rade_gs:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "rade_gs:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/rade_gs/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "rade_gs:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/rade_gs/gcp_3000_20260602/seed0-30k-20260818T102000Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "rade_gs:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/rade_gs/gcp_3000_20260602/seed0-30k-20260818T102000Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
+        "bytes": 635689449
+      }
+    },
+    {
+      "name": "rade_gs:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/rade_gs/gcp_3000_20260602/seed0-30k-20260818T102000Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "qgs:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/qgs/74d05c945e99fcaef7afe5a8831903be71ad9b55/official-train"
+    },
+    {
+      "name": "qgs:source_commit",
+      "passed": true,
+      "detail": "74d05c945e99fcaef7afe5a8831903be71ad9b55"
+    },
+    {
+      "name": "qgs:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "qgs:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "qgs:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/qgs/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "qgs:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "qgs:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
+        "bytes": 1941135861
+      }
+    },
+    {
+      "name": "qgs:config_path",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/model_snapshot/config.yaml"
+    },
+    {
+      "name": "qgs:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "gsprior:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/train-compat-v1"
+    },
+    {
+      "name": "gsprior:source_commit",
+      "passed": true,
+      "detail": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55"
+    },
+    {
+      "name": "gsprior:tracked_diff",
+      "passed": true,
+      "detail": "a2fa787c8e0de02826ee391bdb8a86e784038f60aa5b9a49b3ce4ba6bd883f27"
+    },
+    {
+      "name": "gsprior:patched_file:scene/dataset_readers.py",
+      "passed": true,
+      "detail": "f0fadf22869091cafa7cec4cc14eb3e295f83c58bf5ad22c2557c3b3b9cee247"
+    },
+    {
+      "name": "gsprior:patched_file:train.py",
+      "passed": true,
+      "detail": "44e434741b68075d7e3f92f2c71f471cab2c66e4d3bd129261e7701da03274f1"
+    },
+    {
+      "name": "gsprior:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "gsprior:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "gsprior:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "gsprior:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/model_snapshot/point_cloud/iteration_40000/point_cloud.ply",
+        "bytes": 437765428
+      }
+    },
+    {
+      "name": "gsprior:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "sof:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/sof/b9eb4170c843014f5f96d54924976161bd675469/official-train"
+    },
+    {
+      "name": "sof:source_commit",
+      "passed": true,
+      "detail": "b9eb4170c843014f5f96d54924976161bd675469"
+    },
+    {
+      "name": "sof:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sof:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "sof:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/sof/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "sof:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "sof:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
+        "bytes": 711559089
+      }
+    },
+    {
+      "name": "sof:splatting_config_path",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/model/config.json"
+    },
+    {
+      "name": "sof:splatting_config_sha256",
+      "passed": true,
+      "detail": "39e7d3f021401602604d009d8b30182e4edf92e934f8df8e62fe0cd842bfafac"
+    },
+    {
+      "name": "sof:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "citygaussian_v2:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygaussian_v2/e84c7c8774dd11d3f4189be3488e1220afa20a86/official-train"
+    },
+    {
+      "name": "citygaussian_v2:source_commit",
+      "passed": true,
+      "detail": "e84c7c8774dd11d3f4189be3488e1220afa20a86"
+    },
+    {
+      "name": "citygaussian_v2:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "citygaussian_v2:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "citygaussian_v2:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/eval-py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "citygaussian_v2:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "citygaussian_v2:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/formal_evaluation/model_snapshot/merged_step_60000.ckpt",
+        "bytes": 1182717065
+      }
+    },
+    {
+      "name": "citygaussian_v2:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "citygs_x:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygs_x/27617f2486505e3b6fe75345edf7c2b11161bc2a/train-runtime-v1"
+    },
+    {
+      "name": "citygs_x:source_commit",
+      "passed": true,
+      "detail": "27617f2486505e3b6fe75345edf7c2b11161bc2a"
+    },
+    {
+      "name": "citygs_x:tracked_diff",
+      "passed": true,
+      "detail": "bcf3545ed19ef93896d4d80a6bef330d69f4de4e3ab3fd3a3ba523a022364c6a"
+    },
+    {
+      "name": "citygs_x:patched_file:scene/dataset_readers.py",
+      "passed": true,
+      "detail": "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c"
+    },
+    {
+      "name": "citygs_x:patched_file:utils/camera_utils.py",
+      "passed": true,
+      "detail": "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3"
+    },
+    {
+      "name": "citygs_x:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "citygs_x:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "citygs_x:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "citygs_x:formal_model",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z/formal_evaluation/model_snapshot/point_cloud/iteration_100000/point_cloud_rk0_ws1.ply",
+        "bytes": 860702192
+      }
+    },
+    {
+      "name": "citygs_x:pytorch3d_compat",
+      "passed": true,
+      "detail": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat"
+    },
+    {
+      "name": "citygs_x:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z/formal_evaluation/rgb_quality_v1"
+    },
+    {
+      "name": "metrogs:source_exists",
+      "passed": true,
+      "detail": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/official-train"
+    },
+    {
+      "name": "metrogs:source_commit",
+      "passed": true,
+      "detail": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f"
+    },
+    {
+      "name": "metrogs:tracked_diff",
+      "passed": true,
+      "detail": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metrogs:untracked_policy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "metrogs:environment_python",
+      "passed": true,
+      "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python"
+    },
+    {
+      "name": "metrogs:training_cameras_json",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/model/cameras.json"
+    },
+    {
+      "name": "metrogs:training_camera_names",
+      "passed": true,
+      "detail": 82
+    },
+    {
+      "name": "metrogs:appearance_ids",
+      "passed": true,
+      "detail": {
+        "count": 82,
+        "min": 0,
+        "max": 81
+      }
+    },
+    {
+      "name": "metrogs:normalized_appearance_ids",
+      "passed": true,
+      "detail": {
+        "count": 82
+      }
+    },
+    {
+      "name": "metrogs:rgb_output_absent",
+      "passed": true,
+      "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/formal_evaluation/rgb_quality_v1"
+    }
+  ]
+}

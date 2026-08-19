@@ -1,0 +1,79 @@
+{
+  "contract_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/contract.json",
+  "contract_sha256": "ed0cb1784c75b0645883875113a637a7dadfa1eb12530d64c1e739ece2eadcbb",
+  "evaluator_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/code/gcp/evaluate_m3m_native_quarter_rgb_quality.py",
+  "evaluator_sha256": "d0ccd7127cf773b726ac2882d52e0b81073c503cc93a22dd8702975166d0a9fe",
+  "formal_execution": false,
+  "input_manifest_path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
+  "input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+  "method_id": "technical_evaluator_smoke_not_benchmark",
+  "metric_reference": {
+    "files": {
+      "lpipsPyTorch/__init__.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/lpipsPyTorch/__init__.py",
+        "sha256": "a657ce7355782eb970f95fd0d2e26eec5b9023212d2b655814da6e15b70510b4"
+      },
+      "lpipsPyTorch/modules/lpips.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/lpipsPyTorch/modules/lpips.py",
+        "sha256": "3bece0b9cf9943af5b043026458819d259df9bfe7c2a1d3ffc6c905e7e5aa2b4"
+      },
+      "lpipsPyTorch/modules/networks.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/lpipsPyTorch/modules/networks.py",
+        "sha256": "dfa6f152b0e3fbc23ac3bfaea52b46e9473e64ad539ea22ab030c57af51c7f14"
+      },
+      "lpipsPyTorch/modules/utils.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/lpipsPyTorch/modules/utils.py",
+        "sha256": "1bd4a7d4e7b43215497675ed852936fe4f27e7ea3068afe0b0e1f7cfb6c48570"
+      },
+      "metrics.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/metrics.py",
+        "sha256": "bda39191dde1fad93abf56a994d6f799bc02209b8ac5000b038e5ecf3345d6d3"
+      },
+      "utils/image_utils.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/utils/image_utils.py",
+        "sha256": "872a4507773b9378db9e0fefc90104dc474b27551af18ada73f000a7a00a4ba0"
+      },
+      "utils/loss_utils.py": {
+        "path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train/utils/loss_utils.py",
+        "sha256": "53e4824dd41f847bd9c1ce146162886d1d63460acafbfed9db1f3d84dfe63f5f"
+      }
+    },
+    "metric_reference_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/official-train",
+    "weights": {
+      "vgg.pth": {
+        "path": "/root/.cache/torch/hub/checkpoints/vgg.pth",
+        "sha256": "a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868"
+      },
+      "vgg16-397923af.pth": {
+        "path": "/root/.cache/torch/hub/checkpoints/vgg16-397923af.pth",
+        "sha256": "397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0"
+      }
+    }
+  },
+  "outputs_sha256": {
+    "input_render_validation.json": "2a872d0fe1dbf08bf8f09d4a0ac020b04d9657080e08a7bd2921f5b4408940d3",
+    "per_view_metrics.csv": "773a24165ade90d6b11e0e32d75e0cab451be8cc679370e7669c86ed49f94f01",
+    "per_view_metrics.json": "3b03453d89666d10477ba1490af9c7dfaad7e60d17bbc747677374a638fa0a14",
+    "rgb_quality_summary.json": "da75d417801525390fbece4cf1069cb700cfac2f5dd0d44ed39c8d1733834b3a"
+  },
+  "ranking_eligible": false,
+  "render_manifest_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/metric-smoke-v3/rgb_render_manifest.json",
+  "render_manifest_sha256": "1c6ee0bce363dca74f474f65c11a09497734de0fbda215b6c4ca9049097a30c3",
+  "runtime": {
+    "Pillow": "11.1.0",
+    "cuda_available": true,
+    "cudnn_benchmark": false,
+    "cudnn_deterministic": true,
+    "deterministic_algorithms": true,
+    "device": "cuda:0",
+    "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "numpy": "1.26.4",
+    "python": "3.10.12",
+    "torch": "2.7.1+cu128",
+    "torchvision": "0.22.1+cu128"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_gcp_native_quarter_rgb_evaluator_manifest_v1",
+  "status": "PASS_TECHNICAL_SMOKE",
+  "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1"
+}
