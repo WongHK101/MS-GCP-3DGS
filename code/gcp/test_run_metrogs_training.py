@@ -91,7 +91,7 @@ def main() -> int:
     assert qualification["model"]["metric"]["init_args"]["multi_view_from"] == 4
     assert qualification["logger"] == "tensorboard"
 
-    train, merge = build_commands(
+    train, merge, convert = build_commands(
         python=Path("/env/bin/python"),
         repo=Path("/repo"),
         model_path=Path("/run/model"),
@@ -104,6 +104,8 @@ def main() -> int:
     assert Path(train[5]) == Path("/run/metrogs_frozen_training_config.yaml")
     assert Path(merge[-2]) == Path("/repo/utils/merge_distributed_ckpts.py")
     assert Path(merge[-1]) == Path("/run/model")
+    assert Path(convert[-2]) == Path("/repo/utils/ckpt2ply.py")
+    assert Path(convert[-1]) == Path("/run/model")
 
     for mode, iterations in (("formal", 149_999), ("qualification", 4)):
         try:

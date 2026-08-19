@@ -22,6 +22,7 @@ OFFICIAL_CONFIG_RELATIVE = Path("configs/metrogs/train/MatrixCity-Aerial.yaml")
 OFFICIAL_CONFIG_SHA256 = "86e8cbc1e44f177c80e69151f06c08782cab1b50ec145e4e6fdd44797ef814e3"
 MAIN_BSZ_SHA256 = "3bb5fb6de6d62cd9bb74fcfc4b8fcfd85afc839b39542dd79e702402963edbf1"
 MERGE_SCRIPT_SHA256 = "90a5d7b56e605cecb2238514449d53deb4dc097be4eed84e9f897b847e7a6075"
+CKPT2PLY_SHA256 = "fe3a6f540cba658696d9c2e64d13ad76deb8df1401f81820bf79ddedd23231e9"
 FORMAL_MANIFEST_FILE_SHA256 = "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e"
 FORMAL_MANIFEST_CANONICAL_SHA256 = "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8"
 MOGE_WEIGHT_SHA256 = "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01"
@@ -147,7 +148,7 @@ def build_resolved_config(
 
 def build_commands(
     *, python: Path, repo: Path, model_path: Path, resolved_config: Path
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     train = [
         str(python),
         "-B",
@@ -162,7 +163,13 @@ def build_commands(
         str(repo / "utils" / "merge_distributed_ckpts.py"),
         str(model_path),
     ]
-    return train, merge
+    convert = [
+        str(python),
+        "-B",
+        str(repo / "utils" / "ckpt2ply.py"),
+        str(model_path),
+    ]
+    return train, merge, convert
 
 
 def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
@@ -212,11 +219,13 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "merge_distributed_ckpts.py": sha256(
             repo / "utils" / "merge_distributed_ckpts.py"
         ),
+        "ckpt2ply.py": sha256(repo / "utils" / "ckpt2ply.py"),
     }
     expected_source_hashes = {
         "official_config": OFFICIAL_CONFIG_SHA256,
         "main_bsz.py": MAIN_BSZ_SHA256,
         "merge_distributed_ckpts.py": MERGE_SCRIPT_SHA256,
+        "ckpt2ply.py": CKPT2PLY_SHA256,
     }
     if source_hashes != expected_source_hashes:
         raise RuntimeError(
@@ -379,7 +388,7 @@ def main() -> int:
         yaml.safe_dump(resolved, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
     resolved_config_sha256 = sha256(resolved_config_path)
-    train_command, merge_command = build_commands(
+    train_command, merge_command, convert_command = build_commands(
         python=python,
         repo=repo,
         model_path=model_path,
@@ -403,6 +412,8 @@ def main() -> int:
     subprocess.run(train_command, cwd=repo, env=env, check=True)
     print("RUN", json.dumps(merge_command, ensure_ascii=False), flush=True)
     subprocess.run(merge_command, cwd=repo, env=env, check=True)
+    print("RUN", json.dumps(convert_command, ensure_ascii=False), flush=True)
+    subprocess.run(convert_command, cwd=repo, env=env, check=True)
 
     checkpoint_dir = model_path / "checkpoints"
     point_cloud = model_path / "point_cloud" / f"iteration_{args.iterations}" / "point_cloud.ply"
@@ -464,7 +475,11 @@ def main() -> int:
             "point_cloud_path": str(point_cloud),
             "point_cloud_sha256": sha256(point_cloud),
         },
-        "commands": {"train": train_command, "merge": merge_command},
+        "commands": {
+            "train": train_command,
+            "merge": merge_command,
+            "convert_checkpoint_to_ply": convert_command,
+        },
         "route": {
             "single_gpu": True,
             "batch_size": 4,
