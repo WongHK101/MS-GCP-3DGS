@@ -79,6 +79,7 @@ def main() -> int:
     assert formal["model"]["renderer"]["init_args"]["aabb"] is None
     assert formal["model"]["metric"]["init_args"]["multi_view_from"] == 50_000
     assert formal["save_iterations"] == [150_000]
+    assert formal["logger"] == "tensorboard"
     assert Path(formal["output"]) == Path("/run") and formal["name"] == "model"
 
     qualification = build_resolved_config(
@@ -88,6 +89,7 @@ def main() -> int:
     assert qualification["save_iterations"] == [8]
     assert qualification["model"]["metric"]["init_args"]["single_view_from"] == 0
     assert qualification["model"]["metric"]["init_args"]["multi_view_from"] == 4
+    assert qualification["logger"] == "tensorboard"
 
     train, merge = build_commands(
         python=Path("/env/bin/python"),

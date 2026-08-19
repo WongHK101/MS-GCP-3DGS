@@ -132,7 +132,11 @@ def build_resolved_config(
     config["save_val"] = False
     config["output"] = str(model_path.parent)
     config["name"] = model_path.name
-    config["logger"] = "none"
+    # MetroGS' frozen upstream training loop unconditionally emits the
+    # Gaussian-count/learning-rate metrics through ``self.logger`` on the
+    # first optimizer step.  Use Lightning's local TensorBoard logger so the
+    # official loop remains untouched and no network service is required.
+    config["logger"] = "tensorboard"
 
     # Qualification covers one official single-view depth step and one
     # multi-view geometry step (effective iterations 0 and 4 at batch size 4).

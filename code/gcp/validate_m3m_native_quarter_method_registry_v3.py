@@ -658,7 +658,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(metro_method.get("recipe") == metro_recipe_relative, "MetroGS recipe path mismatch")
     require(
         metro_method.get("recipe_sha256")
-        == "14a28d76ac903faddca2bd48eedadfd205964c95835ac1defdac575fbdffd0cb",
+        == "215cab491aa6a3d9f9746d4c6d9ca159c74123e610831c8112b53b2e010b3cc2",
         "MetroGS recipe recorded SHA mismatch",
     )
     require(metro_method.get("renderer_adapter") == metro_adapter_relative, "MetroGS adapter path mismatch")

@@ -100,6 +100,7 @@
     "density_voxel_size": 0.1,
     "densify_until_iteration": 50000,
     "aabb": "frozen upstream robust MAD estimator for this custom scene; MatrixCity numeric AABB is not imported",
+    "logger": "Lightning TensorBoardLogger writing only beneath the run root; required because the frozen upstream training loop logs Gaussian-count and learning-rate metrics on its first optimizer step",
     "formal_checkpoint_iteration": 150000,
     "resume_allowed": false,
     "gcp_lidar_or_heldout_rgb_visible_to_training": false
@@ -114,10 +115,11 @@
   },
   "execution": {
     "wrapper": "code/gcp/run_metrogs_training.py",
-    "wrapper_sha256": "a673ecfe150771ed6282e9b1a522f5f037de4103c199977604e0a42342374815",
+    "wrapper_sha256": "99acb08258e813849b3bad339d787a325cc2d1b00035530ff1e75a1c205d3a56",
     "formal_command_template": "python code/gcp/run_metrogs_training.py --repo <clean_official_train> --python <frozen_python> --dataset <metrogs_training_copy> --model_path <new_run_root>/model --prior_manifest <prior_pass_json> --prior_pass_marker <prior_pass_marker> --additional_ply <pi3_merged_ply> --mode formal --iterations 150000",
     "working_directory": "clean official training source",
     "training_source_patch": null,
+    "runtime_correction": "pre-result qualification retry replaces disabled logging with the upstream-supported local TensorBoard logger; no training source, loss, schedule, input, budget, or evaluation semantics changed",
     "preexisting_checkpoint_allowed": false,
     "overwrite_allowed": false,
     "result_driven_retry_allowed": false,

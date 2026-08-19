@@ -498,10 +498,10 @@
         "pi3_weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
       },
       "recipe": "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
-      "recipe_sha256": "14a28d76ac903faddca2bd48eedadfd205964c95835ac1defdac575fbdffd0cb",
+      "recipe_sha256": "215cab491aa6a3d9f9746d4c6d9ca159c74123e610831c8112b53b2e010b3cc2",
       "renderer_adapter": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
       "renderer_adapter_sha256": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
-      "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_RETRY_AFTER_UPSTREAM_DEPTH_FILTER_SEMANTICS_FIX",
+      "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_RETRY_WITH_REQUIRED_LOCAL_LOGGER",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": false,
       "six_scene_run_allowed": false,
