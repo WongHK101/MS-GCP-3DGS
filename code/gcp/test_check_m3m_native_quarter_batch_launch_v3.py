@@ -14,6 +14,7 @@ QGS_GATE_PATH = "configs/launch_gates/m3m_gcp_native_quarter_qgs_3k_seed0_30k_ga
 QGS_GATE_SHA256 = "e882d98d5203128e081cf1849499ef5bef49d1213b84a635815c2d9ffc0d08b5"
 SOF_GATE_PATH = "configs/launch_gates/m3m_gcp_native_quarter_sof_3k_seed0_30k_gate_v1.json"
 SOF_GATE_SHA256 = "07f8d43fb0c6137f5dbb05b942a1cb5ab63cd76ed499a19d8acf23c309b395bf"
+METRO_GATE_PATH = "configs/launch_gates/m3m_gcp_native_quarter_metrogs_3k_seed0_150k_gate_v1.json"
 
 
 def load_qgs_gate_fixture() -> tuple[dict, dict]:
@@ -48,6 +49,35 @@ def load_sof_gate_fixture() -> tuple[dict, dict]:
     }
     gate = json.loads((REPO_ROOT / SOF_GATE_PATH).read_text(encoding="utf-8"))
     return registry, gate
+
+
+def load_metro_gate_fixture() -> tuple[dict, dict]:
+    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    gate = json.loads((REPO_ROOT / METRO_GATE_PATH).read_text(encoding="utf-8"))
+    return registry, gate
+
+
+def test_current_metrogs_gate_freezes_the_predeclared_wall_time_limit() -> None:
+    registry, gate = load_metro_gate_fixture()
+    result = check_launch(
+        registry,
+        REPO_ROOT,
+        method_id="metrogs",
+        scene="gcp_3000_20260602",
+        seed=0,
+        budget_value=150000,
+        run_root=gate["run_root"],
+        run_root_exists=False,
+    )
+    assert result["passed"] is True
+    assert result["errors"] == []
+
+
+def test_metrogs_frozen_gate_declares_no_retry_after_wall_time_limit() -> None:
+    _, gate = load_metro_gate_fixture()
+    assert gate["maximum_training_wall_seconds"] == 54000
+    assert gate["wall_time_limit_terminal_status"] == "INCOMPLETE_UNRANKED"
+    assert gate["wall_time_limit_retry_allowed"] is False
 
 
 def test_closed_sof_gate_replay_fixture_authorizes_only_its_frozen_run() -> None:

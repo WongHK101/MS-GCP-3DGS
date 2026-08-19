@@ -86,6 +86,18 @@ def check_launch(
     require(gate.get("resume_allowed") is False, "gate permits resume")
     require(gate.get("overwrite_allowed") is False, "gate permits overwrite")
     require(gate.get("result_driven_retry_allowed") is False, "gate permits result-driven retry")
+    if method_id == "metrogs":
+        require(gate.get("maximum_training_wall_seconds") == 54000, "MetroGS wall-time limit mismatch")
+        require(
+            gate.get("wall_time_limit_enforced_by")
+            == "/usr/bin/timeout --signal=TERM --kill-after=120s 54000s",
+            "MetroGS wall-time enforcement mismatch",
+        )
+        require(
+            gate.get("wall_time_limit_terminal_status") == "INCOMPLETE_UNRANKED",
+            "MetroGS wall-time terminal status mismatch",
+        )
+        require(gate.get("wall_time_limit_retry_allowed") is False, "MetroGS wall-time limit permits retry")
 
     if method is not None:
         source = method.get("source", {})

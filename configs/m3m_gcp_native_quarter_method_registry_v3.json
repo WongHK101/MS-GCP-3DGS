@@ -507,7 +507,7 @@
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": false
+      "three_k_training_allowed": true
     },
     {
       "method_id": "gof",
@@ -540,8 +540,12 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": [],
-  "current_one_use_launch_gate": null,
+  "per_method_training_allowed_methods": ["metrogs"],
+  "current_one_use_launch_gate": {
+    "method_id": "metrogs",
+    "path": "configs/launch_gates/m3m_gcp_native_quarter_metrogs_3k_seed0_150k_gate_v1.json",
+    "sha256": "5ee389d1f56300e9cc728460edc16b278e7726a88f7edf4c677b2529530407d7"
+  },
   "batch_controller": {
     "preparation_allowed": true,
     "formal_training_requires_method_gate": true,
