@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_rgb_quality_contract_v1",
   "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
-  "status": "ACTIVE_FROZEN",
+  "status": "REVIEW_CANDIDATE_NOT_FORMAL",
   "relationship_to_geometry_protocol": {
     "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
     "role": "additive orthogonal RGB heldout measurement suite",

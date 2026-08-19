@@ -57,15 +57,14 @@ def load_qgs_runtime(qgs_repo: Path, config: Any) -> Dict[str, Any]:
         background: Any,
         return_raw_metric_depth_accumulators: bool = False,
     ) -> Dict[str, Any]:
-        return qgs_render(
+        return call_qgs_render(
+            qgs_render,
             view,
             gaussians,
             pipeline,
             config.optimizer,
             background,
             kernel_size=config.dataset.kernel_size,
-            return_depth=True,
-            return_normal=True,
             return_raw_metric_depth_accumulators=return_raw_metric_depth_accumulators,
         )
 
@@ -79,6 +78,48 @@ def load_qgs_runtime(qgs_repo: Path, config: Any) -> Dict[str, Any]:
         "sparse_adam_available": False,
         "render_parameters": set(inspect.signature(render).parameters),
     }
+
+
+def call_qgs_render(
+    qgs_render: Any,
+    view: Any,
+    gaussians: Any,
+    pipeline: Any,
+    optimizer: Any,
+    background: Any,
+    *,
+    kernel_size: float,
+    return_raw_metric_depth_accumulators: bool = False,
+) -> Dict[str, Any]:
+    """Call either the official RGB renderer or the additive depth-patched renderer.
+
+    The official frozen QGS source has no raw-accumulator keyword.  RGB export
+    must therefore omit that depth-only extension.  A geometry caller that
+    actually requests raw accumulators still fails closed unless the evaluated
+    renderer explicitly exposes the extension.
+    """
+
+    parameters = set(inspect.signature(qgs_render).parameters)
+    kwargs: Dict[str, Any] = {
+        "kernel_size": kernel_size,
+        "return_depth": True,
+        "return_normal": True,
+    }
+    raw_keyword = "return_raw_metric_depth_accumulators"
+    if raw_keyword in parameters:
+        kwargs[raw_keyword] = bool(return_raw_metric_depth_accumulators)
+    elif return_raw_metric_depth_accumulators:
+        raise RuntimeError(
+            "QGS renderer does not expose the required raw metric-depth accumulators"
+        )
+    return qgs_render(
+        view,
+        gaussians,
+        pipeline,
+        optimizer,
+        background,
+        **kwargs,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:

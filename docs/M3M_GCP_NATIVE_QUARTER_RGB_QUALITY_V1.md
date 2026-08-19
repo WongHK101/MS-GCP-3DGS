@@ -1,6 +1,6 @@
 # M3M-GCP native-quarter heldout RGB quality suite v1
 
-Status: **ACTIVE_FROZEN**
+Status: **REVIEW_CANDIDATE_NOT_FORMAL** (attempt-1 adapter remediation)
 Suite ID: `m3m_gcp_native_quarter_rgb_quality_v1`
 
 This is an additive measurement suite bound to
@@ -42,6 +42,13 @@ camera object. The adapter records that fact and clears `original_image`
 before calling the renderer; renderer source identity is frozen, and no
 heldout tensor is available at the renderer/appearance-policy boundary.
 
+QGS uses its official RGB renderer without the additive metric-depth-only raw
+accumulator keyword. A geometry export that requests those raw accumulators
+still fails closed unless the evaluated renderer explicitly exposes them.
+SOF emits a documented 10-channel raster packet; its dedicated RGB adapter
+requires that exact packet shape and selects channels 0:3 only. Neither rule
+changes the model, camera, heldout truth, or common metric evaluator.
+
 MetroGS is the only active 3K method requiring an explicit novel-view
 appearance rule. Its official renderer trains one appearance embedding per
 training view. For each heldout view, the adapter executes the frozen official
@@ -74,3 +81,17 @@ evidence bound to the exact clean deployment commit/tree and current
 contract/registry hashes. Any non-active status is rejected before an artifact
 directory is created. A technical smoke requires a separate explicit switch
 and a confined temporary output root and is never ranking-eligible.
+
+## Attempt-1 remediation state
+
+The first active execution at benchmark commit `6f91f8b` completed eight
+methods and exposed two non-OOM adapter interface errors (QGS and SOF). Its
+181-file, 237,943,429-byte inventory is frozen by SHA-256 in the review-gate
+evidence. No attempt-1 output is publishable as the final ten-method table.
+
+After review, the complete attempt-1 artifact set will be moved without
+overwrite to one clearly named immutable superseded-attempt root and rehashed.
+Only then may this suite return to `ACTIVE_FROZEN`, obtain a fresh exact
+`PASS_READY` preflight, and rerun all ten methods at the canonical paths. This
+keeps one benchmark commit/tree for the final comparable table and prevents a
+mixture of results from two adapter revisions.

@@ -78,7 +78,7 @@ def _render_argv(
         str(method["appearance_policy"]),
     ]
     camera_root = _resolve_camera_root(method, shared)
-    if method["adapter"] == "export_gaussian_rgb.py":
+    if method["adapter"] in {"export_gaussian_rgb.py", "export_sof_rgb.py"}:
         argv = [
             python,
             "-B",

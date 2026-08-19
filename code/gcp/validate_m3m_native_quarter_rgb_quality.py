@@ -46,7 +46,7 @@ EXPECTED_ADAPTERS = {
     "rade_gs": ("export_gaussian_rgb.py", "graphdeco_style_gaussian_rgb_v1"),
     "qgs": ("export_qgs_rgb.py", "qgs_rgb_v1"),
     "gsprior": ("export_gaussian_rgb.py", "graphdeco_style_gaussian_rgb_v1"),
-    "sof": ("export_gaussian_rgb.py", "graphdeco_style_gaussian_rgb_v1"),
+    "sof": ("export_sof_rgb.py", "sof_rgb_v1"),
     "citygaussian_v2": ("export_lightning_gaussian_rgb.py", "lightning_gaussian_rgb_v1"),
     "citygs_x": ("export_citygs_x_rgb.py", "citygs_x_rgb_v1"),
     "metrogs": ("export_lightning_gaussian_rgb.py", "lightning_gaussian_rgb_v1"),
@@ -526,7 +526,8 @@ def validate(
         require(preflight_evidence.get("errors") == [], "state-specific 901 preflight has errors")
         if status == "REVIEW_CANDIDATE_NOT_FORMAL":
             require(
-                preflight_evidence.get("status") == "PASS_STATIC_METRO_PENDING",
+                preflight_evidence.get("status")
+                == "PASS_REMEDIATION_REVIEW_PENDING",
                 "review-candidate 901 preflight status mismatch",
             )
             require(
@@ -535,7 +536,11 @@ def validate(
             )
             require(
                 preflight_evidence.get("pending")
-                == ["metrogs:formal_model_sha256_activation"],
+                == [
+                    "archive_attempt1_to_immutable_superseded_root",
+                    "activate_reviewed_remediation_commit",
+                    "run_fresh_active_preflight_after_archive",
+                ],
                 "review-candidate 901 preflight pending set mismatch",
             )
         elif status == "ACTIVE_FROZEN":

@@ -22,6 +22,8 @@ from evaluate_m3m_native_quarter_rgb_quality import (
     validate_render_and_ground_truth,
 )
 from build_m3m_native_quarter_rgb_quality_3k_commands import build_plan
+from export_qgs_depth_maps import call_qgs_render
+from export_sof_rgb import extract_sof_rgb
 from rgb_quality_contract import (
     RgbRenderWriter,
     arithmetic_mean,
@@ -42,6 +44,65 @@ POINTER = REPO_ROOT / "configs" / "m3m_gcp_native_quarter_current.json"
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+def test_qgs_rgb_call_omits_unavailable_depth_only_keyword() -> None:
+    calls: list[dict[str, object]] = []
+
+    def official_renderer(
+        view: object,
+        gaussians: object,
+        pipeline: object,
+        optimizer: object,
+        background: object,
+        *,
+        kernel_size: float,
+        return_depth: bool,
+        return_normal: bool,
+    ) -> dict[str, object]:
+        calls.append(
+            {
+                "kernel_size": kernel_size,
+                "return_depth": return_depth,
+                "return_normal": return_normal,
+            }
+        )
+        return {"render": np.zeros((3, 2, 2), dtype=np.float32)}
+
+    result = call_qgs_render(
+        official_renderer,
+        object(),
+        object(),
+        object(),
+        object(),
+        object(),
+        kernel_size=0.1,
+        return_raw_metric_depth_accumulators=False,
+    )
+    assert result["render"].shape == (3, 2, 2)
+    assert calls == [
+        {"kernel_size": 0.1, "return_depth": True, "return_normal": True}
+    ]
+    with pytest.raises(RuntimeError, match="does not expose"):
+        call_qgs_render(
+            official_renderer,
+            object(),
+            object(),
+            object(),
+            object(),
+            object(),
+            kernel_size=0.1,
+            return_raw_metric_depth_accumulators=True,
+        )
+
+
+def test_sof_rgb_extraction_requires_exact_frozen_packet_shape() -> None:
+    packet = np.arange(10 * 4 * 5, dtype=np.float32).reshape(10, 4, 5)
+    rgb = extract_sof_rgb({"render": packet})
+    assert rgb.shape == (3, 4, 5)
+    assert np.array_equal(rgb, packet[:3])
+    with pytest.raises(ValueError, match=r"\[10,H,W\]"):
+        extract_sof_rgb({"render": np.zeros((9, 4, 5), dtype=np.float32)})
 
 
 def _synthetic_contract_and_input(tmp_path: Path) -> tuple[Path, Path, Path]:

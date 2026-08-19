@@ -112,7 +112,8 @@ def export_rgb(
                 payload = render(view, gaussians, pipeline, background, **kwargs)
                 if not isinstance(payload, dict) or "render" not in payload:
                     raise RuntimeError(f"renderer did not return RGB for {image_name}")
-                rgb = payload["render"]
+                extractor = runtime.get("extract_rgb")
+                rgb = extractor(payload) if callable(extractor) else payload["render"]
                 if bool(getattr(dataset, "train_test_exp", False)):
                     rgb = rgb[..., rgb.shape[-1] // 2 :]
                 writer.save(
@@ -173,6 +174,9 @@ def export_rgb(
             float(dataset.kernel_size) if hasattr(dataset, "kernel_size") else None
         ),
         "appearance_policy": args.appearance_policy,
+        "rgb_extraction_policy": runtime.get(
+            "rgb_extraction_policy", "payload.render_must_be_exact_3chw"
+        ),
         "splatting_config": (
             {
                 "path": str(splatting_config_path),
