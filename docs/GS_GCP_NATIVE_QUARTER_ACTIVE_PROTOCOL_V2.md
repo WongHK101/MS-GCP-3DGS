@@ -125,8 +125,9 @@ CityGaussianV2、CityGS-X、MetroGS；GOF 只作为 `historical_complete_retired
 不再执行或扩展。机器登记为 `configs/m3m_gcp_native_quarter_method_registry_v3.json`。
 
 结果必须标注 `rgb_colmap_only` 或 `rgb_colmap_external_geometry_prior`。CityGS-X、
-MetroGS 的外部先验型号、权重 SHA、输入分辨率、命令及成本未冻结前不得资格运行。
-CityGS-X 冻结提交缺少明确许可证，内部试验和代码再分发必须区分。
+MetroGS 的外部先验型号、权重 SHA、输入分辨率和命令均已在各自配方中冻结；外部先验
+生成和训练成本必须独立记录。CityGS-X 冻结提交缺少明确许可证，内部数值试验和代码/
+权重再分发必须区分。
 
 ## 8. 3DGS 原生 1/4 资格状态
 
@@ -231,6 +232,24 @@ GOF 原生 opacity level set/mesh 仍只属于诊断次轨，正式公共结果�
 一个 seed，不得宣称方法间差异具有统计显著性。本节只更新执行状态，没有修改 v2 的输入、
 公共算子、覆盖、Sim(3) 或排名语义。
 
+### 8.3 CityGS-X 方法级正式状态与 MetroGS 资格语义
+
+CityGS-X 的唯一 3K seed-0/100K 正式运行已完成并重新锁定。训练使用完整 82 张冻结
+原生 1/4 RGB、同一 track-closed COLMAP 模型和预先冻结的 DAv2/多视图先验；训练期未读取
+GCP、LiDAR、holdout RGB 或正射真值。训练耗时 `16917.6115 s`（`4.6993365 GPU h`），
+峰值显存 `14647 MiB`，未发生 OOM/OOM-kill；最终 PLY SHA-256 为
+`bf530190e953d8e84145f72bebe13457bc849c0340d6beb3dae0872187e8fb7d`。
+66 个正式 packet 全部通过复算，覆盖 4/4 checkpoints 与 5/5 controls，场景状态为
+`COMPLETE_RANKED`。checkpoint RMSE 为 3D `0.0351800842 m`、水平 `0.0195005004 m`、
+高程 `0.0292808608 m`；正式报告为
+`docs/protocol_evidence/citygs_x_native_quarter_formal_3k_seed0_100k_v1.json`。
+
+MetroGS 仍处于正式训练前资格阶段。其冻结官方 dataparser 的 `0.2×–5×` 中位深度尺度
+筛选只决定某一训练视图是否挂载 MoGe 深度先验，不删除该视图的 RGB 训练样本。资格预处理
+必须验证 82/82 RGB 和 82/82 MoGe 文件均存在，并精确报告筛选后 72 个深度先验被挂载、
+10 个被跳过；训练集仍为同一 82 张 RGB。不得放宽官方阈值、删除 RGB 视图或以结果调参。
+这项资格语义澄清没有改变 v2 的输入、公共评测或排名规则。
+
 ## 9. 解锁顺序
 
 单个方法只有在源码/许可证、原生 1/4 recipe、外部先验、原始矩适配器、合成一致性、
@@ -240,11 +259,10 @@ GOF 原生 opacity level set/mesh 仍只属于诊断次轨，正式公共结果�
 证据保留。PGSR、RaDe-GS、QGS、GSPrior、SOF、CityGaussianV2、CityGS-X 和
 MetroGS 进入同一个 seed-0 3K 批次，但仍须各自通过一次性资格门。技术资格
 `TECHNICALLY_QUALIFIED` 与场景结果 `COMPLETE_RANKED` / `INCOMPLETE_UNRANKED`
-分开记录。PGSR 已通过冻结源码、原生 1/4 recipe、truth-deny、CUDA 原始矩一致性、
-冻结 3K 真实 packet-camera 和端到端评测预检；当前仅 PGSR 的 seed-0、30K、固定
-3K run root 一次性门禁开放，其他方法及六场景矩阵仍锁定。PGSR 的邻接相机仍采用
-上游的视角小于 30 度且最近 8 个规则，但去除不适用于该米制大场景的固定 1.5 距离
-截断；该决定只使用冻结输入相机几何，在训练和任何真值评测前确定。
+分开记录。PGSR、RaDe-GS、QGS、GSPrior、SOF、CityGaussianV2 和 CityGS-X 的
+seed-0 3K 正式结果均已终止并重新锁定；当前没有开放的正式训练门。MetroGS 必须先完成
+冻结外部先验、8 effective-iteration 训练及 66-packet 评测资格链，资格证据入库并通过登记
+验证后，才可获得其唯一 150K effective-iteration 正式门禁。六场景矩阵仍锁定。
 
 当前实现入口：
 

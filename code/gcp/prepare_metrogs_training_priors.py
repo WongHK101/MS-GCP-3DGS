@@ -152,7 +152,9 @@ def validate_depths(
     return rows
 
 
-def validate_scales(path: Path, expected_names: set[str]) -> tuple[list[dict[str, Any]], float]:
+def validate_scales(
+    path: Path, expected_names: set[str]
+) -> tuple[list[dict[str, Any]], float, list[str], list[str]]:
     values = json.loads(path.read_text(encoding="utf-8"))
     if set(values) != expected_names:
         raise RuntimeError(
@@ -170,13 +172,15 @@ def validate_scales(path: Path, expected_names: set[str]) -> tuple[list[dict[str
         rows.append({"image_name": name, "scale": scale, "offset": offset})
     median = float(np.median(np.asarray(scales, dtype=np.float64)))
     lower, upper = 0.2 * median, 5.0 * median
-    rejected = [row["image_name"] for row in rows if not lower <= row["scale"] <= upper]
-    if rejected:
-        raise RuntimeError(
-            "official MetroGS 0.2x--5x median depth-scale filter would reject training views: "
-            f"{rejected}"
-        )
-    return rows, median
+    accepted: list[str] = []
+    rejected: list[str] = []
+    for row in rows:
+        keep_depth_prior = lower <= row["scale"] <= upper
+        row["official_depth_prior_accepted"] = keep_depth_prior
+        (accepted if keep_depth_prior else rejected).append(row["image_name"])
+    if not accepted:
+        raise RuntimeError("official MetroGS depth-scale filter would reject every depth prior")
+    return rows, median, accepted, rejected
 
 
 def validate_multi_view(path: Path, expected_names: set[str]) -> dict[str, Any]:
@@ -454,7 +458,9 @@ def main() -> int:
         cwd=repo,
         env=env,
     )
-    scale_rows, median_scale = validate_scales(scale_path, expected_names)
+    scale_rows, median_scale, scale_accepted, scale_rejected = validate_scales(
+        scale_path, expected_names
+    )
 
     multi_view_path = dataset / "multi_view.json"
     commands["multi_view"] = run_checked(
@@ -619,7 +625,17 @@ def main() -> int:
             "scale_manifest_sha256": sha256(scale_path),
             "scale_count": len(scale_rows),
             "scale_median": median_scale,
-            "official_scale_bound_survivor_count": len(scale_rows),
+            "official_scale_bound_lower_factor": 0.2,
+            "official_scale_bound_upper_factor": 5.0,
+            "official_scale_bound_survivor_count": len(scale_accepted),
+            "official_scale_bound_rejected_count": len(scale_rejected),
+            "official_scale_bound_survivor_images": scale_accepted,
+            "official_scale_bound_rejected_images": scale_rejected,
+            "official_filter_semantics": (
+                "all 82 RGB views remain in the training set; only the depth prior is "
+                "left unattached for out-of-bound views, exactly as the frozen upstream "
+                "MetroGS dataparser implements"
+            ),
         },
         "multi_view": {
             **multi_view,
@@ -651,6 +667,7 @@ def main() -> int:
             "gcp_truth_read": False,
             "lidar_read": False,
             "image_pixels_changed": False,
+            "rgb_training_views_removed_by_depth_scale_filter": False,
             "formal_training_started": False,
         },
         "runtime": {

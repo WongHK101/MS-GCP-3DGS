@@ -48,7 +48,9 @@
       "model": "MoGe-2 ViT-L Normal",
       "weight_bytes": 1323815904,
       "weight_sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
-      "output": "estimated_mask_depths plus estimated_mask_depth_scales.json for exactly 82 training views"
+      "output": "estimated_mask_depths plus estimated_mask_depth_scales.json for exactly 82 training views",
+      "official_scale_filter_semantics": "the frozen upstream 0.2x--5x median-scale filter skips only the monocular depth prior on out-of-bound views; all 82 RGB views remain in training",
+      "qualification_observed_attachment": "72 depth priors attached and 10 skipped by the frozen upstream filter; no RGB training view removed"
     },
     "multi_view": {
       "generator": "frozen upstream MatrixCity route",
@@ -66,7 +68,7 @@
       "output": "additional_points/metrogs_pi3_merged.ply"
     },
     "preparation_script": "code/gcp/prepare_metrogs_training_priors.py",
-    "preparation_script_sha256": "c44e0187835f511f763021faa672b9e462a30c35e34aa873345e898171e1c8df",
+    "preparation_script_sha256": "6000a8431efe91138a50b47abd498c0eea681eac34a806c5c7b35bf5f3b9f60a",
     "compatibility_patch": {
       "path": "patches/metrogs/numpy_bool_compat_get_mask_depth_scales_8cf9ac1_v1.patch",
       "sha256": "40baaacce2f71493fdc3da22790e5a111066c2e1fa766ceae37c282de5d374c2",
@@ -112,7 +114,7 @@
   },
   "execution": {
     "wrapper": "code/gcp/run_metrogs_training.py",
-    "wrapper_sha256": "da223e353927166c2c47429f201ed3354138321c2addac258b676363c4bee2ec",
+    "wrapper_sha256": "a673ecfe150771ed6282e9b1a522f5f037de4103c199977604e0a42342374815",
     "formal_command_template": "python code/gcp/run_metrogs_training.py --repo <clean_official_train> --python <frozen_python> --dataset <metrogs_training_copy> --model_path <new_run_root>/model --prior_manifest <prior_pass_json> --prior_pass_marker <prior_pass_marker> --additional_ply <pi3_merged_ply> --mode formal --iterations 150000",
     "working_directory": "clean official training source",
     "training_source_patch": null,

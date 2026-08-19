@@ -658,7 +658,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(metro_method.get("recipe") == metro_recipe_relative, "MetroGS recipe path mismatch")
     require(
         metro_method.get("recipe_sha256")
-        == "1864d720d53a082832ac69cfec0b81f9f4db42ebb5ceb638fa1e13c09de2d13c",
+        == "14a28d76ac903faddca2bd48eedadfd205964c95835ac1defdac575fbdffd0cb",
         "MetroGS recipe recorded SHA mismatch",
     )
     require(metro_method.get("renderer_adapter") == metro_adapter_relative, "MetroGS adapter path mismatch")
@@ -694,6 +694,17 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             metro_recipe.get("evaluation_adapter", {}).get("config_sha256")
             == file_sha256(metro_adapter_path),
             "MetroGS recipe records the wrong adapter SHA",
+        )
+        moge_route = metro_recipe.get("external_prior_route", {}).get("moge", {})
+        require(
+            "all 82 RGB views remain in training"
+            in str(moge_route.get("official_scale_filter_semantics", "")),
+            "MetroGS official depth-prior filter semantics are not frozen",
+        )
+        require(
+            moge_route.get("qualification_observed_attachment")
+            == "72 depth priors attached and 10 skipped by the frozen upstream filter; no RGB training view removed",
+            "MetroGS qualification depth-prior attachment accounting mismatch",
         )
         metro_preparation_path = repo_root / "code/gcp/prepare_metrogs_training_priors.py"
         metro_wrapper_path = repo_root / "code/gcp/run_metrogs_training.py"

@@ -422,7 +422,7 @@
     {
       "method_id": "citygs_x",
       "display_name": "CityGS-X",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "hierarchical_3d_gaussian",
       "source": {
         "official_repository": "https://github.com/gyy456/CityGS-X",
@@ -452,10 +452,24 @@
       "qualification_report": "docs/protocol_evidence/citygs_x_native_quarter_gpu_real_3k_qualification_v1.json",
       "qualification_report_sha256": "4e153f3779ac66c3a011a4feb83a03f127c056bf3b08a2af5b62e616c23533cb",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/citygs_x_native_quarter_formal_3k_seed0_100k_v1.json",
+        "report_sha256": "0ddcf9b88b9bd9e12b240df8716fd8d1cf77357772f8400012cb5958ed332031",
+        "final_checkpoint_sha256": "bf530190e953d8e84145f72bebe13457bc849c0340d6beb3dae0872187e8fb7d",
+        "packet_manifest_sha256": "e05b566d3dbe8120e47293a44a104a0cd49a63cf868444e492dd34c4e70ee3c7",
+        "checkpoint_rmse_3d_m": 0.035180084205386805,
+        "checkpoint_rmse_h_m": 0.019500500402927074,
+        "checkpoint_rmse_z_m": 0.02928086079222309,
+        "all_rmse_3d_m": 0.035364501970153936,
+        "all_rmse_h_m": 0.020414329909838137,
+        "all_rmse_z_m": 0.02887738100883302,
+        "primary_accuracy_scope": "checkpoint",
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "metrogs",
@@ -484,10 +498,10 @@
         "pi3_weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
       },
       "recipe": "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
-      "recipe_sha256": "1864d720d53a082832ac69cfec0b81f9f4db42ebb5ceb638fa1e13c09de2d13c",
+      "recipe_sha256": "14a28d76ac903faddca2bd48eedadfd205964c95835ac1defdac575fbdffd0cb",
       "renderer_adapter": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
       "renderer_adapter_sha256": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
-      "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_CHAIN_QUEUED",
+      "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_RETRY_AFTER_UPSTREAM_DEPTH_FILTER_SEMANTICS_FIX",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
       "technical_full_matrix_eligibility": false,
       "six_scene_run_allowed": false,
@@ -524,12 +538,8 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["citygs_x"],
-  "current_one_use_launch_gate": {
-    "method_id": "citygs_x",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_citygs_x_3k_seed0_100k_gate_v1.json",
-    "sha256": "c9bcf6bff2954f631955cc5dcb8de224e0feb1c169c4c44944b4a7ad4394751a"
-  },
+  "per_method_training_allowed_methods": [],
+  "current_one_use_launch_gate": null,
   "batch_controller": {
     "preparation_allowed": true,
     "formal_training_requires_method_gate": true,

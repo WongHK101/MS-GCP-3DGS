@@ -261,6 +261,16 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("MetroGS track-closed sparse identity mismatch")
     if prior.get("moge", {}).get("weight_sha256") != MOGE_WEIGHT_SHA256:
         raise RuntimeError("MetroGS MoGe weight identity mismatch")
+    moge = prior.get("moge", {})
+    if moge.get("depth_count") != 82 or moge.get("scale_count") != 82:
+        raise RuntimeError("MetroGS MoGe inventory must cover all 82 RGB training views")
+    survivor_count = int(moge.get("official_scale_bound_survivor_count", -1))
+    rejected_count = int(moge.get("official_scale_bound_rejected_count", -1))
+    rejected_images = moge.get("official_scale_bound_rejected_images")
+    if survivor_count <= 0 or survivor_count + rejected_count != 82:
+        raise RuntimeError("MetroGS official depth-prior filter accounting mismatch")
+    if not isinstance(rejected_images, list) or len(rejected_images) != rejected_count:
+        raise RuntimeError("MetroGS rejected depth-prior inventory mismatch")
     if prior.get("pi3", {}).get("weight_sha256") != PI3_WEIGHT_SHA256:
         raise RuntimeError("MetroGS Pi3 weight identity mismatch")
     merged = prior.get("pi3", {}).get("merged_pointmap", {})
@@ -277,6 +287,7 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "gcp_truth_read": False,
         "lidar_read": False,
         "image_pixels_changed": False,
+        "rgb_training_views_removed_by_depth_scale_filter": False,
         "formal_training_started": False,
     }
     for name, expected in expected_claims.items():
@@ -312,6 +323,9 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "formal_input_manifest_canonical_sha256": FORMAL_MANIFEST_CANONICAL_SHA256,
         "training_image_count": image_count,
         "training_depth_count": depth_count,
+        "training_depth_prior_attached_count": survivor_count,
+        "training_depth_prior_skipped_count": rejected_count,
+        "training_depth_prior_skipped_images": rejected_images,
         "sparse_sha256": actual_sparse,
         "additional_pointmap": {
             "path": str(additional_ply),
