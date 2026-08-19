@@ -390,7 +390,9 @@
         {
           "name": "Depth Anything V2 Large",
           "official_encoder": "vitl",
-          "official_command_mode": "--pred-only --grayscale",
+          "actual_execution_mode": "official CityGaussianV2 utils/run_depth_anything_v2.py wrapper; direct frozen DAv2 ViT-L inference, per-image min-max normalization to [0,1], single-channel float32 .npy output",
+          "actual_command_evidence": "docs/protocol_evidence/citygaussian_v2_native_quarter_gpu_real_3k_qualification_v1.json#/external_geometry_prior/manifest/commands/depth_generation",
+          "legacy_recipe_command_mode_superseded_by": "docs/protocol_evidence/citygaussian_v2_formal_metadata_correction_v1.json",
           "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
           "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
           "freeze_status": "FROZEN_EXACT_WEIGHTS_AND_COMMAND_PRE_RESULT"
@@ -408,6 +410,9 @@
         "checkpoint_rmse_3d_m": 0.09403251107922012,
         "checkpoint_rmse_h_m": 0.020016423080856036,
         "checkpoint_rmse_z_m": 0.09187739627847442,
+        "primary_accuracy_scope": "checkpoint",
+        "metadata_correction": "docs/protocol_evidence/citygaussian_v2_formal_metadata_correction_v1.json",
+        "metadata_correction_sha256": "191e4290a9f7b9a69829fa08dba6b1ecdc1507293d7d1f26ac559710807505a7",
         "rerun_allowed": false
       },
       "technical_full_matrix_eligibility": true,

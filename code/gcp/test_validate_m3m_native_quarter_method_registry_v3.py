@@ -58,6 +58,15 @@ def test_training_flag_without_gate_fails_closed(tmp_path: Path) -> None:
     assert "method training flags disagree with the allowlist" in result["errors"]
 
 
+def test_citygaussian_metadata_correction_hash_is_bound(tmp_path: Path) -> None:
+    value = load_registry()
+    method = next(item for item in value["methods"] if item["method_id"] == "citygaussian_v2")
+    method["formal_3k_result"]["metadata_correction_sha256"] = "0" * 64
+    result = validate_mutation(tmp_path, value)
+    assert result["passed"] is False
+    assert "citygaussian_v2: metadata correction recorded SHA mismatch" in result["errors"]
+
+
 def test_one_use_gate_hash_is_bound(tmp_path: Path) -> None:
     value = load_registry()
     method = next(item for item in value["methods"] if item["method_id"] == "qgs")

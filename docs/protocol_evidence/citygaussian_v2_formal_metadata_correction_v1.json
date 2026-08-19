@@ -1,0 +1,73 @@
+{
+  "schema": "m3m_gcp_native_quarter_citygaussian_v2_formal_metadata_correction_v1",
+  "status": "PASS_METADATA_CORRECTION_NO_RESULT_CHANGE",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "method_id": "citygaussian_v2",
+  "scene": "gcp_3000_20260602",
+  "created_at": "2026-08-19T10:28:06+08:00",
+  "original_formal_evidence": {
+    "path": "docs/protocol_evidence/citygaussian_v2_native_quarter_formal_3k_seed0_90k_v1.json",
+    "sha256": "deabc720479a6d584b79a37182de80ac228762e43f72164cf687270be6c28b5d",
+    "modified_by_this_correction": false,
+    "formal_result_status": "COMPLETE_RANKED"
+  },
+  "ranking_scope_correction": {
+    "primary_accuracy_scope": "checkpoint",
+    "primary_checkpoint_rmse_m": {
+      "rmse_3d_m": 0.09403251107922012,
+      "rmse_h_m": 0.020016423080856036,
+      "rmse_z_m": 0.09187739627847442
+    },
+    "all_point_scope": "overall_description_only_not_primary_independent_accuracy",
+    "control_scope": "diagnostic_only_not_primary_accuracy",
+    "reason": "The frozen control points participate in the shared common Sim(3) fit, whereas the four checkpoints are the independent accuracy targets. COMPLETE_RANKED still requires all four checkpoints to pass the frozen coverage gate."
+  },
+  "checkpoint_step_semantics": {
+    "coarse_checkpoint": {
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/pipeline/coarse/checkpoints/epoch=366-step=30000.ckpt",
+      "internal_global_step": 30000,
+      "sha256": "355a899ad2863d5932e118ea03e0bc7ad7aeded7de12be152ec6d9c783e99637"
+    },
+    "fine_block_checkpoint": {
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/pipeline/fine/blocks/block_0/checkpoints/epoch=732-step=60000.ckpt",
+      "internal_global_step": 60000,
+      "sha256": "8c31d1eac78e3f39e2eb672d6795933e60059afec80b84297bb51c3e9ad813aa"
+    },
+    "merged_checkpoint": {
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/pipeline/fine/checkpoints/epoch=366-step=30000.ckpt",
+      "filename_step_is_not_the_fine_budget": true,
+      "internal_global_step": 60000,
+      "sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64",
+      "formal_evaluation_snapshot_sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64"
+    },
+    "verification": "Independent audit inspected the trusted local Lightning checkpoint state on AutoDL-901. The misleading merged filename is an upstream merge naming artifact, not a budget shortfall."
+  },
+  "depth_anything_v2_execution_correction": {
+    "legacy_metadata_only_description": "--pred-only --grayscale",
+    "legacy_description_executed": false,
+    "actual_entrypoint": "official CityGaussianV2 utils/run_depth_anything_v2.py wrapper",
+    "actual_entrypoint_sha256": "15a34713315f82cabd657712de964cb47c9441c53575f1dd8efec99d46ac7303",
+    "actual_execution": "The CityGaussianV2 wrapper directly invokes the frozen Depth Anything V2 ViT-L model, applies the wrapper's per-image min-max normalization to [0,1], and writes one single-channel float32 .npy array per training image.",
+    "actual_command_evidence": "docs/protocol_evidence/citygaussian_v2_native_quarter_gpu_real_3k_qualification_v1.json#/external_geometry_prior/manifest/commands/depth_generation",
+    "frozen_dav2_repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+    "frozen_dav2_weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+    "encoder": "vitl",
+    "input_size": 518,
+    "training_rgb_count": 82,
+    "heldout_rgb_count": 0,
+    "gcp_or_lidar_truth_read": false,
+    "formal_result_affected": false,
+    "note": "The consumed recipe v1 remains byte-identical because its SHA-256 is bound into the one-use launch gate and formal evidence. This correction supersedes only that recipe's command_mode prose and the former registry prose; it does not alter the executed command, prior arrays, training, or evaluation."
+  },
+  "independent_audit": {
+    "review_thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "result": "PASS_WITH_REQUIRED_CHANGES",
+    "formal_result_invalidated": false,
+    "rerun_required": false,
+    "required_changes_addressed_by": [
+      "ranking_scope_correction",
+      "checkpoint_step_semantics",
+      "depth_anything_v2_execution_correction"
+    ]
+  }
+}

@@ -93,6 +93,7 @@
     "configs/launch_gates/m3m_gcp_native_quarter_citygaussian_v2_3k_seed0_90k_gate_v1.json",
     "docs/protocol_evidence/citygaussian_v2_native_quarter_gpu_real_3k_qualification_v1.json",
     "docs/protocol_evidence/citygaussian_v2_native_quarter_formal_3k_seed0_90k_v1.json",
+    "docs/protocol_evidence/citygaussian_v2_formal_metadata_correction_v1.json",
     "docs/protocol_evidence/citygaussian_native_quarter_track_compatibility_v1.json",
     "code/gcp/prepare_citygaussian_v2_depth_prior.py",
     "code/gcp/run_citygaussian_v2_pipeline.py",

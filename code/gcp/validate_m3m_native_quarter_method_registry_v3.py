@@ -762,6 +762,65 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             if report_path.is_file() and is_sha256(report_sha):
                 require(file_sha256(report_path) == report_sha, f"{method_id}: formal report file SHA mismatch")
 
+    citygaussian = by_id.get("citygaussian_v2", {})
+    citygaussian_formal = citygaussian.get("formal_3k_result", {})
+    if citygaussian_formal.get("status") == "COMPLETE_RANKED":
+        correction_relative = "docs/protocol_evidence/citygaussian_v2_formal_metadata_correction_v1.json"
+        correction_sha = "191e4290a9f7b9a69829fa08dba6b1ecdc1507293d7d1f26ac559710807505a7"
+        require(
+            citygaussian_formal.get("primary_accuracy_scope") == "checkpoint",
+            "citygaussian_v2: primary accuracy scope is not checkpoint-only",
+        )
+        require(
+            citygaussian_formal.get("metadata_correction") == correction_relative,
+            "citygaussian_v2: metadata correction path mismatch",
+        )
+        require(
+            citygaussian_formal.get("metadata_correction_sha256") == correction_sha,
+            "citygaussian_v2: metadata correction recorded SHA mismatch",
+        )
+        citygaussian_priors = citygaussian.get("external_priors", [])
+        if len(citygaussian_priors) == 1:
+            registered_prior = citygaussian_priors[0]
+            require(
+                "official CityGaussianV2 utils/run_depth_anything_v2.py wrapper"
+                in str(registered_prior.get("actual_execution_mode", "")),
+                "citygaussian_v2: actual DAv2 wrapper execution is not registered",
+            )
+            require(
+                "official_command_mode" not in registered_prior,
+                "citygaussian_v2: superseded DAv2 CLI description remains active",
+            )
+        correction_path = repo_root / correction_relative
+        require(correction_path.is_file(), "citygaussian_v2: metadata correction file missing")
+        if correction_path.is_file():
+            require(
+                file_sha256(correction_path) == correction_sha,
+                "citygaussian_v2: metadata correction file SHA mismatch",
+            )
+            correction = json.loads(correction_path.read_text(encoding="utf-8"))
+            require(
+                correction.get("status") == "PASS_METADATA_CORRECTION_NO_RESULT_CHANGE",
+                "citygaussian_v2: metadata correction status mismatch",
+            )
+            require(
+                correction.get("original_formal_evidence", {}).get("sha256")
+                == citygaussian_formal.get("report_sha256"),
+                "citygaussian_v2: metadata correction is not bound to the formal evidence",
+            )
+            require(
+                correction.get("ranking_scope_correction", {}).get("primary_accuracy_scope")
+                == "checkpoint",
+                "citygaussian_v2: correction does not freeze checkpoint-primary ranking",
+            )
+            require(
+                correction.get("checkpoint_step_semantics", {})
+                .get("merged_checkpoint", {})
+                .get("internal_global_step")
+                == 60000,
+                "citygaussian_v2: merged checkpoint global-step correction mismatch",
+            )
+
     require(value.get("global_training_allowed") is False, "global training lock missing")
     allowlist = value.get("per_method_training_allowed_methods")
     require(isinstance(allowlist, list) and len(allowlist) <= 1, "method allowlist must contain at most one method")
