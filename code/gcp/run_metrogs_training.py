@@ -405,6 +405,11 @@ def main() -> int:
     env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     env["NCCL_SHM_DISABLE"] = "1"
     env["WANDB_MODE"] = "offline"
+    # PyTorch 2.6+ defaults torch.load to weights_only=True, while the frozen
+    # upstream ckpt2ply utility loads Lightning metadata from the checkpoint
+    # produced moments earlier by this same clean run.  Trust only that
+    # self-produced checkpoint for the official post-training conversion.
+    env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
     for name in ("RANK", "WORLD_SIZE", "LOCAL_RANK", "MASTER_ADDR", "MASTER_PORT"):
         env.pop(name, None)
 
