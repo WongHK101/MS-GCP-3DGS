@@ -474,7 +474,7 @@
     {
       "method_id": "metrogs",
       "display_name": "MetroGS",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "large_scale_2d_gaussian_with_pointmap_initialization",
       "source": {
         "official_repository": "https://github.com/M3phist0/MetroGS",
@@ -504,10 +504,26 @@
       "qualification_report": "docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json",
       "qualification_report_sha256": "1e6a0f30c859240e9c3f8ce9b0189cba12112d755a85d00b9b2997ebe231922e",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/metrogs_native_quarter_formal_3k_seed0_150k_v1.json",
+        "report_sha256": "6608637791c5d966e9e10ccbdddf1aad0ab74d2c25cf20f5b33726d1d6e0855e",
+        "final_checkpoint_sha256": "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274",
+        "packet_manifest_sha256": "582a7df52dd76feb45f773388de888e69bd0c356d46635d527aca42ed8cc4478",
+        "checkpoint_rmse_3d_m": 0.2743372664806153,
+        "checkpoint_rmse_h_m": 0.03939729655738993,
+        "checkpoint_rmse_z_m": 0.2714936257152738,
+        "all_rmse_3d_m": 0.3182816947643775,
+        "all_rmse_h_m": 0.05825697437282116,
+        "all_rmse_z_m": 0.3129047173805611,
+        "primary_accuracy_scope": "checkpoint",
+        "metadata_correction": "docs/protocol_evidence/metrogs_formal_metadata_correction_v1.json",
+        "metadata_correction_sha256": "37ed5c917a4a03fbd3cd391e80ca300137fe2e8561ecf5d0ad4f51f6e55d1a61",
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "gof",
@@ -540,12 +556,8 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["metrogs"],
-  "current_one_use_launch_gate": {
-    "method_id": "metrogs",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_metrogs_3k_seed0_150k_gate_v1.json",
-    "sha256": "5ee389d1f56300e9cc728460edc16b278e7726a88f7edf4c677b2529530407d7"
-  },
+  "per_method_training_allowed_methods": [],
+  "current_one_use_launch_gate": null,
   "batch_controller": {
     "preparation_allowed": true,
     "formal_training_requires_method_gate": true,

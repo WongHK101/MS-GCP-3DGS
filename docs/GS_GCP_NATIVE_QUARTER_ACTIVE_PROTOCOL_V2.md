@@ -250,8 +250,10 @@ MetroGS 的正式训练前资格链已完成。其冻结官方 dataparser 的 `0
 仍为同一 82 张 RGB。8 effective-iteration / 2 optimizer-step 训练、冻结官方 checkpoint
 合并与 PLY 转换、原生 `A/M1` 一致性以及 66-packet 公共评测均通过，未发生 OOM，且未
 拟合方法专属 Sim(3)。资格报告为
-`docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json`。这项资格只证明
-技术兼容性，不是正式 benchmark 结果；150K 正式门仍关闭。
+`docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json`。该资格随后用于
+一次性 150K 正式训练；正式结果已达到 `COMPLETE_RANKED`，证据为
+`docs/protocol_evidence/metrogs_native_quarter_formal_3k_seed0_150k_v1.json`，其环境变量作用域说明
+由 `docs/protocol_evidence/metrogs_formal_metadata_correction_v1.json` 补充。一次性 3K 训练门已关闭。
 
 ## 9. 解锁顺序
 

@@ -1,0 +1,35 @@
+{
+  "schema": "m3m_gcp_native_quarter_metrogs_metadata_correction_v1",
+  "status": "PASS_WITH_REQUIRED_CHANGES_DISCLOSURE",
+  "created_utc": "2026-08-19T14:13:56.679Z",
+  "scene": "gcp_3000_20260602",
+  "method_id": "metrogs",
+  "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z",
+  "immutable_evidence_binding": {
+    "formal_run_evidence_relative_path": "formal_evaluation/formal_run_evidence.json",
+    "formal_run_evidence_sha256": "6608637791c5d966e9e10ccbdddf1aad0ab74d2c25cf20f5b33726d1d6e0855e",
+    "evaluation_summary_relative_path": "formal_evaluation/evaluator/evaluation_summary.json",
+    "evaluation_summary_sha256": "5530dab2b5db363bb2671f1b4b530af9e180a8fcec956737fc6281bdb546f345",
+    "formal_checkpoint_sha256": "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274",
+    "training_wrapper_summary_sha256": "e7fbf248a8e1172c5b2f0b5a926f5208edaffe716500f1d2d337c8468dc45a91"
+  },
+  "correction": {
+    "environment_variable": "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1",
+    "actual_scope": [
+      "fresh training subprocess",
+      "checkpoint merge subprocess",
+      "ckpt2ply conversion subprocess"
+    ],
+    "validation_side_effect": "The frozen validation-only torchmetrics LPIPS module loaded its fixed weight state dict with weights_only=False.",
+    "training_semantics": "LPIPS is not part of the MetroGS training loss, gradient, optimizer, densification, or checkpoint selection path; this was a fresh run with no resume checkpoint.",
+    "numerical_validity": "The deserialization safety mode did not change the loaded LPIPS state-dict values or the formal model optimization trajectory; no rerun is required.",
+    "future_six_scene_requirement": "Move the environment variable to the ckpt2ply conversion subprocess only and add a negative test proving it is absent from training and merge environments before six-scene execution."
+  },
+  "review_binding": {
+    "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "verdict": "PASS_WITH_REQUIRED_CHANGES",
+    "current_run_action": "retain result without rerun",
+    "future_action_required": true
+  },
+  "immutability": "This additive correction does not alter the frozen training, checkpoint, geometry packets, evaluation summary, or formal_run_evidence.json."
+}

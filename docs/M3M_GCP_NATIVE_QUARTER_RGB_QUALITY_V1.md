@@ -1,6 +1,6 @@
 # M3M-GCP native-quarter heldout RGB quality suite v1
 
-Status: **REVIEW_CANDIDATE_NOT_FORMAL**
+Status: **ACTIVE_FROZEN**
 Suite ID: `m3m_gcp_native_quarter_rgb_quality_v1`
 
 This is an additive measurement suite bound to
@@ -68,9 +68,9 @@ Per-view values are averaged arithmetically for a scene. Once the six-scene
 matrix exists, the paper-level summary uses an unweighted scene macro mean.
 
 The machine-readable authority is
-`configs/m3m_gcp_native_quarter_rgb_quality_v1.json`. Formal execution remains
-locked while its status is `REVIEW_CANDIDATE_NOT_FORMAL`: adapters reject that
-status before creating an artifact directory. A technical smoke requires a
-separate explicit switch and a confined temporary output root. Activation
-requires fresh `PASS_READY` evidence bound to the final clean deployment
-commit/tree and current contract/registry hashes.
+`configs/m3m_gcp_native_quarter_rgb_quality_v1.json`. Formal execution is
+authorized only while its status is `ACTIVE_FROZEN`, with fresh `PASS_READY`
+evidence bound to the exact clean deployment commit/tree and current
+contract/registry hashes. Any non-active status is rejected before an artifact
+directory is created. A technical smoke requires a separate explicit switch
+and a confined temporary output root and is never ranking-eligible.

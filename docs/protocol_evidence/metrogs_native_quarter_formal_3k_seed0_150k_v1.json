@@ -1,0 +1,817 @@
+{
+  "artifact_retention": {
+    "large_checkpoint_and_packets_remain_on_autodl_901": true,
+    "local_model_mirror_created": false
+  },
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "created_utc": "2026-08-19T14:05:16.262025+00:00",
+  "evaluation": {
+    "checkpoint_coverage_rate": 1.0,
+    "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+    "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+    "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "method_id": "metrogs",
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2314,
+        "sha256": "5530dab2b5db363bb2671f1b4b530af9e180a8fcec956737fc6281bdb546f345"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1369,
+        "sha256": "23bfc57076ab24fa42c44a225635e4cb20308f41b6be122bc43798d4acf265df"
+      },
+      "observation_samples.csv": {
+        "bytes": 51999,
+        "sha256": "ec65f54788a2f733c879d573bc09edeee95921fe16578025c7c82030ec9bae65"
+      },
+      "point_results.csv": {
+        "bytes": 4355,
+        "sha256": "e168efb0fb5db132f5aa73209283963022c0254f5e5a0719dccdbb075ff3efad"
+      }
+    },
+    "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/formal_evaluation/packets/depth_export_manifest.json",
+    "packet_manifest_sha256": "582a7df52dd76feb45f773388de888e69bd0c356d46635d527aca42ed8cc4478",
+    "physical_surface_claim": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+    "residual_statistics": {
+      "all": {
+        "count": 9,
+        "max_3d_m": 0.72794206691435,
+        "median_3d_m": 0.12664292140966615,
+        "p95_3d_m": 0.6347008485994479,
+        "rmse_3d_m": 0.3182816947643775,
+        "rmse_h_m": 0.05825697437282116,
+        "rmse_z_m": 0.3129047173805611
+      },
+      "checkpoint": {
+        "count": 4,
+        "max_3d_m": 0.4948390211270948,
+        "median_3d_m": 0.14899602193761088,
+        "p95_3d_m": 0.4463155363278638,
+        "rmse_3d_m": 0.2743372664806153,
+        "rmse_h_m": 0.03939729655738993,
+        "rmse_z_m": 0.2714936257152738
+      },
+      "control": {
+        "count": 5,
+        "max_3d_m": 0.72794206691435,
+        "median_3d_m": 0.06538030653924409,
+        "p95_3d_m": 0.6369968582648093,
+        "rmse_3d_m": 0.349481155966537,
+        "rmse_h_m": 0.06976573322707381,
+        "rmse_z_m": 0.3424468146194321
+      }
+    },
+    "scene": "gcp_3000_20260602",
+    "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+    "status": "COMPLETE_RANKED"
+  },
+  "external_geometry_priors": {
+    "manifest": {
+      "claims": {
+        "external_geometry_priors": [
+          "MoGe-2",
+          "Pi3-Align"
+        ],
+        "formal_training_started": false,
+        "gcp_truth_read": false,
+        "heldout_rgb_read": false,
+        "image_pixels_changed": false,
+        "lidar_read": false,
+        "rgb_training_views_removed_by_depth_scale_filter": false,
+        "training_colmap_only": true,
+        "training_rgb_only": true
+      },
+      "commands": {
+        "depth_scale": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+          "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/utils/get_mask_depth_scales.py",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602"
+        ],
+        "merge_pointmaps": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+          "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/merge_all.py",
+          "--base_dir",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602",
+          "--output",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/additional_points/metrogs_pi3_merged.ply"
+        ],
+        "moge": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+          "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/utils/run_moge_v2.py",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/images",
+          "--output",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/estimated_mask_depths",
+          "--dataset_dir",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602",
+          "--downsample_factor",
+          "1",
+          "--moge_path",
+          "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/utils/MoGe"
+        ],
+        "multi_view": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+          "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/utils/multi_view_filter.py",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602",
+          "--split_mode",
+          "reconstruction",
+          "--downsample_factor",
+          "1",
+          "--multi_view_max_dis",
+          "1.5"
+        ],
+        "pi3_blocks": [
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/Pi3-Align/X_long.py",
+            "--image_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/images",
+            "--sparse_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/sparse_closed",
+            "--save_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/output",
+            "--config",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/metrogs_pi3_config_frozen.yaml",
+            "--Xname",
+            "Pi3"
+          ],
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/Pi3-Align/X_long.py",
+            "--image_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/images",
+            "--sparse_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/sparse_closed",
+            "--save_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/output",
+            "--config",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/metrogs_pi3_config_frozen.yaml",
+            "--Xname",
+            "Pi3"
+          ],
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/Pi3-Align/X_long.py",
+            "--image_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/images",
+            "--sparse_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/sparse_closed",
+            "--save_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/output",
+            "--config",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/metrogs_pi3_config_frozen.yaml",
+            "--Xname",
+            "Pi3"
+          ],
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/Pi3-Align/X_long.py",
+            "--image_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/images",
+            "--sparse_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/sparse_closed",
+            "--save_dir",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/output",
+            "--config",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/metrogs_pi3_config_frozen.yaml",
+            "--Xname",
+            "Pi3"
+          ]
+        ],
+        "segment": [
+          "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+          "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/scene_images_segment.py",
+          "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602",
+          "--split_num",
+          "4",
+          "--split_mode",
+          "reconstruction",
+          "--downsample_factor",
+          "1"
+        ],
+        "segment_track_closure": [
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/gcp/materialize_colmap_subset_track_closure.py",
+            "--input_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/sparse/0",
+            "--output_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/sparse_closed/0",
+            "--output_manifest",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/track_closure_manifest.json",
+            "--colmap_io",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/colmap/utils/read_write_model.py"
+          ],
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/gcp/materialize_colmap_subset_track_closure.py",
+            "--input_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/sparse/0",
+            "--output_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/sparse_closed/0",
+            "--output_manifest",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/track_closure_manifest.json",
+            "--colmap_io",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/colmap/utils/read_write_model.py"
+          ],
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/gcp/materialize_colmap_subset_track_closure.py",
+            "--input_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/sparse/0",
+            "--output_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/sparse_closed/0",
+            "--output_manifest",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/track_closure_manifest.json",
+            "--colmap_io",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/colmap/utils/read_write_model.py"
+          ],
+          [
+            "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/gcp/materialize_colmap_subset_track_closure.py",
+            "--input_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/sparse/0",
+            "--output_model",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/sparse_closed/0",
+            "--output_manifest",
+            "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/track_closure_manifest.json",
+            "--colmap_io",
+            "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/colmap/utils/read_write_model.py"
+          ]
+        ]
+      },
+      "input": {
+        "dataset": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602",
+        "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+        "heldout_view_count": 12,
+        "image_hash_aggregate_sha256": "71bc009abc8ca95a282f3904aea669c9fdb59019c79a4bec9d2533872bb2fb4f",
+        "image_transform": "none; byte-identical frozen native-quarter JPEGs",
+        "sparse_hashes": {
+          "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+          "images.bin": "c0ce229da0adbe69f4796d749ed071e1cb5a87d50774c81d22dc1c369590199d",
+          "points3D.bin": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955"
+        },
+        "train_view_count": 82
+      },
+      "input_class": "rgb_colmap_external_geometry_prior",
+      "method_id": "metrogs",
+      "moge": {
+        "depth_count": 82,
+        "depth_hash_aggregate_sha256": "c2d36f10f09fcc0691d223b5ce37208651fd45de67b9b6c1937725045dbcaad2",
+        "depth_valid_fraction_max": 1.0,
+        "depth_valid_fraction_min": 1.0,
+        "official_filter_semantics": "all 82 RGB views remain in the training set; only the depth prior is left unattached for out-of-bound views, exactly as the frozen upstream MetroGS dataparser implements",
+        "official_scale_bound_lower_factor": 0.2,
+        "official_scale_bound_rejected_count": 10,
+        "official_scale_bound_rejected_images": [
+          "DJI_20260602165126_0013_D.JPG",
+          "DJI_20260602165130_0014_D.JPG",
+          "DJI_20260602165138_0016_D.JPG",
+          "DJI_20260602165142_0017_D.JPG",
+          "DJI_20260602165146_0018_D.JPG",
+          "DJI_20260602165150_0019_D.JPG",
+          "DJI_20260602165154_0020_D.JPG",
+          "DJI_20260602165158_0021_D.JPG",
+          "DJI_20260602165206_0023_D.JPG",
+          "DJI_20260602165210_0024_D.JPG"
+        ],
+        "official_scale_bound_survivor_count": 72,
+        "official_scale_bound_survivor_images": [
+          "DJI_20260602165038_0001_D.JPG",
+          "DJI_20260602165042_0002_D.JPG",
+          "DJI_20260602165050_0004_D.JPG",
+          "DJI_20260602165054_0005_D.JPG",
+          "DJI_20260602165102_0007_D.JPG",
+          "DJI_20260602165106_0008_D.JPG",
+          "DJI_20260602165110_0009_D.JPG",
+          "DJI_20260602165114_0010_D.JPG",
+          "DJI_20260602165118_0011_D.JPG",
+          "DJI_20260602165122_0012_D.JPG",
+          "DJI_20260602165229_0025_D.JPG",
+          "DJI_20260602165233_0026_D.JPG",
+          "DJI_20260602165237_0027_D.JPG",
+          "DJI_20260602165241_0028_D.JPG",
+          "DJI_20260602165245_0029_D.JPG",
+          "DJI_20260602165249_0030_D.JPG",
+          "DJI_20260602165253_0031_D.JPG",
+          "DJI_20260602165301_0033_D.JPG",
+          "DJI_20260602165305_0034_D.JPG",
+          "DJI_20260602165309_0035_D.JPG",
+          "DJI_20260602165313_0036_D.JPG",
+          "DJI_20260602165321_0038_D.JPG",
+          "DJI_20260602165325_0039_D.JPG",
+          "DJI_20260602165329_0040_D.JPG",
+          "DJI_20260602165348_0041_D.JPG",
+          "DJI_20260602165353_0042_D.JPG",
+          "DJI_20260602165357_0043_D.JPG",
+          "DJI_20260602165401_0044_D.JPG",
+          "DJI_20260602165409_0046_D.JPG",
+          "DJI_20260602165413_0047_D.JPG",
+          "DJI_20260602165417_0048_D.JPG",
+          "DJI_20260602165421_0049_D.JPG",
+          "DJI_20260602165425_0050_D.JPG",
+          "DJI_20260602165429_0051_D.JPG",
+          "DJI_20260602165433_0052_D.JPG",
+          "DJI_20260602165437_0053_D.JPG",
+          "DJI_20260602165445_0055_D.JPG",
+          "DJI_20260602165449_0056_D.JPG",
+          "DJI_20260602165453_0057_D.JPG",
+          "DJI_20260602165457_0058_D.JPG",
+          "DJI_20260602165501_0059_D.JPG",
+          "DJI_20260602165517_0060_D.JPG",
+          "DJI_20260602165522_0061_D.JPG",
+          "DJI_20260602165526_0062_D.JPG",
+          "DJI_20260602165530_0063_D.JPG",
+          "DJI_20260602165538_0065_D.JPG",
+          "DJI_20260602165542_0066_D.JPG",
+          "DJI_20260602165546_0067_D.JPG",
+          "DJI_20260602165550_0068_D.JPG",
+          "DJI_20260602165554_0069_D.JPG",
+          "DJI_20260602165558_0070_D.JPG",
+          "DJI_20260602165606_0072_D.JPG",
+          "DJI_20260602165610_0073_D.JPG",
+          "DJI_20260602165614_0074_D.JPG",
+          "DJI_20260602165618_0075_D.JPG",
+          "DJI_20260602165640_0076_D.JPG",
+          "DJI_20260602165645_0077_D.JPG",
+          "DJI_20260602165649_0078_D.JPG",
+          "DJI_20260602165653_0079_D.JPG",
+          "DJI_20260602165701_0081_D.JPG",
+          "DJI_20260602165705_0082_D.JPG",
+          "DJI_20260602165709_0083_D.JPG",
+          "DJI_20260602165713_0084_D.JPG",
+          "DJI_20260602165717_0085_D.JPG",
+          "DJI_20260602165721_0086_D.JPG",
+          "DJI_20260602165725_0087_D.JPG",
+          "DJI_20260602165729_0088_D.JPG",
+          "DJI_20260602165737_0090_D.JPG",
+          "DJI_20260602165741_0091_D.JPG",
+          "DJI_20260602165745_0092_D.JPG",
+          "DJI_20260602165749_0093_D.JPG",
+          "DJI_20260602165753_0094_D.JPG"
+        ],
+        "official_scale_bound_upper_factor": 5.0,
+        "runtime_source": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/utils/MoGe",
+        "scale_count": 82,
+        "scale_manifest": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/estimated_mask_depth_scales.json",
+        "scale_manifest_sha256": "012a65ee9b8088869280bc4e803d8384416002a6d71fc64d9cc418ebb2ff5260",
+        "scale_median": 0.02246331079903586,
+        "weight": "/root/autodl-tmp/models/m3m-gcp-native-quarter/metrogs/moge-2-vitl-normal/b135031bae30b5ac2ae141a0e68717795ce38340/model.pt",
+        "weight_bytes": 1323815904,
+        "weight_sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01"
+      },
+      "multi_view": {
+        "bytes": 30589,
+        "camera_count": 82,
+        "max_distance": 1.5,
+        "neighbor_count_max": 8,
+        "neighbor_count_mean": 8.0,
+        "neighbor_count_min": 8,
+        "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/multi_view.json",
+        "rule": "exact official MatrixCity script route: multi_view_filter.py is called without a distance override, so its default maximum distance is 1.5",
+        "sha256": "a719d408595832edd4c920eddf397a5e990dc965d3fcc489bb66377936ee01dd"
+      },
+      "passed": true,
+      "pi3": {
+        "block_pointmaps": [
+          {
+            "bytes": 501869,
+            "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/output/pcd/combined_pcd.ply",
+            "sha256": "24b0ee40181cdaf5f836e81f9af81fb482a2be831663a59e130412adf13551b0",
+            "vertex_count": 33446,
+            "xyz_max": [
+              64.13340759277344,
+              79.14029693603516,
+              -22.77789306640625
+            ],
+            "xyz_min": [
+              -46.470314025878906,
+              -90.12775421142578,
+              -40.189781188964844
+            ]
+          },
+          {
+            "bytes": 612869,
+            "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/output/pcd/combined_pcd.ply",
+            "sha256": "801b409eff27828d0b5225f457a212c3197443504a5a65e560a2328651d5de05",
+            "vertex_count": 40846,
+            "xyz_max": [
+              64.60916900634766,
+              83.09574890136719,
+              -20.58405303955078
+            ],
+            "xyz_min": [
+              -66.25444793701172,
+              -36.20848083496094,
+              -40.079734802246094
+            ]
+          },
+          {
+            "bytes": 1106894,
+            "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/output/pcd/combined_pcd.ply",
+            "sha256": "d70ac6f0935f3c28e76c4e89073a6c36fbf833fb0622b5bbf63958a345e1dbea",
+            "vertex_count": 73781,
+            "xyz_max": [
+              57.69718551635742,
+              72.91206359863281,
+              -22.471158981323242
+            ],
+            "xyz_min": [
+              -66.59579467773438,
+              -83.97862243652344,
+              -40.368507385253906
+            ]
+          },
+          {
+            "bytes": 338804,
+            "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/output/pcd/combined_pcd.ply",
+            "sha256": "58c18d2ed939bf6a08170370bf22f587f35d0317bb4c24a2e0d2afad502c9b15",
+            "vertex_count": 22575,
+            "xyz_max": [
+              56.91310119628906,
+              21.74380874633789,
+              -24.826919555664062
+            ],
+            "xyz_min": [
+              -62.13274002075195,
+              -75.03973388671875,
+              -40.18291091918945
+            ]
+          }
+        ],
+        "config_template": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/prior-runtime-v1/pointmap/Pi3-Align/configs/mc_aerial.yaml",
+        "config_template_sha256": "e6c1065ed368c8793cc34b0b561c65efa6c5afc043271532964cb153b457a560",
+        "loop_enable": false,
+        "merged_pointmap": {
+          "bytes": 2559900,
+          "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/additional_points/metrogs_pi3_merged.ply",
+          "sha256": "d53b2739e8844ca3b753d83fcd674b20ba87e208bc2592f5f4fac1ccdc0fd893",
+          "vertex_count": 170648,
+          "xyz_max": [
+            64.60916900634766,
+            83.09574890136719,
+            -20.58405303955078
+          ],
+          "xyz_min": [
+            -66.59579467773438,
+            -90.12775421142578,
+            -40.368507385253906
+          ]
+        },
+        "resolved_config": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/metrogs_pi3_config_frozen.yaml",
+        "resolved_config_sha256": "9375fd97c500f40438fc7ff67f604638c927545aa18b8ec95c7423e7cbe86961",
+        "segment_image_counts": [
+          17,
+          19,
+          35,
+          11
+        ],
+        "segments": [
+          {
+            "block": "block_0",
+            "image_count": 17,
+            "image_hash_aggregate_sha256": "cc4eadd0350a9d1a7fffbc07cac53fc50cd76393541b2541f4e0e60fd924a14f",
+            "sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 4116982,
+                "sha256": "157ced98400aa7963cf1ab9e08f8e909953b19c7b3a48dbc0a3b6d9d38d8b569"
+              },
+              "points3D.bin": {
+                "bytes": 1305500,
+                "sha256": "62a2cd90948ba52ffd3c59f15da067ff68b945cfd29fa1729e986135479004cd"
+              }
+            },
+            "track_closure_manifest": {
+              "bytes": 1332,
+              "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_0/track_closure_manifest.json",
+              "removed_point_count": 45104,
+              "removed_track_element_count": 281693,
+              "sha256": "f8be5c3a2542059177788f6d4703a7eb98916268619202c30187204d2873e569"
+            },
+            "upstream_sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 4116982,
+                "sha256": "157ced98400aa7963cf1ab9e08f8e909953b19c7b3a48dbc0a3b6d9d38d8b569"
+              },
+              "points3D.bin": {
+                "bytes": 5859348,
+                "sha256": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955"
+              }
+            }
+          },
+          {
+            "block": "block_1",
+            "image_count": 19,
+            "image_hash_aggregate_sha256": "3454b0934a260fc15895d2943422edf4a275191b6592efd6a3d2cf10c8da79cd",
+            "sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 4727874,
+                "sha256": "0634d4e084d8076e7f27e2eef3f85b2dca793f40c7bf91b8f76d78a569f2ed95"
+              },
+              "points3D.bin": {
+                "bytes": 1952624,
+                "sha256": "26a9715245e499e3b731f6a46328cae6508c911e9f5691329e848beee3a874f7"
+              }
+            },
+            "track_closure_manifest": {
+              "bytes": 1332,
+              "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_1/track_closure_manifest.json",
+              "removed_point_count": 36644,
+              "removed_track_element_count": 254735,
+              "sha256": "b203388dfab1b50b7fdfcb0517da8c113200807baa1ca191c1561ff35fb92c5e"
+            },
+            "upstream_sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 4727874,
+                "sha256": "0634d4e084d8076e7f27e2eef3f85b2dca793f40c7bf91b8f76d78a569f2ed95"
+              },
+              "points3D.bin": {
+                "bytes": 5859348,
+                "sha256": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955"
+              }
+            }
+          },
+          {
+            "block": "block_2",
+            "image_count": 35,
+            "image_hash_aggregate_sha256": "35bf7e61742470cc2ad20b19ac5219ec8490a287301f3050c3d36641708cd3c9",
+            "sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 8302450,
+                "sha256": "5b5c6b8b0ef31a3a25ef1ad761f7db62b4e2f2a4bc6b472ee9dd2dd4844e0529"
+              },
+              "points3D.bin": {
+                "bytes": 3137223,
+                "sha256": "8396fa0bf7776802ad65d6045cb043562d4ac52550ce338e157c755fb9f23a5b"
+              }
+            },
+            "track_closure_manifest": {
+              "bytes": 1333,
+              "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_2/track_closure_manifest.json",
+              "removed_point_count": 23223,
+              "removed_track_element_count": 192219,
+              "sha256": "291014dcde10b02613e628fa33afba16c5e7e5e35c6999218d16e321bbfc30bf"
+            },
+            "upstream_sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 8302450,
+                "sha256": "5b5c6b8b0ef31a3a25ef1ad761f7db62b4e2f2a4bc6b472ee9dd2dd4844e0529"
+              },
+              "points3D.bin": {
+                "bytes": 5859348,
+                "sha256": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955"
+              }
+            }
+          },
+          {
+            "block": "block_3",
+            "image_count": 11,
+            "image_hash_aggregate_sha256": "1e2081f1de30daaa5af8c2c502ecff71732d28f40eb21fe7b19cbe7c8a33c8a6",
+            "sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 2616610,
+                "sha256": "109e02e31c5f4a8b51d0de1cfb7f08c5b8616825604be0bbf4a5d6e9fff7d188"
+              },
+              "points3D.bin": {
+                "bytes": 1186907,
+                "sha256": "6a31defe1cbb5d2ae5a6c6313f41d57b08cb5ce8450269476e6b512269d69913"
+              }
+            },
+            "track_closure_manifest": {
+              "bytes": 1332,
+              "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_3000_20260602/segments/block_3/track_closure_manifest.json",
+              "removed_point_count": 45123,
+              "removed_track_element_count": 296396,
+              "sha256": "ebdafa6fae08029943e8768f1bf2fb2990443bd651cb9a9b7c8a97dda4097a1a"
+            },
+            "upstream_sparse": {
+              "cameras.bin": {
+                "bytes": 64,
+                "sha256": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f"
+              },
+              "images.bin": {
+                "bytes": 2616610,
+                "sha256": "109e02e31c5f4a8b51d0de1cfb7f08c5b8616825604be0bbf4a5d6e9fff7d188"
+              },
+              "points3D.bin": {
+                "bytes": 5859348,
+                "sha256": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955"
+              }
+            }
+          }
+        ],
+        "split_num": 4,
+        "use_dbow": false,
+        "weight": "/root/autodl-tmp/models/m3m-gcp-native-quarter/metrogs/pi3/ae722e7039287d0c8fde9f11f197f804f44b510c/model.safetensors",
+        "weight_bytes": 3834909248,
+        "weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
+      },
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "runtime": {
+        "cuda_visible_devices": "0",
+        "python": "3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]"
+      },
+      "scene": "gcp_3000_20260602",
+      "schema": "m3m_gcp_native_quarter_metrogs_training_priors_v1",
+      "source": {
+        "compatibility_patch": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/metrogs/numpy_bool_compat_get_mask_depth_scales_8cf9ac1_v1.patch",
+        "compatibility_patch_sha256": "40baaacce2f71493fdc3da22790e5a111066c2e1fa766ceae37c282de5d374c2",
+        "patched_depth_scale_script_sha256": "b48d68d1355140af9b37caf3fee55d135ae5b59277eb43eb5d245d0e60a67106",
+        "repository_commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+        "repository_tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+        "runtime_status": " M utils/get_mask_depth_scales.py",
+        "subset_track_closure_tool": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/f06bce89cfd53ad9f8ce2e63f8f81a9097dc0e66/repo/code/gcp/materialize_colmap_subset_track_closure.py",
+        "subset_track_closure_tool_sha256": "0ff696cd9e764c2292de2b9360ca51ccc1c1aae0c84dfca64aa1241fc1f2f456"
+      },
+      "status": "PASS"
+    },
+    "manifest_sha256": "b2f85d5ba7123c24e220227cbf0e68a0b302f3437b065b51ae738c187f533af8"
+  },
+  "final_gpu_compute_process_count": 0,
+  "formal_result_status": "COMPLETE_RANKED",
+  "input": {
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "gcp_truth_training_access": false,
+    "height": 1025,
+    "heldout_rgb_training_access": false,
+    "heldout_test_view_count": 12,
+    "input_class": "rgb_colmap_external_geometry_prior",
+    "lidar_training_access": false,
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "track_closure_evidence_sha256": "273a4e34157eebc9fcbbd8e57009edfc1a870c2985d382bbefda7af1b1381b72",
+    "train_view_count": 82,
+    "training_downsample": 1.0,
+    "width": 1414
+  },
+  "method_id": "metrogs",
+  "official_budget": {
+    "effective_iterations": 150000,
+    "optimizer_steps": 37500
+  },
+  "packet_export": {
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "benchmark_commit": "d3c0b37cce145f8450e8b2cb20d11eaa4db6e6d7",
+    "benchmark_tree": "79647707abac487ae7e4f60c1ca7ad2a6af98fd1",
+    "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+    "evaluation_camera_domain_is_frozen_94_camera_scene": true,
+    "evaluation_snapshot_is_separate_from_formal_model": true,
+    "exporter_sha256": "14b2a33430d4f037ce7298d36d49eedfe2f3999cb263200d5048751c9196d96c",
+    "manifest_sha256": "582a7df52dd76feb45f773388de888e69bd0c356d46635d527aca42ed8cc4478",
+    "mapping_csv_sha256": "bd6ccea5852fb0dcfccbdcb6b96ba814b38f79c16fb6850ac5f4f16fa704ca76",
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "packet_bytes": 2727188184,
+    "packet_count": 66,
+    "packet_identity_aggregate_sha256": "406f2db88858a8127c38d5cfa6763856f85cda5e17a7f780776c3a41e1385006",
+    "packet_recomputation_all_passed": true,
+    "peak_gpu_memory_mib": 4889.0,
+    "rasterizer_patch_sha256": "1d46e9039aa7e9973e7e25d2537412e496e9a95443afb0bfb67fb9ac895c006f",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "raw_moment_conformance_sha256": "76b32b0a5b7e45d1f88cb7d85d7906ec2975aaee61b7cb1693579bc42d69fcee",
+    "renderer_patch_sha256": "d7cc203ef57c59b14bffa3748e938c3fb4339858e86ac7e4cec643d39e3f5475",
+    "resource_summary_sha256": "deb9e9671209afc5e842a55e2c4771bb1ecd4f26a355a7d70cd18befde8fcc7d",
+    "snapshot_checkpoint": {
+      "bytes": 2199079961,
+      "sha256": "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274"
+    },
+    "snapshot_point_cloud": {
+      "bytes": 712211064,
+      "sha256": "49ae958391ba808f674ac8a93efe1a024f84e53a37563d235b0eab4c7027ac5a"
+    },
+    "status": "PASS",
+    "valid_pixel_count_max": 1449350,
+    "valid_pixel_count_min": 1449350,
+    "validation_report_sha256": "64f7d835d8b13e78f1026ce3d34a7574f45fb8b112a4bcad6f729b6e60efef4b",
+    "variance_nonnegativity_unresolved_total": 447,
+    "variance_validation_fail_pixel_total": 0,
+    "wall_seconds": 258.10366951301694
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe": {
+    "batch_size": 4,
+    "effective_iterations": 150000,
+    "optimizer_steps": 37500,
+    "resolution": 1,
+    "resume_allowed": false,
+    "route": "official MatrixCity-Aerial route through main_bsz.py"
+  },
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "run": {
+    "adapter_config_sha256": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
+    "formal_launch_gate_sha256": "5ee389d1f56300e9cc728460edc16b278e7726a88f7edf4c677b2529530407d7",
+    "launch_check_sha256": "0b5393cb11f550cd5aa1654c4e9f1a65092be84098b922e4912113a95069956a",
+    "launcher_sha256": "7fc1b1d7d0421321ea39f45bb8a08a3538f22544d94d99fea019d14b58faa6d0",
+    "qualification_report_sha256": "1e6a0f30c859240e9c3f8ce9b0189cba12112d755a85d00b9b2997ebe231922e",
+    "recipe_sha256": "acbf4b79f26fe21ec9ab92ad0e54ab2412a41442c2abf5ee4343dab214470f14",
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_native_quarter_metrogs_formal_3k_run_v1",
+  "seed": 0,
+  "single_seed_only": true,
+  "source": {
+    "evaluation_adapter_only": true,
+    "official_repository_commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
+    "official_repository_tree": "7e92b13095cf4a031d7eb8593e10616db154abbf",
+    "training_renderer_or_rasterizer_modified": false,
+    "training_source_modified": false
+  },
+  "statistical_significance_claim": false,
+  "status": "PASS",
+  "training": {
+    "cgroup_observed_peak_bytes": 19597799424,
+    "checkpoint": {
+      "bytes": 2199079961,
+      "sha256": "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274"
+    },
+    "command_record_sha256": "c35234e65de163ad2832da7d9d10c4478ae01448decdc9b4442c379b07039310",
+    "estimated_gpu_energy_wh": 1148.4699033088546,
+    "fd_peak": 75,
+    "gpu_hours": 5.056795227471739,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "peak_gpu_memory_mib": 25600.0,
+    "point_cloud": {
+      "bytes": 712211064,
+      "sha256": "49ae958391ba808f674ac8a93efe1a024f84e53a37563d235b0eab4c7027ac5a"
+    },
+    "process_maximum_rss_kib": 11992440,
+    "process_tree_sampled_peak_rss_kib": 11887560,
+    "resource_status": "PASS",
+    "resource_summary_sha256": "95a297547dcb38f1dc3dfcce189298a994915a98f5dd80e3151350ffdaaf8b73",
+    "sampler_errors": [],
+    "training_wrapper_summary_sha256": "e7fbf248a8e1172c5b2f0b5a926f5208edaffe716500f1d2d337c8468dc45a91",
+    "wall_seconds": 18204.46281889826
+  }
+}

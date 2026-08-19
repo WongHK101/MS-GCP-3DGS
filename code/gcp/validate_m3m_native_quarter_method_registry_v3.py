@@ -91,6 +91,10 @@ EXPECTED_FORMAL_REPORTS = {
         "docs/protocol_evidence/rade_gs_native_quarter_formal_3k_seed0_30k_v1.json",
         "6586957f3b0da3d2a1a83ac09e65f8228cc395d081f1d1690e2b09047ee674dc",
     ),
+    "metrogs": (
+        "docs/protocol_evidence/metrogs_native_quarter_formal_3k_seed0_150k_v1.json",
+        "6608637791c5d966e9e10ccbdddf1aad0ab74d2c25cf20f5b33726d1d6e0855e",
+    ),
     "gof": (
         "docs/protocol_evidence/gof_native_quarter_formal_3k_seed0_30k_v1.json",
         "04f72d495fba0c74cc2124246feea931ffcceaaba12005529b8ec2ad088eda8a",
@@ -830,6 +834,60 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
                 .get("internal_global_step")
                 == 60000,
                 "citygaussian_v2: merged checkpoint global-step correction mismatch",
+            )
+
+    metro = by_id.get("metrogs", {})
+    metro_formal = metro.get("formal_3k_result", {})
+    if metro_formal.get("status") == "COMPLETE_RANKED":
+        correction_relative = "docs/protocol_evidence/metrogs_formal_metadata_correction_v1.json"
+        correction_sha = "37ed5c917a4a03fbd3cd391e80ca300137fe2e8561ecf5d0ad4f51f6e55d1a61"
+        checkpoint_sha = "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274"
+        require(
+            metro_formal.get("primary_accuracy_scope") == "checkpoint",
+            "metrogs: primary accuracy scope is not checkpoint-only",
+        )
+        require(
+            metro_formal.get("final_checkpoint_sha256") == checkpoint_sha,
+            "metrogs: final checkpoint SHA mismatch",
+        )
+        require(
+            metro_formal.get("metadata_correction") == correction_relative,
+            "metrogs: metadata correction path mismatch",
+        )
+        require(
+            metro_formal.get("metadata_correction_sha256") == correction_sha,
+            "metrogs: metadata correction recorded SHA mismatch",
+        )
+        correction_path = repo_root / correction_relative
+        require(correction_path.is_file(), "metrogs: metadata correction file missing")
+        if correction_path.is_file():
+            require(
+                file_sha256(correction_path) == correction_sha,
+                "metrogs: metadata correction file SHA mismatch",
+            )
+            correction = json.loads(correction_path.read_text(encoding="utf-8"))
+            require(
+                correction.get("status") == "PASS_WITH_REQUIRED_CHANGES_DISCLOSURE",
+                "metrogs: metadata correction status mismatch",
+            )
+            binding = correction.get("immutable_evidence_binding", {})
+            require(
+                binding.get("formal_run_evidence_sha256") == metro_formal.get("report_sha256"),
+                "metrogs: correction is not bound to the formal evidence",
+            )
+            require(
+                binding.get("formal_checkpoint_sha256") == checkpoint_sha,
+                "metrogs: correction is not bound to the formal checkpoint",
+            )
+            require(
+                correction.get("review_binding", {}).get("current_run_action")
+                == "retain result without rerun",
+                "metrogs: reviewed current-run action mismatch",
+            )
+            require(
+                "six-scene"
+                in str(correction.get("correction", {}).get("future_six_scene_requirement", "")),
+                "metrogs: future six-scene environment-scope fix is not recorded",
             )
 
     require(value.get("global_training_allowed") is False, "global training lock missing")

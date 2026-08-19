@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_rgb_quality_3k_registry_v1",
   "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
-  "status": "REVIEW_CANDIDATE_NOT_FORMAL",
+  "status": "ACTIVE_FROZEN",
   "scene": "gcp_3000_20260602",
   "server": "AutoDL-901",
   "active_method_count": 10,
@@ -283,7 +283,7 @@
       "environment_variables": {"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"},
       "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z",
       "formal_checkpoint": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/formal_evaluation/model_snapshot/merged_step_150000.ckpt",
-      "formal_model_sha256": "PENDING_METRO_FORMAL_COMPLETION",
+      "formal_model_sha256": "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274",
       "training_cameras_json": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/model/cameras.json",
       "training_cameras_json_sha256": "e5faae00adee6a3576cd7a358bcd7e809f70a202375931eea3925c08499e31fd",
       "iteration": 150000,

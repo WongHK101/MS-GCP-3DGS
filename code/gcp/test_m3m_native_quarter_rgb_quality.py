@@ -132,8 +132,42 @@ def _technical_writer(
     )
 
 
-def test_repository_contract_and_registry_pass() -> None:
-    result = validate(REPO_ROOT, CONTRACT, REGISTRY, POINTER)
+def test_repository_contract_and_registry_pass(tmp_path: Path) -> None:
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    activation_preflight = None
+    if contract.get("status") == "ACTIVE_FROZEN":
+        identity = git_identity(REPO_ROOT)
+        activation_preflight = tmp_path / "synthetic_activation_preflight.json"
+        _write_json(
+            activation_preflight,
+            {
+                "status": "PASS_READY",
+                "passed": True,
+                "formal_launch_ready": True,
+                "pending": [],
+                "errors": [],
+                "inputs": {
+                    "contract_sha256": sha256_file(CONTRACT),
+                    "registry_sha256": sha256_file(REGISTRY),
+                    "preflight_sha256": sha256_file(
+                        REPO_ROOT
+                        / "code"
+                        / "gcp"
+                        / "preflight_m3m_native_quarter_rgb_quality_3k.py"
+                    ),
+                    "benchmark_commit": identity["commit"],
+                    "benchmark_tree": identity["tree"],
+                    "benchmark_clean": True,
+                },
+            },
+        )
+    result = validate(
+        REPO_ROOT,
+        CONTRACT,
+        REGISTRY,
+        POINTER,
+        activation_preflight,
+    )
     assert result["passed"] is True, result["errors"]
     assert result["method_ids"][-1] == "metrogs"
     assert result["geometry_protocol_id"] == "m3m_gcp_native_quarter_geometry_v2"
@@ -483,7 +517,8 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
 
 
 def test_review_candidate_command_plan_is_explicitly_non_executable() -> None:
-    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    registry = copy.deepcopy(json.loads(REGISTRY.read_text(encoding="utf-8")))
+    registry["status"] = "REVIEW_CANDIDATE_NOT_FORMAL"
     plan = build_plan(
         registry,
         benchmark_repo="/reviewed/benchmark/repo",

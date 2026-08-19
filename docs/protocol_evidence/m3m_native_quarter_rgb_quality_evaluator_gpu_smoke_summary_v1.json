@@ -9,7 +9,7 @@
   },
   "benchmark_repository": null,
   "complete_test_coverage": true,
-  "contract_status": "REVIEW_CANDIDATE_NOT_FORMAL",
+  "contract_status": "ACTIVE_FROZEN",
   "diagnostic_scene_mean": {
     "LPIPS_VGG": 5.66258456502026e-11,
     "PSNR": 114.51374816894531,
@@ -17,7 +17,7 @@
   },
   "evaluated_test_view_count": 12,
   "expected_test_view_count": 12,
-  "finished_at": "2026-08-19T14:21:11.186505+00:00",
+  "finished_at": "2026-08-19T14:38:33.825289+00:00",
   "formal_execution": false,
   "method_id": "technical_evaluator_smoke_not_benchmark",
   "metric_domain": {
@@ -31,7 +31,7 @@
   "ranking_eligible": false,
   "scene": "gcp_3000_20260602",
   "schema": "m3m_gcp_native_quarter_rgb_quality_summary_v1",
-  "started_at": "2026-08-19T14:21:06.096627+00:00",
+  "started_at": "2026-08-19T14:38:28.697697+00:00",
   "status": "TECHNICAL_SMOKE_COMPLETE_UNRANKED",
   "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
   "test_time_optimization": false,

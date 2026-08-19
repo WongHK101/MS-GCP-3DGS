@@ -1,7 +1,7 @@
 {
-  "contract_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/configs/m3m_gcp_native_quarter_rgb_quality_v1.json",
-  "contract_sha256": "a75af8128e40eff5c51dedcb2893319dad0ed0e39d5e72141806d85e65ddd558",
-  "evaluator_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/code/gcp/evaluate_m3m_native_quarter_rgb_quality.py",
+  "contract_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/9d6ce7876d2b2ae93c26da2a795ddd926071cb77/repo/configs/m3m_gcp_native_quarter_rgb_quality_v1.json",
+  "contract_sha256": "1ebb6524d4ffcfceab6abafe2dae8ebd9835e57cc33f4e9985728d54160e4a26",
+  "evaluator_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/9d6ce7876d2b2ae93c26da2a795ddd926071cb77/repo/code/gcp/evaluate_m3m_native_quarter_rgb_quality.py",
   "evaluator_sha256": "aa8f346d7747e7db23b8bcdd1eefe8280ba38ce3aafeae0a4f2e042f5ce71a7e",
   "formal_execution": false,
   "input_manifest_path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
@@ -53,14 +53,14 @@
   "outputs_sha256": {
     "input_render_validation.json": "b0e7dddc6001dee1a57b87a8fa07d3936a9f3aa62d1a8df1047d8ca418fb3776",
     "per_view_metrics.csv": "773a24165ade90d6b11e0e32d75e0cab451be8cc679370e7669c86ed49f94f01",
-    "per_view_metrics.json": "bb4fa50b7dbe0074a3132704bfce4977607355bc1f81dcc92903299675561edf",
-    "rgb_quality_summary.json": "81e13430b6584b531fd859f17a1f63ee7152833d36c4c5aac6d18bd0fc658ae3"
+    "per_view_metrics.json": "471e6d52ef77df7975f053b439bdd5a9e85535b2ed1622e3a1eb67ef6cb0ead7",
+    "rgb_quality_summary.json": "5ea12b3d0d0205c25a9e8c3aad7ed37e9f60cdfcc13e04ad32ce230b40e38f3d"
   },
   "ranking_eligible": false,
   "registry_path": null,
   "registry_sha256": null,
-  "render_manifest_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-b57ff90b/metric-smoke-v5/rgb_render_manifest.json",
-  "render_manifest_sha256": "257e1612013aa576cd31902a4bd1000a609b377a23825e12934a257f6187eb2d",
+  "render_manifest_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-activation-smoke-9d6ce78/metric-smoke-active-v1/rgb_render_manifest.json",
+  "render_manifest_sha256": "8b9f3c36d9901d3075612ab3f04342bb4edd3813e27e44d900df4bdddfdbad72",
   "runtime": {
     "Pillow": "11.1.0",
     "cuda_available": true,
