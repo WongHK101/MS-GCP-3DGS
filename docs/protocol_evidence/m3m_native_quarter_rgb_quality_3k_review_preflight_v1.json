@@ -10,9 +10,9 @@
     "preflight_sha256": "10b59c843323874baca4a1dbcdd0f96f05446403cf6b3e1842f5cdc9b66a2763",
     "contract_sha256": "a75af8128e40eff5c51dedcb2893319dad0ed0e39d5e72141806d85e65ddd558",
     "registry_sha256": "a273b8ba77a0a54e6db09b44bc63ac22067e37a76f8fc9a3011a93f0e445cb07",
-    "benchmark_commit": null,
-    "benchmark_tree": null,
-    "benchmark_clean": false
+    "benchmark_commit": "dd928f5325bfd2466f06713b1378d84bbc2a6305",
+    "benchmark_tree": "e61c089ff0ce016c87f42a94fe61460d3edf352c",
+    "benchmark_clean": true
   },
   "prior_formal_attempt": {
     "attempt_id": "formal-attempt1-6f91f8b-20260819",

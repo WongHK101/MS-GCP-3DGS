@@ -603,15 +603,74 @@ def validate(
             == _sha256_file(repo_root / "code" / "gcp" / "evaluate_m3m_native_quarter_rgb_quality.py"),
             "GPU evaluator smoke evaluator SHA binding mismatch",
         )
-        require(
-            smoke_manifest.get("contract_sha256") == _sha256_file(contract_path),
-            "GPU evaluator smoke contract SHA binding mismatch",
-        )
+        if status == "ACTIVE_FROZEN":
+            require(
+                smoke_manifest.get("contract_sha256") == _sha256_file(contract_path),
+                "GPU evaluator smoke contract SHA binding mismatch",
+            )
         require(
             smoke_manifest.get("outputs_sha256", {}).get("rgb_quality_summary.json")
             == _sha256_file(smoke_summary_path),
             "GPU evaluator smoke summary SHA binding mismatch",
         )
+
+    if status == "REVIEW_CANDIDATE_NOT_FORMAL":
+        remediation_smoke_path = (
+            repo_root
+            / "docs"
+            / "protocol_evidence"
+            / "m3m_native_quarter_rgb_quality_adapter_remediation_smoke_v1.json"
+        )
+        require(remediation_smoke_path.is_file(), "adapter remediation smoke evidence missing")
+        if remediation_smoke_path.is_file():
+            remediation = json.loads(remediation_smoke_path.read_text(encoding="utf-8"))
+            require(
+                remediation.get("status") == "PASS_TECHNICAL_SMOKE",
+                "adapter remediation smoke did not pass",
+            )
+            require(remediation.get("ranking_eligible") is False, "adapter remediation smoke became rankable")
+            require(remediation.get("formal_execution") is False, "adapter remediation smoke became formal")
+            require(
+                remediation.get("contract_sha256") == _sha256_file(contract_path),
+                "adapter remediation contract SHA binding mismatch",
+            )
+            require(
+                remediation.get("registry_sha256") == _sha256_file(registry_path),
+                "adapter remediation registry SHA binding mismatch",
+            )
+            source_sha = remediation.get("source_sha256", {})
+            for name in (
+                "export_qgs_rgb.py",
+                "export_qgs_depth_maps.py",
+                "export_gaussian_rgb.py",
+                "export_sof_rgb.py",
+                "evaluate_m3m_native_quarter_rgb_quality.py",
+            ):
+                require(
+                    source_sha.get(name) == _sha256_file(repo_root / "code" / "gcp" / name),
+                    f"adapter remediation source SHA mismatch: {name}",
+                )
+            smoke_methods = remediation.get("methods", {})
+            for method_id in ("qgs", "sof"):
+                method_smoke = smoke_methods.get(method_id, {})
+                require(
+                    method_smoke.get("status") == "COMPLETE_UNRANKED",
+                    f"{method_id}: remediation smoke incomplete",
+                )
+                require(
+                    method_smoke.get("render_returncode") == 0
+                    and method_smoke.get("metric_returncode") == 0,
+                    f"{method_id}: remediation smoke returned nonzero",
+                )
+                require(
+                    method_smoke.get("required_test_view_count") == 12
+                    and method_smoke.get("rendered_test_view_count") == 12
+                    and method_smoke.get("evaluated_test_view_count") == 12
+                    and method_smoke.get("complete_test_coverage") is True
+                    and method_smoke.get("input_render_validation_passed") is True,
+                    f"{method_id}: remediation smoke coverage/validation mismatch",
+                )
+            require(remediation.get("failed_methods") == [], "adapter remediation smoke retains failures")
 
     return {
         "schema": "m3m_gcp_native_quarter_rgb_quality_validation_v1",
