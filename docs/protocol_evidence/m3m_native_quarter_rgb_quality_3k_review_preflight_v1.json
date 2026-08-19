@@ -7,16 +7,19 @@
   "scene": "gcp_3000_20260602",
   "method_count": 10,
   "inputs": {
-    "preflight_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/preflight.py",
-    "preflight_sha256": "b1043359a49c390e79cd97d125b605347948cb3936a9ab334a4f4974bb32c6a7",
-    "contract_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/contract.json",
-    "contract_sha256": "09cb98c270303aa2a0f0a3dab659c5e0fa91c278850b9e19712ab2e8727915f1",
-    "registry_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/registry.json",
-    "registry_sha256": "2ae260bdfc6171fbd7d8b5c06f9d7ab9237f886d5f32c0578af7fb93eef6e921"
+    "preflight_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/code/gcp/preflight_m3m_native_quarter_rgb_quality_3k.py",
+    "preflight_sha256": "10b59c843323874baca4a1dbcdd0f96f05446403cf6b3e1842f5cdc9b66a2763",
+    "contract_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/configs/m3m_gcp_native_quarter_rgb_quality_v1.json",
+    "contract_sha256": "a75af8128e40eff5c51dedcb2893319dad0ed0e39d5e72141806d85e65ddd558",
+    "registry_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/configs/m3m_gcp_native_quarter_rgb_quality_3k_registry_v1.json",
+    "registry_sha256": "e35f0d240e8e21f8df9ab52ecb0fae8d05db1cb9c134c9a25731cbd638370187",
+    "benchmark_repo": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo",
+    "benchmark_commit": "b57ff90b4bd42769d473502a0cb52947040bc107",
+    "benchmark_tree": "264434d1f5f028255465e3b77c624ccb7f5efa0a",
+    "benchmark_clean": true
   },
   "pending": [
-    "metrogs:geometry_formal_completion",
-    "metrogs:formal_model"
+    "metrogs:formal_model_sha256_activation"
   ],
   "errors": [],
   "checks": [
@@ -194,6 +197,20 @@
       "detail": "3ddde6f5c3b30c14752149c54dcad1f02f68e68dc2b546955eb8a177206276c0"
     },
     {
+      "name": "3dgs_original:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "3dgs_original:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
+    },
+    {
       "name": "3dgs_original:rgb_output_absent",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/seed0-30k-20260810T073742Z/formal_evaluation/rgb_quality_v1"
@@ -244,6 +261,20 @@
       "name": "2dgs:cfg_args_sha256",
       "passed": true,
       "detail": "1fefa01fadfde6bba4db1c4f08838e45e3dc09c6832ab200a47e9cde32241db3"
+    },
+    {
+      "name": "2dgs:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "2dgs:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
     },
     {
       "name": "2dgs:rgb_output_absent",
@@ -303,6 +334,26 @@
       "detail": "6e0315d30d957f6d4df519fb32dd76d637e942e20f2f6a277898e476173996c3"
     },
     {
+      "name": "pgsr:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "pgsr:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/compat",
+          "file_count": 2,
+          "manifest_sha256": "432f6706d7477d9611d141c863ef973fd438fc679e5d17b40ea235deb613ec8b"
+        }
+      ]
+    },
+    {
       "name": "pgsr:rgb_output_absent",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z/formal_evaluation/rgb_quality_v1"
@@ -353,6 +404,20 @@
       "name": "rade_gs:cfg_args_sha256",
       "passed": true,
       "detail": "6bd7681a876802b9aa11166ba43a687a81b705a3c5055f155b1eb1084eae4f79"
+    },
+    {
+      "name": "rade_gs:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "rade_gs:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
     },
     {
       "name": "rade_gs:rgb_output_absent",
@@ -410,6 +475,20 @@
       "name": "qgs:config_sha256",
       "passed": true,
       "detail": "2787868ea446e3282e090f75cbbf170e877b3d560418bbd05b6e89b346cf07d8"
+    },
+    {
+      "name": "qgs:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "qgs:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
     },
     {
       "name": "qgs:rgb_output_absent",
@@ -474,6 +553,26 @@
       "detail": "ab599a3002cdbe34b99d4632f54160277ee2580795d5f1ad06827e4a855e70de"
     },
     {
+      "name": "gsprior:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "0f59fe69c46c862d59326b2acc70c5324844ba9c555cceffbb77aac90ce3741b",
+        "points3D.bin": "ef416ae289f748d3731e867005ca9e3adccb7370adbae3676e6fef08f868d99a"
+      }
+    },
+    {
+      "name": "gsprior:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/gsprior/prep-v1/compat",
+          "file_count": 2,
+          "manifest_sha256": "0c26588f70d2454278ad5cd8019c9ed9a2a9d1f719ea84dc883cf6c010a01053"
+        }
+      ]
+    },
+    {
       "name": "gsprior:rgb_output_absent",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/rgb_quality_v1"
@@ -536,6 +635,20 @@
       "detail": "39e7d3f021401602604d009d8b30182e4edf92e934f8df8e62fe0cd842bfafac"
     },
     {
+      "name": "sof:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "sof:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
+    },
+    {
       "name": "sof:rgb_output_absent",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/formal_evaluation/rgb_quality_v1"
@@ -581,6 +694,20 @@
         "bytes": 1182717065,
         "sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64"
       }
+    },
+    {
+      "name": "citygaussian_v2:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "citygaussian_v2:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
     },
     {
       "name": "citygaussian_v2:rgb_output_absent",
@@ -660,6 +787,26 @@
       "detail": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat"
     },
     {
+      "name": "citygs_x:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "citygs_x:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat",
+          "file_count": 2,
+          "manifest_sha256": "c7dee8e4f1f52a480bc577c6d6799abc48a596cf7c232c9ca28228df3b5c20bf"
+        }
+      ]
+    },
+    {
       "name": "citygs_x:rgb_output_absent",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z/formal_evaluation/rgb_quality_v1"
@@ -690,9 +837,31 @@
       "detail": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/metrogs/py310-torch2.7.1-cu128-v1/bin/python"
     },
     {
+      "name": "metrogs:geometry_formal_completion",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/formal_evaluation/evaluator/evaluation_summary.json",
+        "status": "COMPLETE_RANKED"
+      }
+    },
+    {
+      "name": "metrogs:formal_model_exists",
+      "passed": true,
+      "detail": {
+        "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/formal_evaluation/model_snapshot/merged_step_150000.ckpt",
+        "bytes": 2199079961,
+        "sha256": "f45527e44a75e8745b6785981a43309803202e09a950c1b94259b25ab4f36274"
+      }
+    },
+    {
       "name": "metrogs:training_cameras_json",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/model/cameras.json"
+    },
+    {
+      "name": "metrogs:training_cameras_json_sha256",
+      "passed": true,
+      "detail": "e5faae00adee6a3576cd7a358bcd7e809f70a202375931eea3925c08499e31fd"
     },
     {
       "name": "metrogs:training_camera_names",
@@ -714,6 +883,20 @@
       "detail": {
         "count": 82
       }
+    },
+    {
+      "name": "metrogs:camera_sparse_sha256",
+      "passed": true,
+      "detail": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+      }
+    },
+    {
+      "name": "metrogs:runtime_pythonpath_identity",
+      "passed": true,
+      "detail": []
     },
     {
       "name": "metrogs:rgb_output_absent",

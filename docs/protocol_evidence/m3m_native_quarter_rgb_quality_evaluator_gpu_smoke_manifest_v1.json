@@ -1,8 +1,8 @@
 {
-  "contract_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/contract.json",
-  "contract_sha256": "09cb98c270303aa2a0f0a3dab659c5e0fa91c278850b9e19712ab2e8727915f1",
-  "evaluator_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/code/gcp/evaluate_m3m_native_quarter_rgb_quality.py",
-  "evaluator_sha256": "3399570f25c578e417894a3006283775f1ae8c4d32d37777cba521a612f38296",
+  "contract_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/configs/m3m_gcp_native_quarter_rgb_quality_v1.json",
+  "contract_sha256": "a75af8128e40eff5c51dedcb2893319dad0ed0e39d5e72141806d85e65ddd558",
+  "evaluator_path": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/b57ff90b4bd42769d473502a0cb52947040bc107/repo/code/gcp/evaluate_m3m_native_quarter_rgb_quality.py",
+  "evaluator_sha256": "aa8f346d7747e7db23b8bcdd1eefe8280ba38ce3aafeae0a4f2e042f5ce71a7e",
   "formal_execution": false,
   "input_manifest_path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
   "input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
@@ -53,14 +53,14 @@
   "outputs_sha256": {
     "input_render_validation.json": "b0e7dddc6001dee1a57b87a8fa07d3936a9f3aa62d1a8df1047d8ca418fb3776",
     "per_view_metrics.csv": "773a24165ade90d6b11e0e32d75e0cab451be8cc679370e7669c86ed49f94f01",
-    "per_view_metrics.json": "b53fdbceda111819946644a4e08db9ee72a2b28fbeb5c4bbe3b0383db95c87c3",
-    "rgb_quality_summary.json": "5380c83635257b9347259deb23fe3fd1beb49be05ffade8c6f1a66663f4662c2"
+    "per_view_metrics.json": "bb4fa50b7dbe0074a3132704bfce4977607355bc1f81dcc92903299675561edf",
+    "rgb_quality_summary.json": "81e13430b6584b531fd859f17a1f63ee7152833d36c4c5aac6d18bd0fc658ae3"
   },
   "ranking_eligible": false,
   "registry_path": null,
   "registry_sha256": null,
-  "render_manifest_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/metric-smoke-v4/rgb_render_manifest.json",
-  "render_manifest_sha256": "f4e9ff32324b1cf3e871036c5ac64ebdf1e4b33947a1f933daaa5f90f57b465b",
+  "render_manifest_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-b57ff90b/metric-smoke-v5/rgb_render_manifest.json",
+  "render_manifest_sha256": "257e1612013aa576cd31902a4bd1000a609b377a23825e12934a257f6187eb2d",
   "runtime": {
     "Pillow": "11.1.0",
     "cuda_available": true,
