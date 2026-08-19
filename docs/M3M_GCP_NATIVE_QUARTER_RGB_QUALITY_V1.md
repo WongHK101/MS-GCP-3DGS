@@ -1,6 +1,6 @@
 # M3M-GCP native-quarter heldout RGB quality suite v1
 
-Status: **REVIEW_CANDIDATE_NOT_FORMAL** (attempt-1 adapter remediation)
+Status: **ACTIVE_FROZEN** (adapter remediation reviewed and activated)
 Suite ID: `m3m_gcp_native_quarter_rgb_quality_v1`
 
 This is an additive measurement suite bound to
@@ -89,9 +89,11 @@ methods and exposed two non-OOM adapter interface errors (QGS and SOF). Its
 181-file, 237,943,429-byte inventory is frozen by SHA-256 in the review-gate
 evidence. No attempt-1 output is publishable as the final ten-method table.
 
-After review, the complete attempt-1 artifact set will be moved without
-overwrite to one clearly named immutable superseded-attempt root and rehashed.
-Only then may this suite return to `ACTIVE_FROZEN`, obtain a fresh exact
-`PASS_READY` preflight, and rerun all ten methods at the canonical paths. This
-keeps one benchmark commit/tree for the final comparable table and prevents a
-mixture of results from two adapter revisions.
+The complete attempt-1 artifact set was moved without overwrite through ten
+per-method atomic renames to one clearly named immutable superseded-attempt
+root and rehashed. The archive result and its
+`SUPERSEDED_DO_NOT_USE_FOR_RANKING` marker are bound by SHA-256 in committed
+evidence. A fresh exact `PASS_READY` preflight is still mandatory before the
+activated remediation commit can rerun all ten methods at the canonical
+paths. This keeps one benchmark commit/tree for the final comparable table and
+prevents a mixture of results from two adapter revisions.
