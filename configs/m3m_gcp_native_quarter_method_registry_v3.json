@@ -501,9 +501,11 @@
       "recipe_sha256": "acbf4b79f26fe21ec9ab92ad0e54ab2412a41442c2abf5ee4343dab214470f14",
       "renderer_adapter": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
       "renderer_adapter_sha256": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
-      "technical_qualification_status": "PRE_RESULT_GPU_QUALIFICATION_RETRY_WITH_LOCAL_LOGGER_AND_OFFICIAL_PLY_CONVERSION",
+      "qualification_report": "docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json",
+      "qualification_report_sha256": "1e6a0f30c859240e9c3f8ce9b0189cba12112d755a85d00b9b2997ebe231922e",
+      "technical_qualification_status": "TECHNICALLY_QUALIFIED",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
-      "technical_full_matrix_eligibility": false,
+      "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
       "three_k_training_allowed": false
     },

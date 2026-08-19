@@ -131,6 +131,7 @@
     "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
     "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
     "docs/protocol_evidence/metrogs_native_quarter_track_closure_v1.json",
+    "docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json",
     "code/gcp/prepare_metrogs_training_priors.py",
     "code/gcp/test_prepare_metrogs_training_priors.py",
     "code/gcp/run_metrogs_training.py",

@@ -244,11 +244,14 @@ GCP、LiDAR、holdout RGB 或正射真值。训练耗时 `16917.6115 s`（`4.699
 高程 `0.0292808608 m`；正式报告为
 `docs/protocol_evidence/citygs_x_native_quarter_formal_3k_seed0_100k_v1.json`。
 
-MetroGS 仍处于正式训练前资格阶段。其冻结官方 dataparser 的 `0.2×–5×` 中位深度尺度
-筛选只决定某一训练视图是否挂载 MoGe 深度先验，不删除该视图的 RGB 训练样本。资格预处理
-必须验证 82/82 RGB 和 82/82 MoGe 文件均存在，并精确报告筛选后 72 个深度先验被挂载、
-10 个被跳过；训练集仍为同一 82 张 RGB。不得放宽官方阈值、删除 RGB 视图或以结果调参。
-这项资格语义澄清没有改变 v2 的输入、公共评测或排名规则。
+MetroGS 的正式训练前资格链已完成。其冻结官方 dataparser 的 `0.2×–5×` 中位深度尺度
+筛选只决定某一训练视图是否挂载 MoGe 深度先验，不删除该视图的 RGB 训练样本。资格证据
+验证了 82/82 RGB 和 82/82 MoGe 文件，筛选后 72 个深度先验被挂载、10 个被跳过，训练集
+仍为同一 82 张 RGB。8 effective-iteration / 2 optimizer-step 训练、冻结官方 checkpoint
+合并与 PLY 转换、原生 `A/M1` 一致性以及 66-packet 公共评测均通过，未发生 OOM，且未
+拟合方法专属 Sim(3)。资格报告为
+`docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json`。这项资格只证明
+技术兼容性，不是正式 benchmark 结果；150K 正式门仍关闭。
 
 ## 9. 解锁顺序
 
@@ -260,9 +263,9 @@ MetroGS 仍处于正式训练前资格阶段。其冻结官方 dataparser 的 `0
 MetroGS 进入同一个 seed-0 3K 批次，但仍须各自通过一次性资格门。技术资格
 `TECHNICALLY_QUALIFIED` 与场景结果 `COMPLETE_RANKED` / `INCOMPLETE_UNRANKED`
 分开记录。PGSR、RaDe-GS、QGS、GSPrior、SOF、CityGaussianV2 和 CityGS-X 的
-seed-0 3K 正式结果均已终止并重新锁定；当前没有开放的正式训练门。MetroGS 必须先完成
-冻结外部先验、8 effective-iteration 训练及 66-packet 评测资格链，资格证据入库并通过登记
-验证后，才可获得其唯一 150K effective-iteration 正式门禁。六场景矩阵仍锁定。
+seed-0 3K 正式结果均已终止并重新锁定；MetroGS 已通过冻结外部先验、8
+effective-iteration 训练及 66-packet 评测资格链，但其唯一 150K effective-iteration 正式
+门尚未创建或开放，当前没有开放的正式训练门。六场景矩阵仍锁定。
 
 当前实现入口：
 
