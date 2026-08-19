@@ -30,6 +30,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--manifest_path", default="")
     parser.add_argument("--appearance_policy", default="none")
+    parser.add_argument("--benchmark_repo", required=True)
+    parser.add_argument("--benchmark_commit", required=True)
+    parser.add_argument("--benchmark_tree", required=True)
+    parser.add_argument("--runtime_pythonpath", action="append", default=[])
+    parser.add_argument("--allow_review_candidate", action="store_true")
+    parser.add_argument("--technical_smoke_root", default="")
     parser.add_argument("--quiet", action="store_true")
     return parser
 

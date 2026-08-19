@@ -114,9 +114,14 @@
   "formal_gate": {
     "review_required_before_first_formal_run": true,
     "required_status_for_formal_run": "ACTIVE_FROZEN",
+    "review_candidate_render_default": "reject before creating any artifact path",
+    "technical_smoke_exception": "requires an explicit allow_review_candidate flag and confines render and metric outputs to an explicit technical_smoke_root",
+    "activation_preflight": "fresh PASS_READY evidence bound to the exact clean activation commit/tree and current contract/registry hashes",
+    "benchmark_checkout_identity": "every formal adapter and evaluator rechecks the exact clean benchmark commit and tree",
     "render_manifest_required": true,
     "per_view_metrics_required": true,
     "source_weight_model_and_input_hashes_required": true,
+    "camera_sparse_training_appearance_and_runtime_compat_hashes_required": true,
     "no_overwrite": true
   }
 }

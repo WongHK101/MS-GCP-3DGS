@@ -18,9 +18,11 @@ from export_citygaussian_v2_depth_maps import (  # noqa: E402
 )
 from rgb_quality_contract import (  # noqa: E402
     RgbRenderWriter,
+    directory_content_identity,
     git_identity,
     role_rows,
     sha256_file,
+    sparse_model_sha256,
 )
 
 
@@ -116,6 +118,12 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         method_id=args.method_id,
         output_dir=args.output_dir,
         manifest_path=args.manifest_path,
+        allow_review_candidate=args.allow_review_candidate,
+        technical_smoke_root=args.technical_smoke_root,
+        benchmark_repo=args.benchmark_repo,
+        benchmark_commit=args.benchmark_commit,
+        benchmark_tree=args.benchmark_tree,
+        adapter_path=Path(__file__),
     )
     runtime = load_citygaussian_runtime(repo)
     torch = runtime["torch"]
@@ -188,6 +196,7 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         "formal_model_sha256": sha256_file(checkpoint),
         "iteration": int(args.iteration),
         "camera_source_root": str(camera_root),
+        "camera_sparse_model_sha256": sparse_model_sha256(camera_root),
         "frozen_sparse_model": str(sparse_model),
         "frozen_sparse_model_sha256": {
             name: sha256_file(sparse_model / name)
@@ -195,6 +204,9 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         },
         "white_background": False,
         "appearance_policy": args.appearance_policy,
+        "runtime_pythonpath_identity": [
+            directory_content_identity(path) for path in args.runtime_pythonpath
+        ],
         "training_cameras_json": (
             {
                 "path": str(args.training_cameras_json.expanduser().resolve()),
@@ -204,6 +216,7 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
             else None
         ),
         "heldout_rgb_used_by_adapter": False,
+        "heldout_rgb_consumed_by_renderer_or_policy": False,
         "test_time_optimization": False,
         "runtime": {
             "python": sys.version,
@@ -229,6 +242,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--manifest_path", type=Path)
     parser.add_argument("--appearance_policy", required=True)
     parser.add_argument("--training_cameras_json", type=Path)
+    parser.add_argument("--benchmark_repo", type=Path, required=True)
+    parser.add_argument("--benchmark_commit", required=True)
+    parser.add_argument("--benchmark_tree", required=True)
+    parser.add_argument("--runtime_pythonpath", type=Path, action="append", default=[])
+    parser.add_argument("--allow_review_candidate", action="store_true")
+    parser.add_argument("--technical_smoke_root", type=Path)
     return parser
 
 

@@ -23,11 +23,14 @@ from rgb_quality_contract import (  # noqa: E402
     RENDER_MANIFEST_SCHEMA,
     SUITE_ID,
     arithmetic_mean,
+    directory_content_identity,
     git_identity,
     load_bound_input_manifest,
     load_contract,
     role_rows,
     sha256_file,
+    sparse_model_sha256,
+    validate_benchmark_checkout,
     write_json,
 )
 
@@ -61,6 +64,19 @@ def _registered_camera_root(method: dict[str, Any], shared: dict[str, Any]) -> P
     return Path(value).expanduser().resolve()
 
 
+def _registered_camera_sparse_sha256(
+    method: dict[str, Any], shared: dict[str, Any]
+) -> dict[str, str]:
+    value = str(method["camera_root"])
+    aliases = {
+        "shared.default_camera_root": "default_camera_sparse_sha256",
+        "shared.graphdeco_camera_root": "graphdeco_camera_sparse_sha256",
+    }
+    if value in aliases:
+        return dict(shared[aliases[value]])
+    return dict(method["camera_sparse_sha256"])
+
+
 def validate_registered_provenance(
     *,
     contract: dict[str, Any],
@@ -69,6 +85,7 @@ def validate_registered_provenance(
     scene: str,
     method_id: str,
     allow_review_candidate: bool,
+    benchmark_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Bind a formal render to the frozen registry, source tree, and model bytes."""
 
@@ -141,6 +158,29 @@ def validate_registered_provenance(
     provenance = render_manifest.get("provenance", {})
     if not isinstance(provenance, dict):
         provenance = {}
+    if not allow_review_candidate:
+        record(
+            "benchmark_identity_supplied",
+            benchmark_identity is not None,
+            benchmark_identity,
+        )
+        rendered_benchmark = provenance.get("benchmark_repository")
+        if not isinstance(rendered_benchmark, dict):
+            rendered_benchmark = {}
+        current_benchmark = benchmark_identity or {}
+        for key in (
+            "path",
+            "commit",
+            "tree",
+            "tracked_diff_sha256",
+            "tracked_modified_files_sha256",
+            "unexpected_untracked_files",
+        ):
+            record(
+                f"benchmark_repository:{key}",
+                rendered_benchmark.get(key) == current_benchmark.get(key),
+                rendered_benchmark.get(key),
+            )
     adapter_path = Path(__file__).resolve().parent / str(method["adapter"])
     adapter_sha = sha256_file(adapter_path) if adapter_path.is_file() else "MISSING"
     record("adapter_kind", provenance.get("adapter_kind") == method.get("adapter_kind"), provenance.get("adapter_kind"))
@@ -189,6 +229,17 @@ def validate_registered_provenance(
         == source_identity.get("tracked_modified_files_sha256"),
         rendered_source.get("tracked_modified_files_sha256"),
     )
+    record(
+        "source_untracked_policy",
+        source_identity.get("unexpected_untracked_files") == [],
+        source_identity.get("unexpected_untracked_files"),
+    )
+    record(
+        "source_manifest_untracked_policy",
+        rendered_source.get("unexpected_untracked_files")
+        == source_identity.get("unexpected_untracked_files"),
+        rendered_source.get("unexpected_untracked_files"),
+    )
 
     renderer_source = Path(str(provenance.get("renderer_source_path", ""))).expanduser().resolve()
     try:
@@ -207,6 +258,18 @@ def validate_registered_provenance(
         "camera_source_root",
         _same_resolved_path(provenance.get("camera_source_root"), camera_root),
         provenance.get("camera_source_root"),
+    )
+    expected_camera_sha = _registered_camera_sparse_sha256(method, shared)
+    actual_camera_sha = sparse_model_sha256(camera_root)
+    record(
+        "camera_sparse_model_sha256",
+        actual_camera_sha == expected_camera_sha,
+        actual_camera_sha,
+    )
+    record(
+        "camera_manifest_sparse_model_sha256",
+        provenance.get("camera_sparse_model_sha256") == actual_camera_sha,
+        provenance.get("camera_sparse_model_sha256"),
     )
     record("iteration", provenance.get("iteration") == method.get("iteration"), provenance.get("iteration"))
     record(
@@ -269,6 +332,38 @@ def validate_registered_provenance(
         record("splatting_config_path", _same_resolved_path(splatting.get("path"), method["splatting_config_path"]), splatting.get("path"))
         record("splatting_config_sha256", splatting.get("sha256") == method.get("splatting_config_sha256"), splatting.get("sha256"))
 
+    expected_pythonpath = method.get("pythonpath_content_identity", [])
+    actual_pythonpath = [
+        directory_content_identity(Path(str(row["path"]))) for row in expected_pythonpath
+    ]
+    record("runtime_pythonpath_identity", actual_pythonpath == expected_pythonpath, actual_pythonpath)
+    record(
+        "runtime_pythonpath_manifest_identity",
+        provenance.get("runtime_pythonpath_identity") == actual_pythonpath,
+        provenance.get("runtime_pythonpath_identity"),
+    )
+    if "training_cameras_json" in method:
+        training_path = Path(str(method["training_cameras_json"])).expanduser().resolve()
+        actual_training_sha = sha256_file(training_path) if training_path.is_file() else "MISSING"
+        record(
+            "training_cameras_json_sha256",
+            actual_training_sha == method.get("training_cameras_json_sha256"),
+            actual_training_sha,
+        )
+        rendered_training = provenance.get("training_cameras_json") or {}
+        record(
+            "training_cameras_json_path",
+            _same_resolved_path(rendered_training.get("path"), training_path),
+            rendered_training.get("path"),
+        )
+        record(
+            "training_cameras_json_manifest_sha256",
+            rendered_training.get("sha256") == actual_training_sha,
+            rendered_training.get("sha256"),
+        )
+    if method_id == "citygs_x":
+        record("citygs_x_runtime_appearance_dim", provenance.get("appearance_dim") == 0, provenance.get("appearance_dim"))
+
     return {
         "passed": not errors,
         "binding_mode": "frozen_registry",
@@ -289,6 +384,7 @@ def validate_render_and_ground_truth(
     method_id: str,
     allow_review_candidate: bool,
     registry_path: Path | None = None,
+    benchmark_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract_path = contract_path.expanduser().resolve()
     input_manifest_path = input_manifest_path.expanduser().resolve()
@@ -309,6 +405,7 @@ def validate_render_and_ground_truth(
         scene=scene,
         method_id=method_id,
         allow_review_candidate=allow_review_candidate,
+        benchmark_identity=benchmark_identity,
     )
     errors.extend(
         f"provenance: {message}"
@@ -601,7 +698,27 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     output_dir = args.output_dir.expanduser().resolve()
     if output_dir.exists():
         raise FileExistsError(output_dir)
-    output_dir.mkdir(parents=True)
+    benchmark_identity: dict[str, Any] | None = None
+    if args.allow_review_candidate:
+        if args.technical_smoke_root is None:
+            raise ValueError("technical smoke requires --technical_smoke_root")
+        try:
+            output_dir.relative_to(args.technical_smoke_root.expanduser().resolve())
+        except ValueError as exc:
+            raise ValueError("technical-smoke metric output is outside its frozen root") from exc
+    else:
+        if (
+            args.benchmark_repo is None
+            or args.benchmark_commit is None
+            or args.benchmark_tree is None
+        ):
+            raise ValueError("formal evaluator requires frozen benchmark checkout identity")
+        benchmark_identity = validate_benchmark_checkout(
+            benchmark_repo=args.benchmark_repo,
+            expected_commit=args.benchmark_commit,
+            expected_tree=args.benchmark_tree,
+            entrypoint=Path(__file__).resolve(),
+        )
     started_at = datetime.now(timezone.utc).isoformat()
     validation = validate_render_and_ground_truth(
         contract_path=args.rgb_contract,
@@ -612,13 +729,13 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         method_id=args.method_id,
         allow_review_candidate=args.allow_review_candidate,
         registry_path=args.registry,
+        benchmark_identity=benchmark_identity,
     )
     public_validation = {
         key: value
         for key, value in validation.items()
         if key not in {"contract", "input_manifest", "render_manifest", "validated_rows"}
     }
-    write_json(output_dir / "input_render_validation.json", public_validation)
     if not validation["passed"]:
         summary = {
             "schema": SUMMARY_SCHEMA,
@@ -636,7 +753,6 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             "unranked_reason": "input/render validation did not achieve complete frozen coverage",
             "validation": public_validation,
         }
-        write_json(output_dir / "rgb_quality_summary.json", summary)
         return summary, 2
 
     metric_reference = validate_metric_reference(
@@ -645,6 +761,10 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         vgg16_weights=args.vgg16_weights,
         lpips_vgg_weights=args.lpips_vgg_weights,
     )
+    # All contract, checkout, provenance, data and metric-reference gates pass
+    # before the immutable metric directory is created.
+    output_dir.mkdir(parents=True)
+    write_json(output_dir / "input_render_validation.json", public_validation)
     per_view, computed = compute_metrics(
         rows=validation["validated_rows"],
         contract=validation["contract"],
@@ -666,6 +786,7 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         ),
         "scene": args.scene,
         "method_id": args.method_id,
+        "benchmark_repository": benchmark_identity,
         "expected_test_view_count": validation["expected_count"],
         "evaluated_test_view_count": len(per_view),
         "complete_test_coverage": True,
@@ -729,6 +850,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rgb_contract", type=Path, required=True)
     parser.add_argument("--registry", type=Path)
+    parser.add_argument("--benchmark_repo", type=Path)
+    parser.add_argument("--benchmark_commit")
+    parser.add_argument("--benchmark_tree")
     parser.add_argument("--input_manifest", type=Path, required=True)
     parser.add_argument("--input_root", type=Path, required=True)
     parser.add_argument("--render_manifest", type=Path, required=True)
@@ -739,6 +863,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lpips_vgg_weights", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--output_dir", type=Path, required=True)
+    parser.add_argument("--technical_smoke_root", type=Path)
     parser.add_argument(
         "--allow_review_candidate",
         action="store_true",

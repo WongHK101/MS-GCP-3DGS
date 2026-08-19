@@ -14,7 +14,17 @@
     "input_manifest": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/NATIVE_QUARTER_INPUT_MANIFEST.json",
     "input_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602",
     "default_camera_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/gcp_3000_20260602",
+    "default_camera_sparse_sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+      "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    },
     "graphdeco_camera_root": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-preflight-data-v1/gcp_3000_20260602",
+    "graphdeco_camera_sparse_sha256": {
+      "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+      "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+      "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f"
+    },
     "graphdeco_camera_root_policy": "existing byte-identical flat 94-image camera-loader view used by formal geometry export; images and sparse model are reverified against the frozen manifest before RGB execution",
     "output_relative_path": "rgb_quality_v1",
     "metric_environment": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/3dgs-original/py310-torch2.7.1-cu128-v1",
@@ -80,6 +90,13 @@
       "environment": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/pgsr/py310-torch2.7.1-cu128-v1",
       "pythonpath": [
         "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/compat"
+      ],
+      "pythonpath_content_identity": [
+        {
+          "path": "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/compat",
+          "file_count": 2,
+          "manifest_sha256": "432f6706d7477d9611d141c863ef973fd438fc679e5d17b40ea235deb613ec8b"
+        }
       ],
       "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z",
       "model_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z/formal_evaluation/model_snapshot",
@@ -150,6 +167,13 @@
       "pythonpath": [
         "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/gsprior/prep-v1/compat"
       ],
+      "pythonpath_content_identity": [
+        {
+          "path": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/gsprior/prep-v1/compat",
+          "file_count": 2,
+          "manifest_sha256": "0c26588f70d2454278ad5cd8019c9ed9a2a9d1f719ea84dc883cf6c010a01053"
+        }
+      ],
       "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z",
       "model_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/model_snapshot",
       "formal_model_relative_path": "point_cloud/iteration_40000/point_cloud.ply",
@@ -157,6 +181,11 @@
       "cfg_args_sha256": "ab599a3002cdbe34b99d4632f54160277ee2580795d5f1ad06827e4a855e70de",
       "iteration": 40000,
       "camera_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_3000_20260602/evaluation_cameras",
+      "camera_sparse_sha256": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "0f59fe69c46c862d59326b2acc70c5324844ba9c555cceffbb77aac90ce3741b",
+        "points3D.bin": "ef416ae289f748d3731e867005ca9e3adccb7370adbae3676e6fef08f868d99a"
+      },
       "camera_coordinate_policy": "frozen training-only GSPrior similarity transform; pixels and intrinsics unchanged",
       "appearance_policy": "exposure_compensation_false_use_render_not_app_image",
       "extra_cli": []
@@ -220,6 +249,13 @@
       "pythonpath": [
         "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat"
       ],
+      "pythonpath_content_identity": [
+        {
+          "path": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat",
+          "file_count": 2,
+          "manifest_sha256": "c7dee8e4f1f52a480bc577c6d6799abc48a596cf7c232c9ca28228df3b5c20bf"
+        }
+      ],
       "pytorch3d_compat": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat",
       "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z",
       "model_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z/formal_evaluation/model_snapshot",
@@ -249,6 +285,7 @@
       "formal_checkpoint": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/formal_evaluation/model_snapshot/merged_step_150000.ckpt",
       "formal_model_sha256": "PENDING_METRO_FORMAL_COMPLETION",
       "training_cameras_json": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/metrogs/gcp_3000_20260602/seed0-150k-20260819T085500Z/model/cameras.json",
+      "training_cameras_json_sha256": "e5faae00adee6a3576cd7a358bcd7e809f70a202375931eea3925c08499e31fd",
       "iteration": 150000,
       "camera_root": "shared.default_camera_root",
       "appearance_policy": "official_nearest_training_camera_geometry_alpha_0_7_v1",

@@ -22,7 +22,14 @@ from evaluate_m3m_native_quarter_rgb_quality import (
     validate_render_and_ground_truth,
 )
 from build_m3m_native_quarter_rgb_quality_3k_commands import build_plan
-from rgb_quality_contract import RgbRenderWriter, arithmetic_mean, git_identity, sha256_file
+from rgb_quality_contract import (
+    RgbRenderWriter,
+    arithmetic_mean,
+    git_identity,
+    sha256_file,
+    sparse_model_sha256,
+    validate_benchmark_checkout,
+)
 from validate_m3m_native_quarter_rgb_quality import validate
 
 
@@ -105,6 +112,26 @@ def _synthetic_contract_and_input(tmp_path: Path) -> tuple[Path, Path, Path]:
     return contract_path, manifest_path, input_root
 
 
+def _technical_writer(
+    *,
+    tmp_path: Path,
+    contract: Path,
+    input_manifest: Path,
+    output_dir: Path,
+    manifest_path: Path | None = None,
+) -> RgbRenderWriter:
+    return RgbRenderWriter(
+        contract_path=contract,
+        input_manifest_path=input_manifest,
+        scene="synthetic",
+        method_id="synthetic_method",
+        output_dir=output_dir,
+        manifest_path=manifest_path,
+        allow_review_candidate=True,
+        technical_smoke_root=tmp_path,
+    )
+
+
 def test_repository_contract_and_registry_pass() -> None:
     result = validate(REPO_ROOT, CONTRACT, REGISTRY, POINTER)
     assert result["passed"] is True, result["errors"]
@@ -115,11 +142,10 @@ def test_repository_contract_and_registry_pass() -> None:
 def test_writer_and_common_validation_round_trip(tmp_path: Path) -> None:
     contract, input_manifest, input_root = _synthetic_contract_and_input(tmp_path)
     artifact_root = tmp_path / "artifact"
-    writer = RgbRenderWriter(
-        contract_path=contract,
-        input_manifest_path=input_manifest,
-        scene="synthetic",
-        method_id="synthetic_method",
+    writer = _technical_writer(
+        tmp_path=tmp_path,
+        contract=contract,
+        input_manifest=input_manifest,
         output_dir=artifact_root / "renders",
         manifest_path=artifact_root / "rgb_render_manifest.json",
     )
@@ -143,11 +169,10 @@ def test_writer_and_common_validation_round_trip(tmp_path: Path) -> None:
 
 def test_incomplete_render_set_fails_closed(tmp_path: Path) -> None:
     contract, input_manifest, _input_root = _synthetic_contract_and_input(tmp_path)
-    writer = RgbRenderWriter(
-        contract_path=contract,
-        input_manifest_path=input_manifest,
-        scene="synthetic",
-        method_id="synthetic_method",
+    writer = _technical_writer(
+        tmp_path=tmp_path,
+        contract=contract,
+        input_manifest=input_manifest,
         output_dir=tmp_path / "artifact" / "renders",
     )
     writer.save("test_a.jpg", np.zeros((3, 4, 5), dtype=np.float32))
@@ -157,11 +182,10 @@ def test_incomplete_render_set_fails_closed(tmp_path: Path) -> None:
 
 def test_writer_rejects_path_components(tmp_path: Path) -> None:
     contract, input_manifest, _input_root = _synthetic_contract_and_input(tmp_path)
-    writer = RgbRenderWriter(
-        contract_path=contract,
-        input_manifest_path=input_manifest,
-        scene="synthetic",
-        method_id="synthetic_method",
+    writer = _technical_writer(
+        tmp_path=tmp_path,
+        contract=contract,
+        input_manifest=input_manifest,
         output_dir=tmp_path / "artifact" / "renders",
     )
     with pytest.raises(ValueError, match="must be a basename"):
@@ -171,11 +195,10 @@ def test_writer_rejects_path_components(tmp_path: Path) -> None:
 def test_formal_evaluation_rejects_review_candidate(tmp_path: Path) -> None:
     contract, input_manifest, input_root = _synthetic_contract_and_input(tmp_path)
     artifact_root = tmp_path / "artifact"
-    writer = RgbRenderWriter(
-        contract_path=contract,
-        input_manifest_path=input_manifest,
-        scene="synthetic",
-        method_id="synthetic_method",
+    writer = _technical_writer(
+        tmp_path=tmp_path,
+        contract=contract,
+        input_manifest=input_manifest,
         output_dir=artifact_root / "renders",
     )
     writer.save("test_a.jpg", np.zeros((3, 4, 5), dtype=np.float32))
@@ -195,20 +218,19 @@ def test_formal_evaluation_rejects_review_candidate(tmp_path: Path) -> None:
 
 def test_formal_validation_requires_frozen_registry(tmp_path: Path) -> None:
     contract, input_manifest, input_root = _synthetic_contract_and_input(tmp_path)
-    payload = json.loads(contract.read_text(encoding="utf-8"))
-    payload["status"] = "ACTIVE_FROZEN"
-    _write_json(contract, payload)
     artifact_root = tmp_path / "artifact"
-    writer = RgbRenderWriter(
-        contract_path=contract,
-        input_manifest_path=input_manifest,
-        scene="synthetic",
-        method_id="synthetic_method",
+    writer = _technical_writer(
+        tmp_path=tmp_path,
+        contract=contract,
+        input_manifest=input_manifest,
         output_dir=artifact_root / "renders",
     )
     writer.save("test_a.jpg", np.zeros((3, 4, 5), dtype=np.float32))
     writer.save("test_b.jpg", np.zeros((3, 4, 5), dtype=np.float32))
     writer.finalize(provenance={})
+    payload = json.loads(contract.read_text(encoding="utf-8"))
+    payload["status"] = "ACTIVE_FROZEN"
+    _write_json(contract, payload)
 
     result = validate_render_and_ground_truth(
         contract_path=contract,
@@ -266,6 +288,67 @@ def test_git_identity_includes_staged_tracked_changes(tmp_path: Path) -> None:
     }
 
 
+def test_benchmark_checkout_rejects_untracked_runtime_source(tmp_path: Path) -> None:
+    repo = tmp_path / "benchmark"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "RGB Test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "user.email", "rgb-test@example.invalid"],
+        check=True,
+    )
+    entrypoint = repo / "adapter.py"
+    entrypoint.write_text("# frozen\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "adapter.py"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "base"], check=True)
+    identity = git_identity(repo)
+    (repo / "shadow_runtime.py").write_text("# unexpected\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unexpected untracked files"):
+        validate_benchmark_checkout(
+            benchmark_repo=repo,
+            expected_commit=identity["commit"],
+            expected_tree=identity["tree"],
+            entrypoint=entrypoint,
+        )
+
+
+def test_review_candidate_render_fails_before_creating_output(tmp_path: Path) -> None:
+    contract, input_manifest, _input_root = _synthetic_contract_and_input(tmp_path)
+    formal_root = tmp_path / "immutable_formal" / "renders"
+
+    with pytest.raises(ValueError, match="contract status is not executable"):
+        RgbRenderWriter(
+            contract_path=contract,
+            input_manifest_path=input_manifest,
+            scene="synthetic",
+            method_id="synthetic_method",
+            output_dir=formal_root,
+        )
+
+    assert not formal_root.exists()
+    assert not formal_root.parent.exists()
+
+
+def test_review_candidate_smoke_cannot_escape_frozen_root(tmp_path: Path) -> None:
+    contract, input_manifest, _input_root = _synthetic_contract_and_input(tmp_path)
+    smoke_root = tmp_path / "smoke"
+    escaped = tmp_path / "formal" / "renders"
+
+    with pytest.raises(ValueError, match="outside the frozen smoke root"):
+        RgbRenderWriter(
+            contract_path=contract,
+            input_manifest_path=input_manifest,
+            scene="synthetic",
+            method_id="synthetic_method",
+            output_dir=escaped,
+            allow_review_candidate=True,
+            technical_smoke_root=smoke_root,
+        )
+
+    assert not escaped.exists()
+
+
 def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
@@ -281,17 +364,26 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
     subprocess.run(["git", "-C", str(source), "commit", "-q", "-m", "base"], check=True)
     source_identity = git_identity(source)
     camera_root = tmp_path / "cameras"
-    camera_root.mkdir()
+    sparse = camera_root / "sparse" / "0"
+    sparse.mkdir(parents=True)
+    for name in ("cameras.bin", "images.bin", "points3D.bin"):
+        (sparse / name).write_bytes(name.encode("utf-8"))
+    camera_sha = sparse_model_sha256(camera_root)
     model_root = tmp_path / "model"
     model_root.mkdir()
     model = model_root / "model.bin"
     model.write_bytes(b"frozen model")
+    training_cameras = tmp_path / "training_cameras.json"
+    training_cameras.write_text("[]\n", encoding="utf-8")
     adapter = MODULE_DIR / "export_citygs_x_rgb.py"
     registry = {
         "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
         "status": "ACTIVE_FROZEN",
         "scene": "synthetic",
-        "shared": {"default_camera_root": str(camera_root)},
+        "shared": {
+            "default_camera_root": str(camera_root),
+            "default_camera_sparse_sha256": camera_sha,
+        },
         "methods": [
             {
                 "method_id": "synthetic_method",
@@ -305,6 +397,9 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
                 "formal_model_sha256": sha256_file(model),
                 "iteration": 1,
                 "appearance_policy": "none",
+                "pythonpath_content_identity": [],
+                "training_cameras_json": str(training_cameras),
+                "training_cameras_json_sha256": sha256_file(training_cameras),
             }
         ],
     }
@@ -318,6 +413,7 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
         "renderer_source_path": str(renderer),
         "renderer_source_sha256": sha256_file(renderer),
         "camera_source_root": str(camera_root),
+        "camera_sparse_model_sha256": camera_sha,
         "model_root": str(model_root),
         "formal_model_path": str(model),
         "formal_model_sha256": sha256_file(model),
@@ -327,7 +423,21 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
         "heldout_rgb_used_by_adapter": False,
         "heldout_rgb_consumed_by_renderer_or_policy": False,
         "test_time_optimization": False,
+        "runtime_pythonpath_identity": [],
+        "training_cameras_json": {
+            "path": str(training_cameras),
+            "sha256": sha256_file(training_cameras),
+        },
     }
+    benchmark_identity = {
+        "path": str(tmp_path / "benchmark"),
+        "commit": "b" * 40,
+        "tree": "c" * 40,
+        "tracked_diff_sha256": hashlib.sha256(b"").hexdigest(),
+        "tracked_modified_files_sha256": {},
+        "unexpected_untracked_files": [],
+    }
+    provenance["benchmark_repository"] = benchmark_identity
     contract = {
         "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
         "status": "ACTIVE_FROZEN",
@@ -340,6 +450,7 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
         scene="synthetic",
         method_id="synthetic_method",
         allow_review_candidate=False,
+        benchmark_identity=benchmark_identity,
     )
     assert passed["passed"] is True, passed["errors"]
 
@@ -351,9 +462,24 @@ def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) ->
         scene="synthetic",
         method_id="synthetic_method",
         allow_review_candidate=False,
+        benchmark_identity=benchmark_identity,
     )
     assert failed["passed"] is False
     assert any("formal_model_sha256" in error for error in failed["errors"])
+
+    model.write_bytes(b"frozen model")
+    training_cameras.write_text("[{}]\n", encoding="utf-8")
+    cameras_failed = validate_registered_provenance(
+        contract=contract,
+        registry_path=registry_path,
+        render_manifest={"provenance": provenance},
+        scene="synthetic",
+        method_id="synthetic_method",
+        allow_review_candidate=False,
+        benchmark_identity=benchmark_identity,
+    )
+    assert cameras_failed["passed"] is False
+    assert any("training_cameras_json_sha256" in error for error in cameras_failed["errors"])
 
 
 def test_review_candidate_command_plan_is_explicitly_non_executable() -> None:
@@ -361,14 +487,69 @@ def test_review_candidate_command_plan_is_explicitly_non_executable() -> None:
     plan = build_plan(
         registry,
         benchmark_repo="/reviewed/benchmark/repo",
+        benchmark_commit="a" * 40,
+        benchmark_tree="b" * 40,
         allow_review_candidate=True,
     )
     assert plan["formal_execution_authorized"] is False
     assert plan["job_count"] == 10
     assert plan["method_order"][-1] == "metrogs"
     assert "--training_cameras_json" in plan["jobs"][-1]["render"]["argv"]
+    assert all("--allow_review_candidate" not in job["render"]["argv"] for job in plan["jobs"])
     assert all("--registry" in job["metric"]["argv"] for job in plan["jobs"])
     assert all(
         job["metric"]["argv"][2].endswith("evaluate_m3m_native_quarter_rgb_quality.py")
         for job in plan["jobs"]
     )
+
+
+def test_active_plan_requires_fresh_pass_ready_preflight() -> None:
+    registry = copy.deepcopy(json.loads(REGISTRY.read_text(encoding="utf-8")))
+    registry["status"] = "ACTIVE_FROZEN"
+    contract_sha = "1" * 64
+    registry_sha = "2" * 64
+    commit = "a" * 40
+    tree = "b" * 40
+    stale = {
+        "status": "PASS_STATIC_METRO_PENDING",
+        "passed": True,
+        "formal_launch_ready": False,
+        "pending": ["metrogs:formal_model_sha256_activation"],
+        "errors": [],
+        "inputs": {
+            "contract_sha256": contract_sha,
+            "registry_sha256": registry_sha,
+            "benchmark_commit": commit,
+            "benchmark_tree": tree,
+            "benchmark_clean": True,
+        },
+    }
+    with pytest.raises(ValueError, match="not launch-ready"):
+        build_plan(
+            registry,
+            benchmark_repo="/reviewed/benchmark/repo",
+            benchmark_commit=commit,
+            benchmark_tree=tree,
+            activation_preflight=stale,
+            contract_sha256=contract_sha,
+            registry_sha256=registry_sha,
+        )
+
+    ready = copy.deepcopy(stale)
+    ready.update(
+        {
+            "status": "PASS_READY",
+            "formal_launch_ready": True,
+            "pending": [],
+        }
+    )
+    plan = build_plan(
+        registry,
+        benchmark_repo="/reviewed/benchmark/repo",
+        benchmark_commit=commit,
+        benchmark_tree=tree,
+        activation_preflight=ready,
+        contract_sha256=contract_sha,
+        registry_sha256=registry_sha,
+    )
+    assert plan["formal_execution_authorized"] is True

@@ -20,8 +20,10 @@ from export_gaussian_depth_maps import (  # noqa: E402
 )
 from rgb_quality_contract import (  # noqa: E402
     RgbRenderWriter,
+    directory_content_identity,
     git_identity,
     sha256_file,
+    sparse_model_sha256,
 )
 
 
@@ -40,6 +42,14 @@ def export_rgb(
         method_id=args.method_id,
         output_dir=Path(args.output_dir),
         manifest_path=Path(args.manifest_path) if args.manifest_path else None,
+        allow_review_candidate=bool(args.allow_review_candidate),
+        technical_smoke_root=(
+            Path(args.technical_smoke_root) if args.technical_smoke_root else None
+        ),
+        benchmark_repo=Path(args.benchmark_repo),
+        benchmark_commit=args.benchmark_commit,
+        benchmark_tree=args.benchmark_tree,
+        adapter_path=Path(getattr(args, "adapter_path", __file__)),
     )
     if not torch.cuda.is_available():
         raise RuntimeError("formal Gaussian RGB export requires CUDA")
@@ -152,6 +162,10 @@ def export_rgb(
             else None
         ),
         "camera_source_root": str(source_root),
+        "camera_sparse_model_sha256": sparse_model_sha256(source_root),
+        "runtime_pythonpath_identity": [
+            directory_content_identity(Path(path)) for path in args.runtime_pythonpath
+        ],
         "iteration": int(args.iteration),
         "sh_degree": int(dataset.sh_degree),
         "white_background": bool(dataset.white_background),
@@ -198,6 +212,12 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--manifest_path", default="")
     parser.add_argument("--appearance_policy", required=True)
+    parser.add_argument("--benchmark_repo", required=True)
+    parser.add_argument("--benchmark_commit", required=True)
+    parser.add_argument("--benchmark_tree", required=True)
+    parser.add_argument("--runtime_pythonpath", action="append", default=[])
+    parser.add_argument("--allow_review_candidate", action="store_true")
+    parser.add_argument("--technical_smoke_root", default="")
     parser.add_argument(
         "--splatting_config_path",
         default="",

@@ -23,7 +23,10 @@ training recipes, or method pool.
   method. Method-native metric scripts are not used for the comparable table.
 - Before computing a formal metric, that evaluator binds the render manifest
   to the frozen registry and rechecks the exact adapter, renderer source tree,
-  camera root, model/checkpoint, auxiliary weights, and config hashes.
+  clean benchmark commit/tree, method source (including disallowed untracked
+  files), camera sparse-model bytes, runtime compatibility directories,
+  model/checkpoint, auxiliary weights, and config hashes. MetroGS also binds
+  the exact `cameras.json` bytes used for training-appearance assignment.
 - A scene mean is publishable only when all frozen heldout views pass identity,
   shape, mode, finite-value, and hash checks. Successful-subset means are
   diagnostic only.
@@ -66,4 +69,8 @@ matrix exists, the paper-level summary uses an unweighted scene macro mean.
 
 The machine-readable authority is
 `configs/m3m_gcp_native_quarter_rgb_quality_v1.json`. Formal execution remains
-locked while its status is `REVIEW_CANDIDATE_NOT_FORMAL`.
+locked while its status is `REVIEW_CANDIDATE_NOT_FORMAL`: adapters reject that
+status before creating an artifact directory. A technical smoke requires a
+separate explicit switch and a confined temporary output root. Activation
+requires fresh `PASS_READY` evidence bound to the final clean deployment
+commit/tree and current contract/registry hashes.

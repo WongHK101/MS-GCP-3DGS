@@ -8,8 +8,16 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from rgb_quality_contract import (  # noqa: E402
+    directory_content_identity,
+    sparse_model_sha256,
+    validate_benchmark_checkout,
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -43,6 +51,9 @@ def preflight(
     registry_path: Path,
     *,
     allow_metro_pending: bool,
+    benchmark_repo: Path,
+    benchmark_commit: str,
+    benchmark_tree: str,
 ) -> dict[str, Any]:
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
@@ -57,6 +68,12 @@ def preflight(
             errors.append(f"{name}: {detail}")
 
     shared = registry["shared"]
+    benchmark_identity = validate_benchmark_checkout(
+        benchmark_repo=benchmark_repo,
+        expected_commit=benchmark_commit,
+        expected_tree=benchmark_tree,
+        entrypoint=Path(__file__).resolve(),
+    )
     input_manifest_path = Path(shared["input_manifest"])
     expected_binding = contract["input_binding"]["scene_bindings"][registry["scene"]]
     record("input_manifest_exists", input_manifest_path.is_file(), str(input_manifest_path))
@@ -208,15 +225,24 @@ def preflight(
                 record(f"{method_id}:formal_model", False, str(model_path))
         else:
             actual_model_sha = sha256_file(model_path)
-            record(
-                f"{method_id}:formal_model",
-                actual_model_sha == method.get("formal_model_sha256"),
-                {
-                    "path": str(model_path),
-                    "bytes": model_path.stat().st_size,
-                    "sha256": actual_model_sha,
-                },
-            )
+            model_detail = {
+                "path": str(model_path),
+                "bytes": model_path.stat().st_size,
+                "sha256": actual_model_sha,
+            }
+            if (
+                method_id == "metrogs"
+                and allow_metro_pending
+                and method.get("formal_model_sha256") == "PENDING_METRO_FORMAL_COMPLETION"
+            ):
+                record(f"{method_id}:formal_model_exists", True, model_detail)
+                pending.append("metrogs:formal_model_sha256_activation")
+            else:
+                record(
+                    f"{method_id}:formal_model",
+                    actual_model_sha == method.get("formal_model_sha256"),
+                    model_detail,
+                )
 
         if "cfg_args_sha256" in method:
             cfg_args = Path(method["model_root"]) / "cfg_args"
@@ -259,6 +285,12 @@ def preflight(
                     actual_sha,
                 )
             if exists and optional_key == "training_cameras_json":
+                actual_sha = sha256_file(path)
+                record(
+                    f"{method_id}:training_cameras_json_sha256",
+                    actual_sha == method.get("training_cameras_json_sha256"),
+                    actual_sha,
+                )
                 camera_rows = json.loads(path.read_text(encoding="utf-8"))
                 train_names = {
                     str(row["image_name"])
@@ -291,6 +323,34 @@ def preflight(
                     {"count": len(normalized_ids)},
                 )
 
+        camera_value = str(method["camera_root"])
+        if camera_value == "shared.default_camera_root":
+            camera_root = Path(shared["default_camera_root"])
+            expected_camera_sha = shared["default_camera_sparse_sha256"]
+        elif camera_value == "shared.graphdeco_camera_root":
+            camera_root = Path(shared["graphdeco_camera_root"])
+            expected_camera_sha = shared["graphdeco_camera_sparse_sha256"]
+        else:
+            camera_root = Path(camera_value)
+            expected_camera_sha = method["camera_sparse_sha256"]
+        actual_camera_sha = sparse_model_sha256(camera_root)
+        record(
+            f"{method_id}:camera_sparse_sha256",
+            actual_camera_sha == expected_camera_sha,
+            actual_camera_sha,
+        )
+
+        expected_pythonpath = method.get("pythonpath_content_identity", [])
+        actual_pythonpath = [
+            directory_content_identity(Path(str(row["path"])))
+            for row in expected_pythonpath
+        ]
+        record(
+            f"{method_id}:runtime_pythonpath_identity",
+            actual_pythonpath == expected_pythonpath,
+            actual_pythonpath,
+        )
+
         artifact_root = run_root / "formal_evaluation" / shared["output_relative_path"]
         record(f"{method_id}:rgb_output_absent", not artifact_root.exists(), str(artifact_root))
 
@@ -309,6 +369,14 @@ def preflight(
             "contract_sha256": sha256_file(contract_path),
             "registry_path": str(registry_path),
             "registry_sha256": sha256_file(registry_path),
+            "benchmark_repo": str(benchmark_repo.expanduser().resolve()),
+            "benchmark_commit": benchmark_identity["commit"],
+            "benchmark_tree": benchmark_identity["tree"],
+            "benchmark_clean": (
+                benchmark_identity["tracked_diff_sha256"] == hashlib.sha256(b"").hexdigest()
+                and benchmark_identity["tracked_modified_files_sha256"] == {}
+                and benchmark_identity["unexpected_untracked_files"] == []
+            ),
         },
         "pending": pending,
         "errors": errors,
@@ -330,12 +398,18 @@ def main() -> int:
         default=repo_root / "configs" / "m3m_gcp_native_quarter_rgb_quality_3k_registry_v1.json",
     )
     parser.add_argument("--allow-metro-pending", action="store_true")
+    parser.add_argument("--benchmark-repo", type=Path, required=True)
+    parser.add_argument("--benchmark-commit", required=True)
+    parser.add_argument("--benchmark-tree", required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     result = preflight(
         args.contract.resolve(),
         args.registry.resolve(),
         allow_metro_pending=args.allow_metro_pending,
+        benchmark_repo=args.benchmark_repo.resolve(),
+        benchmark_commit=args.benchmark_commit,
+        benchmark_tree=args.benchmark_tree,
     )
     rendered = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:

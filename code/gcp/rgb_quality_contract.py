@@ -37,7 +37,59 @@ def write_json(path: Path, value: Any) -> None:
     )
 
 
-def git_identity(repo: Path) -> dict[str, str]:
+def _generated_cache_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return (
+        normalized.endswith(".pyc")
+        or "/__pycache__/" in f"/{normalized}"
+        or normalized.endswith("/__pycache__")
+    )
+
+
+def directory_content_identity(root: Path) -> dict[str, Any]:
+    """Return a deterministic digest for an import/runtime compatibility tree."""
+
+    root = root.expanduser().resolve()
+    if not root.is_dir():
+        raise FileNotFoundError(root)
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
+        relative = path.relative_to(root).as_posix()
+        if _generated_cache_path(relative):
+            continue
+        if path.is_symlink():
+            raise ValueError(f"runtime compatibility tree contains a symlink: {path}")
+        if path.is_file():
+            rows.append(
+                {
+                    "relative_path": relative,
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                }
+            )
+    canonical = json.dumps(
+        rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return {
+        "path": str(root),
+        "file_count": len(rows),
+        "manifest_sha256": hashlib.sha256(canonical).hexdigest(),
+    }
+
+
+def sparse_model_sha256(camera_root: Path) -> dict[str, str]:
+    camera_root = camera_root.expanduser().resolve()
+    sparse = camera_root / "sparse" / "0"
+    result: dict[str, str] = {}
+    for name in ("cameras.bin", "images.bin", "points3D.bin"):
+        path = sparse / name
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        result[name] = sha256_file(path)
+    return result
+
+
+def git_identity(repo: Path) -> dict[str, Any]:
     repo = repo.expanduser().resolve()
 
     def run(*args: str) -> str:
@@ -66,6 +118,27 @@ def git_identity(repo: Path) -> dict[str, str]:
     except Exception as exc:  # noqa: BLE001
         diff_sha = f"ERROR:{type(exc).__name__}:{exc}"
         modified_files = {}
+    try:
+        status_z = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "status",
+                "--porcelain=v1",
+                "-z",
+                "--untracked-files=all",
+            ],
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8")
+        status_items = [item for item in status_z.split("\0") if item]
+        unexpected_untracked = sorted(
+            item[3:]
+            for item in status_items
+            if item.startswith("?? ") and not _generated_cache_path(item[3:])
+        )
+    except Exception as exc:  # noqa: BLE001
+        unexpected_untracked = [f"ERROR:{type(exc).__name__}:{exc}"]
     return {
         "path": str(repo),
         "commit": run("rev-parse", "HEAD"),
@@ -73,10 +146,49 @@ def git_identity(repo: Path) -> dict[str, str]:
         "status_porcelain_v1": run("status", "--porcelain=v1"),
         "tracked_diff_sha256": diff_sha,
         "tracked_modified_files_sha256": modified_files,
+        "unexpected_untracked_files": unexpected_untracked,
     }
 
 
-def load_contract(path: Path, *, allow_review_candidate: bool = True) -> dict[str, Any]:
+def validate_benchmark_checkout(
+    *,
+    benchmark_repo: Path,
+    expected_commit: str,
+    expected_tree: str,
+    entrypoint: Path,
+) -> dict[str, Any]:
+    benchmark_repo = benchmark_repo.expanduser().resolve()
+    entrypoint = entrypoint.expanduser().resolve()
+    identity = git_identity(benchmark_repo)
+    empty_sha = hashlib.sha256(b"").hexdigest()
+    errors: list[str] = []
+    if identity.get("commit") != expected_commit:
+        errors.append(
+            f"benchmark commit mismatch: {identity.get('commit')} != {expected_commit}"
+        )
+    if identity.get("tree") != expected_tree:
+        errors.append(f"benchmark tree mismatch: {identity.get('tree')} != {expected_tree}")
+    if identity.get("tracked_diff_sha256") != empty_sha:
+        errors.append("benchmark checkout has tracked modifications")
+    if identity.get("tracked_modified_files_sha256") != {}:
+        errors.append("benchmark checkout has modified tracked files")
+    if identity.get("unexpected_untracked_files") != []:
+        errors.append(
+            "benchmark checkout has unexpected untracked files: "
+            f"{identity.get('unexpected_untracked_files')}"
+        )
+    try:
+        entrypoint.relative_to(benchmark_repo)
+    except ValueError:
+        errors.append(f"benchmark entrypoint is outside the checkout: {entrypoint}")
+    if not entrypoint.is_file():
+        errors.append(f"benchmark entrypoint is missing: {entrypoint}")
+    if errors:
+        raise ValueError("; ".join(errors))
+    return identity
+
+
+def load_contract(path: Path, *, allow_review_candidate: bool = False) -> dict[str, Any]:
     path = path.expanduser().resolve()
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("schema") != CONTRACT_SCHEMA or payload.get("suite_id") != SUITE_ID:
@@ -168,9 +280,17 @@ class RgbRenderWriter:
         method_id: str,
         output_dir: Path,
         manifest_path: Path | None = None,
+        allow_review_candidate: bool = False,
+        technical_smoke_root: Path | None = None,
+        benchmark_repo: Path | None = None,
+        benchmark_commit: str | None = None,
+        benchmark_tree: str | None = None,
+        adapter_path: Path | None = None,
     ) -> None:
         self.contract_path = contract_path.expanduser().resolve()
-        self.contract = load_contract(self.contract_path)
+        self.contract = load_contract(
+            self.contract_path, allow_review_candidate=allow_review_candidate
+        )
         self.input_manifest_path = input_manifest_path.expanduser().resolve()
         self.input_manifest = load_bound_input_manifest(
             self.contract, self.input_manifest_path, scene
@@ -183,6 +303,40 @@ class RgbRenderWriter:
             if manifest_path
             else self.output_dir.parent / "rgb_render_manifest.json"
         )
+        self.benchmark_identity: dict[str, Any] | None = None
+        if self.contract["status"] == "REVIEW_CANDIDATE_NOT_FORMAL":
+            if not allow_review_candidate or technical_smoke_root is None:
+                raise ValueError(
+                    "review-candidate rendering requires an explicit technical-smoke root"
+                )
+            smoke_root = technical_smoke_root.expanduser().resolve()
+            for label, path in (
+                ("output_dir", self.output_dir),
+                ("manifest_path", self.manifest_path),
+            ):
+                try:
+                    path.relative_to(smoke_root)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"technical-smoke {label} is outside the frozen smoke root: {path}"
+                    ) from exc
+        else:
+            if (
+                benchmark_repo is None
+                or benchmark_commit is None
+                or benchmark_tree is None
+                or adapter_path is None
+            ):
+                raise ValueError("formal rendering requires frozen benchmark checkout identity")
+            self.benchmark_identity = validate_benchmark_checkout(
+                benchmark_repo=benchmark_repo,
+                expected_commit=benchmark_commit,
+                expected_tree=benchmark_tree,
+                entrypoint=adapter_path,
+            )
+        # Every status and identity gate above must pass before any artifact
+        # path is tested or created, so a rejected candidate cannot poison the
+        # immutable formal output root.
         if self.output_dir.exists():
             raise FileExistsError(self.output_dir)
         if self.manifest_path.exists():
@@ -265,6 +419,11 @@ class RgbRenderWriter:
         extra = sorted(self._written - set(self.expected_by_name))
         if missing or extra or len(self.rows) != len(self.expected_rows):
             raise RuntimeError(f"incomplete RGB render set: missing={missing} extra={extra}")
+        provenance = dict(provenance)
+        provenance["benchmark_repository"] = self.benchmark_identity
+        provenance["technical_smoke_only"] = (
+            self.contract["status"] == "REVIEW_CANDIDATE_NOT_FORMAL"
+        )
         payload = {
             "schema": RENDER_MANIFEST_SCHEMA,
             "suite_id": SUITE_ID,

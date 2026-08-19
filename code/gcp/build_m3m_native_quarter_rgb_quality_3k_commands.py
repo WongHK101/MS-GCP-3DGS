@@ -6,8 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
+import sys
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from rgb_quality_contract import (  # noqa: E402
+    sha256_file,
+    validate_benchmark_checkout,
+)
 
 
 PLAN_SCHEMA = "m3m_gcp_native_quarter_rgb_quality_3k_execution_plan_v1"
@@ -42,6 +49,8 @@ def _render_argv(
     method: dict[str, Any],
     shared: dict[str, Any],
     benchmark_repo: str,
+    benchmark_commit: str,
+    benchmark_tree: str,
     contract_path: str,
     artifact_root: str,
 ) -> list[str]:
@@ -49,6 +58,12 @@ def _render_argv(
     python = f"{method['environment']}/bin/python"
     adapter = f"{benchmark_repo}/code/gcp/{method['adapter']}"
     common = [
+        "--benchmark_repo",
+        benchmark_repo,
+        "--benchmark_commit",
+        benchmark_commit,
+        "--benchmark_tree",
+        benchmark_tree,
         "--rgb_contract",
         contract_path,
         "--input_manifest",
@@ -146,6 +161,8 @@ def _render_argv(
     else:
         raise ValueError(f"unsupported RGB adapter: {method['adapter']}")
     argv.extend(str(value) for value in method.get("extra_cli", []))
+    for path in method.get("pythonpath", []):
+        argv.extend(["--runtime_pythonpath", str(path)])
     if method.get("splatting_config_path"):
         argv.extend(["--splatting_config_path", str(method["splatting_config_path"])])
     return argv
@@ -155,7 +172,12 @@ def build_plan(
     registry: dict[str, Any],
     *,
     benchmark_repo: str,
+    benchmark_commit: str,
+    benchmark_tree: str,
     allow_review_candidate: bool = False,
+    activation_preflight: dict[str, Any] | None = None,
+    contract_sha256: str | None = None,
+    registry_sha256: str | None = None,
 ) -> dict[str, Any]:
     status = registry.get("status")
     if status != "ACTIVE_FROZEN" and not (
@@ -167,6 +189,26 @@ def build_plan(
         raise ValueError("benchmark repository path must be absolute")
     if "DEPLOYED_REVIEWED_COMMIT" in benchmark_repo:
         raise ValueError("benchmark repository path still contains the review placeholder")
+
+    if status == "ACTIVE_FROZEN":
+        if activation_preflight is None:
+            raise ValueError("ACTIVE_FROZEN execution requires fresh activation preflight evidence")
+        inputs = activation_preflight.get("inputs", {})
+        required = {
+            "status": activation_preflight.get("status") == "PASS_READY",
+            "passed": activation_preflight.get("passed") is True,
+            "formal_launch_ready": activation_preflight.get("formal_launch_ready") is True,
+            "pending": activation_preflight.get("pending") == [],
+            "errors": activation_preflight.get("errors") == [],
+            "contract_sha256": inputs.get("contract_sha256") == contract_sha256,
+            "registry_sha256": inputs.get("registry_sha256") == registry_sha256,
+            "benchmark_commit": inputs.get("benchmark_commit") == benchmark_commit,
+            "benchmark_tree": inputs.get("benchmark_tree") == benchmark_tree,
+            "benchmark_clean": inputs.get("benchmark_clean") is True,
+        }
+        failures = [name for name, passed in required.items() if not passed]
+        if failures:
+            raise ValueError(f"activation preflight is not launch-ready: {failures}")
 
     shared = registry["shared"]
     contract_path = str(benchmark_path / str(shared["contract_relative_path"]))
@@ -181,6 +223,8 @@ def build_plan(
             method=method,
             shared=shared,
             benchmark_repo=str(benchmark_path),
+            benchmark_commit=benchmark_commit,
+            benchmark_tree=benchmark_tree,
             contract_path=contract_path,
             artifact_root=artifact_root,
         )
@@ -192,6 +236,12 @@ def build_plan(
             contract_path,
             "--registry",
             registry_path,
+            "--benchmark_repo",
+            str(benchmark_path),
+            "--benchmark_commit",
+            benchmark_commit,
+            "--benchmark_tree",
+            benchmark_tree,
             "--input_manifest",
             str(shared["input_manifest"]),
             "--input_root",
@@ -249,6 +299,9 @@ def build_plan(
         "server": registry["server"],
         "scene": registry["scene"],
         "benchmark_repo": str(benchmark_path),
+        "benchmark_commit": benchmark_commit,
+        "benchmark_tree": benchmark_tree,
+        "activation_preflight": activation_preflight,
         "contract_path": contract_path,
         "registry_path": registry_path,
         "job_count": len(jobs),
@@ -273,6 +326,9 @@ def main() -> int:
         default=repo_root / "configs" / "m3m_gcp_native_quarter_rgb_quality_3k_registry_v1.json",
     )
     parser.add_argument("--benchmark-repo", required=True)
+    parser.add_argument("--benchmark-commit", required=True)
+    parser.add_argument("--benchmark-tree", required=True)
+    parser.add_argument("--activation-preflight", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument(
         "--allow-review-candidate",
@@ -280,11 +336,30 @@ def main() -> int:
         help="Build a non-executable audit preview while the suite is not ACTIVE_FROZEN.",
     )
     args = parser.parse_args()
+    benchmark_repo = Path(args.benchmark_repo).expanduser().resolve()
+    validate_benchmark_checkout(
+        benchmark_repo=benchmark_repo,
+        expected_commit=args.benchmark_commit,
+        expected_tree=args.benchmark_tree,
+        entrypoint=Path(__file__).resolve(),
+    )
     registry = json.loads(args.registry.read_text(encoding="utf-8"))
+    activation_preflight = (
+        json.loads(args.activation_preflight.read_text(encoding="utf-8"))
+        if args.activation_preflight is not None
+        else None
+    )
+    contract_path = benchmark_repo / str(registry["shared"]["contract_relative_path"])
+    registry_path = benchmark_repo / str(registry["shared"]["registry_relative_path"])
     plan = build_plan(
         registry,
-        benchmark_repo=args.benchmark_repo,
+        benchmark_repo=str(benchmark_repo),
+        benchmark_commit=args.benchmark_commit,
+        benchmark_tree=args.benchmark_tree,
         allow_review_candidate=args.allow_review_candidate,
+        activation_preflight=activation_preflight,
+        contract_sha256=sha256_file(contract_path),
+        registry_sha256=sha256_file(registry_path),
     )
     rendered = json.dumps(plan, ensure_ascii=False, indent=2) + "\n"
     if args.output:

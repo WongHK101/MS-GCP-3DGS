@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -112,6 +113,42 @@ EXPECTED_CITYGS_X_AUX_SHA256 = {
     "additional_attributes.npz": "f9ac471f155ec503205bb409a16e9d0162fa03aa20f38500121f12b951ccc789",
     "checkpoints.pth": "eca8b10cfecfee85f2ad61eb9f1cd60a99db4cb1b51507e2f01917c9c597fb4d",
 }
+EXPECTED_COMMON_CAMERA_SHA256 = {
+    "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+    "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+    "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f",
+}
+EXPECTED_GSPRIOR_CAMERA_SHA256 = {
+    "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+    "images.bin": "0f59fe69c46c862d59326b2acc70c5324844ba9c555cceffbb77aac90ce3741b",
+    "points3D.bin": "ef416ae289f748d3731e867005ca9e3adccb7370adbae3676e6fef08f868d99a",
+}
+EXPECTED_PYTHONPATH_IDENTITIES = {
+    "pgsr": [
+        {
+            "path": "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/compat",
+            "file_count": 2,
+            "manifest_sha256": "432f6706d7477d9611d141c863ef973fd438fc679e5d17b40ea235deb613ec8b",
+        }
+    ],
+    "gsprior": [
+        {
+            "path": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/gsprior/prep-v1/compat",
+            "file_count": 2,
+            "manifest_sha256": "0c26588f70d2454278ad5cd8019c9ed9a2a9d1f719ea84dc883cf6c010a01053",
+        }
+    ],
+    "citygs_x": [
+        {
+            "path": "/root/autodl-tmp/staging/m3m-gcp-native-quarter/batch-20260818/citygs_x/pytorch3d_compat",
+            "file_count": 2,
+            "manifest_sha256": "c7dee8e4f1f52a480bc577c6d6799abc48a596cf7c232c9ca28228df3b5c20bf",
+        }
+    ],
+}
+EXPECTED_METRO_TRAINING_CAMERAS_SHA256 = (
+    "e5faae00adee6a3576cd7a358bcd7e809f70a202375931eea3925c08499e31fd"
+)
 
 
 def _absolute_posix(value: Any) -> bool:
@@ -131,6 +168,7 @@ def validate(
     contract_path: Path,
     registry_path: Path,
     current_pointer_path: Path,
+    activation_preflight_path: Path | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
 
@@ -256,7 +294,20 @@ def validate(
     gate = contract.get("formal_gate", {})
     require(gate.get("review_required_before_first_formal_run") is True, "review gate disabled")
     require(gate.get("required_status_for_formal_run") == "ACTIVE_FROZEN", "formal status gate mismatch")
+    require(
+        gate.get("review_candidate_render_default")
+        == "reject before creating any artifact path",
+        "review-candidate render hard lock is not frozen",
+    )
+    require("technical_smoke_root" in str(gate.get("technical_smoke_exception", "")), "technical-smoke confinement is missing")
+    require("PASS_READY" in str(gate.get("activation_preflight", "")), "ACTIVE preflight gate is missing")
+    require("commit and tree" in str(gate.get("benchmark_checkout_identity", "")), "benchmark checkout identity gate is missing")
     require(gate.get("no_overwrite") is True, "no-overwrite gate disabled")
+    require(
+        gate.get("camera_sparse_training_appearance_and_runtime_compat_hashes_required")
+        is True,
+        "runtime auxiliary-content hash gate is disabled",
+    )
 
     methods = registry.get("methods", [])
     method_ids = [method.get("method_id") for method in methods if isinstance(method, dict)]
@@ -267,6 +318,14 @@ def validate(
     require("gof" not in method_ids, "retired GOF leaked into the active RGB suite")
 
     shared = registry.get("shared", {})
+    require(
+        shared.get("default_camera_sparse_sha256") == EXPECTED_COMMON_CAMERA_SHA256,
+        "default camera sparse-model hashes mismatch",
+    )
+    require(
+        shared.get("graphdeco_camera_sparse_sha256") == EXPECTED_COMMON_CAMERA_SHA256,
+        "Graphdeco camera sparse-model hashes mismatch",
+    )
     for key in (
         "input_manifest",
         "input_root",
@@ -354,6 +413,11 @@ def validate(
             method.get("appearance_policy") == EXPECTED_APPEARANCE_POLICIES[method_id],
             f"{method_id}: frozen appearance policy mismatch",
         )
+        require(
+            method.get("pythonpath_content_identity", [])
+            == EXPECTED_PYTHONPATH_IDENTITIES.get(method_id, []),
+            f"{method_id}: runtime PYTHONPATH content identity mismatch",
+        )
         require("evaluator" not in method and "metrics_script" not in method, f"{method_id}: method-specific evaluator registered")
 
         if method_id in {"citygaussian_v2", "citygs_x", "metrogs"}:
@@ -381,6 +445,16 @@ def validate(
         else:
             require(_absolute_posix(method.get("model_root")), f"{method_id}: model root missing")
             require("environment_variables" not in method, f"{method_id}: unexpected environment override")
+        if method_id == "gsprior":
+            require(
+                method.get("camera_sparse_sha256") == EXPECTED_GSPRIOR_CAMERA_SHA256,
+                "gsprior: normalized camera sparse-model hashes mismatch",
+            )
+        elif str(method.get("camera_root", "")).startswith("/"):
+            require(
+                "camera_sparse_sha256" not in method,
+                f"{method_id}: unexpected method-specific camera hash set",
+            )
 
     appearance = contract.get("appearance_policy", {})
     metro = next((method for method in methods if method.get("method_id") == "metrogs"), {})
@@ -411,6 +485,11 @@ def validate(
             metro.get("formal_model_sha256") != "PENDING_METRO_FORMAL_COMPLETION",
             "active registry retains pending MetroGS model identity",
         )
+    require(
+        metro.get("training_cameras_json_sha256")
+        == EXPECTED_METRO_TRAINING_CAMERAS_SHA256,
+        "MetroGS training cameras SHA mismatch",
+    )
 
     execution = registry.get("execution_policy", {})
     require(execution.get("geometry_formal_completion_required_before_rgb") is True, "geometry-before-RGB gate disabled")
@@ -434,28 +513,58 @@ def validate(
         / "protocol_evidence"
         / "m3m_native_quarter_rgb_quality_3k_review_preflight_v1.json"
     )
-    require(review_preflight_path.is_file(), "review-candidate 901 preflight evidence missing")
-    if review_preflight_path.is_file():
-        review_preflight = json.loads(review_preflight_path.read_text(encoding="utf-8"))
-        require(review_preflight.get("passed") is True, "review-candidate 901 preflight failed")
-        require(
-            review_preflight.get("status") == "PASS_STATIC_METRO_PENDING",
-            "review-candidate 901 preflight status mismatch",
-        )
-        require(review_preflight.get("errors") == [], "review-candidate 901 preflight has errors")
-        require(
-            review_preflight.get("pending")
-            == ["metrogs:geometry_formal_completion", "metrogs:formal_model"],
-            "review-candidate 901 preflight pending set mismatch",
-        )
-        inputs = review_preflight.get("inputs", {})
+    status = contract.get("status")
+    evidence_path = (
+        review_preflight_path
+        if status == "REVIEW_CANDIDATE_NOT_FORMAL"
+        else activation_preflight_path
+    )
+    require(evidence_path is not None and evidence_path.is_file(), "state-specific 901 preflight evidence missing")
+    if evidence_path is not None and evidence_path.is_file():
+        preflight_evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        require(preflight_evidence.get("passed") is True, "state-specific 901 preflight failed")
+        require(preflight_evidence.get("errors") == [], "state-specific 901 preflight has errors")
+        if status == "REVIEW_CANDIDATE_NOT_FORMAL":
+            require(
+                preflight_evidence.get("status") == "PASS_STATIC_METRO_PENDING",
+                "review-candidate 901 preflight status mismatch",
+            )
+            require(
+                preflight_evidence.get("formal_launch_ready") is False,
+                "review-candidate preflight became launch-ready",
+            )
+            require(
+                preflight_evidence.get("pending")
+                == ["metrogs:formal_model_sha256_activation"],
+                "review-candidate 901 preflight pending set mismatch",
+            )
+        elif status == "ACTIVE_FROZEN":
+            require(preflight_evidence.get("status") == "PASS_READY", "ACTIVE preflight is not PASS_READY")
+            require(preflight_evidence.get("formal_launch_ready") is True, "ACTIVE preflight launch gate is false")
+            require(preflight_evidence.get("pending") == [], "ACTIVE preflight retains pending items")
+        inputs = preflight_evidence.get("inputs", {})
         require(inputs.get("contract_sha256") == _sha256_file(contract_path), "preflight contract SHA binding mismatch")
         require(inputs.get("registry_sha256") == _sha256_file(registry_path), "preflight registry SHA binding mismatch")
         preflight_source = repo_root / "code" / "gcp" / "preflight_m3m_native_quarter_rgb_quality_3k.py"
-        require(
-            inputs.get("preflight_sha256") == _sha256_file(preflight_source),
-            "preflight source SHA binding mismatch",
-        )
+        require(inputs.get("preflight_sha256") == _sha256_file(preflight_source), "preflight source SHA binding mismatch")
+        if status == "ACTIVE_FROZEN":
+            try:
+                actual_commit = subprocess.check_output(
+                    ["git", "-C", str(repo_root), "rev-parse", "HEAD"], text=True
+                ).strip()
+                actual_tree = subprocess.check_output(
+                    ["git", "-C", str(repo_root), "rev-parse", "HEAD^{tree}"], text=True
+                ).strip()
+                actual_status = subprocess.check_output(
+                    ["git", "-C", str(repo_root), "status", "--porcelain=v1", "--untracked-files=all"],
+                    text=True,
+                ).strip()
+            except Exception as exc:  # noqa: BLE001
+                actual_commit = actual_tree = f"ERROR:{type(exc).__name__}:{exc}"
+                actual_status = "ERROR"
+            require(inputs.get("benchmark_commit") == actual_commit, "ACTIVE preflight benchmark commit mismatch")
+            require(inputs.get("benchmark_tree") == actual_tree, "ACTIVE preflight benchmark tree mismatch")
+            require(inputs.get("benchmark_clean") is True and actual_status == "", "ACTIVE benchmark checkout is not clean")
 
     smoke_summary_path = (
         repo_root
@@ -532,12 +641,14 @@ def main() -> int:
         default=repo_root / "configs" / "m3m_gcp_native_quarter_current.json",
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--activation-preflight", type=Path)
     args = parser.parse_args()
     result = validate(
         args.repo_root.resolve(),
         args.contract.resolve(),
         args.registry.resolve(),
         args.current_pointer.resolve(),
+        args.activation_preflight.resolve() if args.activation_preflight else None,
     )
     rendered = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:

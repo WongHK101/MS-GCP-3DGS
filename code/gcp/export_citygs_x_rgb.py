@@ -20,8 +20,10 @@ from export_citygs_x_depth_maps import (  # noqa: E402
 )
 from rgb_quality_contract import (  # noqa: E402
     RgbRenderWriter,
+    directory_content_identity,
     git_identity,
     sha256_file,
+    sparse_model_sha256,
 )
 
 
@@ -37,6 +39,12 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         method_id="citygs_x",
         output_dir=args.output_dir,
         manifest_path=args.manifest_path,
+        allow_review_candidate=args.allow_review_candidate,
+        technical_smoke_root=args.technical_smoke_root,
+        benchmark_repo=args.benchmark_repo,
+        benchmark_commit=args.benchmark_commit,
+        benchmark_tree=args.benchmark_tree,
+        adapter_path=Path(__file__),
     )
     runtime_log = writer.manifest_path.parent / "citygs_x_rgb_runtime.log"
     old_cwd = Path.cwd()
@@ -53,6 +61,11 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
             torch = runtime["torch"]
             if not torch.cuda.is_available():
                 raise RuntimeError("formal CityGS-X RGB export requires CUDA")
+            actual_appearance_dim = int(runtime["args"].appearance_dim)
+            if actual_appearance_dim != 0:
+                raise RuntimeError(
+                    f"frozen CityGS-X runtime appearance_dim is {actual_appearance_dim}, not 0"
+                )
             cameras = build_frozen_cameras(
                 runtime, sparse_model, camera_root, writer.expected_names
             )
@@ -131,6 +144,7 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         },
         "cfg_args_sha256": sha256_file(model_path / "cfg_args"),
         "camera_source_root": str(camera_root),
+        "camera_sparse_model_sha256": sparse_model_sha256(camera_root),
         "frozen_sparse_model": str(sparse_model),
         "frozen_sparse_model_sha256": {
             name: sha256_file(sparse_model / name)
@@ -139,8 +153,12 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         "iteration": int(args.iteration),
         "white_background": False,
         "appearance_policy": args.appearance_policy,
-        "appearance_dim": 0,
+        "appearance_dim": actual_appearance_dim,
+        "runtime_pythonpath_identity": [
+            directory_content_identity(path) for path in args.runtime_pythonpath
+        ],
         "heldout_rgb_used_by_adapter": False,
+        "heldout_rgb_consumed_by_renderer_or_policy": False,
         "test_time_optimization": False,
         "runtime": {
             "python": sys.version,
@@ -165,6 +183,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output_dir", type=Path, required=True)
     parser.add_argument("--manifest_path", type=Path)
     parser.add_argument("--appearance_policy", default="appearance_dim_0")
+    parser.add_argument("--benchmark_repo", type=Path, required=True)
+    parser.add_argument("--benchmark_commit", required=True)
+    parser.add_argument("--benchmark_tree", required=True)
+    parser.add_argument("--runtime_pythonpath", type=Path, action="append", default=[])
+    parser.add_argument("--allow_review_candidate", action="store_true")
+    parser.add_argument("--technical_smoke_root", type=Path)
     return parser
 
 
