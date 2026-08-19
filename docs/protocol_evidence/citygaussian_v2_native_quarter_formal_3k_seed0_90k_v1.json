@@ -1,0 +1,245 @@
+{
+  "artifact_retention": {
+    "large_checkpoint_and_packets_remain_on_autodl_901": true,
+    "local_model_mirror_created": false
+  },
+  "check_vector": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "created_utc": "2026-08-19T02:04:32.236558+00:00",
+  "evaluation": {
+    "checkpoint_coverage_rate": 1.0,
+    "checkpoint_residual_statistics_scope": "all_formal_checkpoints",
+    "common_primary_semantics": "render-support expected camera-z coordinate sampled as bilinear(M1)/bilinear(A)",
+    "common_sim3_path": "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2/scenes/gcp_3000_20260602/common_sim3.json",
+    "common_sim3_sha256": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "method_id": "citygaussian_v2",
+    "method_specific_sim3_fitted": false,
+    "observation_failure_counts": {},
+    "outputs": {
+      "evaluation_summary.json": {
+        "bytes": 2360,
+        "sha256": "3dee4281434a4583ef4be0a70e4aa79f23e0b74a1b3915b3960b1b7c4f2cd2d7"
+      },
+      "evaluator_manifest.json": {
+        "bytes": 1390,
+        "sha256": "5ef4ba2421da31a3770f51a3548fe3aff30871eb849325db96cf0475d9179c58"
+      },
+      "observation_samples.csv": {
+        "bytes": 52358,
+        "sha256": "ff68a74c6794fd9b3d7ce55e97f5dcae6cd4ca5fad14a0a928759d08ad04a1ef"
+      },
+      "point_results.csv": {
+        "bytes": 4403,
+        "sha256": "c6f987a5a5dbb03b2c265ee9f9b02722a92bb105cfe14384323b545aad21348f"
+      }
+    },
+    "packet_manifest": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/formal_evaluation/packets/depth_export_manifest.json",
+    "packet_manifest_sha256": "556f52c31c86d436d4f99e07dc69d268eb84acca116de60e3e670ac8a1c8565b",
+    "physical_surface_claim": false,
+    "point_counts": {
+      "checkpoint_passed": 4,
+      "checkpoint_total": 4,
+      "control_passed": 5,
+      "control_total": 5
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "ranking_eligible": true,
+    "ranking_exclusion_reason": "",
+    "ranking_policy": "A scene is COMPLETE_RANKED only when every formal checkpoint passes the point-level coverage gate. INCOMPLETE_UNRANKED subset errors remain diagnostic and must not enter an RMSE ranking or cross-scene macro-average.",
+    "residual_statistics": {
+      "all": {
+        "count": 9,
+        "max_3d_m": 0.1641258214850626,
+        "median_3d_m": 0.03828066186010346,
+        "p95_3d_m": 0.12515858892013412,
+        "rmse_3d_m": 0.06765917824392044,
+        "rmse_h_m": 0.016102563049026478,
+        "rmse_z_m": 0.06571508094718231
+      },
+      "checkpoint": {
+        "count": 4,
+        "max_3d_m": 0.1641258214850626,
+        "median_3d_m": 0.0639845215989157,
+        "p95_3d_m": 0.1495131092732144,
+        "rmse_3d_m": 0.09403251107922012,
+        "rmse_h_m": 0.020016423080856036,
+        "rmse_z_m": 0.09187739627847442
+      },
+      "control": {
+        "count": 5,
+        "max_3d_m": 0.05209023093640112,
+        "median_3d_m": 0.03628686040781586,
+        "p95_3d_m": 0.049328317121141586,
+        "rmse_3d_m": 0.03415092106028404,
+        "rmse_h_m": 0.012091352769012664,
+        "rmse_z_m": 0.03193876324282207
+      }
+    },
+    "scene": "gcp_3000_20260602",
+    "schema": "m3m_gcp_native_quarter_method_evaluation_v2",
+    "status": "COMPLETE_RANKED"
+  },
+  "external_geometry_prior": {
+    "enabled_depth_count": 75,
+    "encoder": "vitl",
+    "gcp_annotations_opened": 0,
+    "heldout_rgb_opened": 0,
+    "input_size": 518,
+    "lidar_opened": 0,
+    "manifest_sha256": "eeb19e41fd75b9e41272fcf0395498917731474610f8f09b5029cdfb2c83417d",
+    "repository_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+    "thresholds_selected_from_results": false,
+    "training_rgb_opened": 82,
+    "weight_sha256": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345"
+  },
+  "final_gpu_compute_process_count": 0,
+  "formal_result_status": "COMPLETE_RANKED",
+  "input": {
+    "formal_input_manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+    "formal_input_manifest_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+    "gcp_truth_training_access": false,
+    "height": 1025,
+    "heldout_rgb_training_access": false,
+    "heldout_test_view_count": 12,
+    "input_class": "rgb_colmap_external_geometry_prior",
+    "lidar_training_access": false,
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "track_compatibility_evidence_sha256": "e8e48b14e276cdd8867769cecde739a0800b9951cca8de056824567f578e5163",
+    "train_view_count": 82,
+    "training_downsample": 1.0,
+    "width": 1414
+  },
+  "method_id": "citygaussian_v2",
+  "official_budget": {
+    "coarse_steps": 30000,
+    "fine_steps": 60000,
+    "total_steps": 90000
+  },
+  "packet_export": {
+    "allowlist_sha256": "bf4ab69a1cd10cd3aa42ad3c5295ba5db050491c308d75c3bd12ff647efaefdf",
+    "benchmark_commit": "1a8891a5ca04e6e2b2584e0b374808322817c39a",
+    "benchmark_tree": "3099c36b36e5949146de16848697e88f2effd757",
+    "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+    "evaluation_camera_domain_is_frozen_94_camera_scene": true,
+    "evaluation_snapshot_is_separate_from_formal_model": true,
+    "exporter_sha256": "0c6bc3263deb7bad8034553ff1c8c35a7b50f3bc000f2a651de24c51292136f6",
+    "manifest_sha256": "556f52c31c86d436d4f99e07dc69d268eb84acca116de60e3e670ac8a1c8565b",
+    "mapping_csv_sha256": "6271f9f932a1c61b39535de896a97f3ee0ce0301a197d936456adba26a392db2",
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "packet_bytes": 2667242062,
+    "packet_count": 66,
+    "packet_identity_aggregate_sha256": "7a1dea42c669d5b18289df69fb5a067333cb7008c1924c07783ab08af01c23a2",
+    "packet_recomputation_all_passed": true,
+    "peak_gpu_memory_mib": 9219.0,
+    "rasterizer_patch_sha256": "cb92c91b5af52c003bf91c6ae96d47894c4e55050adaac2e1d685dab60407412",
+    "raw_camera_z_to_protocol_scale": 1.0,
+    "raw_moment_conformance_sha256": "3c6f45d76fbe364ccdc8938a691206369687ecb8983af7f2d2b83911c6d5e5af",
+    "renderer_patch_sha256": "5b08f2a9b4a275b191230e8d20802261a4ed35c7120a3ecf2181060f264ebc64",
+    "resource_summary_sha256": "eaffbfe8231fc2b332316a55c2b285854bf46e8510fbeb97aaa2f2677ff26e41",
+    "status": "PASS",
+    "valid_pixel_count_max": 1449350,
+    "valid_pixel_count_min": 1449350,
+    "validation_report_sha256": "6a84164fd4fe20ae27a3fe79035d2834245393c3713714fd3ce7f66a454cfade",
+    "variance_nonnegativity_unresolved_total": 13,
+    "variance_validation_fail_pixel_total": 0,
+    "wall_seconds": 263.9829963967204
+  },
+  "passed": true,
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "recipe": {
+    "block_dim": [
+      1,
+      1
+    ],
+    "coarse_steps": 30000,
+    "content_threshold": 0.05,
+    "fine_steps": 60000,
+    "resume_allowed": false,
+    "route": "official MatrixCity aerial coarse/fine single-block route"
+  },
+  "result_kind": "formal_benchmark_result_not_preflight",
+  "run": {
+    "adapter_config_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+    "formal_launch_gate_sha256": "674f1db430bf1aafcb3374aa6653698542666a3e4122826f08200105e8b57f99",
+    "launch_check_sha256": "99e92d89d53b60242f22281c8adc3168150bc38344caaa9a19cdc08204ecac00",
+    "launcher_sha256": "373c8851221b46cfa726e1a30f1739ae7c337475939650bb6b208fe360657537",
+    "qualification_report_sha256": "a61e63e2aa8bd95150082a99e3162ffc049c88a791ba3500e6143bfa8bb61f3d",
+    "recipe_sha256": "2ee37a3e85de03a3fe436b1b842c8caef439e8bedd2835be1167fc46bce6c188",
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z"
+  },
+  "scene": "gcp_3000_20260602",
+  "schema": "m3m_native_quarter_citygaussian_v2_formal_3k_run_v1",
+  "seed": 0,
+  "single_seed_only": true,
+  "source": {
+    "evaluation_adapter_only": true,
+    "official_repository_commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+    "official_repository_tree": "be088977358cb36bac000caec396eff3758c74b2",
+    "training_renderer_or_rasterizer_modified": false,
+    "training_source_modified": false
+  },
+  "statistical_significance_claim": false,
+  "status": "PASS",
+  "training": {
+    "block_checkpoint": {
+      "bytes": 1182803983,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/pipeline/fine/blocks/block_0/checkpoints/epoch=732-step=60000.ckpt",
+      "sha256": "8c31d1eac78e3f39e2eb672d6795933e60059afec80b84297bb51c3e9ad813aa"
+    },
+    "cgroup_observed_peak_bytes": 107206463488,
+    "coarse_checkpoint": {
+      "bytes": 1273246351,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/pipeline/coarse/checkpoints/epoch=366-step=30000.ckpt",
+      "sha256": "355a899ad2863d5932e118ea03e0bc7ad7aeded7de12be152ec6d9c783e99637"
+    },
+    "command_record_sha256": "5badcebfd20571bb316b81eeb34f0561a2a9a6fb7b77ed5423202f417d7db67a",
+    "estimated_gpu_energy_wh": 860.462120145734,
+    "fd_peak": 69,
+    "final_merged_checkpoint": {
+      "bytes": 1182717065,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/pipeline/fine/checkpoints/epoch=366-step=30000.ckpt",
+      "sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64",
+      "verified_sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64"
+    },
+    "gpu_hours": 3.2865683313169414,
+    "memory_events_delta": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0
+    },
+    "peak_gpu_memory_mib": 6875.0,
+    "pipeline_summary_sha256": "10f3921c2a962cfb22c8a6b0b968e18f35ad986b3c0e25b353ca81f05d32657b",
+    "process_maximum_rss_kib": 5792020,
+    "process_tree_sampled_peak_rss_kib": 5596176,
+    "resource_status": "PASS",
+    "resource_summary_sha256": "be661c84ffbaa061184a73ae681267ede392225333ce5a986f76342703b36492",
+    "sampler_errors": [],
+    "wall_seconds": 11831.645992740989
+  }
+}

@@ -368,7 +368,7 @@
     {
       "method_id": "citygaussian_v2",
       "display_name": "CityGaussianV2",
-      "lifecycle_role": "ACTIVE_3K_CANDIDATE",
+      "lifecycle_role": "ACTIVE_3K_COMPLETE_RANKED",
       "representation_family": "large_scale_2d_gaussian",
       "source": {
         "official_repository": "https://github.com/Linketic/CityGaussian",
@@ -399,10 +399,20 @@
       "qualification_report": "docs/protocol_evidence/citygaussian_v2_native_quarter_gpu_real_3k_qualification_v1.json",
       "qualification_report_sha256": "a61e63e2aa8bd95150082a99e3162ffc049c88a791ba3500e6143bfa8bb61f3d",
       "technical_qualification_status": "TECHNICALLY_QUALIFIED",
-      "formal_3k_result": {"status": "NOT_ATTEMPTED"},
+      "formal_3k_result": {
+        "status": "COMPLETE_RANKED",
+        "report": "docs/protocol_evidence/citygaussian_v2_native_quarter_formal_3k_seed0_90k_v1.json",
+        "report_sha256": "deabc720479a6d584b79a37182de80ac228762e43f72164cf687270be6c28b5d",
+        "final_checkpoint_sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64",
+        "packet_manifest_sha256": "556f52c31c86d436d4f99e07dc69d268eb84acca116de60e3e670ac8a1c8565b",
+        "checkpoint_rmse_3d_m": 0.09403251107922012,
+        "checkpoint_rmse_h_m": 0.020016423080856036,
+        "checkpoint_rmse_z_m": 0.09187739627847442,
+        "rerun_allowed": false
+      },
       "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": true
+      "three_k_training_allowed": false
     },
     {
       "method_id": "citygs_x",
@@ -434,11 +444,13 @@
       ],
       "redistribution_allowed": false,
       "internal_numeric_reporting_allowed": true,
-      "technical_qualification_status": "SOURCE_FROZEN_RECIPE_AND_PRIOR_PENDING",
+      "qualification_report": "docs/protocol_evidence/citygs_x_native_quarter_gpu_real_3k_qualification_v1.json",
+      "qualification_report_sha256": "4e153f3779ac66c3a011a4feb83a03f127c056bf3b08a2af5b62e616c23533cb",
+      "technical_qualification_status": "TECHNICALLY_QUALIFIED",
       "formal_3k_result": {"status": "NOT_ATTEMPTED"},
-      "technical_full_matrix_eligibility": false,
+      "technical_full_matrix_eligibility": true,
       "six_scene_run_allowed": false,
-      "three_k_training_allowed": false
+      "three_k_training_allowed": true
     },
     {
       "method_id": "metrogs",
@@ -507,11 +519,11 @@
     }
   ],
   "global_training_allowed": false,
-  "per_method_training_allowed_methods": ["citygaussian_v2"],
+  "per_method_training_allowed_methods": ["citygs_x"],
   "current_one_use_launch_gate": {
-    "method_id": "citygaussian_v2",
-    "path": "configs/launch_gates/m3m_gcp_native_quarter_citygaussian_v2_3k_seed0_90k_gate_v1.json",
-    "sha256": "674f1db430bf1aafcb3374aa6653698542666a3e4122826f08200105e8b57f99"
+    "method_id": "citygs_x",
+    "path": "configs/launch_gates/m3m_gcp_native_quarter_citygs_x_3k_seed0_100k_gate_v1.json",
+    "sha256": "c9bcf6bff2954f631955cc5dcb8de224e0feb1c169c4c44944b4a7ad4394751a"
   },
   "batch_controller": {
     "preparation_allowed": true,

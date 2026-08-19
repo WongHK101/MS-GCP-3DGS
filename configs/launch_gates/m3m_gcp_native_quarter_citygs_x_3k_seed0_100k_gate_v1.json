@@ -1,0 +1,55 @@
+{
+  "schema": "m3m_gcp_native_quarter_one_use_method_launch_gate_v1",
+  "status": "AUTHORIZED_NOT_STARTED",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
+  "method_id": "citygs_x",
+  "scene": "gcp_3000_20260602",
+  "seed": 0,
+  "official_budget": {
+    "type": "iterations",
+    "value": 100000
+  },
+  "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z",
+  "source": {
+    "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+    "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab",
+    "frozen_official_source_clean": false,
+    "training_io_compatibility_only": true,
+    "camera_utils_patch_sha256": "c96ca17794bf3dafae630e342e1bbf3862842262e97791b8baad614e56fc63d8",
+    "dataset_readers_patch_sha256": "49a336be3090ff1cad382fe3f0f2e0d69eca12aefbd2876bc8dacc4c38b79144",
+    "training_renderer_or_rasterizer_modified": false
+  },
+  "recipe": "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
+  "recipe_sha256": "fb6e311a6beef9316b289a0eb8c807b617b1e8384826f71e16f57a522031bdc4",
+  "adapter_config": "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
+  "adapter_config_sha256": "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
+  "qualification_report": "docs/protocol_evidence/citygs_x_native_quarter_gpu_real_3k_qualification_v1.json",
+  "qualification_report_sha256": "4e153f3779ac66c3a011a4feb83a03f127c056bf3b08a2af5b62e616c23533cb",
+  "qualification_gates": {
+    "source_frozen": true,
+    "recipe_frozen": true,
+    "environment_ready": true,
+    "adapter_conformant": true,
+    "synthetic_preflight_pass": true,
+    "real_camera_preflight_pass": true,
+    "evaluator_preflight_pass": true,
+    "truth_deny_pass": true
+  },
+  "source_scene_root": "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/gcp_3000_20260602",
+  "training_input_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_3000_20260602/train",
+  "denied_truth_roots": [
+    "/root/autodl-tmp/datasets/ms-gcp-v13/513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75/release_v1_3_0",
+    "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2"
+  ],
+  "gcp_truth_training_access": false,
+  "lidar_training_access": false,
+  "heldout_rgb_training_access": false,
+  "single_fresh_run_allowed": true,
+  "resume_allowed": false,
+  "overwrite_allowed": false,
+  "result_driven_retry_allowed": false,
+  "six_scene_matrix_allowed": false,
+  "global_training_allowed": false,
+  "consumption_rule": "The first creation of the exact run_root consumes this gate whether the process succeeds, fails, or is OOM-killed."
+}
