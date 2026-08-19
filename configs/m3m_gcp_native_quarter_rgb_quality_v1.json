@@ -33,6 +33,7 @@
   "prediction_contract": {
     "camera_source": "the same frozen native-quarter COLMAP cameras, or a predeclared method-coordinate copy related by the method's frozen training similarity transform only",
     "render_source": "each method's frozen official inference renderer and frozen formal checkpoint",
+    "heldout_rgb_renderer_boundary": "direct camera adapters never load heldout RGB; Graphdeco-family loaders may decode it while constructing Camera objects but the benchmark adapter must clear original_image before the frozen renderer is called",
     "background": "the method's frozen training background setting; all active 3K recipes use black",
     "file_format": "lossless RGB PNG",
     "quantization": "clip finite float RGB to [0,1], multiply by 255, add 0.5, floor, cast to uint8",

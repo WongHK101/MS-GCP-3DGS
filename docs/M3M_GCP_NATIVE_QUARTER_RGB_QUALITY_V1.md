@@ -21,6 +21,9 @@ training recipes, or method pool.
   or heldout-image optimization.
 - One benchmark-owned evaluator computes PSNR, SSIM, and LPIPS-VGG for every
   method. Method-native metric scripts are not used for the comparable table.
+- Before computing a formal metric, that evaluator binds the render manifest
+  to the frozen registry and rechecks the exact adapter, renderer source tree,
+  camera root, model/checkpoint, auxiliary weights, and config hashes.
 - A scene mean is publishable only when all frozen heldout views pass identity,
   shape, mode, finite-value, and hash checks. Successful-subset means are
   diagnostic only.
@@ -30,6 +33,11 @@ training recipes, or method pool.
 Checkpoint and renderer APIs differ, but the comparison domain and metric code
 must not. The adapters only load a frozen model/camera set and emit the common
 PNG+manifest contract. Metric computation starts after that boundary.
+
+Some Graphdeco-family camera loaders decode image bytes while constructing a
+camera object. The adapter records that fact and clears `original_image`
+before calling the renderer; renderer source identity is frozen, and no
+heldout tensor is available at the renderer/appearance-policy boundary.
 
 MetroGS is the only active 3K method requiring an explicit novel-view
 appearance rule. Its official renderer trains one appearance embedding per

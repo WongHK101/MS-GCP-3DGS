@@ -186,6 +186,7 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         "renderer_source_sha256": sha256_file(renderer_source),
         "formal_model_path": str(checkpoint),
         "formal_model_sha256": sha256_file(checkpoint),
+        "iteration": int(args.iteration),
         "camera_source_root": str(camera_root),
         "frozen_sparse_model": str(sparse_model),
         "frozen_sparse_model_sha256": {
@@ -218,6 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--iteration", type=int, required=True)
     parser.add_argument("--camera_root", type=Path, required=True)
     parser.add_argument("--rgb_contract", type=Path, required=True)
     parser.add_argument("--input_manifest", type=Path, required=True)

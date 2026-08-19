@@ -116,6 +116,8 @@ def _render_argv(
             str(method["source_root"]),
             "--checkpoint",
             str(method["formal_checkpoint"]),
+            "--iteration",
+            str(method["iteration"]),
             "--camera_root",
             camera_root,
             *common,
@@ -168,6 +170,7 @@ def build_plan(
 
     shared = registry["shared"]
     contract_path = str(benchmark_path / str(shared["contract_relative_path"]))
+    registry_path = str(benchmark_path / str(shared["registry_relative_path"]))
     evaluator = str(benchmark_path / "code/gcp/evaluate_m3m_native_quarter_rgb_quality.py")
     jobs: list[dict[str, Any]] = []
     for method in registry["methods"]:
@@ -187,6 +190,8 @@ def build_plan(
             evaluator,
             "--rgb_contract",
             contract_path,
+            "--registry",
+            registry_path,
             "--input_manifest",
             str(shared["input_manifest"]),
             "--input_root",
@@ -245,6 +250,7 @@ def build_plan(
         "scene": registry["scene"],
         "benchmark_repo": str(benchmark_path),
         "contract_path": contract_path,
+        "registry_path": registry_path,
         "job_count": len(jobs),
         "method_order": [job["method_id"] for job in jobs],
         "execution_semantics": {

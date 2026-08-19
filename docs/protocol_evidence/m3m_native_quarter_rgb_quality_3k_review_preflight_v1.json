@@ -8,11 +8,11 @@
   "method_count": 10,
   "inputs": {
     "preflight_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/preflight.py",
-    "preflight_sha256": "dba3d98d7cc4896d0d5e6b5b965405c4a367f93c3da49b426384280d9c927586",
+    "preflight_sha256": "b1043359a49c390e79cd97d125b605347948cb3936a9ab334a4f4974bb32c6a7",
     "contract_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/contract.json",
-    "contract_sha256": "ed0cb1784c75b0645883875113a637a7dadfa1eb12530d64c1e739ece2eadcbb",
+    "contract_sha256": "09cb98c270303aa2a0f0a3dab659c5e0fa91c278850b9e19712ab2e8727915f1",
     "registry_path": "/root/autodl-tmp/transfer/m3m-gcp-native-quarter/rgb-quality-review-candidate-20260819/registry.json",
-    "registry_sha256": "c4d1e9dccb4239d17ff445792f653ab3226c7f5876a2866bed111aeeb9f10139"
+    "registry_sha256": "2ae260bdfc6171fbd7d8b5c06f9d7ab9237f886d5f32c0578af7fb93eef6e921"
   },
   "pending": [
     "metrogs:geometry_formal_completion",
@@ -184,8 +184,14 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_3000_20260602/seed0-30k-20260810T073742Z/model/point_cloud/iteration_30000/point_cloud.ply",
-        "bytes": 919975636
+        "bytes": 919975636,
+        "sha256": "461b48e97f31ee6588b5ba3de52d29ed07b4709134f7a155c95bc7c38dba91ff"
       }
+    },
+    {
+      "name": "3dgs_original:cfg_args_sha256",
+      "passed": true,
+      "detail": "3ddde6f5c3b30c14752149c54dcad1f02f68e68dc2b546955eb8a177206276c0"
     },
     {
       "name": "3dgs_original:rgb_output_absent",
@@ -230,8 +236,14 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/2dgs/gcp_3000_20260602/seed0-30k-20260810T103434Z/model/point_cloud/iteration_30000/point_cloud.ply",
-        "bytes": 398888073
+        "bytes": 398888073,
+        "sha256": "3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193"
       }
+    },
+    {
+      "name": "2dgs:cfg_args_sha256",
+      "passed": true,
+      "detail": "1fefa01fadfde6bba4db1c4f08838e45e3dc09c6832ab200a47e9cde32241db3"
     },
     {
       "name": "2dgs:rgb_output_absent",
@@ -281,8 +293,14 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/pgsr/gcp_3000_20260602/seed0-30k-20260818T091500Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
-        "bytes": 361152276
+        "bytes": 361152276,
+        "sha256": "c545036afc31b7ca5430e81b011d8cb2e7fc6ce75eabe647f2c902b7c4652880"
       }
+    },
+    {
+      "name": "pgsr:cfg_args_sha256",
+      "passed": true,
+      "detail": "6e0315d30d957f6d4df519fb32dd76d637e942e20f2f6a277898e476173996c3"
     },
     {
       "name": "pgsr:rgb_output_absent",
@@ -327,8 +345,14 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/rade_gs/gcp_3000_20260602/seed0-30k-20260818T102000Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
-        "bytes": 635689449
+        "bytes": 635689449,
+        "sha256": "37168235bbf81084d1cb0763b92026b6eac4f866498bd90205ac08266d50f222"
       }
+    },
+    {
+      "name": "rade_gs:cfg_args_sha256",
+      "passed": true,
+      "detail": "6bd7681a876802b9aa11166ba43a687a81b705a3c5055f155b1eb1084eae4f79"
     },
     {
       "name": "rade_gs:rgb_output_absent",
@@ -373,13 +397,19 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
-        "bytes": 1941135861
+        "bytes": 1941135861,
+        "sha256": "041c7a623dfd3cd9a9799ad7b785f54bfbc76d050d04bc315ee5316cf76bef81"
       }
     },
     {
       "name": "qgs:config_path",
       "passed": true,
       "detail": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qgs/gcp_3000_20260602/seed0-30k-20260818T105000Z/formal_evaluation/model_snapshot/config.yaml"
+    },
+    {
+      "name": "qgs:config_sha256",
+      "passed": true,
+      "detail": "2787868ea446e3282e090f75cbbf170e877b3d560418bbd05b6e89b346cf07d8"
     },
     {
       "name": "qgs:rgb_output_absent",
@@ -434,8 +464,14 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/gsprior/gcp_3000_20260602/seed0-40k-20260818T183000Z/formal_evaluation/model_snapshot/point_cloud/iteration_40000/point_cloud.ply",
-        "bytes": 437765428
+        "bytes": 437765428,
+        "sha256": "8aa5474fe45c7f99409fed16191b677325a2060c83584f702eac5f88699bb1a0"
       }
+    },
+    {
+      "name": "gsprior:cfg_args_sha256",
+      "passed": true,
+      "detail": "ab599a3002cdbe34b99d4632f54160277ee2580795d5f1ad06827e4a855e70de"
     },
     {
       "name": "gsprior:rgb_output_absent",
@@ -480,8 +516,14 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/sof/gcp_3000_20260602/seed0-30k-20260818T220000Z/formal_evaluation/model_snapshot/point_cloud/iteration_30000/point_cloud.ply",
-        "bytes": 711559089
+        "bytes": 711559089,
+        "sha256": "0428d1da4b8fdfef93368e1cad7891bfd5003dd4a94379342acdbae520cfd032"
       }
+    },
+    {
+      "name": "sof:cfg_args_sha256",
+      "passed": true,
+      "detail": "a2de2148d0a26c756e38c3868e167e1de14a0497f7490ed0e0033b5520a77835"
     },
     {
       "name": "sof:splatting_config_path",
@@ -536,7 +578,8 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygaussian_v2/gcp_3000_20260602/seed0-coarse30k-fine60k-20260818T224500Z/formal_evaluation/model_snapshot/merged_step_60000.ckpt",
-        "bytes": 1182717065
+        "bytes": 1182717065,
+        "sha256": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64"
       }
     },
     {
@@ -592,8 +635,24 @@
       "passed": true,
       "detail": {
         "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/citygs_x/gcp_3000_20260602/seed0-100k-20260819T021500Z/formal_evaluation/model_snapshot/point_cloud/iteration_100000/point_cloud_rk0_ws1.ply",
-        "bytes": 860702192
+        "bytes": 860702192,
+        "sha256": "bf530190e953d8e84145f72bebe13457bc849c0340d6beb3dae0872187e8fb7d"
       }
+    },
+    {
+      "name": "citygs_x:cfg_args_sha256",
+      "passed": true,
+      "detail": "026c5d9a2f99bbd1867738868c8cdbcd71ea2513d3489e51817438bd4c52aec2"
+    },
+    {
+      "name": "citygs_x:formal_model_aux:additional_attributes.npz",
+      "passed": true,
+      "detail": "f9ac471f155ec503205bb409a16e9d0162fa03aa20f38500121f12b951ccc789"
+    },
+    {
+      "name": "citygs_x:formal_model_aux:checkpoints.pth",
+      "passed": true,
+      "detail": "eca8b10cfecfee85f2ad61eb9f1cd60a99db4cb1b51507e2f01917c9c597fb4d"
     },
     {
       "name": "citygs_x:pytorch3d_compat",

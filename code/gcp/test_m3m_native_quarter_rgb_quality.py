@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -15,9 +17,12 @@ MODULE_DIR = Path(__file__).resolve().parent
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 
-from evaluate_m3m_native_quarter_rgb_quality import validate_render_and_ground_truth
+from evaluate_m3m_native_quarter_rgb_quality import (
+    validate_registered_provenance,
+    validate_render_and_ground_truth,
+)
 from build_m3m_native_quarter_rgb_quality_3k_commands import build_plan
-from rgb_quality_contract import RgbRenderWriter, arithmetic_mean, sha256_file
+from rgb_quality_contract import RgbRenderWriter, arithmetic_mean, git_identity, sha256_file
 from validate_m3m_native_quarter_rgb_quality import validate
 
 
@@ -188,6 +193,37 @@ def test_formal_evaluation_rejects_review_candidate(tmp_path: Path) -> None:
         )
 
 
+def test_formal_validation_requires_frozen_registry(tmp_path: Path) -> None:
+    contract, input_manifest, input_root = _synthetic_contract_and_input(tmp_path)
+    payload = json.loads(contract.read_text(encoding="utf-8"))
+    payload["status"] = "ACTIVE_FROZEN"
+    _write_json(contract, payload)
+    artifact_root = tmp_path / "artifact"
+    writer = RgbRenderWriter(
+        contract_path=contract,
+        input_manifest_path=input_manifest,
+        scene="synthetic",
+        method_id="synthetic_method",
+        output_dir=artifact_root / "renders",
+    )
+    writer.save("test_a.jpg", np.zeros((3, 4, 5), dtype=np.float32))
+    writer.save("test_b.jpg", np.zeros((3, 4, 5), dtype=np.float32))
+    writer.finalize(provenance={})
+
+    result = validate_render_and_ground_truth(
+        contract_path=contract,
+        input_manifest_path=input_manifest,
+        input_root=input_root,
+        render_manifest_path=artifact_root / "rgb_render_manifest.json",
+        scene="synthetic",
+        method_id="synthetic_method",
+        allow_review_candidate=False,
+    )
+
+    assert result["passed"] is False
+    assert "provenance: formal evaluation requires --registry" in result["errors"]
+
+
 def test_registry_rejects_method_specific_evaluator(tmp_path: Path) -> None:
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
     registry = copy.deepcopy(registry)
@@ -206,6 +242,120 @@ def test_arithmetic_mean_and_exact_match_policy() -> None:
         arithmetic_mean([1.0, math.nan])
 
 
+def test_git_identity_includes_staged_tracked_changes(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "RGB Test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "user.email", "rgb-test@example.invalid"],
+        check=True,
+    )
+    tracked = repo / "tracked.txt"
+    tracked.write_text("base\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "tracked.txt"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "base"], check=True)
+    tracked.write_text("staged change\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "tracked.txt"], check=True)
+
+    identity = git_identity(repo)
+
+    assert identity["tracked_diff_sha256"] != hashlib.sha256(b"").hexdigest()
+    assert identity["tracked_modified_files_sha256"] == {
+        "tracked.txt": sha256_file(tracked)
+    }
+
+
+def test_registered_provenance_binds_and_detects_model_tamper(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", "-q", str(source)], check=True)
+    subprocess.run(["git", "-C", str(source), "config", "user.name", "RGB Test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(source), "config", "user.email", "rgb-test@example.invalid"],
+        check=True,
+    )
+    renderer = source / "renderer.py"
+    renderer.write_text("# frozen renderer\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(source), "add", "renderer.py"], check=True)
+    subprocess.run(["git", "-C", str(source), "commit", "-q", "-m", "base"], check=True)
+    source_identity = git_identity(source)
+    camera_root = tmp_path / "cameras"
+    camera_root.mkdir()
+    model_root = tmp_path / "model"
+    model_root.mkdir()
+    model = model_root / "model.bin"
+    model.write_bytes(b"frozen model")
+    adapter = MODULE_DIR / "export_citygs_x_rgb.py"
+    registry = {
+        "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
+        "status": "ACTIVE_FROZEN",
+        "scene": "synthetic",
+        "shared": {"default_camera_root": str(camera_root)},
+        "methods": [
+            {
+                "method_id": "synthetic_method",
+                "adapter": adapter.name,
+                "adapter_kind": "synthetic_rgb_v1",
+                "source_root": str(source),
+                "source_commit": source_identity["commit"],
+                "camera_root": "shared.default_camera_root",
+                "model_root": str(model_root),
+                "formal_model_relative_path": model.name,
+                "formal_model_sha256": sha256_file(model),
+                "iteration": 1,
+                "appearance_policy": "none",
+            }
+        ],
+    }
+    registry_path = tmp_path / "registry.json"
+    _write_json(registry_path, registry)
+    provenance = {
+        "adapter_kind": "synthetic_rgb_v1",
+        "adapter_path": str(adapter),
+        "adapter_sha256": sha256_file(adapter),
+        "renderer_repository": source_identity,
+        "renderer_source_path": str(renderer),
+        "renderer_source_sha256": sha256_file(renderer),
+        "camera_source_root": str(camera_root),
+        "model_root": str(model_root),
+        "formal_model_path": str(model),
+        "formal_model_sha256": sha256_file(model),
+        "iteration": 1,
+        "appearance_policy": "none",
+        "white_background": False,
+        "heldout_rgb_used_by_adapter": False,
+        "heldout_rgb_consumed_by_renderer_or_policy": False,
+        "test_time_optimization": False,
+    }
+    contract = {
+        "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
+        "status": "ACTIVE_FROZEN",
+    }
+
+    passed = validate_registered_provenance(
+        contract=contract,
+        registry_path=registry_path,
+        render_manifest={"provenance": provenance},
+        scene="synthetic",
+        method_id="synthetic_method",
+        allow_review_candidate=False,
+    )
+    assert passed["passed"] is True, passed["errors"]
+
+    model.write_bytes(b"tampered model")
+    failed = validate_registered_provenance(
+        contract=contract,
+        registry_path=registry_path,
+        render_manifest={"provenance": provenance},
+        scene="synthetic",
+        method_id="synthetic_method",
+        allow_review_candidate=False,
+    )
+    assert failed["passed"] is False
+    assert any("formal_model_sha256" in error for error in failed["errors"])
+
+
 def test_review_candidate_command_plan_is_explicitly_non_executable() -> None:
     registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
     plan = build_plan(
@@ -217,6 +367,7 @@ def test_review_candidate_command_plan_is_explicitly_non_executable() -> None:
     assert plan["job_count"] == 10
     assert plan["method_order"][-1] == "metrogs"
     assert "--training_cameras_json" in plan["jobs"][-1]["render"]["argv"]
+    assert all("--registry" in job["metric"]["argv"] for job in plan["jobs"])
     assert all(
         job["metric"]["argv"][2].endswith("evaluate_m3m_native_quarter_rgb_quality.py")
         for job in plan["jobs"]

@@ -150,7 +150,9 @@ def preflight(
         if source.is_dir():
             commit = str(_git(source, "rev-parse", "HEAD"))
             record(f"{method_id}:source_commit", commit == method["source_commit"], commit)
-            diff = _git(source, "diff", "--binary", "--no-ext-diff", binary=True)
+            # Compare the complete tracked worktree against HEAD so an
+            # accidentally staged patch cannot evade the frozen diff identity.
+            diff = _git(source, "diff", "HEAD", "--binary", "--no-ext-diff", binary=True)
             assert isinstance(diff, bytes)
             diff_sha = hashlib.sha256(diff).hexdigest()
             expected_worktree = method.get("source_worktree")
@@ -205,7 +207,36 @@ def preflight(
             else:
                 record(f"{method_id}:formal_model", False, str(model_path))
         else:
-            record(f"{method_id}:formal_model", True, {"path": str(model_path), "bytes": model_path.stat().st_size})
+            actual_model_sha = sha256_file(model_path)
+            record(
+                f"{method_id}:formal_model",
+                actual_model_sha == method.get("formal_model_sha256"),
+                {
+                    "path": str(model_path),
+                    "bytes": model_path.stat().st_size,
+                    "sha256": actual_model_sha,
+                },
+            )
+
+        if "cfg_args_sha256" in method:
+            cfg_args = Path(method["model_root"]) / "cfg_args"
+            actual_sha = sha256_file(cfg_args) if cfg_args.is_file() else "MISSING"
+            record(
+                f"{method_id}:cfg_args_sha256",
+                actual_sha == method["cfg_args_sha256"],
+                actual_sha,
+            )
+
+        if "formal_model_aux_sha256" in method:
+            checkpoint_dir = model_path.parent
+            for name, expected_sha in method["formal_model_aux_sha256"].items():
+                path = checkpoint_dir / name
+                actual_sha = sha256_file(path) if path.is_file() else "MISSING"
+                record(
+                    f"{method_id}:formal_model_aux:{name}",
+                    actual_sha == expected_sha,
+                    actual_sha,
+                )
 
         for optional_key in ("config_path", "training_cameras_json", "pytorch3d_compat", "splatting_config_path"):
             if optional_key not in method:
@@ -218,6 +249,13 @@ def preflight(
                 record(
                     f"{method_id}:splatting_config_sha256",
                     actual_sha == method["splatting_config_sha256"],
+                    actual_sha,
+                )
+            if exists and optional_key == "config_path" and "config_sha256" in method:
+                actual_sha = sha256_file(path)
+                record(
+                    f"{method_id}:config_sha256",
+                    actual_sha == method["config_sha256"],
                     actual_sha,
                 )
             if exists and optional_key == "training_cameras_json":

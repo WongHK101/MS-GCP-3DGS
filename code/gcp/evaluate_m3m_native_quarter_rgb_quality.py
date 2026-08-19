@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import importlib.metadata
 import json
 import math
@@ -22,6 +23,7 @@ from rgb_quality_contract import (  # noqa: E402
     RENDER_MANIFEST_SCHEMA,
     SUITE_ID,
     arithmetic_mean,
+    git_identity,
     load_bound_input_manifest,
     load_contract,
     role_rows,
@@ -41,6 +43,242 @@ def _safe_relative(base: Path, relative: str) -> Path:
     return path
 
 
+def _same_resolved_path(actual: Any, expected: Any) -> bool:
+    try:
+        return Path(str(actual)).expanduser().resolve() == Path(str(expected)).expanduser().resolve()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _registered_camera_root(method: dict[str, Any], shared: dict[str, Any]) -> Path:
+    value = str(method["camera_root"])
+    aliases = {
+        "shared.default_camera_root": "default_camera_root",
+        "shared.graphdeco_camera_root": "graphdeco_camera_root",
+    }
+    if value in aliases:
+        value = str(shared[aliases[value]])
+    return Path(value).expanduser().resolve()
+
+
+def validate_registered_provenance(
+    *,
+    contract: dict[str, Any],
+    registry_path: Path | None,
+    render_manifest: dict[str, Any],
+    scene: str,
+    method_id: str,
+    allow_review_candidate: bool,
+) -> dict[str, Any]:
+    """Bind a formal render to the frozen registry, source tree, and model bytes."""
+
+    if registry_path is None:
+        if allow_review_candidate:
+            return {
+                "passed": True,
+                "binding_mode": "technical_smoke_unbound_unranked",
+                "registry_path": None,
+                "registry_sha256": None,
+                "checks": [],
+                "errors": [],
+            }
+        return {
+            "passed": False,
+            "binding_mode": "formal_registry_required",
+            "registry_path": None,
+            "registry_sha256": None,
+            "checks": [],
+            "errors": ["formal evaluation requires --registry"],
+        }
+
+    registry_path = registry_path.expanduser().resolve()
+    errors: list[str] = []
+    checks: list[dict[str, Any]] = []
+
+    def record(name: str, passed: bool, detail: Any) -> None:
+        checks.append({"name": name, "passed": bool(passed), "detail": detail})
+        if not passed:
+            errors.append(f"{name}: {detail}")
+
+    if not registry_path.is_file():
+        return {
+            "passed": False,
+            "binding_mode": "frozen_registry",
+            "registry_path": str(registry_path),
+            "registry_sha256": None,
+            "checks": [],
+            "errors": [f"registry is missing: {registry_path}"],
+        }
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    registry_sha = sha256_file(registry_path)
+    record("registry_suite_id", registry.get("suite_id") == SUITE_ID, registry.get("suite_id"))
+    record("registry_scene", registry.get("scene") == scene, registry.get("scene"))
+    record(
+        "registry_status",
+        registry.get("status") == contract.get("status"),
+        {"registry": registry.get("status"), "contract": contract.get("status")},
+    )
+    if not allow_review_candidate:
+        record("formal_registry_active", registry.get("status") == "ACTIVE_FROZEN", registry.get("status"))
+    candidates = [
+        method
+        for method in registry.get("methods", [])
+        if isinstance(method, dict) and method.get("method_id") == method_id
+    ]
+    record("registered_method_unique", len(candidates) == 1, len(candidates))
+    if len(candidates) != 1:
+        return {
+            "passed": False,
+            "binding_mode": "frozen_registry",
+            "registry_path": str(registry_path),
+            "registry_sha256": registry_sha,
+            "checks": checks,
+            "errors": errors,
+        }
+
+    method = candidates[0]
+    shared = registry["shared"]
+    provenance = render_manifest.get("provenance", {})
+    if not isinstance(provenance, dict):
+        provenance = {}
+    adapter_path = Path(__file__).resolve().parent / str(method["adapter"])
+    adapter_sha = sha256_file(adapter_path) if adapter_path.is_file() else "MISSING"
+    record("adapter_kind", provenance.get("adapter_kind") == method.get("adapter_kind"), provenance.get("adapter_kind"))
+    record("adapter_path", _same_resolved_path(provenance.get("adapter_path"), adapter_path), provenance.get("adapter_path"))
+    record("adapter_sha256", provenance.get("adapter_sha256") == adapter_sha, provenance.get("adapter_sha256"))
+    if method.get("adapter") == "export_qgs_rgb.py":
+        shared_adapter = Path(__file__).resolve().parent / "export_gaussian_rgb.py"
+        record(
+            "shared_graphdeco_adapter_path",
+            _same_resolved_path(provenance.get("shared_graphdeco_adapter_path"), shared_adapter),
+            provenance.get("shared_graphdeco_adapter_path"),
+        )
+        record(
+            "shared_graphdeco_adapter_sha256",
+            provenance.get("shared_graphdeco_adapter_sha256") == sha256_file(shared_adapter),
+            provenance.get("shared_graphdeco_adapter_sha256"),
+        )
+
+    source_root = Path(str(method["source_root"])).expanduser().resolve()
+    source_identity = git_identity(source_root)
+    rendered_source = provenance.get("renderer_repository", {})
+    if not isinstance(rendered_source, dict):
+        rendered_source = {}
+    expected_worktree = method.get("source_worktree") or {}
+    expected_diff = expected_worktree.get(
+        "expected_tracked_diff_sha256", hashlib.sha256(b"").hexdigest()
+    )
+    expected_modified = expected_worktree.get("expected_tracked_files_sha256", {})
+    record("source_path", _same_resolved_path(rendered_source.get("path"), source_root), rendered_source.get("path"))
+    record("source_commit", source_identity.get("commit") == method.get("source_commit"), source_identity.get("commit"))
+    record("source_manifest_commit", rendered_source.get("commit") == source_identity.get("commit"), rendered_source.get("commit"))
+    record("source_diff", source_identity.get("tracked_diff_sha256") == expected_diff, source_identity.get("tracked_diff_sha256"))
+    record(
+        "source_manifest_diff",
+        rendered_source.get("tracked_diff_sha256") == source_identity.get("tracked_diff_sha256"),
+        rendered_source.get("tracked_diff_sha256"),
+    )
+    record(
+        "source_modified_files",
+        source_identity.get("tracked_modified_files_sha256") == expected_modified,
+        source_identity.get("tracked_modified_files_sha256"),
+    )
+    record(
+        "source_manifest_modified_files",
+        rendered_source.get("tracked_modified_files_sha256")
+        == source_identity.get("tracked_modified_files_sha256"),
+        rendered_source.get("tracked_modified_files_sha256"),
+    )
+
+    renderer_source = Path(str(provenance.get("renderer_source_path", ""))).expanduser().resolve()
+    try:
+        renderer_inside_source = renderer_source.is_relative_to(source_root)
+    except ValueError:
+        renderer_inside_source = False
+    record("renderer_source_inside_frozen_repo", renderer_inside_source, str(renderer_source))
+    renderer_sha = sha256_file(renderer_source) if renderer_source.is_file() else "MISSING"
+    record(
+        "renderer_source_sha256",
+        provenance.get("renderer_source_sha256") == renderer_sha,
+        provenance.get("renderer_source_sha256"),
+    )
+    camera_root = _registered_camera_root(method, shared)
+    record(
+        "camera_source_root",
+        _same_resolved_path(provenance.get("camera_source_root"), camera_root),
+        provenance.get("camera_source_root"),
+    )
+    record("iteration", provenance.get("iteration") == method.get("iteration"), provenance.get("iteration"))
+    record(
+        "appearance_policy",
+        provenance.get("appearance_policy") == method.get("appearance_policy"),
+        provenance.get("appearance_policy"),
+    )
+    record("white_background", provenance.get("white_background") is False, provenance.get("white_background"))
+    record(
+        "heldout_rgb_not_consumed",
+        provenance.get("heldout_rgb_used_by_adapter") is False
+        and provenance.get("heldout_rgb_consumed_by_renderer_or_policy", False) is False,
+        {
+            "used_by_adapter": provenance.get("heldout_rgb_used_by_adapter"),
+            "consumed_by_renderer_or_policy": provenance.get(
+                "heldout_rgb_consumed_by_renderer_or_policy"
+            ),
+        },
+    )
+    if method.get("adapter_kind") in {"graphdeco_style_gaussian_rgb_v1", "qgs_rgb_v1"}:
+        record(
+            "heldout_rgb_detached_before_renderer",
+            provenance.get("heldout_rgb_detached_before_renderer") is True,
+            provenance.get("heldout_rgb_detached_before_renderer"),
+        )
+    record("test_time_optimization", provenance.get("test_time_optimization") is False, provenance.get("test_time_optimization"))
+
+    if "formal_checkpoint" in method:
+        model_path = Path(str(method["formal_checkpoint"])).expanduser().resolve()
+    else:
+        model_path = (
+            Path(str(method["model_root"])).expanduser().resolve()
+            / str(method["formal_model_relative_path"])
+        )
+    actual_model_sha = sha256_file(model_path) if model_path.is_file() else "MISSING"
+    record("formal_model_sha256", actual_model_sha == method.get("formal_model_sha256"), actual_model_sha)
+    if method_id == "citygs_x":
+        record("model_root", _same_resolved_path(provenance.get("model_root"), method.get("model_root")), provenance.get("model_root"))
+        model_files = provenance.get("formal_model_files_sha256", {})
+        record("formal_model_manifest_sha256", model_files.get(model_path.name) == actual_model_sha, model_files.get(model_path.name))
+        for name, expected_sha in method.get("formal_model_aux_sha256", {}).items():
+            aux_path = model_path.parent / name
+            actual_sha = sha256_file(aux_path) if aux_path.is_file() else "MISSING"
+            record(f"formal_model_aux:{name}", actual_sha == expected_sha, actual_sha)
+            record(f"formal_model_manifest_aux:{name}", model_files.get(name) == actual_sha, model_files.get(name))
+    else:
+        record("formal_model_path", _same_resolved_path(provenance.get("formal_model_path"), model_path), provenance.get("formal_model_path"))
+        record("formal_model_manifest_sha256", provenance.get("formal_model_sha256") == actual_model_sha, provenance.get("formal_model_sha256"))
+        if "model_root" in method:
+            record("model_root", _same_resolved_path(provenance.get("model_root"), method.get("model_root")), provenance.get("model_root"))
+
+    if "cfg_args_sha256" in method:
+        record("cfg_args_sha256", provenance.get("cfg_args_sha256") == method["cfg_args_sha256"], provenance.get("cfg_args_sha256"))
+    if "config_path" in method:
+        method_config = provenance.get("method_config", {})
+        record("method_config_path", _same_resolved_path(method_config.get("path"), method["config_path"]), method_config.get("path"))
+        record("method_config_sha256", method_config.get("sha256") == method.get("config_sha256"), method_config.get("sha256"))
+    if "splatting_config_path" in method:
+        splatting = provenance.get("splatting_config", {})
+        record("splatting_config_path", _same_resolved_path(splatting.get("path"), method["splatting_config_path"]), splatting.get("path"))
+        record("splatting_config_sha256", splatting.get("sha256") == method.get("splatting_config_sha256"), splatting.get("sha256"))
+
+    return {
+        "passed": not errors,
+        "binding_mode": "frozen_registry",
+        "registry_path": str(registry_path),
+        "registry_sha256": registry_sha,
+        "checks": checks,
+        "errors": errors,
+    }
+
+
 def validate_render_and_ground_truth(
     *,
     contract_path: Path,
@@ -50,6 +288,7 @@ def validate_render_and_ground_truth(
     scene: str,
     method_id: str,
     allow_review_candidate: bool,
+    registry_path: Path | None = None,
 ) -> dict[str, Any]:
     contract_path = contract_path.expanduser().resolve()
     input_manifest_path = input_manifest_path.expanduser().resolve()
@@ -63,6 +302,18 @@ def validate_render_and_ground_truth(
     input_manifest = load_bound_input_manifest(contract, input_manifest_path, scene)
     render_manifest = json.loads(render_manifest_path.read_text(encoding="utf-8"))
     errors: list[str] = []
+    provenance_validation = validate_registered_provenance(
+        contract=contract,
+        registry_path=registry_path,
+        render_manifest=render_manifest,
+        scene=scene,
+        method_id=method_id,
+        allow_review_candidate=allow_review_candidate,
+    )
+    errors.extend(
+        f"provenance: {message}"
+        for message in provenance_validation.get("errors", [])
+    )
 
     expected_header = {
         "schema": RENDER_MANIFEST_SCHEMA,
@@ -178,6 +429,7 @@ def validate_render_and_ground_truth(
         "contract": contract,
         "input_manifest": input_manifest,
         "render_manifest": render_manifest,
+        "provenance_validation": provenance_validation,
     }
 
 
@@ -359,6 +611,7 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         scene=args.scene,
         method_id=args.method_id,
         allow_review_candidate=args.allow_review_candidate,
+        registry_path=args.registry,
     )
     public_validation = {
         key: value
@@ -444,6 +697,14 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         "evaluator_sha256": sha256_file(Path(__file__).resolve()),
         "contract_path": str(args.rgb_contract.expanduser().resolve()),
         "contract_sha256": sha256_file(args.rgb_contract.expanduser().resolve()),
+        "registry_path": (
+            str(args.registry.expanduser().resolve()) if args.registry is not None else None
+        ),
+        "registry_sha256": (
+            sha256_file(args.registry.expanduser().resolve())
+            if args.registry is not None
+            else None
+        ),
         "input_manifest_path": str(args.input_manifest.expanduser().resolve()),
         "input_manifest_sha256": sha256_file(args.input_manifest.expanduser().resolve()),
         "render_manifest_path": str(args.render_manifest.expanduser().resolve()),
@@ -467,6 +728,7 @@ def evaluate(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rgb_contract", type=Path, required=True)
+    parser.add_argument("--registry", type=Path)
     parser.add_argument("--input_manifest", type=Path, required=True)
     parser.add_argument("--input_root", type=Path, required=True)
     parser.add_argument("--render_manifest", type=Path, required=True)

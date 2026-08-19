@@ -50,12 +50,12 @@ def git_identity(repo: Path) -> dict[str, str]:
 
     try:
         tracked_diff = subprocess.check_output(
-            ["git", "-C", str(repo), "diff", "--binary", "--no-ext-diff"],
+            ["git", "-C", str(repo), "diff", "HEAD", "--binary", "--no-ext-diff"],
             stderr=subprocess.DEVNULL,
         )
         diff_sha = hashlib.sha256(tracked_diff).hexdigest()
         modified_names = subprocess.check_output(
-            ["git", "-C", str(repo), "diff", "--name-only", "-z"],
+            ["git", "-C", str(repo), "diff", "HEAD", "--name-only", "-z"],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8").split("\0")
         modified_files = {

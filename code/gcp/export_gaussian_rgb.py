@@ -74,7 +74,18 @@ def export_rgb(
                 args.camera_sets,
                 allowlist=writer.allowlist_map(),
             )
+            upstream_decoded_heldout_rgb_count = 0
             for split, view, image_name in views:
+                # Graphdeco-family Scene loaders construct Camera objects by
+                # decoding image bytes even though official render() functions
+                # do not consume them.  Remove the tensor before the renderer
+                # boundary so a future source drift fails instead of silently
+                # gaining access to heldout truth.
+                if getattr(view, "original_image", None) is not None:
+                    upstream_decoded_heldout_rgb_count += 1
+                    view.original_image = None
+                if getattr(view, "original_image", None) is not None:
+                    raise RuntimeError(f"failed to detach heldout RGB for {image_name}")
                 kwargs: dict[str, Any] = {}
                 if "use_trained_exp" in render_parameters:
                     kwargs["use_trained_exp"] = bool(
@@ -112,6 +123,11 @@ def export_rgb(
         raise FileNotFoundError(ply)
     source_root = Path(dataset.source_path).expanduser().resolve()
     cfg_args = model_root / "cfg_args"
+    method_config_path = (
+        Path(args.qgs_config_path).expanduser().resolve()
+        if getattr(args, "qgs_config_path", "")
+        else None
+    )
     renderer_file = train_repo / "gaussian_renderer" / "__init__.py"
     entrypoint = Path(getattr(args, "adapter_path", __file__)).expanduser().resolve()
     provenance = {
@@ -127,6 +143,14 @@ def export_rgb(
         "formal_model_path": str(ply),
         "formal_model_sha256": sha256_file(ply),
         "cfg_args_sha256": sha256_file(cfg_args) if cfg_args.is_file() else None,
+        "method_config": (
+            {
+                "path": str(method_config_path),
+                "sha256": sha256_file(method_config_path),
+            }
+            if method_config_path is not None
+            else None
+        ),
         "camera_source_root": str(source_root),
         "iteration": int(args.iteration),
         "sh_degree": int(dataset.sh_degree),
@@ -143,6 +167,11 @@ def export_rgb(
             if splatting_config_path is not None
             else None
         ),
+        "upstream_camera_loader_decoded_heldout_rgb_count": int(
+            upstream_decoded_heldout_rgb_count
+        ),
+        "heldout_rgb_detached_before_renderer": True,
+        "heldout_rgb_consumed_by_renderer_or_policy": False,
         "heldout_rgb_used_by_adapter": False,
         "test_time_optimization": False,
         "runtime": {

@@ -50,6 +50,28 @@ EXPECTED_ADAPTERS = {
     "citygs_x": ("export_citygs_x_rgb.py", "citygs_x_rgb_v1"),
     "metrogs": ("export_lightning_gaussian_rgb.py", "lightning_gaussian_rgb_v1"),
 }
+EXPECTED_EXTRA_CLI = {
+    method_id: []
+    for method_id in EXPECTED_METHODS
+}
+EXPECTED_EXTRA_CLI["rade_gs"] = [
+    "--kernel_size",
+    "0.0",
+    "--use_decoupled_appearance",
+    "0",
+]
+EXPECTED_APPEARANCE_POLICIES = {
+    "3dgs_original": "none",
+    "2dgs": "none",
+    "pgsr": "exposure_compensation_false_use_render_not_app_image",
+    "rade_gs": "canonical_base_render_training_only_pgsr_appearance_no_test_fit",
+    "qgs": "none",
+    "gsprior": "exposure_compensation_false_use_render_not_app_image",
+    "sof": "canonical_render_training_only_decoupled_appearance_no_test_fit",
+    "citygaussian_v2": "frozen_renderer_has_no_appearance_module",
+    "citygs_x": "appearance_dim_0",
+    "metrogs": "official_nearest_training_camera_geometry_alpha_0_7_v1",
+}
 EXPECTED_METRIC_FILES = {
     "metrics.py": "bda39191dde1fad93abf56a994d6f799bc02209b8ac5000b038e5ecf3345d6d3",
     "utils/image_utils.py": "872a4507773b9378db9e0fefc90104dc474b27551af18ada73f000a7a00a4ba0",
@@ -63,6 +85,32 @@ EXPECTED_DIRTY_SOURCE_DIFFS = {
     "pgsr": "173addb7351cd3cfe1fbd56e7e2efed080adcd8a5b00a90756b872b4b9551bfd",
     "gsprior": "a2fa787c8e0de02826ee391bdb8a86e784038f60aa5b9a49b3ce4ba6bd883f27",
     "citygs_x": "bcf3545ed19ef93896d4d80a6bef330d69f4de4e3ab3fd3a3ba523a022364c6a",
+}
+EXPECTED_FORMAL_MODEL_SHA256 = {
+    "3dgs_original": "461b48e97f31ee6588b5ba3de52d29ed07b4709134f7a155c95bc7c38dba91ff",
+    "2dgs": "3d13956ad22ede5cae6bb5899f51c358a9d5a2d5f6e853980f705b8966454193",
+    "pgsr": "c545036afc31b7ca5430e81b011d8cb2e7fc6ce75eabe647f2c902b7c4652880",
+    "rade_gs": "37168235bbf81084d1cb0763b92026b6eac4f866498bd90205ac08266d50f222",
+    "qgs": "041c7a623dfd3cd9a9799ad7b785f54bfbc76d050d04bc315ee5316cf76bef81",
+    "gsprior": "8aa5474fe45c7f99409fed16191b677325a2060c83584f702eac5f88699bb1a0",
+    "sof": "0428d1da4b8fdfef93368e1cad7891bfd5003dd4a94379342acdbae520cfd032",
+    "citygaussian_v2": "345b9277de5310a6d9f6cdc86b24cfda5805be982eab6fb8170bc975f5789a64",
+    "citygs_x": "bf530190e953d8e84145f72bebe13457bc849c0340d6beb3dae0872187e8fb7d",
+    "metrogs": "PENDING_METRO_FORMAL_COMPLETION",
+}
+EXPECTED_CFG_ARGS_SHA256 = {
+    "3dgs_original": "3ddde6f5c3b30c14752149c54dcad1f02f68e68dc2b546955eb8a177206276c0",
+    "2dgs": "1fefa01fadfde6bba4db1c4f08838e45e3dc09c6832ab200a47e9cde32241db3",
+    "pgsr": "6e0315d30d957f6d4df519fb32dd76d637e942e20f2f6a277898e476173996c3",
+    "rade_gs": "6bd7681a876802b9aa11166ba43a687a81b705a3c5055f155b1eb1084eae4f79",
+    "gsprior": "ab599a3002cdbe34b99d4632f54160277ee2580795d5f1ad06827e4a855e70de",
+    "sof": "a2de2148d0a26c756e38c3868e167e1de14a0497f7490ed0e0033b5520a77835",
+    "citygs_x": "026c5d9a2f99bbd1867738868c8cdbcd71ea2513d3489e51817438bd4c52aec2",
+}
+EXPECTED_QGS_CONFIG_SHA256 = "2787868ea446e3282e090f75cbbf170e877b3d560418bbd05b6e89b346cf07d8"
+EXPECTED_CITYGS_X_AUX_SHA256 = {
+    "additional_attributes.npz": "f9ac471f155ec503205bb409a16e9d0162fa03aa20f38500121f12b951ccc789",
+    "checkpoints.pth": "eca8b10cfecfee85f2ad61eb9f1cd60a99db4cb1b51507e2f01917c9c597fb4d",
 }
 
 
@@ -160,6 +208,10 @@ def validate(
         "prediction forbidden-operation set is incomplete",
     )
     require(prediction.get("file_format") == "lossless RGB PNG", "prediction encoding mismatch")
+    require(
+        "clear original_image before" in str(prediction.get("heldout_rgb_renderer_boundary", "")),
+        "heldout RGB renderer boundary is not frozen",
+    )
     domain = contract.get("metric_domain", {})
     require(domain.get("mask") == "none; full frame", "metric mask is not full-frame")
     require(domain.get("crop") == "none", "metric crop is enabled")
@@ -227,6 +279,11 @@ def validate(
     ):
         require(_absolute_posix(shared.get(key)), f"shared {key} must be an absolute POSIX path")
     require(shared.get("output_relative_path") == "rgb_quality_v1", "output directory identity mismatch")
+    require(
+        shared.get("registry_relative_path")
+        == "configs/m3m_gcp_native_quarter_rgb_quality_3k_registry_v1.json",
+        "registry relative path mismatch",
+    )
     require(shared.get("metric_device") == "cuda:0", "metric device mismatch")
     require(
         shared.get("benchmark_repo_runtime_argument_required") is True,
@@ -251,6 +308,17 @@ def validate(
             require(method.get("adapter_kind") == adapter_kind, f"{method_id}: adapter kind mismatch")
             require((repo_root / "code" / "gcp" / adapter_name).is_file(), f"{method_id}: adapter file missing")
         require(method.get("source_commit") == EXPECTED_COMMITS.get(method_id), f"{method_id}: source commit mismatch")
+        require(
+            method.get("formal_model_sha256") == EXPECTED_FORMAL_MODEL_SHA256.get(method_id),
+            f"{method_id}: formal model SHA mismatch",
+        )
+        if method_id in EXPECTED_CFG_ARGS_SHA256:
+            require(
+                method.get("cfg_args_sha256") == EXPECTED_CFG_ARGS_SHA256[method_id],
+                f"{method_id}: cfg_args SHA mismatch",
+            )
+        else:
+            require("cfg_args_sha256" not in method, f"{method_id}: unexpected cfg_args SHA")
         worktree = method.get("source_worktree")
         if method_id in EXPECTED_DIRTY_SOURCE_DIFFS:
             require(isinstance(worktree, dict), f"{method_id}: patched source identity missing")
@@ -278,6 +346,14 @@ def validate(
             all(isinstance(value, str) for value in method.get("extra_cli", [])),
             f"{method_id}: extra CLI contains a non-string",
         )
+        require(
+            method.get("extra_cli") == EXPECTED_EXTRA_CLI[method_id],
+            f"{method_id}: frozen extra CLI mismatch",
+        )
+        require(
+            method.get("appearance_policy") == EXPECTED_APPEARANCE_POLICIES[method_id],
+            f"{method_id}: frozen appearance policy mismatch",
+        )
         require("evaluator" not in method and "metrics_script" not in method, f"{method_id}: method-specific evaluator registered")
 
         if method_id in {"citygaussian_v2", "citygs_x", "metrogs"}:
@@ -288,12 +364,23 @@ def validate(
         else:
             require(method.get("input_class") == "rgb_colmap_only", f"{method_id}: input stratum mismatch")
         if method_id == "qgs":
+            require("environment_variables" not in method, "qgs: unexpected environment override")
             require(_absolute_posix(method.get("config_path")), "qgs: config path missing")
+            require(
+                method.get("config_sha256") == EXPECTED_QGS_CONFIG_SHA256,
+                "qgs: config SHA mismatch",
+            )
             require(_absolute_posix(method.get("model_root")), "qgs: model root missing")
         elif method_id in {"citygaussian_v2", "metrogs"}:
             require(_absolute_posix(method.get("formal_checkpoint")), f"{method_id}: checkpoint missing")
+            require(
+                method.get("environment_variables")
+                == {"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"},
+                f"{method_id}: checkpoint-load environment mismatch",
+            )
         else:
             require(_absolute_posix(method.get("model_root")), f"{method_id}: model root missing")
+            require("environment_variables" not in method, f"{method_id}: unexpected environment override")
 
     appearance = contract.get("appearance_policy", {})
     metro = next((method for method in methods if method.get("method_id") == "metrogs"), {})
@@ -315,6 +402,15 @@ def validate(
     require("canonical_base_render" in str(rade.get("appearance_policy", "")), "RaDe-GS canonical appearance rule missing")
     citygs = next((method for method in methods if method.get("method_id") == "citygs_x"), {})
     require(citygs.get("appearance_policy") == "appearance_dim_0", "CityGS-X appearance rule mismatch")
+    require(
+        citygs.get("formal_model_aux_sha256") == EXPECTED_CITYGS_X_AUX_SHA256,
+        "CityGS-X auxiliary model hashes mismatch",
+    )
+    if contract.get("status") == "ACTIVE_FROZEN":
+        require(
+            metro.get("formal_model_sha256") != "PENDING_METRO_FORMAL_COMPLETION",
+            "active registry retains pending MetroGS model identity",
+        )
 
     execution = registry.get("execution_policy", {})
     require(execution.get("geometry_formal_completion_required_before_rgb") is True, "geometry-before-RGB gate disabled")
