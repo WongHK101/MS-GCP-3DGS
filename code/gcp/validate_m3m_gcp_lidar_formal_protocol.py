@@ -18,6 +18,27 @@ EXPECTED_SCENES = {
     "gcp_50000_20260610": (2208, 1932, 276, 63),
     "gcp_100000_20260610": (2510, 2196, 314, 63),
 }
+REPO_ROOT = Path(__file__).resolve().parents[2]
+EXPECTED_SIM3 = {
+    "gcp_3000_20260602": "2f4894f5753a3c7e2cf4cc6cfd48ce85c67dac1a5329bbc7972088642501c9c5",
+    "gcp_5000_20260602": "4ace92000e745a38dfd85ca5dfddbd9f5e63fb2158e78b138f27ee1422b222d5",
+    "gcp_20000_20260602": "7985d5e5855b93e1ba2d4fed7bfb1e1c7b8600a12af44fa4781e57427e6ad425",
+    "gcp_10000_20260610": "2c2f69990642c43b8253c57eb4f769c0a959473737b23e10e22d1d0eb1879f01",
+    "gcp_50000_20260610": "cf76e44faddc922b62235a952e139bde9d9c7cbfb21d440ce35a2093b7ac40bd",
+    "gcp_100000_20260610": "f2bdfe649891f666371db64d9b504aee49bb1312fde33801408d72bea6def000",
+}
+EXPECTED_METHOD_CLASSES = {
+    "3dgs_original": "rgb_colmap_only",
+    "2dgs": "rgb_colmap_only",
+    "pgsr": "rgb_colmap_only",
+    "rade_gs": "rgb_colmap_only",
+    "qgs": "rgb_colmap_only",
+    "gsprior": "rgb_colmap_only",
+    "sof": "rgb_colmap_only",
+    "citygaussian_v2": "rgb_colmap_external_geometry_prior",
+    "citygs_x": "rgb_colmap_external_geometry_prior",
+    "metrogs": "rgb_colmap_external_geometry_prior",
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -34,7 +55,9 @@ def canonical_sha256(payload: dict[str, Any]) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def validate_contract(contract: dict[str, Any], split: dict[str, Any]) -> list[str]:
+def validate_contract(
+    contract: dict[str, Any], split: dict[str, Any], repo_root: Path = REPO_ROOT
+) -> list[str]:
     errors: list[str] = []
 
     def require(condition: bool, message: str) -> None:
@@ -53,6 +76,28 @@ def validate_contract(contract: dict[str, Any], split: dict[str, Any]) -> list[s
     require(split.get("manifest_sha256") == source.get("split_manifest_canonical_sha256"), "split canonical identity mismatch")
     require(split.get("release_root_digest") == source.get("release_root_digest_sha256"), "split release mismatch")
 
+    geometry = contract.get("source_geometry_binding", {})
+    require(geometry.get("release_pin_path") == "configs/m3m_gcp_native_quarter_protocol_release_v2.json", "geometry release-pin path mismatch")
+    require(geometry.get("release_pin_sha256") == "7bf9db0c62bb0bae9ecca06b97b08fcd5f26913e52f9dd2a29745b09e6ffe8e6", "geometry release-pin SHA mismatch")
+    require(geometry.get("release_manifest_sha256") == "21fbac75d66433169535ea7440c31393f7a5ecdb4ed94fcefd31d1780c28bea4", "geometry release-manifest SHA mismatch")
+    require(geometry.get("gcp_points_sha256") == "45b61e76b3548cb378436609c9c507fb8adacd2bbcc3d18034df179bc03305cc", "GCP coordinate SHA mismatch")
+    require(geometry.get("gcp_roles_sha256") == "53400d901738677dfa99b7a001218c5871a8bd51d17fe2c327902a9a0bb3ae19", "GCP role SHA mismatch")
+    require(geometry.get("scene_common_sim3_sha256") == EXPECTED_SIM3, "scene common-Sim3 identity mismatch")
+    release_pin = repo_root / str(geometry.get("release_pin_path", "__missing__"))
+    require(release_pin.is_file(), "geometry release-pin file missing")
+    if release_pin.is_file():
+        require(sha256_file(release_pin) == geometry.get("release_pin_sha256"), "geometry release-pin file SHA mismatch")
+
+    method_binding = contract.get("method_registry_binding", {})
+    require(method_binding.get("path") == "configs/m3m_gcp_native_quarter_method_registry_v3.json", "method-registry path mismatch")
+    require(method_binding.get("file_sha256") == "b409b16435642eb02f865b41532b3856ba05a100e8fbef523d9d3401f89a5043", "method-registry SHA mismatch")
+    require(method_binding.get("active_method_ids_in_order") == list(EXPECTED_METHOD_CLASSES), "active method order mismatch")
+    require(method_binding.get("active_method_input_classes") == EXPECTED_METHOD_CLASSES, "method input-class mapping mismatch")
+    registry_path = repo_root / str(method_binding.get("path", "__missing__"))
+    require(registry_path.is_file(), "method-registry file missing")
+    if registry_path.is_file():
+        require(sha256_file(registry_path) == method_binding.get("file_sha256"), "method-registry file SHA mismatch")
+
     rows = {row.get("scene"): row for row in contract.get("scenes", [])}
     require(set(rows) == set(EXPECTED_SCENES), "scene set mismatch")
     split_rows = {row.get("scene"): row for row in split.get("scenes", [])}
@@ -67,13 +112,18 @@ def validate_contract(contract: dict[str, Any], split: dict[str, Any]) -> list[s
     require(lidar.get("payload_file_count") == 52 and lidar.get("payload_bytes") == 4008188380, "LiDAR payload inventory mismatch")
     require(lidar.get("training_access") == "FORBIDDEN_EVALUATION_ONLY", "LiDAR training boundary weakened")
     require(lidar.get("method_specific_reference_selection") is False, "method-specific reference selection enabled")
+    require(lidar.get("normal_minus_ellipsoid_m") == 23.980600991639484, "vertical datum bridge changed")
 
     registration = contract.get("registration", {})
     for key in ("method_specific_sim3_refit", "method_specific_icp", "result_dependent_alignment"):
         require(registration.get(key) == "FORBIDDEN", f"registration gate weakened: {key}")
 
     reference = contract.get("reference_surface", {})
+    require(reference.get("roi") == "convex_hull_of_frozen_active_control_and_checkpoint_points_buffered_in_EPSG32649", "ROI definition changed")
     require(reference.get("roi_buffer_m") == 8.0, "ROI buffer changed")
+    require(reference.get("roi_is_identical_across_methods") is True, "ROI became method-dependent")
+    require(reference.get("las_class_filter") == "NONE_SOURCE_CLASSIFICATION_IS_NOT_SEMANTICALLY_RELIABLE", "LiDAR class filter changed")
+    require(reference.get("return_number_filter") == "NONE_ALL_LIDAR_RETURNS_DEFINE_THE_REFERENCE_SAMPLE_SET", "LiDAR return filter changed")
     require(reference.get("reference_voxel_m") == 0.05, "reference voxel changed")
     require(reference.get("voxel_representative") == "deterministic_voxel_center", "reference representative changed")
     require(reference.get("coordinate_dtype") == "float64", "reference dtype changed")
@@ -84,6 +134,7 @@ def validate_contract(contract: dict[str, Any], split: dict[str, Any]) -> list[s
     require(surface.get("view_role") == "train" and surface.get("all_train_views_required") is True, "view allowlist changed")
     require(surface.get("heldout_rgb_read") is False, "heldout RGB access enabled")
     require(surface.get("gcp_annotation_used_for_view_selection") is False, "GCP-dependent view selection enabled")
+    require(surface.get("common_view_set_required_across_methods") is True, "common method view set disabled")
     require(surface.get("alpha_min_inclusive") == 0.5, "alpha threshold changed")
     require(surface.get("pixel_stride") == 4, "pixel stride changed")
     require(surface.get("reconstruction_voxel_m") == 0.05 and surface.get("voxel_grid_shared_with_reference") is True, "surface voxel contract changed")
@@ -96,11 +147,22 @@ def validate_contract(contract: dict[str, Any], split: dict[str, Any]) -> list[s
     require(len(metrics.get("machine_readable_diagnostics", [])) == 17, "diagnostic metric inventory changed")
 
     ranking = contract.get("ranking", {})
+    require(ranking.get("scene_primary") == "fscore_10cm_descending", "scene primary ranking changed")
+    require(ranking.get("scene_tiebreakers") == ["chamfer_l1_mean_m_ascending", "precision_10cm_descending"], "scene tiebreakers changed")
+    require(ranking.get("overall_primary") == "macro_fscore_10cm_descending", "overall primary ranking changed")
+    require(ranking.get("overall_tiebreakers") == ["macro_chamfer_l1_mean_m_ascending", "macro_precision_10cm_descending"], "overall tiebreakers changed")
+    require(ranking.get("tie_numeric_tolerance") == 1e-9, "ranking tie tolerance changed")
+    require(ranking.get("tie_tolerance_application") == "for_each_key_in_order_if_absolute_difference_is_at_most_tolerance_continue_to_next_key", "ranking tolerance application changed")
+    require(ranking.get("all_keys_tied") == "same_competition_rank_then_method_id_lexicographic_display_next_rank_skips_tie_count", "all-keys-tied policy changed")
     require(ranking.get("dataset_aggregation") == "unweighted_arithmetic_macro_average_of_per_scene_metrics", "macro aggregation changed")
     require(ranking.get("micro_pooling_across_scenes") == "FORBIDDEN", "micro pooling permitted")
     require(ranking.get("overall_rank_eligibility") == "COMPLETE_ALL_6_SCENES_ONLY", "overall eligibility changed")
     require(ranking.get("failed_or_oom_scene_metric_imputation") == "FORBIDDEN", "failure metric imputation permitted")
     require(ranking.get("input_class_official_ranking") == "WITHIN_EACH_FROZEN_METHOD_REGISTRY_INPUT_CLASS", "input-class ranking changed")
+
+    failure = contract.get("failure_policy", {})
+    require(failure.get("quality_threshold_early_stop") is False, "quality-threshold early stop enabled")
+    require(failure.get("record_and_continue") is True, "failure record-and-continue disabled")
 
     evidence = contract.get("evidence", {})
     for key in (
@@ -113,6 +175,47 @@ def validate_contract(contract: dict[str, Any], split: dict[str, Any]) -> list[s
     ):
         require(evidence.get(key) is True, f"evidence requirement disabled: {key}")
     require(contract.get("pilot_transition", {}).get("pilot_results_reusable_as_formal") is False, "pilot result promoted to formal")
+
+    implementation = contract.get("implementation", {})
+    expected_impl_paths = {
+        "evaluator": "code/gcp/evaluate_m3m_gcp_lidar_formal_v1.py",
+        "verifier": "code/gcp/verify_m3m_gcp_lidar_formal_v1.py",
+        "artifact_schema": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
+        "ranker": "code/gcp/rank_m3m_gcp_lidar_formal_v1.py",
+        "launch_gate": "code/gcp/check_m3m_gcp_lidar_formal_launch.py",
+    }
+    for key, expected_path in expected_impl_paths.items():
+        require(implementation.get(f"{key}_path") == expected_path, f"{key} path mismatch")
+        path = repo_root / expected_path
+        require(path.is_file(), f"{key} file missing")
+        if path.is_file():
+            require(implementation.get(f"{key}_sha256") == sha256_file(path), f"{key} SHA mismatch")
+    require(implementation.get("formal_methods_manifest_schema") == "m3m_gcp_lidar_formal_methods_v1", "formal methods schema changed")
+    require(implementation.get("implementation_version_commit") == "BOUND_BY_REVIEWED_ACTIVATION_MANIFEST_BEFORE_EXECUTION", "implementation commit binding weakened")
+
+    launch = contract.get("launch_policy", {})
+    require(launch.get("activation_manifest_schema") == "m3m_gcp_lidar_formal_activation_v1", "activation schema changed")
+    require(launch.get("required_review_verdict") == "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION", "activation review verdict changed")
+    require(launch.get("active_frozen_required") is True, "ACTIVE_FROZEN launch gate disabled")
+    require(launch.get("exact_clean_benchmark_commit_and_tree_required") is True, "exact clean commit gate disabled")
+    require(launch.get("implementation_file_hashes_rechecked_before_output_creation") is True, "implementation pre-output hash gate disabled")
+    require(launch.get("formal_output_root_must_not_exist") is True, "formal no-overwrite gate disabled")
+    require(launch.get("resume_or_overwrite_formal_result") == "FORBIDDEN", "formal overwrite/resume enabled")
+    require(launch.get("quality_threshold_early_stop") is False, "launch quality-threshold early stop enabled")
+
+    schema_path = repo_root / str(implementation.get("artifact_schema_path", "__missing__"))
+    if schema_path.is_file():
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        require(schema.get("schema") == "m3m_gcp_lidar_formal_artifact_schema_v1", "artifact schema id mismatch")
+        require(schema.get("protocol_id") == "m3m_gcp_lidar_rendered_surface_v1", "artifact schema protocol mismatch")
+        require(schema.get("distance_npz", {}).get("keys_exact") == ["reconstruction_to_lidar_m", "lidar_to_reconstruction_m"], "distance NPZ keys changed")
+        require(schema.get("distance_npz", {}).get("reconstruction_to_lidar_m", {}).get("dtype") == "float64", "distance dtype changed")
+        require(schema.get("formal_methods_manifest", {}).get("schema") == "m3m_gcp_lidar_formal_methods_v1", "formal methods artifact schema changed")
+        require(schema.get("six_scene_results_manifest", {}).get("schema") == "m3m_gcp_lidar_six_scene_results_manifest_v1", "six-scene results manifest schema changed")
+        require(schema.get("method_result_json", {}).get("metric_fields_exact") == metrics.get("machine_readable_diagnostics"), "method-result metric schema changed")
+        comparator = schema.get("ranking_comparator", {})
+        require(comparator.get("numeric_tolerance") == 1e-9, "artifact ranking tolerance changed")
+        require(comparator.get("all_keys_tied_rule") == "assign the same competition rank; order equal-rank display rows lexicographically by method_id; the next rank skips the number of tied rows", "artifact all-tied policy changed")
     return errors
 
 

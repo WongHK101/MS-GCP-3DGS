@@ -1,0 +1,105 @@
+{
+  "schema": "m3m_gcp_lidar_formal_artifact_schema_v1",
+  "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+  "canonical_json": {
+    "encoding": "UTF-8",
+    "ensure_ascii": false,
+    "sort_keys": true,
+    "separators": [",", ":"],
+    "digest": "SHA-256",
+    "self_hash_rule": "remove only the top-level canonical_sha256 field before canonical serialization"
+  },
+  "depth_packet_manifest": {
+    "schema": "ms_gcp_metric_depth_packet_manifest_v2",
+    "required_semantics": {
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "primary_depth_tensor": "alpha_normalized_expected_camera_z",
+      "primary_depth_semantics": "camera_z",
+      "image_domain": "colmap_4_0_4_image_undistorter_pinhole_max_1414",
+      "pixel_coordinate_convention": "zero_based_pixel_centers",
+      "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+      "adapter_conformance_status": "PASS"
+    },
+    "required_view_set": "exactly all train_image_names for the scene in configs/gs_gcp_rgb_holdout_split_manifest_v1.json",
+    "view_order_for_hashing": "lexicographic image_name order",
+    "packet_npz": {
+      "alpha_normalized_expected_camera_z": {"dtype": "float32", "shape": ["camera_height", "camera_width"], "unit": "frozen COLMAP camera-z units"},
+      "accumulated_alpha": {"dtype": "float32", "shape": ["camera_height", "camera_width"], "unit": "dimensionless"},
+      "metric_depth_valid_mask": {"dtype": "bool", "shape": ["camera_height", "camera_width"], "unit": "boolean"}
+    }
+  },
+  "formal_methods_manifest": {
+    "schema": "m3m_gcp_lidar_formal_methods_v1",
+    "top_level_required": ["schema", "protocol_id", "scene", "methods", "canonical_sha256"],
+    "method_fields_exact": ["method_id", "method_name", "input_class", "run_root", "model_checkpoint_path", "model_checkpoint_sha256", "recipe_path", "recipe_sha256", "renderer_adapter_path", "renderer_adapter_sha256", "packet_manifest_path", "packet_manifest_sha256"],
+    "method_ids": ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof", "citygaussian_v2", "citygs_x", "metrogs"],
+    "canonical_sha256_required": true
+  },
+  "reference_npz": {
+    "filename": "reference_voxel_centres_local_metric.npz",
+    "keys_exact": ["points_local_m", "local_origin_utm49n_normal_height_m"],
+    "points_local_m": {"dtype": "float64", "shape": ["N_reference", 3], "unit": "metre", "finite": true, "minimum_count": 1},
+    "local_origin_utm49n_normal_height_m": {"dtype": "float64", "shape": [3], "unit": "metre", "finite": true}
+  },
+  "surface_npz": {
+    "filename": "surface_voxel_centres_local_metric.npz",
+    "keys_exact": ["points_local_m", "local_origin_utm49n_normal_height_m"],
+    "points_local_m": {"dtype": "float64", "shape": ["N_reconstruction", 3], "unit": "metre", "finite": true, "minimum_count": 1},
+    "local_origin_utm49n_normal_height_m": {"dtype": "float64", "shape": [3], "unit": "metre", "finite": true},
+    "origin_must_equal_reference": true
+  },
+  "distance_npz": {
+    "filename": "nearest_neighbor_distances.npz",
+    "keys_exact": ["reconstruction_to_lidar_m", "lidar_to_reconstruction_m"],
+    "reconstruction_to_lidar_m": {"dtype": "float64", "shape": ["N_reconstruction"], "unit": "metre", "finite": true, "nonnegative": true},
+    "lidar_to_reconstruction_m": {"dtype": "float64", "shape": ["N_reference"], "unit": "metre", "finite": true, "nonnegative": true}
+  },
+  "method_result_json": {
+    "schema": "m3m_gcp_lidar_method_result_v1",
+    "required_identity_fields": ["protocol_id", "contract_file_sha256", "activation_manifest_sha256", "scene", "method_id", "input_class", "protocol_manifest_canonical_sha256", "model_checkpoint_sha256", "recipe_sha256", "renderer_adapter_sha256", "packet_manifest_sha256", "surface_npz_sha256", "distance_npz_sha256", "reference_npz_sha256", "evaluator_sha256", "verifier_sha256", "artifact_schema_sha256"],
+    "required_count_fields": ["train_view_count", "reference_point_count", "reconstruction_point_count", "reconstruction_to_lidar_distance_count", "lidar_to_reconstruction_distance_count"],
+    "metric_fields_exact": ["accuracy_mean_m", "accuracy_median_m", "accuracy_p95_m", "completeness_mean_m", "completeness_median_m", "completeness_p95_m", "chamfer_l1_mean_m", "symmetric_rmse_m", "precision_5cm", "recall_5cm", "fscore_5cm", "precision_10cm", "recall_10cm", "fscore_10cm", "precision_20cm", "recall_20cm", "fscore_20cm"],
+    "canonical_sha256_required": true
+  },
+  "scene_batch_result_json": {
+    "schema": "m3m_gcp_lidar_scene_batch_result_v1",
+    "statuses": ["COMPLETE_RANKED", "OOM_UNRANKED", "FAILED_UNRANKED", "INCOMPLETE_UNRANKED"],
+    "canonical_sha256_required": true
+  },
+  "six_scene_ranking_json": {
+    "schema": "m3m_gcp_lidar_six_scene_ranking_v1",
+    "complete_scene_count_required_for_rank": 6,
+    "scene_aggregation": "unweighted arithmetic macro average",
+    "micro_pooling": "forbidden",
+    "canonical_sha256_required": true
+  },
+  "six_scene_results_manifest": {
+    "schema": "m3m_gcp_lidar_six_scene_results_manifest_v1",
+    "method_fields_exact": ["method_id", "method_name", "input_class", "scenes"],
+    "scene_entry_fields_exact": ["scene", "status", "method_result_path", "method_result_sha256"],
+    "failed_scene_rule": "method_result_path and method_result_sha256 must both be null; never impute a metric",
+    "canonical_sha256_required": true
+  },
+  "lightweight_archive_manifest": {
+    "schema": "m3m_gcp_lidar_lightweight_archive_manifest_v1",
+    "inventory_row_fields_exact": ["relative_path", "bytes", "sha256"],
+    "path_rule": "POSIX relative paths only; no absolute path and no parent traversal",
+    "required_retained_artifacts": ["contract", "activation manifest", "protocol manifest", "method result JSON", "scene batch result JSON", "distance NPZ", "view allowlist", "resource/failure log", "evaluator", "verifier", "artifact schema"],
+    "canonical_sha256_required": true
+  },
+  "ranking_comparator": {
+    "numeric_tolerance": 1e-09,
+    "scene_keys_in_order": [
+      {"field": "fscore_10cm", "direction": "descending"},
+      {"field": "chamfer_l1_mean_m", "direction": "ascending"},
+      {"field": "precision_10cm", "direction": "descending"}
+    ],
+    "overall_keys_in_order": [
+      {"field": "macro_fscore_10cm", "direction": "descending"},
+      {"field": "macro_chamfer_l1_mean_m", "direction": "ascending"},
+      {"field": "macro_precision_10cm", "direction": "descending"}
+    ],
+    "comparison_rule": "for each key in order, values differing by more than numeric_tolerance are ordered by that key; otherwise continue to the next key",
+    "all_keys_tied_rule": "assign the same competition rank; order equal-rank display rows lexicographically by method_id; the next rank skips the number of tied rows"
+  }
+}

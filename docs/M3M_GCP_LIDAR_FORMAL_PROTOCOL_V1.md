@@ -79,9 +79,9 @@ fields for audit and diagnostics.
 
 The paper's main LiDAR table contains only:
 
-1. Precision at 10 cm;
-2. Recall at 10 cm;
-3. F1 at 10 cm;
+1. F1 at 10 cm;
+2. Precision at 10 cm;
+3. Recall at 10 cm;
 4. symmetric Chamfer-L1, defined as the mean of reconstruction-to-reference
    mean distance and reference-to-reconstruction mean distance.
 
@@ -133,6 +133,48 @@ Vegetation, vehicles, movable objects, and construction changes are therefore
 real reference uncertainty.  The constant vertical bridge is also an
 approximation.  Neither limitation may be removed through method-specific
 alignment, result-dependent masks, or post-hoc threshold selection.
+
+## 9. Byte-level source and method identities
+
+The protocol ID alone is not an identity.  Formal v1 binds the geometry-v2
+release pin (`7bf9db0c...ffe8e6`), release manifest
+(`21fbac75...28bea4`), the six individual `common_sim3.json` hashes, the
+surveyed GCP coordinate and role files, and the source native-quarter release
+and split hashes.  The exact values are normative in the machine contract.
+
+The active method registry is bound by SHA-256
+`b409b164...a5043`.  The formal pool is exactly ten methods.  3DGS, 2DGS,
+PGSR, RaDe-GS, QGS, GSPrior and SoF are in `rgb_colmap_only`;
+CityGaussianV2, CityGS-X and MetroGS are in
+`rgb_colmap_external_geometry_prior`.  GOF is not in the active formal pool.
+Every scene attempt supplies an immutable methods manifest whose checkpoint,
+recipe, renderer adapter and packet manifest paths and hashes are rechecked
+before any output directory is created.
+
+## 10. Frozen implementation, artifacts and launch gate
+
+The exact evaluator, independent verifier, six-scene ranker, artifact schema
+and launch gate paths and SHA-256 values are frozen in the machine contract.
+The artifact schema fixes the NPZ key names, float64 local-metre coordinate and
+distance dtypes, shapes, units, origins and point counts.  It also fixes JSON
+canonicalization, lightweight archive inventory rules and the 17 diagnostic
+metric fields.
+
+Ranking compares each key in order and treats an absolute difference at most
+`1e-9` as tied for that key.  If every key is tied, methods receive the same
+competition rank; equal-rank display is by `method_id`, and the next rank skips
+the number of tied rows.  The executable ranker enforces unweighted six-scene
+macro averaging, refuses fabricated results for failed/OOM scenes and assigns
+an official rank only to 6/6 complete methods within the same input class.
+
+Formal execution is impossible while this contract is a review candidate.
+After review, a separate canonical activation manifest must bind the approved
+contract and artifact schema hashes plus the exact clean benchmark commit and
+tree.  The launch gate rechecks that activation, all implementation hashes,
+the geometry release and scene Sim(3), LiDAR inventory, GCP coordinates,
+formal input manifest/COLMAP bytes, method registry/class mapping and all
+per-method assets.  It then requires a previously nonexistent absolute output
+root.  Formal resume or overwrite is forbidden.
 
 The normative machine-readable contract is
 `configs/m3m_gcp_lidar_formal_v1.json`.
