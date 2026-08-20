@@ -1,7 +1,7 @@
 {
   "builder_script_sha256": "a10b671105b8184482434e2ce005ac8e7864bc2d57e01b246876643adfc1595c",
-  "canonical_sha256": "14ca11169fee7059f08afc85c836a340878d510045750e2460e6e24a3120a115",
-  "contract_file_sha256": "9f0b0b32ff2ad038f20f0d63a6d1fcfe8445e8cda122cb504fbfa73466e50dcd",
+  "canonical_sha256": "1836e5343bf8f0b5f25e92c966fa825db41329c578342b5df1576a4d2d623926",
+  "contract_file_sha256": "bb04c59876a5e7636b3300084153d090f04ce9d1edfbdf590c2b2e882c92aa49",
   "failures": [],
   "formal_evaluation": "NOT_STARTED",
   "gpu_required_for_this_preparation": false,
@@ -10,7 +10,7 @@
   "method_specific_prior_generation": "NOT_STARTED_REQUIRES_SEPARATE_SCENE_PLAN",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
   "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
-  "repository_head": "bf06254f589e85055d562fe4359d353be7b603c2",
+  "repository_head": "5930b6305fc8a3b768158c43c3dba559310f59d2",
   "scene_count": 6,
   "scenes": [
     {

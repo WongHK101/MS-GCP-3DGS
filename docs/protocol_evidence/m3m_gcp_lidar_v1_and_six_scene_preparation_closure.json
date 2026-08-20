@@ -1,23 +1,23 @@
 {
   "schema": "m3m_gcp_lidar_v1_and_six_scene_preparation_closure_v1",
-  "status": "PASS_READY_FOR_INDEPENDENT_REVIEW_NO_EXECUTION_AUTHORIZED",
+  "status": "PASS_READY_FOR_INDEPENDENT_REREVIEW_NO_EXECUTION_AUTHORIZED",
   "recorded_at": "2026-08-21T03:46:38.0434028+08:00",
   "benchmark": {
-    "commit": "bf06254f589e85055d562fe4359d353be7b603c2",
-    "tree": "026cdd33003e70b744782f58712ace52631bd389",
+    "commit": "5930b6305fc8a3b768158c43c3dba559310f59d2",
+    "tree": "7b4a3d0b6d7765a9eb6a41f72664775504730515",
     "local_worktree_clean_except_this_closure_evidence": true,
-    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/bf06254f589e85055d562fe4359d353be7b603c2/repo",
+    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/5930b6305fc8a3b768158c43c3dba559310f59d2/repo",
     "remote_checkout_clean": true,
-    "deployment_bundle_sha256": "dfbdd130ac8f9a380cee13059931c9af1d3a186cad053075ef9112c3397d0f30"
+    "deployment_bundle_sha256": "b6436fcfa9044c23cc4e3c61f08d5a0280d09eba68d7a80d2f2b8f1ddc5d5474"
   },
   "protocol": {
     "id": "m3m_gcp_lidar_rendered_surface_v1",
     "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
     "execution_authorized": false,
     "contract_path": "configs/m3m_gcp_lidar_formal_v1.json",
-    "contract_sha256": "9f0b0b32ff2ad038f20f0d63a6d1fcfe8445e8cda122cb504fbfa73466e50dcd",
-    "local_validation_sha256": "a81b0d6505286ccd3c91a20d8b690daca5c8037482c22862921f201fa773732e",
-    "remote_validation_sha256": "bcbefce9e5902b6526c1b7ad407b86e0dc279d75e43f6429f698b7fa3941a363",
+    "contract_sha256": "bb04c59876a5e7636b3300084153d090f04ce9d1edfbdf590c2b2e882c92aa49",
+    "local_validation_sha256": "c6251e0ef5a9bc1006305e2234d85e12b671289bce2a996740501c37d53a2705",
+    "remote_validation_sha256": "e2ba727c2f15cb805447862dedc4c2c615fd28b88cb10cde982657cffc83e18b",
     "local_validation_status": "PASS",
     "remote_validation_status": "PASS"
   },
@@ -26,12 +26,12 @@
     "scene_count": 6,
     "total_logical_bytes": 6846028833,
     "local_manifest_path": "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_local_v1.json",
-    "local_manifest_sha256": "91035e7507fcc67cbb2109767678324978295e82c309e02dffb5fad6da0362e3",
-    "local_manifest_canonical_sha256": "a28eb71a5caf56ec0a9484f634001e507c19bc48c8de451a756b334fa16e7734",
+    "local_manifest_sha256": "62d2fab2fbc64aa4451cacfc053cd7d5cff3cdb769b1987d11b3fbf57e18f4e6",
+    "local_manifest_canonical_sha256": "1836e5343bf8f0b5f25e92c966fa825db41329c578342b5df1576a4d2d623926",
     "remote_manifest_path": "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_remote_v1.json",
-    "remote_manifest_sha256": "c4b178b329e64f3d0df72a2eb0192eb028a4991d8bb6d3a9f9e094dd87d73ca0",
-    "remote_manifest_canonical_sha256": "14ca11169fee7059f08afc85c836a340878d510045750e2460e6e24a3120a115",
-    "canonical_difference_reason": "repository_head is intentionally host-run specific; all six normative scene identities were compared field by field",
+    "remote_manifest_sha256": "139ee901f46ac8a356c2ae7927be8056dd95d171f1efa268432d1b4e1e228e8f",
+    "remote_manifest_canonical_sha256": "1836e5343bf8f0b5f25e92c966fa825db41329c578342b5df1576a4d2d623926",
+    "file_sha_difference_reason": "Windows and Linux line endings differ; canonical payload SHA and all six normative scene identities match",
     "scene_manifest_canonical_sha256_match_count": 6,
     "scene_manifest_file_sha256_match_count": 6,
     "scene_logical_bytes_match_count": 6,
@@ -69,6 +69,22 @@
     "local_test": "PASS",
     "remote_test": "PASS"
   },
+  "formal_implementation_closure": {
+    "artifact_schema_sha256": "ad872d736acf7ab2a7208099acf81a18ae8cee6043bf325e4f4173bd9a1ceac0",
+    "evaluator_sha256": "92f20f863c88a6008d33e3460aec4f595abeef3a98ebda66f07087bc17912913",
+    "verifier_sha256": "c61ed444aaa10c979fab10547b8b2af8edae24311394b28fc490f954dc3fb014",
+    "ranker_sha256": "0edc9e5db279095fb41154cc0f0c6aa38303ba2f74c1a36b2e6d62a6b91a5f95",
+    "launch_gate_sha256": "1aab1f76b9f2203d35b0682ec5c25c8636e7530053b9c2bf74e316cc71203ab1",
+    "local_tests": {
+      "contract_and_identity_tests": "10/10 PASS",
+      "npz_metric_and_comparator_tests": "4/4 PASS",
+      "clean_git_launch_gate_tests": "2/2 PASS",
+      "six_scene_ranker_tests": "2/2 PASS",
+      "numeric_core": "PASS"
+    },
+    "remote_real_lidar_environment_tests": "same suites PASS; laspy pyproj scipy shapely real imports PASS",
+    "activation_gate": "candidate cannot execute; ACTIVE_FROZEN plus reviewed exact clean commit/tree activation is required before output creation"
+  },
   "execution_state": {
     "training_started": false,
     "method_specific_prior_generation_started": false,
@@ -78,6 +94,8 @@
   },
   "independent_review": {
     "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
-    "verdict": "PENDING"
+    "prior_verdict": "REQUIRE_CHANGES_FORMAL_IMPLEMENTATION_AND_BYTE_IDENTITIES_NOT_FROZEN",
+    "prior_findings_addressed": true,
+    "verdict": "PENDING_REREVIEW"
   }
 }
