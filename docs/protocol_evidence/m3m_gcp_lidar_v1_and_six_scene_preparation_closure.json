@@ -1,25 +1,25 @@
 {
   "schema": "m3m_gcp_lidar_v1_and_six_scene_preparation_closure_v1",
   "status": "PASS_READY_FOR_INDEPENDENT_REREVIEW_NO_EXECUTION_AUTHORIZED",
-  "recorded_at": "2026-08-21T04:45:00+08:00",
+  "recorded_at": "2026-08-21T05:05:00+08:00",
   "benchmark": {
-    "implementation_commit": "91f8889ed138a6e858ba8fe0af49b943a44f8fd0",
-    "implementation_tree": "dd1535e32274245dadd475f531595af9388a6094",
+    "implementation_commit": "11e5eb01abc6f1ad195c5cf9a81a690fa37461b1",
+    "implementation_tree": "bff0937c8c2217bf6acc63f8d996d2fb738ec813",
     "local_worktree_clean_before_evidence_capture": true,
-    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/91f8889ed138a6e858ba8fe0af49b943a44f8fd0/repo",
+    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/11e5eb01abc6f1ad195c5cf9a81a690fa37461b1/repo",
     "remote_checkout_clean": true,
-    "deployment_bundle_sha256": "7da238ac198fdf86c7d80d4d61c54c2b11bb227f03f5b7d59fcd414ae425217c"
+    "deployment_bundle_sha256": "40b7b808466b9e5eb55bb3f9a58c5b199f3f8bf4a540eeb6522494595cbeb62b"
   },
   "protocol": {
     "id": "m3m_gcp_lidar_rendered_surface_v1",
     "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
     "execution_authorized": false,
     "contract_path": "configs/m3m_gcp_lidar_formal_v1.json",
-    "contract_sha256": "2b930ef353d77ddf5f30a139fa7ced7dcf0f4a4d003893df3bde7c7816194809",
+    "contract_sha256": "4b851763cf8873467c39d2aafdaa1eecd7dc3e226ffc118829973b35f83c05aa",
     "local_validation_path": "docs/protocol_evidence/m3m_gcp_lidar_formal_protocol_validation_v1.json",
-    "local_validation_sha256": "1c7bb5b889c9350fda05085a05f81f5addd05c9a999166cfa8968aa42da129bb",
+    "local_validation_sha256": "5d84fba3139bffc7ee95a3a2a596d7513763c951957c6b6512dec14aa285d2d3",
     "remote_validation_path": "docs/protocol_evidence/m3m_gcp_lidar_formal_protocol_validation_remote_v1.json",
-    "remote_validation_sha256": "5972cc1e042d1ad7e11537f0d05da9c6df3ad9ab06a56a314f7323988a265d94",
+    "remote_validation_sha256": "6b27595eb21c18fa85e9608b639f9e6080a2fe044348b8f05d03cd7461ef0da0",
     "local_validation_status": "PASS",
     "remote_validation_status": "PASS"
   },
@@ -41,7 +41,7 @@
   },
   "actual_payload_byte_audit": {
     "path": "docs/protocol_evidence/m3m_gcp_lidar_bound_payload_byte_audit_remote_v1.json",
-    "sha256": "5852ebbcc4577c24d746a93b4122ac49cd7a5c9e21c30ad1bc5b59db427bdf13",
+    "sha256": "e7148c011c09c762fd1b11ddc573dc23a0bee5d800bdaa9564a5ef37f3325786",
     "status": "PASS",
     "lidar_inventory_verified": true,
     "laz_files_verified": 9,
@@ -78,7 +78,7 @@
     "artifact_schema_sha256": "d1d61b3f5aedce82ad761b1a0f7891c5f8b4f23258b5c6cd8ee8c3795e18f420",
     "evaluator_sha256": "4cb868dfcfab4a46a88b71e6da03e47ca6b9b31a25d8a553160af202c6c84e89",
     "verifier_sha256": "1aa907eb5a4ec71f9d0269c1c43742468749b31d73f08018218ad489fef44570",
-    "ranker_sha256": "54eb371db461db6cc668a909563fae495f01ad17391b4535cc3bc874d3ca9883",
+    "ranker_sha256": "a4a31d282b128d78e5f7cee149de4e969203a87cefb7fc5d5aedfb5b1dcf97ee",
     "launch_gate_sha256": "948fc1c76db14c711a0e6b7a8e46bb58744859e67f49587f2b2de2e770030996",
     "local_tests": {
       "contract_and_identity_tests": "12/12 PASS",
@@ -100,6 +100,7 @@
     "full_ordered_ten_method_manifest_required": true,
     "per_scene_pre_result_review_authorization_required": true,
     "ranker_rejects_arbitrary_method_pool": true,
+    "ranker_uses_frozen_registry_display_name_field": true,
     "ranker_requires_hash_bound_pass_verifier_report_for_every_complete_scene": true,
     "ranker_checks_full_result_identity_count_metric_and_array_hash_fields": true
   },
@@ -112,7 +113,7 @@
   },
   "independent_review": {
     "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
-    "prior_verdict": "REQUIRE_CHANGES_ACTUAL_BYTES_SELF_SIGNABLE_MANIFESTS_AND_UNVERIFIED_RANKER",
+    "prior_verdict": "REQUIRE_CHANGES_RANKER_USED_NONEXISTENT_METHOD_NAME_FIELD_INSTEAD_OF_FROZEN_DISPLAY_NAME",
     "prior_findings_addressed": true,
     "verdict": "PENDING_REREVIEW"
   }
