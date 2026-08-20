@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_lidar_v1_rolling_lifecycle_supersession_v1",
   "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
-  "recorded_at": "2026-08-21T08:00:00+08:00",
+  "recorded_at": "2026-08-21T05:00:00+08:00",
   "superseded_review_verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION",
   "supersession_scope": "formal LiDAR artifact and launch lifecycle only; source data, six-scene preparation, metrics, thresholds, registration, ROI, ranking comparator and method pool are unchanged",
   "reason": [
