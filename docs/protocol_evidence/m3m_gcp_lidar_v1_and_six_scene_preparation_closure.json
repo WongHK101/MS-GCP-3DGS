@@ -1,0 +1,83 @@
+{
+  "schema": "m3m_gcp_lidar_v1_and_six_scene_preparation_closure_v1",
+  "status": "PASS_READY_FOR_INDEPENDENT_REVIEW_NO_EXECUTION_AUTHORIZED",
+  "recorded_at": "2026-08-21T03:46:38.0434028+08:00",
+  "benchmark": {
+    "commit": "bf06254f589e85055d562fe4359d353be7b603c2",
+    "tree": "026cdd33003e70b744782f58712ace52631bd389",
+    "local_worktree_clean_except_this_closure_evidence": true,
+    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/bf06254f589e85055d562fe4359d353be7b603c2/repo",
+    "remote_checkout_clean": true,
+    "deployment_bundle_sha256": "dfbdd130ac8f9a380cee13059931c9af1d3a186cad053075ef9112c3397d0f30"
+  },
+  "protocol": {
+    "id": "m3m_gcp_lidar_rendered_surface_v1",
+    "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+    "execution_authorized": false,
+    "contract_path": "configs/m3m_gcp_lidar_formal_v1.json",
+    "contract_sha256": "9f0b0b32ff2ad038f20f0d63a6d1fcfe8445e8cda122cb504fbfa73466e50dcd",
+    "local_validation_sha256": "a81b0d6505286ccd3c91a20d8b690daca5c8037482c22862921f201fa773732e",
+    "remote_validation_sha256": "bcbefce9e5902b6526c1b7ad407b86e0dc279d75e43f6429f698b7fa3941a363",
+    "local_validation_status": "PASS",
+    "remote_validation_status": "PASS"
+  },
+  "common_scene_preparation": {
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "scene_count": 6,
+    "total_logical_bytes": 6846028833,
+    "local_manifest_path": "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_local_v1.json",
+    "local_manifest_sha256": "91035e7507fcc67cbb2109767678324978295e82c309e02dffb5fad6da0362e3",
+    "local_manifest_canonical_sha256": "a28eb71a5caf56ec0a9484f634001e507c19bc48c8de451a756b334fa16e7734",
+    "remote_manifest_path": "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_remote_v1.json",
+    "remote_manifest_sha256": "c4b178b329e64f3d0df72a2eb0192eb028a4991d8bb6d3a9f9e094dd87d73ca0",
+    "remote_manifest_canonical_sha256": "14ca11169fee7059f08afc85c836a340878d510045750e2460e6e24a3120a115",
+    "canonical_difference_reason": "repository_head is intentionally host-run specific; all six normative scene identities were compared field by field",
+    "scene_manifest_canonical_sha256_match_count": 6,
+    "scene_manifest_file_sha256_match_count": 6,
+    "scene_logical_bytes_match_count": 6,
+    "scene_view_counts_match_count": 6,
+    "failures": []
+  },
+  "transfer": {
+    "missing_scenes_transferred": [
+      "gcp_5000_20260602",
+      "gcp_20000_20260602",
+      "gcp_10000_20260610",
+      "gcp_50000_20260610"
+    ],
+    "temporary_tar_bytes": 3831635456,
+    "temporary_tar_sha256": "39d7f7048d3ab5b4313d864d0eda33e79d1e9653baa7110c1c4838b74de7d568",
+    "temporary_tar_local_removed_after_remote_verification": true,
+    "temporary_tar_remote_removed_after_remote_verification": true,
+    "source_or_formal_input_deleted": false
+  },
+  "remote_environment": {
+    "host": "autodl-container-f7964f8eb7-2cf79d95",
+    "memory_limit_bytes": 2147483648,
+    "gpu": "No devices found",
+    "filesystem_total_bytes": 1197222133760,
+    "filesystem_used_bytes": 592684437504,
+    "filesystem_available_bytes": 604537696256,
+    "project_training_processes": 0
+  },
+  "metrogs_six_scene_prerequisite": {
+    "wrapper_sha256": "296d5ecbaebb0dc2ad3a857192739a4101af4536cc073244848a5adf78b63113",
+    "negative_test_sha256": "50130f65e056a8ec7db612a02356d3207e1404da635f98145dd6ce024b587295",
+    "train_environment_has_torch_force_no_weights_only_load": false,
+    "merge_environment_has_torch_force_no_weights_only_load": false,
+    "conversion_environment_has_torch_force_no_weights_only_load": true,
+    "local_test": "PASS",
+    "remote_test": "PASS"
+  },
+  "execution_state": {
+    "training_started": false,
+    "method_specific_prior_generation_started": false,
+    "formal_lidar_evaluation_started": false,
+    "one_hundred_k_plan_started": false,
+    "other_four_scene_experiments_started": false
+  },
+  "independent_review": {
+    "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "verdict": "PENDING"
+  }
+}

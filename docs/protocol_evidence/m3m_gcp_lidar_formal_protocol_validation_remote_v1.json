@@ -1,0 +1,9 @@
+{
+  "contract_file_sha256": "9f0b0b32ff2ad038f20f0d63a6d1fcfe8445e8cda122cb504fbfa73466e50dcd",
+  "errors": [],
+  "execution_authorized": false,
+  "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+  "schema": "m3m_gcp_lidar_formal_protocol_validation_v1",
+  "split_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+  "status": "PASS"
+}
