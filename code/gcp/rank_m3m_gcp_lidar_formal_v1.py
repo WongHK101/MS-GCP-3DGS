@@ -154,7 +154,7 @@ def build_ranking(
             raise ValueError(f"{method_id}: method fields differ from artifact schema")
         if method.get("input_class") != method_classes[method_id]:
             raise ValueError(f"{method_id}: frozen input class mismatch")
-        if method.get("method_name") != registry_rows[method_id].get("method_name"):
+        if method.get("method_name") != registry_rows[method_id].get("display_name"):
             raise ValueError(f"{method_id}: frozen method name mismatch")
         scene_entries = method.get("scenes", [])
         if [entry.get("scene") for entry in scene_entries] != list(SCENES):

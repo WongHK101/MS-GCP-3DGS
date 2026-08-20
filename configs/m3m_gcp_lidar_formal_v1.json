@@ -284,7 +284,7 @@
     "artifact_schema_path": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
     "artifact_schema_sha256": "d1d61b3f5aedce82ad761b1a0f7891c5f8b4f23258b5c6cd8ee8c3795e18f420",
     "ranker_path": "code/gcp/rank_m3m_gcp_lidar_formal_v1.py",
-    "ranker_sha256": "54eb371db461db6cc668a909563fae495f01ad17391b4535cc3bc874d3ca9883",
+    "ranker_sha256": "a4a31d282b128d78e5f7cee149de4e969203a87cefb7fc5d5aedfb5b1dcf97ee",
     "launch_gate_path": "code/gcp/check_m3m_gcp_lidar_formal_launch.py",
     "launch_gate_sha256": "948fc1c76db14c711a0e6b7a8e46bb58744859e67f49587f2b2de2e770030996",
     "formal_methods_manifest_schema": "m3m_gcp_lidar_formal_methods_v1",

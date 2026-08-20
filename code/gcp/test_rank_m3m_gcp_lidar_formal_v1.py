@@ -28,8 +28,14 @@ class SixSceneRankerTest(unittest.TestCase):
         self.root = Path(self.temp.name)
         repo_root = Path(__file__).resolve().parents[2]
         self.schema = json.loads((repo_root / "configs" / "m3m_gcp_lidar_formal_artifact_schema_v1.json").read_text(encoding="utf-8"))
+        registry_path = repo_root / "configs" / "m3m_gcp_native_quarter_method_registry_v3.json"
+        self.registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        self.registry_names = {
+            row["method_id"]: row["display_name"] for row in self.registry["methods"]
+            if row["method_id"] in METHOD_CLASSES
+        }
         self.contract_sha, self.activation_sha = "c" * 64, "a" * 64
-        self.schema_sha, self.registry_sha = "s" * 64, "r" * 64
+        self.schema_sha, self.registry_sha = "s" * 64, sha256_file(registry_path)
         self.evaluator_sha, self.verifier_sha = "e" * 64, "v" * 64
         self.contract = {
             "implementation": {"evaluator_sha256": self.evaluator_sha, "verifier_sha256": self.verifier_sha, "artifact_schema_sha256": self.schema_sha},
@@ -37,10 +43,6 @@ class SixSceneRankerTest(unittest.TestCase):
         }
         self.activation = {"contract_file_sha256": self.contract_sha}
         self.activation["canonical_sha256"] = canonical_sha256(self.activation)
-        self.registry = {
-            "active_benchmark_method_ids": list(METHOD_CLASSES),
-            "methods": [{"method_id": key, "method_name": key, "input_class": value} for key, value in METHOD_CLASSES.items()],
-        }
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -52,7 +54,7 @@ class SixSceneRankerTest(unittest.TestCase):
             "contract_file_sha256": self.contract_sha, "activation_manifest_sha256": self.activation_sha,
             "scene_execution_authorization_sha256": "x" * 64, "formal_methods_manifest_sha256": "m" * 64,
             "protocol_manifest_canonical_sha256": "p" * 64, "scene": scene, "method_id": method_id,
-            "method": method_id, "input_class": METHOD_CLASSES[method_id],
+            "method": self.registry_names[method_id], "input_class": METHOD_CLASSES[method_id],
             "model_checkpoint_sha256": "1" * 64, "recipe_sha256": "2" * 64,
             "renderer_adapter_sha256": "3" * 64, "packet_manifest_sha256": "4" * 64,
             "surface_npz_sha256": "5" * 64, "distance_npz_sha256": "6" * 64,
@@ -103,7 +105,7 @@ class SixSceneRankerTest(unittest.TestCase):
                 scenes = [self.result_entry(method_id, scene, 0.7) for scene in SCENES[:-1]] + [self.incomplete_entry(SCENES[-1], "OOM_UNRANKED")]
             else:
                 scenes = [self.incomplete_entry(scene) for scene in SCENES]
-            methods.append({"method_id": method_id, "method_name": method_id, "input_class": METHOD_CLASSES[method_id], "scenes": scenes})
+            methods.append({"method_id": method_id, "method_name": self.registry_names[method_id], "input_class": METHOD_CLASSES[method_id], "scenes": scenes})
         payload = {"schema": "m3m_gcp_lidar_six_scene_results_manifest_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "methods": methods}
         payload["canonical_sha256"] = canonical_sha256(payload)
         return payload
