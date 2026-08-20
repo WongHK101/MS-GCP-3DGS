@@ -1,23 +1,25 @@
 {
   "schema": "m3m_gcp_lidar_v1_and_six_scene_preparation_closure_v1",
   "status": "PASS_READY_FOR_INDEPENDENT_REREVIEW_NO_EXECUTION_AUTHORIZED",
-  "recorded_at": "2026-08-21T03:46:38.0434028+08:00",
+  "recorded_at": "2026-08-21T04:45:00+08:00",
   "benchmark": {
-    "commit": "5930b6305fc8a3b768158c43c3dba559310f59d2",
-    "tree": "7b4a3d0b6d7765a9eb6a41f72664775504730515",
-    "local_worktree_clean_except_this_closure_evidence": true,
-    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/5930b6305fc8a3b768158c43c3dba559310f59d2/repo",
+    "implementation_commit": "91f8889ed138a6e858ba8fe0af49b943a44f8fd0",
+    "implementation_tree": "dd1535e32274245dadd475f531595af9388a6094",
+    "local_worktree_clean_before_evidence_capture": true,
+    "remote_checkout": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/91f8889ed138a6e858ba8fe0af49b943a44f8fd0/repo",
     "remote_checkout_clean": true,
-    "deployment_bundle_sha256": "b6436fcfa9044c23cc4e3c61f08d5a0280d09eba68d7a80d2f2b8f1ddc5d5474"
+    "deployment_bundle_sha256": "7da238ac198fdf86c7d80d4d61c54c2b11bb227f03f5b7d59fcd414ae425217c"
   },
   "protocol": {
     "id": "m3m_gcp_lidar_rendered_surface_v1",
     "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
     "execution_authorized": false,
     "contract_path": "configs/m3m_gcp_lidar_formal_v1.json",
-    "contract_sha256": "bb04c59876a5e7636b3300084153d090f04ce9d1edfbdf590c2b2e882c92aa49",
-    "local_validation_sha256": "c6251e0ef5a9bc1006305e2234d85e12b671289bce2a996740501c37d53a2705",
-    "remote_validation_sha256": "e2ba727c2f15cb805447862dedc4c2c615fd28b88cb10cde982657cffc83e18b",
+    "contract_sha256": "2b930ef353d77ddf5f30a139fa7ced7dcf0f4a4d003893df3bde7c7816194809",
+    "local_validation_path": "docs/protocol_evidence/m3m_gcp_lidar_formal_protocol_validation_v1.json",
+    "local_validation_sha256": "1c7bb5b889c9350fda05085a05f81f5addd05c9a999166cfa8968aa42da129bb",
+    "remote_validation_path": "docs/protocol_evidence/m3m_gcp_lidar_formal_protocol_validation_remote_v1.json",
+    "remote_validation_sha256": "5972cc1e042d1ad7e11537f0d05da9c6df3ad9ab06a56a314f7323988a265d94",
     "local_validation_status": "PASS",
     "remote_validation_status": "PASS"
   },
@@ -31,20 +33,26 @@
     "remote_manifest_path": "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_remote_v1.json",
     "remote_manifest_sha256": "139ee901f46ac8a356c2ae7927be8056dd95d171f1efa268432d1b4e1e228e8f",
     "remote_manifest_canonical_sha256": "1836e5343bf8f0b5f25e92c966fa825db41329c578342b5df1576a4d2d623926",
-    "file_sha_difference_reason": "Windows and Linux line endings differ; canonical payload SHA and all six normative scene identities match",
     "scene_manifest_canonical_sha256_match_count": 6,
     "scene_manifest_file_sha256_match_count": 6,
     "scene_logical_bytes_match_count": 6,
     "scene_view_counts_match_count": 6,
     "failures": []
   },
+  "actual_payload_byte_audit": {
+    "path": "docs/protocol_evidence/m3m_gcp_lidar_bound_payload_byte_audit_remote_v1.json",
+    "sha256": "5852ebbcc4577c24d746a93b4122ac49cd7a5c9e21c30ad1bc5b59db427bdf13",
+    "status": "PASS",
+    "lidar_inventory_verified": true,
+    "laz_files_verified": 9,
+    "scene_manifests_verified": 6,
+    "formal_train_model_files_verified": 18,
+    "formal_train_jpegs_verified": 5412,
+    "heldout_test_jpegs_read": false,
+    "errors": []
+  },
   "transfer": {
-    "missing_scenes_transferred": [
-      "gcp_5000_20260602",
-      "gcp_20000_20260602",
-      "gcp_10000_20260610",
-      "gcp_50000_20260610"
-    ],
+    "missing_scenes_transferred": ["gcp_5000_20260602", "gcp_20000_20260602", "gcp_10000_20260610", "gcp_50000_20260610"],
     "temporary_tar_bytes": 3831635456,
     "temporary_tar_sha256": "39d7f7048d3ab5b4313d864d0eda33e79d1e9653baa7110c1c4838b74de7d568",
     "temporary_tar_local_removed_after_remote_verification": true,
@@ -55,9 +63,6 @@
     "host": "autodl-container-f7964f8eb7-2cf79d95",
     "memory_limit_bytes": 2147483648,
     "gpu": "No devices found",
-    "filesystem_total_bytes": 1197222133760,
-    "filesystem_used_bytes": 592684437504,
-    "filesystem_available_bytes": 604537696256,
     "project_training_processes": 0
   },
   "metrogs_six_scene_prerequisite": {
@@ -70,20 +75,33 @@
     "remote_test": "PASS"
   },
   "formal_implementation_closure": {
-    "artifact_schema_sha256": "ad872d736acf7ab2a7208099acf81a18ae8cee6043bf325e4f4173bd9a1ceac0",
-    "evaluator_sha256": "92f20f863c88a6008d33e3460aec4f595abeef3a98ebda66f07087bc17912913",
-    "verifier_sha256": "c61ed444aaa10c979fab10547b8b2af8edae24311394b28fc490f954dc3fb014",
-    "ranker_sha256": "0edc9e5db279095fb41154cc0f0c6aa38303ba2f74c1a36b2e6d62a6b91a5f95",
-    "launch_gate_sha256": "1aab1f76b9f2203d35b0682ec5c25c8636e7530053b9c2bf74e316cc71203ab1",
+    "artifact_schema_sha256": "d1d61b3f5aedce82ad761b1a0f7891c5f8b4f23258b5c6cd8ee8c3795e18f420",
+    "evaluator_sha256": "4cb868dfcfab4a46a88b71e6da03e47ca6b9b31a25d8a553160af202c6c84e89",
+    "verifier_sha256": "1aa907eb5a4ec71f9d0269c1c43742468749b31d73f08018218ad489fef44570",
+    "ranker_sha256": "54eb371db461db6cc668a909563fae495f01ad17391b4535cc3bc874d3ca9883",
+    "launch_gate_sha256": "948fc1c76db14c711a0e6b7a8e46bb58744859e67f49587f2b2de2e770030996",
     "local_tests": {
-      "contract_and_identity_tests": "10/10 PASS",
+      "contract_and_identity_tests": "12/12 PASS",
+      "clean_git_launch_gate_tests": "6/6 PASS",
       "npz_metric_and_comparator_tests": "4/4 PASS",
-      "clean_git_launch_gate_tests": "2/2 PASS",
-      "six_scene_ranker_tests": "2/2 PASS",
+      "six_scene_ranker_tests": "4/4 PASS",
+      "total_unittests": "26/26 PASS",
       "numeric_core": "PASS"
     },
-    "remote_real_lidar_environment_tests": "same suites PASS; laspy pyproj scipy shapely real imports PASS",
-    "activation_gate": "candidate cannot execute; ACTIVE_FROZEN plus reviewed exact clean commit/tree activation is required before output creation"
+    "remote_real_lidar_environment_tests": "same 26/26 suites PASS; laspy pyproj scipy shapely real imports PASS",
+    "activation_gate": "candidate cannot execute; protocol activation plus a separately reviewed per-scene authorization binding the full ten-method manifest and output roots are both required before output creation"
+  },
+  "review_findings_closed": {
+    "actual_nine_laz_bytes_verified_before_output": true,
+    "selected_method_packet_bytes_keys_dtypes_shapes_and_train_split_verified_before_output": true,
+    "arbitrary_laz_directory_override_removed": true,
+    "six_formal_input_manifest_file_and_canonical_hashes_bound_in_contract": true,
+    "actual_formal_train_model_and_jpeg_bytes_rehashed": true,
+    "full_ordered_ten_method_manifest_required": true,
+    "per_scene_pre_result_review_authorization_required": true,
+    "ranker_rejects_arbitrary_method_pool": true,
+    "ranker_requires_hash_bound_pass_verifier_report_for_every_complete_scene": true,
+    "ranker_checks_full_result_identity_count_metric_and_array_hash_fields": true
   },
   "execution_state": {
     "training_started": false,
@@ -94,7 +112,7 @@
   },
   "independent_review": {
     "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
-    "prior_verdict": "REQUIRE_CHANGES_FORMAL_IMPLEMENTATION_AND_BYTE_IDENTITIES_NOT_FROZEN",
+    "prior_verdict": "REQUIRE_CHANGES_ACTUAL_BYTES_SELF_SIGNABLE_MANIFESTS_AND_UNVERIFIED_RANKER",
     "prior_findings_addressed": true,
     "verdict": "PENDING_REREVIEW"
   }
