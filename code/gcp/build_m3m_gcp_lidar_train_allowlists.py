@@ -75,10 +75,10 @@ def main() -> int:
         "rows": manifest_rows,
     }
     manifest["canonical_sha256"] = canonical_sha256(manifest)
-    args.manifest.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    with args.manifest.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(
+            json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        )
     print(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

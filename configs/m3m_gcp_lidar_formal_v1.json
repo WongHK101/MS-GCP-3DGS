@@ -179,7 +179,7 @@
     "pixel_convention": "zero_based_pixel_centers",
     "view_allowlist_source": "frozen_rgb_holdout_split_manifest",
     "view_allowlist_manifest_path": "configs/m3m_gcp_lidar_train_view_allowlists_v1.json",
-    "view_allowlist_manifest_file_sha256": "30e3e5f59de112939ae493f34eee0167ebff8d15c6b93a9ead5855877b7116e0",
+    "view_allowlist_manifest_file_sha256": "ea49ce0551d82eca7ebf376a335e90ebd0d9696feec219fe4bbffc7d8bfa14f8",
     "view_allowlist_manifest_canonical_sha256": "2deb3cc5eb76b2d14950bdd709d103283cf339aba4474836cee8633327c085ae",
     "view_role": "train",
     "all_train_views_required": true,

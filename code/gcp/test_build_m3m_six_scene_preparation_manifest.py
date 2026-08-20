@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
 
-from build_m3m_six_scene_preparation_manifest import materialization_provenance
+from build_m3m_six_scene_preparation_manifest import materialization_provenance, write_json
 
 
 class MaterializationProvenanceTest(unittest.TestCase):
@@ -28,6 +30,12 @@ class MaterializationProvenanceTest(unittest.TestCase):
     def test_malformed_field_fails_closed(self) -> None:
         with self.assertRaises(TypeError):
             materialization_provenance({"file_materialization": "hardlink"})
+
+    def test_evidence_json_is_lf_only_on_every_platform(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "evidence.json"
+            write_json(path, {"status": "PASS", "rows": [1, 2]})
+            self.assertNotIn(b"\r\n", path.read_bytes())
 
 
 if __name__ == "__main__":
