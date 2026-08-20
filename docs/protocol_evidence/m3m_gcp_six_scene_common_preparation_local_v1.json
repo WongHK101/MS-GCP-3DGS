@@ -1,0 +1,170 @@
+{
+  "builder_script_sha256": "a10b671105b8184482434e2ce005ac8e7864bc2d57e01b246876643adfc1595c",
+  "canonical_sha256": "a28eb71a5caf56ec0a9484f634001e507c19bc48c8de451a756b334fa16e7734",
+  "contract_file_sha256": "9f0b0b32ff2ad038f20f0d63a6d1fcfe8445e8cda122cb504fbfa73466e50dcd",
+  "failures": [],
+  "formal_evaluation": "NOT_STARTED",
+  "gpu_required_for_this_preparation": false,
+  "lidar_protocol_candidate_id": "m3m_gcp_lidar_rendered_surface_v1",
+  "materializer_script_sha256": "94622c8b55bb51c67607d6d4aa8c4ddb26559bc4f682b5856b65fb26ca7b9cd0",
+  "method_specific_prior_generation": "NOT_STARTED_REQUIRES_SEPARATE_SCENE_PLAN",
+  "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+  "repository_head": "09e7a9a8e954aa2535a9c561577cc5bf51de9a5b",
+  "scene_count": 6,
+  "scenes": [
+    {
+      "decoded_images_checked": false,
+      "file_count": 101,
+      "file_materialization": {
+        "mode": "legacy_manifest_field_absent",
+        "semantic_identity": "file bytes and manifest hashes are normative"
+      },
+      "full_views": 94,
+      "logical_bytes": 96900164,
+      "manifest_canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8",
+      "manifest_file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e",
+      "relative_path": "formal_inputs/gcp_3000_20260602",
+      "scene": "gcp_3000_20260602",
+      "source_image_manifest_file_sha256": "ef3d723b2076d84b35df8c1f65a4c0a35d8b7fccaeb2a9cf72bfd6b11f84312f",
+      "source_model_sha256": {
+        "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
+        "images.bin": "478d9bacff13d778cbeb0b616fdef044f4bf332ed97a940c037c0e61aff902eb",
+        "points3D.bin": "44f88eabb7e536416ff8bcf211b7c22f1bb6d2ca6eff2731099e771c97ca689f",
+        "points3D.ply": "fc9a8f52de12062bd363b5aa837230833ded1f239feb62accd7d1128f51ae81d"
+      },
+      "source_package_audit_file_sha256": "9f93a0aa10e94809ff98946f38986d1069007d5326123fcf734c7dd9bff348b3",
+      "test_views": 12,
+      "train_views": 82,
+      "verification": "PASS"
+    },
+    {
+      "decoded_images_checked": false,
+      "file_count": 108,
+      "file_materialization": {
+        "mode": "hardlink",
+        "semantic_identity": "file bytes are normative; hardlinks and copies are equivalent"
+      },
+      "full_views": 101,
+      "logical_bytes": 92531314,
+      "manifest_canonical_sha256": "4a7a7576b990e3af3ba7918792366106e63935bc3b433e75d5477e51ce568b99",
+      "manifest_file_sha256": "7a57cf1009a360695f87fd8a2f4f881e2892dd8b9562aa0cc5119257bb5c1e38",
+      "relative_path": "formal_inputs/gcp_5000_20260602",
+      "scene": "gcp_5000_20260602",
+      "source_image_manifest_file_sha256": "b71fb13a3e6a2fbde6fd1be7d3b2fd3547f45dae9a1c2a4edccc725b5f5ed615",
+      "source_model_sha256": {
+        "cameras.bin": "5ded391338025bfff03fccfc6e24f10937547287128323eb82073ba12f0ecd33",
+        "images.bin": "d0a34c0ea1558082125b2225ba0e84cb1abd7887f104672a261649630f45a6e8",
+        "points3D.bin": "6f3eaf1f210f17cb93f3846d5fe76f1ff017589bcae36fdc0eb5756b96e05e88",
+        "points3D.ply": "d671050c51ba7e66570721890c69392809636a16b070fa5e7045f00af78c545b"
+      },
+      "source_package_audit_file_sha256": "b6a781cf249df8df0a4914b7b7b4db2a7f31e39073a53dc2acd3e630b5ee41b3",
+      "test_views": 13,
+      "train_views": 88,
+      "verification": "PASS"
+    },
+    {
+      "decoded_images_checked": false,
+      "file_count": 305,
+      "file_materialization": {
+        "mode": "hardlink",
+        "semantic_identity": "file bytes are normative; hardlinks and copies are equivalent"
+      },
+      "full_views": 298,
+      "logical_bytes": 331339180,
+      "manifest_canonical_sha256": "1d305e78974c299c7e63cc7774ea6e63ac3f428511d5b85b4dd252790cd2e64c",
+      "manifest_file_sha256": "8dc444f767f5a65bc8612eacd1527077a9dcd457f7fe04ebd8bf2f683be71fa7",
+      "relative_path": "formal_inputs/gcp_20000_20260602",
+      "scene": "gcp_20000_20260602",
+      "source_image_manifest_file_sha256": "422846d825eff2a6930e4b49cfd99e0e214f2491be598461957442fc32c6235b",
+      "source_model_sha256": {
+        "cameras.bin": "3cc835de2f79a474c203acabe19fa12a16872625d86a280ab942be2fa147d5dc",
+        "images.bin": "2476d6d4b3369432a59ae72cc9b50e560c58fefab7824a9c5202d6d118672d25",
+        "points3D.bin": "2bdf219c457871211970a2c543a90d2530f7c888656e75550a03518dbec27435",
+        "points3D.ply": "86860f4ee80a458931bbb5f3267ad8ec2c6fb0a0602daf7d189b8bf35d523db2"
+      },
+      "source_package_audit_file_sha256": "bdb0abedacfd4ed6d3149aee2cda53ee540bae29e686fe0923b76527ee589a28",
+      "test_views": 38,
+      "train_views": 260,
+      "verification": "PASS"
+    },
+    {
+      "decoded_images_checked": false,
+      "file_count": 983,
+      "file_materialization": {
+        "mode": "hardlink",
+        "semantic_identity": "file bytes are normative; hardlinks and copies are equivalent"
+      },
+      "full_views": 976,
+      "logical_bytes": 938069616,
+      "manifest_canonical_sha256": "e9b8a74348e8935ad022e35a48c5734d668862e020505dc751f7821b0fc29124",
+      "manifest_file_sha256": "3b8e25a46916c26a793d51d39e8c2a0cdcac9b36c9a7a2fa554792e92b886249",
+      "relative_path": "formal_inputs/gcp_10000_20260610",
+      "scene": "gcp_10000_20260610",
+      "source_image_manifest_file_sha256": "8a0ec6c358a9bcda3536e9d95e38bb8a0c547666aa6256a93141ba613eb109dc",
+      "source_model_sha256": {
+        "cameras.bin": "cf65356f975fc40138b269cb3900e1e7aa3ab6d0c8ac3a6571a7b07cdd0b9b6f",
+        "images.bin": "d969db0062f936f7af1e1a11ec70959127e9d368d855b643a4bfb51c20e7ba70",
+        "points3D.bin": "9cf0b7dc47234d8d9cbc8e85fbc9ae41ae376f2147d8c8e8402005a6e9940d22",
+        "points3D.ply": "497ef1d923cdfd906dac1273bc353a7add15bfcaf35c48b5533baf52c5fdf288"
+      },
+      "source_package_audit_file_sha256": "fac4f8fbd7d8bbd64b037491bc6a46db5f162cd87e56a6450ada519092bf9f9e",
+      "test_views": 122,
+      "train_views": 854,
+      "verification": "PASS"
+    },
+    {
+      "decoded_images_checked": false,
+      "file_count": 2215,
+      "file_materialization": {
+        "mode": "hardlink",
+        "semantic_identity": "file bytes are normative; hardlinks and copies are equivalent"
+      },
+      "full_views": 2208,
+      "logical_bytes": 2509674220,
+      "manifest_canonical_sha256": "0679bc78d3c6c1e426692c5d19d5b10f2355f42d34d21221970c8e0f96b85c27",
+      "manifest_file_sha256": "35734cdcb94766fcad7bfcdf461e715b4266e98f16b426effd50126ffa9c27e1",
+      "relative_path": "formal_inputs/gcp_50000_20260610",
+      "scene": "gcp_50000_20260610",
+      "source_image_manifest_file_sha256": "007a1a57217655e7fe231af655c62e0cbbec9f69d31b3f9abe9e92f8b2896928",
+      "source_model_sha256": {
+        "cameras.bin": "2df106e8d209e8b8e9850c9059edb3aad79dfff7634c16d4be069244a9e04576",
+        "images.bin": "09990fa9f93d519728fe9e1c568882a932e25c06a00eac333ff08ac64cc8b617",
+        "points3D.bin": "0d98402f86696b475ff85cb4b4c0cc4c7b30d1dfb417a3d9d976f597dd4628ae",
+        "points3D.ply": "17762f2fc4a60eabc23dab8358a9fbea1e99e4406ff60126c70bbb3401a7ceaa"
+      },
+      "source_package_audit_file_sha256": "ba182f50a9bc0e0c4c0f9b794af39efbbaf945cdfda1229f17cce5cdbd9f4cd0",
+      "test_views": 276,
+      "train_views": 1932,
+      "verification": "PASS"
+    },
+    {
+      "decoded_images_checked": false,
+      "file_count": 2517,
+      "file_materialization": {
+        "mode": "hardlink",
+        "semantic_identity": "file bytes are normative; hardlinks and copies are equivalent"
+      },
+      "full_views": 2510,
+      "logical_bytes": 2877514339,
+      "manifest_canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+      "manifest_file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+      "relative_path": "formal_inputs/gcp_100000_20260610",
+      "scene": "gcp_100000_20260610",
+      "source_image_manifest_file_sha256": "8a34b8f973b9ca0efb92b5df95164a1e4d3bb6ec56452e0bfaf873b021168afb",
+      "source_model_sha256": {
+        "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+        "images.bin": "57163927bceee6ca330c113c9caf06cafe1a84a7ca21ac0f055680dcbe8eff6e",
+        "points3D.bin": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+        "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+      },
+      "source_package_audit_file_sha256": "3c883378e93593328dcf4d864d3aa0d7795e67e24b3f3a2c9c47986626cffe9d",
+      "test_views": 314,
+      "train_views": 2196,
+      "verification": "PASS"
+    }
+  ],
+  "schema": "m3m_gcp_six_scene_common_preparation_manifest_v1",
+  "status": "PASS_COMMON_SCENE_PREPARATION_NO_TRAINING",
+  "training_started": false
+}

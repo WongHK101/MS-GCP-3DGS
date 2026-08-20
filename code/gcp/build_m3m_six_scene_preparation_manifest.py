@@ -16,7 +16,6 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from materialize_gs_gcp_native_quarter_inputs import (  # noqa: E402
-    canonical_sha256,
     sha256_file,
     verify_materialization,
 )
@@ -33,6 +32,24 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 def inventory(root: Path) -> tuple[int, int]:
     files = [path for path in root.rglob("*") if path.is_file()]
     return len(files), sum(path.stat().st_size for path in files)
+
+
+def materialization_provenance(manifest: dict[str, Any]) -> dict[str, str]:
+    """Normalize optional physical-layout provenance without changing identity.
+
+    The earliest formal 3K manifest predates this informational field.  Its
+    complete file inventory and hashes remain normative, so absence must not
+    invalidate an otherwise byte-identical formal input.
+    """
+    value = manifest.get("file_materialization")
+    if value is None:
+        return {
+            "mode": "legacy_manifest_field_absent",
+            "semantic_identity": "file bytes and manifest hashes are normative",
+        }
+    if not isinstance(value, dict):
+        raise TypeError("file_materialization must be an object when present")
+    return value
 
 
 def main() -> int:
@@ -90,7 +107,7 @@ def main() -> int:
                 "full_views": actual_counts[0],
                 "train_views": actual_counts[1],
                 "test_views": actual_counts[2],
-                "file_materialization": manifest["file_materialization"],
+                "file_materialization": materialization_provenance(manifest),
                 "file_count": file_count,
                 "logical_bytes": logical_bytes,
                 "decoded_images_checked": verification["decoded_images_checked"],
