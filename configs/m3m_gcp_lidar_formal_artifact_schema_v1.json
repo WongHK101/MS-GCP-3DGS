@@ -23,9 +23,13 @@
     "required_view_set": "exactly all train_image_names for the scene in configs/gs_gcp_rgb_holdout_split_manifest_v1.json",
     "view_order_for_hashing": "lexicographic image_name order",
     "packet_npz": {
+      "keys_exact": ["accumulated_alpha", "weighted_camera_z_sum", "weighted_camera_z_second_moment", "weighted_inverse_camera_z_sum", "alpha_normalized_expected_camera_z", "alpha_normalized_expected_inverse_camera_z", "harmonic_camera_z", "camera_z_variance", "metric_depth_valid_mask", "historical_invalid_unnormalized_inverse_depth"],
       "alpha_normalized_expected_camera_z": {"dtype": "float32", "shape": ["camera_height", "camera_width"], "unit": "frozen COLMAP camera-z units"},
       "accumulated_alpha": {"dtype": "float32", "shape": ["camera_height", "camera_width"], "unit": "dimensionless"},
-      "metric_depth_valid_mask": {"dtype": "bool", "shape": ["camera_height", "camera_width"], "unit": "boolean"}
+      "metric_depth_valid_mask": {"dtype": "bool", "shape": ["camera_height", "camera_width"], "unit": "boolean"},
+      "all_other_arrays_dtype": "float32",
+      "all_arrays_shape": ["camera_height", "camera_width"],
+      "depth_index_fields_required": ["image_name", "split", "width", "height", "packet_path", "packet_bytes", "packet_sha256", "dtype", "tensor_names"]
     }
   },
   "formal_methods_manifest": {
@@ -33,6 +37,12 @@
     "top_level_required": ["schema", "protocol_id", "scene", "methods", "canonical_sha256"],
     "method_fields_exact": ["method_id", "method_name", "input_class", "run_root", "model_checkpoint_path", "model_checkpoint_sha256", "recipe_path", "recipe_sha256", "renderer_adapter_path", "renderer_adapter_sha256", "packet_manifest_path", "packet_manifest_sha256"],
     "method_ids": ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof", "citygaussian_v2", "citygs_x", "metrogs"],
+    "canonical_sha256_required": true
+  },
+  "scene_execution_authorization": {
+    "schema": "m3m_gcp_lidar_scene_execution_authorization_v1",
+    "required_fields_exact": ["schema", "protocol_id", "scene", "review_task_id", "review_verdict", "execution_authorized", "contract_file_sha256", "activation_manifest_sha256", "artifact_schema_sha256", "formal_input_manifest_file_sha256", "formal_input_manifest_canonical_sha256", "methods_manifest_file_sha256", "methods_manifest_canonical_sha256", "benchmark_commit", "benchmark_tree", "authorized_output_roots", "canonical_sha256"],
+    "authorized_output_roots": "exact map from every frozen method_id to one fresh absolute output root",
     "canonical_sha256_required": true
   },
   "reference_npz": {
@@ -56,9 +66,16 @@
   },
   "method_result_json": {
     "schema": "m3m_gcp_lidar_method_result_v1",
-    "required_identity_fields": ["protocol_id", "contract_file_sha256", "activation_manifest_sha256", "scene", "method_id", "input_class", "protocol_manifest_canonical_sha256", "model_checkpoint_sha256", "recipe_sha256", "renderer_adapter_sha256", "packet_manifest_sha256", "surface_npz_sha256", "distance_npz_sha256", "reference_npz_sha256", "evaluator_sha256", "verifier_sha256", "artifact_schema_sha256"],
+    "top_level_fields_exact": ["schema", "protocol_id", "contract_file_sha256", "activation_manifest_sha256", "scene_execution_authorization_sha256", "formal_methods_manifest_sha256", "protocol_manifest_canonical_sha256", "scene", "method_id", "method", "input_class", "model_checkpoint_sha256", "recipe_sha256", "renderer_adapter_sha256", "packet_manifest_sha256", "surface_npz_sha256", "distance_npz_sha256", "reference_npz_sha256", "evaluator_sha256", "verifier_sha256", "artifact_schema_sha256", "train_view_count", "reference_point_count", "reconstruction_point_count", "reconstruction_to_lidar_distance_count", "lidar_to_reconstruction_distance_count", "surface_audit", "metrics", "summary_row", "canonical_sha256"],
+    "required_identity_fields": ["protocol_id", "contract_file_sha256", "activation_manifest_sha256", "scene_execution_authorization_sha256", "formal_methods_manifest_sha256", "scene", "method_id", "input_class", "protocol_manifest_canonical_sha256", "model_checkpoint_sha256", "recipe_sha256", "renderer_adapter_sha256", "packet_manifest_sha256", "surface_npz_sha256", "distance_npz_sha256", "reference_npz_sha256", "evaluator_sha256", "verifier_sha256", "artifact_schema_sha256"],
     "required_count_fields": ["train_view_count", "reference_point_count", "reconstruction_point_count", "reconstruction_to_lidar_distance_count", "lidar_to_reconstruction_distance_count"],
     "metric_fields_exact": ["accuracy_mean_m", "accuracy_median_m", "accuracy_p95_m", "completeness_mean_m", "completeness_median_m", "completeness_p95_m", "chamfer_l1_mean_m", "symmetric_rmse_m", "precision_5cm", "recall_5cm", "fscore_5cm", "precision_10cm", "recall_10cm", "fscore_10cm", "precision_20cm", "recall_20cm", "fscore_20cm"],
+    "canonical_sha256_required": true
+  },
+  "method_verification_report_json": {
+    "schema": "m3m_gcp_lidar_formal_verification_v1",
+    "required_fields_exact": ["schema", "protocol_id", "status", "method_id", "scene", "method_result_sha256", "contract_file_sha256", "activation_manifest_sha256", "scene_execution_authorization_sha256", "formal_methods_manifest_sha256", "artifact_schema_sha256", "evaluator_sha256", "verifier_sha256", "surface_npz_sha256", "distance_npz_sha256", "reference_npz_sha256", "reconstruction_to_lidar_distance_count", "lidar_to_reconstruction_distance_count", "errors", "recomputed_metrics", "canonical_sha256"],
+    "required_status": "PASS_VERIFIED_FORMAL_V1",
     "canonical_sha256_required": true
   },
   "scene_batch_result_json": {
@@ -76,8 +93,9 @@
   "six_scene_results_manifest": {
     "schema": "m3m_gcp_lidar_six_scene_results_manifest_v1",
     "method_fields_exact": ["method_id", "method_name", "input_class", "scenes"],
-    "scene_entry_fields_exact": ["scene", "status", "method_result_path", "method_result_sha256"],
-    "failed_scene_rule": "method_result_path and method_result_sha256 must both be null; never impute a metric",
+    "scene_entry_fields_exact": ["scene", "status", "method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256"],
+    "failed_scene_rule": "all four result/report path and SHA fields must be null; never impute a metric",
+    "complete_scene_rule": "result and independent PASS verification report path/SHA pairs are mandatory",
     "canonical_sha256_required": true
   },
   "lightweight_archive_manifest": {

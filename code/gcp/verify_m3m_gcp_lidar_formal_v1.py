@@ -202,10 +202,23 @@ def validate_archive_manifest(path: Path, root: Path) -> list[str]:
     return errors
 
 
-def verify_method_result(*, result_path: Path, reference_path: Path, schema_path: Path) -> dict[str, Any]:
+def verify_method_result(
+    *,
+    result_path: Path,
+    reference_path: Path,
+    schema_path: Path,
+    contract_path: Path,
+    activation_path: Path,
+    scene_authorization_path: Path,
+    methods_path: Path,
+) -> dict[str, Any]:
     errors: list[str] = []
     result = json.loads(result_path.read_text(encoding="utf-8"))
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    activation = json.loads(activation_path.read_text(encoding="utf-8"))
+    scene_authorization = json.loads(scene_authorization_path.read_text(encoding="utf-8"))
+    methods = json.loads(methods_path.read_text(encoding="utf-8"))
     method_dir = result_path.parent
     surface_path = method_dir / "surface_voxel_centres_local_metric.npz"
     distance_path = method_dir / "nearest_neighbor_distances.npz"
@@ -226,6 +239,15 @@ def verify_method_result(*, result_path: Path, reference_path: Path, schema_path
         errors.append("method result protocol mismatch")
     if result.get("canonical_sha256") != canonical_sha256(result):
         errors.append("method result canonical SHA mismatch")
+    expected_top_level = set(schema.get("method_result_json", {}).get("top_level_fields_exact", []))
+    if set(result) != expected_top_level:
+        errors.append("method result top-level field inventory mismatch")
+    for field in schema.get("method_result_json", {}).get("required_identity_fields", []):
+        if not result.get(field):
+            errors.append(f"missing result identity: {field}")
+    for field in schema.get("method_result_json", {}).get("required_count_fields", []):
+        if field not in result:
+            errors.append(f"missing result count: {field}")
     if set(result.get("metrics", {})) != set(METRIC_FIELDS):
         errors.append("method metric field inventory mismatch")
     if result.get("surface_npz_sha256") != sha256_file(surface_path):
@@ -236,6 +258,45 @@ def verify_method_result(*, result_path: Path, reference_path: Path, schema_path
         errors.append("reference NPZ SHA mismatch")
     if result.get("artifact_schema_sha256") != sha256_file(schema_path):
         errors.append("artifact schema SHA mismatch")
+    if result.get("contract_file_sha256") != sha256_file(contract_path):
+        errors.append("contract SHA mismatch")
+    if result.get("activation_manifest_sha256") != sha256_file(activation_path):
+        errors.append("activation SHA mismatch")
+    if result.get("scene_execution_authorization_sha256") != sha256_file(scene_authorization_path):
+        errors.append("scene authorization SHA mismatch")
+    if result.get("formal_methods_manifest_sha256") != sha256_file(methods_path):
+        errors.append("formal methods manifest SHA mismatch")
+    if activation.get("canonical_sha256") != canonical_sha256(activation):
+        errors.append("activation canonical SHA mismatch")
+    if scene_authorization.get("canonical_sha256") != canonical_sha256(scene_authorization):
+        errors.append("scene authorization canonical SHA mismatch")
+    if methods.get("canonical_sha256") != canonical_sha256(methods):
+        errors.append("methods manifest canonical SHA mismatch")
+    if result.get("scene") != scene_authorization.get("scene") or result.get("scene") != methods.get("scene"):
+        errors.append("scene identity differs across result/authorization/methods")
+    method_row = next(
+        (row for row in methods.get("methods", []) if row.get("method_id") == result.get("method_id")),
+        None,
+    )
+    if method_row is None:
+        errors.append("result method absent from formal methods manifest")
+    else:
+        for result_field, method_field in (
+            ("input_class", "input_class"),
+            ("model_checkpoint_sha256", "model_checkpoint_sha256"),
+            ("recipe_sha256", "recipe_sha256"),
+            ("renderer_adapter_sha256", "renderer_adapter_sha256"),
+            ("packet_manifest_sha256", "packet_manifest_sha256"),
+        ):
+            if result.get(result_field) != method_row.get(method_field):
+                errors.append(f"result/methods mismatch: {result_field}")
+    implementation = contract.get("implementation", {})
+    if result.get("evaluator_sha256") != implementation.get("evaluator_sha256"):
+        errors.append("evaluator SHA differs from contract")
+    if result.get("verifier_sha256") != implementation.get("verifier_sha256"):
+        errors.append("verifier SHA differs from contract")
+    if result.get("artifact_schema_sha256") != implementation.get("artifact_schema_sha256"):
+        errors.append("artifact-schema SHA differs from contract")
     if schema.get("protocol_id") != PROTOCOL_ID:
         errors.append("artifact schema protocol mismatch")
     counts = {
@@ -251,14 +312,30 @@ def verify_method_result(*, result_path: Path, reference_path: Path, schema_path
     for field in METRIC_FIELDS:
         if not np.isclose(float(result.get("metrics", {}).get(field, np.nan)), recomputed[field], atol=1e-12, rtol=0):
             errors.append(f"metric mismatch: {field}")
-    return {
+    report = {
+        "schema": "m3m_gcp_lidar_formal_verification_v1",
+        "protocol_id": PROTOCOL_ID,
         "status": "PASS_VERIFIED_FORMAL_V1" if not errors else "FAIL",
         "method_id": result.get("method_id"),
         "scene": result.get("scene"),
+        "method_result_sha256": sha256_file(result_path),
+        "contract_file_sha256": sha256_file(contract_path),
+        "activation_manifest_sha256": sha256_file(activation_path),
+        "scene_execution_authorization_sha256": sha256_file(scene_authorization_path),
+        "formal_methods_manifest_sha256": sha256_file(methods_path),
+        "artifact_schema_sha256": sha256_file(schema_path),
+        "evaluator_sha256": result.get("evaluator_sha256"),
+        "verifier_sha256": sha256_file(Path(__file__).resolve()),
+        "surface_npz_sha256": sha256_file(surface_path),
+        "distance_npz_sha256": sha256_file(distance_path),
+        "reference_npz_sha256": sha256_file(reference_path),
+        "reconstruction_to_lidar_distance_count": len(accuracy),
+        "lidar_to_reconstruction_distance_count": len(completeness),
         "errors": errors,
         "recomputed_metrics": recomputed,
-        "distance_npz_sha256": sha256_file(distance_path),
     }
+    report["canonical_sha256"] = canonical_sha256(report)
+    return report
 
 
 def main() -> int:
@@ -266,15 +343,21 @@ def main() -> int:
     parser.add_argument("--result", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--artifact-schema", type=Path, required=True)
+    parser.add_argument("--contract", type=Path, required=True)
+    parser.add_argument("--activation", type=Path, required=True)
+    parser.add_argument("--scene-authorization", type=Path, required=True)
+    parser.add_argument("--methods", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     report = verify_method_result(
         result_path=args.result.resolve(),
         reference_path=args.reference.resolve(),
         schema_path=args.artifact_schema.resolve(),
+        contract_path=args.contract.resolve(),
+        activation_path=args.activation.resolve(),
+        scene_authorization_path=args.scene_authorization.resolve(),
+        methods_path=args.methods.resolve(),
     )
-    report["verifier_sha256"] = sha256_file(Path(__file__).resolve())
-    report["canonical_sha256"] = canonical_sha256(report)
     rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.output:
         if args.output.exists():

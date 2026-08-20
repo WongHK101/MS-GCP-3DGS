@@ -100,6 +100,22 @@ class LidarFormalContractTest(unittest.TestCase):
         self.assertTrue(any("no-overwrite" in item for item in errors))
         self.assertTrue(any("exact clean commit" in item for item in errors))
 
+    def test_rejects_formal_input_or_laz_byte_binding_changes(self) -> None:
+        mutated = copy.deepcopy(self.contract)
+        mutated["formal_input_binding"]["scene_manifests"]["gcp_100000_20260610"]["file_sha256"] = "0" * 64
+        mutated["lidar_source"]["laz_files_exact"]["lidars/terra_laz_1_4/cloud0.laz"]["bytes"] += 1
+        errors = validate_contract(mutated, self.split)
+        self.assertTrue(any("formal input manifest" in item for item in errors))
+        self.assertTrue(any("nine-LAZ" in item for item in errors))
+
+    def test_rejects_packet_scene_authorization_or_verifier_gate_changes(self) -> None:
+        mutated = copy.deepcopy(self.contract)
+        mutated["launch_policy"]["scene_plan_review_required"] = False
+        mutated["launch_policy"]["selected_method_packet_bytes_must_be_verified_before_output"] = False
+        errors = validate_contract(mutated, self.split)
+        self.assertTrue(any("scene_plan_review_required" in item for item in errors))
+        self.assertTrue(any("selected_method_packet_bytes" in item for item in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

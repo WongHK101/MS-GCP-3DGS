@@ -39,6 +39,31 @@ EXPECTED_METHOD_CLASSES = {
     "citygs_x": "rgb_colmap_external_geometry_prior",
     "metrogs": "rgb_colmap_external_geometry_prior",
 }
+EXPECTED_FORMAL_INPUTS = {
+    "gcp_3000_20260602": ("ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e", "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8"),
+    "gcp_5000_20260602": ("7a57cf1009a360695f87fd8a2f4f881e2892dd8b9562aa0cc5119257bb5c1e38", "4a7a7576b990e3af3ba7918792366106e63935bc3b433e75d5477e51ce568b99"),
+    "gcp_20000_20260602": ("8dc444f767f5a65bc8612eacd1527077a9dcd457f7fe04ebd8bf2f683be71fa7", "1d305e78974c299c7e63cc7774ea6e63ac3f428511d5b85b4dd252790cd2e64c"),
+    "gcp_10000_20260610": ("3b8e25a46916c26a793d51d39e8c2a0cdcac9b36c9a7a2fa554792e92b886249", "e9b8a74348e8935ad022e35a48c5734d668862e020505dc751f7821b0fc29124"),
+    "gcp_50000_20260610": ("35734cdcb94766fcad7bfcdf461e715b4266e98f16b426effd50126ffa9c27e1", "0679bc78d3c6c1e426692c5d19d5b10f2355f42d34d21221970c8e0f96b85c27"),
+    "gcp_100000_20260610": ("c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d", "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d"),
+}
+EXPECTED_LAZ = {
+    "lidars/terra_laz_1_4/cloud0.laz": (851011162, "a3828d6ca693219974f7c035983a023a5b0233a852b144119357e048b76aa516"),
+    "lidars/terra_laz_1_4/cloud1.laz": (679843190, "717886fd32a6c6eeabd0fe86633f71bde25f3309811eac99e91c5cdee657179f"),
+    "lidars/terra_laz_1_4/cloud2.laz": (337330794, "13e5d16b22e1172f94ab345f6786daa2b8649e1fa883fbc0d536b55e17c52a9e"),
+    "lidars/terra_laz_1_4/cloud3.laz": (544251683, "31f6296ba830bfc4598c5c0ac95479b98a229ce919df1dc6640bd712b3541061"),
+    "lidars/terra_laz_1_4/cloud4.laz": (189672787, "66a20a9ec17493cf22f48ec7ccffc6952f577e48aaeb6897b1678718f50f30dd"),
+    "lidars/terra_laz_1_4/cloud5.laz": (291678006, "35a1775abd16d059d6b4c13e0976c4e4079250f60d3d7b02785a8f4e290b5966"),
+    "lidars/terra_laz_1_4/cloud6.laz": (487722156, "9f6c9372c8202c6cb8b4b48acb6c7e4e9918f1cc47424df3110445d4b9e9f99f"),
+    "lidars/terra_laz_1_4/cloud7.laz": (259018961, "73b3394c4ae62eea20e16c73beb07f2327ff4b6057e6ec64cf5a2c61b747e137"),
+    "lidars/terra_laz_1_4/cloud8.laz": (224786263, "320f8610869a82618227bc47b50452e3c0c563b4412dec3caecadc2886abdbd6"),
+}
+EXPECTED_PACKET_KEYS = [
+    "accumulated_alpha", "weighted_camera_z_sum", "weighted_camera_z_second_moment",
+    "weighted_inverse_camera_z_sum", "alpha_normalized_expected_camera_z",
+    "alpha_normalized_expected_inverse_camera_z", "harmonic_camera_z", "camera_z_variance",
+    "metric_depth_valid_mask", "historical_invalid_unnormalized_inverse_depth",
+]
 
 
 def sha256_file(path: Path) -> str:
@@ -75,6 +100,13 @@ def validate_contract(
     require(source.get("release_root_digest_sha256") == "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75", "release digest mismatch")
     require(split.get("manifest_sha256") == source.get("split_manifest_canonical_sha256"), "split canonical identity mismatch")
     require(split.get("release_root_digest") == source.get("release_root_digest_sha256"), "split release mismatch")
+    formal_inputs = contract.get("formal_input_binding", {})
+    require(formal_inputs.get("source_model_files_exact") == ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"], "formal input source-model inventory mismatch")
+    actual_input_bindings = {
+        scene: (row.get("file_sha256"), row.get("canonical_sha256"))
+        for scene, row in formal_inputs.get("scene_manifests", {}).items()
+    }
+    require(actual_input_bindings == EXPECTED_FORMAL_INPUTS, "formal input manifest byte/canonical bindings mismatch")
 
     geometry = contract.get("source_geometry_binding", {})
     require(geometry.get("release_pin_path") == "configs/m3m_gcp_native_quarter_protocol_release_v2.json", "geometry release-pin path mismatch")
@@ -113,6 +145,11 @@ def validate_contract(
     require(lidar.get("training_access") == "FORBIDDEN_EVALUATION_ONLY", "LiDAR training boundary weakened")
     require(lidar.get("method_specific_reference_selection") is False, "method-specific reference selection enabled")
     require(lidar.get("normal_minus_ellipsoid_m") == 23.980600991639484, "vertical datum bridge changed")
+    actual_laz = {
+        relative: (row.get("bytes"), row.get("sha256"))
+        for relative, row in lidar.get("laz_files_exact", {}).items()
+    }
+    require(actual_laz == EXPECTED_LAZ, "exact nine-LAZ byte bindings mismatch")
 
     registration = contract.get("registration", {})
     for key in ("method_specific_sim3_refit", "method_specific_icp", "result_dependent_alignment"):
@@ -202,6 +239,14 @@ def validate_contract(
     require(launch.get("formal_output_root_must_not_exist") is True, "formal no-overwrite gate disabled")
     require(launch.get("resume_or_overwrite_formal_result") == "FORBIDDEN", "formal overwrite/resume enabled")
     require(launch.get("quality_threshold_early_stop") is False, "launch quality-threshold early stop enabled")
+    require(launch.get("scene_execution_authorization_schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene execution authorization schema changed")
+    for key in (
+        "scene_plan_review_required", "full_ten_method_manifest_required_before_result",
+        "scene_authorization_must_bind_methods_manifest_file_and_canonical_sha256",
+        "selected_method_packet_bytes_must_be_verified_before_output",
+        "lidar_laz_bytes_must_be_verified_before_output",
+    ):
+        require(launch.get(key) is True, f"launch evidence gate disabled: {key}")
 
     schema_path = repo_root / str(implementation.get("artifact_schema_path", "__missing__"))
     if schema_path.is_file():
@@ -211,7 +256,12 @@ def validate_contract(
         require(schema.get("distance_npz", {}).get("keys_exact") == ["reconstruction_to_lidar_m", "lidar_to_reconstruction_m"], "distance NPZ keys changed")
         require(schema.get("distance_npz", {}).get("reconstruction_to_lidar_m", {}).get("dtype") == "float64", "distance dtype changed")
         require(schema.get("formal_methods_manifest", {}).get("schema") == "m3m_gcp_lidar_formal_methods_v1", "formal methods artifact schema changed")
+        require(schema.get("formal_methods_manifest", {}).get("method_ids") == list(EXPECTED_METHOD_CLASSES), "formal methods exact pool changed")
+        require(schema.get("depth_packet_manifest", {}).get("packet_npz", {}).get("keys_exact") == EXPECTED_PACKET_KEYS, "packet NPZ exact keys changed")
+        require(schema.get("scene_execution_authorization", {}).get("schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene authorization artifact schema changed")
+        require(schema.get("method_verification_report_json", {}).get("required_status") == "PASS_VERIFIED_FORMAL_V1", "independent verification PASS requirement changed")
         require(schema.get("six_scene_results_manifest", {}).get("schema") == "m3m_gcp_lidar_six_scene_results_manifest_v1", "six-scene results manifest schema changed")
+        require(schema.get("six_scene_results_manifest", {}).get("scene_entry_fields_exact") == ["scene", "status", "method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256"], "ranking verifier-evidence binding changed")
         require(schema.get("method_result_json", {}).get("metric_fields_exact") == metrics.get("machine_readable_diagnostics"), "method-result metric schema changed")
         comparator = schema.get("ranking_comparator", {})
         require(comparator.get("numeric_tolerance") == 1e-9, "artifact ranking tolerance changed")

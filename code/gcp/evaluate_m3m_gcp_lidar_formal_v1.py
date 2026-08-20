@@ -468,8 +468,8 @@ def validate_packet_manifest(
         raise ValueError(f"packet manifest contract mismatch: {mismatch}")
     if int(payload.get("rendered_view_count", -1)) != len(expected_image_names):
         raise ValueError("packet count differs from the frozen all-train-view allowlist")
-    if payload.get("camera_sets") not in {"train", "frozen_evaluation_allowlist"}:
-        raise ValueError("formal v1 requires frozen training-view packets")
+    if payload.get("camera_sets") != "train":
+        raise ValueError("formal v1 requires exact training-view packets")
     packet_names = tuple(sorted(str(row["image_name"]) for row in payload.get("depth_index", [])))
     if packet_names != expected_image_names:
         raise ValueError("packet image names differ from the frozen scene train-view allowlist")
@@ -517,7 +517,9 @@ def build_reconstruction(
             raise ValueError(f"packet image absent from frozen COLMAP model: {image_name}")
         image = images[image_name]
         camera = cameras[image.camera_id]
-        packet_path = packets_dir / Path(str(entry["packet_path"])).name
+        packet_path = Path(str(entry["packet_path"])).resolve()
+        if packet_path.parent != packets_dir.resolve():
+            raise ValueError(f"packet path escapes frozen packet directory: {packet_path}")
         with np.load(packet_path, allow_pickle=False) as packet:
             depth = packet[PRIMARY_DEPTH][::pixel_stride, ::pixel_stride]
             alpha = packet["accumulated_alpha"][::pixel_stride, ::pixel_stride]
@@ -657,17 +659,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lidar-inventory", type=Path, required=True)
     parser.add_argument("--scene", required=True)
     parser.add_argument("--lidar-root", type=Path, required=True)
-    parser.add_argument(
-        "--laz-dir",
-        type=Path,
-        help="Optional LAZ directory override; defaults to lidar-root/lidars/terra_laz_1_4.",
-    )
     parser.add_argument("--colmap-model", type=Path, required=True)
     parser.add_argument("--gcp-csv", type=Path, required=True)
     parser.add_argument("--sim3-json", type=Path, required=True)
     parser.add_argument("--methods-json", type=Path, required=True)
+    parser.add_argument("--scene-authorization", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--method-id", action="append", default=[])
+    parser.add_argument("--method-id", required=True)
     parser.add_argument("--roi-buffer-m", type=float, default=8.0)
     parser.add_argument("--normal-minus-ellipsoid-m", type=float, default=23.980600991639484)
     parser.add_argument("--alpha-min", type=float, default=0.5)
@@ -692,6 +690,7 @@ def main() -> None:
     registry_path = args.registry.resolve()
     sim3_path = args.sim3_json.resolve()
     methods_path = args.methods_json.resolve()
+    scene_authorization_path = args.scene_authorization.resolve()
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     launch_errors = validate_launch(
         repo=repo,
@@ -704,10 +703,13 @@ def main() -> None:
         formal_input_root=args.formal_input_root.resolve(),
         colmap_model=args.colmap_model.resolve(),
         lidar_inventory_path=args.lidar_inventory.resolve(),
+        lidar_root=args.lidar_root.resolve(),
         gcp_path=args.gcp_csv.resolve(),
         sim3_path=sim3_path,
         methods_path=methods_path,
+        scene_authorization_path=scene_authorization_path,
         scene=args.scene,
+        selected_method_id=args.method_id,
         output_root=args.output_root,
     )
     if launch_errors:
@@ -747,11 +749,7 @@ def main() -> None:
         raise ValueError(f"runtime values differ from formal contract: {changed}")
     numeric_self_test = run_numeric_self_tests(args.reference_voxel_m)
     args.output_root.mkdir(parents=True, exist_ok=True)
-    laz_dir = (
-        args.laz_dir
-        if args.laz_dir is not None
-        else args.lidar_root / "lidars" / "terra_laz_1_4"
-    )
+    laz_dir = args.lidar_root.resolve() / "lidars" / "terra_laz_1_4"
 
     sim3_payload = json.loads(args.sim3_json.read_text(encoding="utf-8"))
     if sim3_payload.get("protocol_id") != SOURCE_PROTOCOL_ID or sim3_payload.get("scene") != args.scene:
@@ -766,12 +764,12 @@ def main() -> None:
     split_scene = next(row for row in split_payload["scenes"] if row["scene"] == args.scene)
     expected_image_names = tuple(sorted(str(name) for name in split_scene["train_image_names"]))
     methods_payload = json.loads(args.methods_json.read_text(encoding="utf-8"))
-    methods = methods_payload["methods"]
-    if args.method_id:
-        selected_ids = set(args.method_id)
-        methods = [method for method in methods if method["method_id"] in selected_ids]
-        if {method["method_id"] for method in methods} != selected_ids:
-            raise ValueError("one or more --method-id values are absent from methods JSON")
+    methods = [
+        method for method in methods_payload["methods"]
+        if method["method_id"] == args.method_id
+    ]
+    if len(methods) != 1:
+        raise ValueError("--method-id must select exactly one frozen formal method")
     common_packet_images: tuple[str, ...] | None = None
     packet_inputs: list[dict[str, Any]] = []
     for method in methods:
@@ -851,6 +849,9 @@ def main() -> None:
             "contract_sha256": sha256_file(contract_path),
             "activation_manifest": str(activation_path),
             "activation_manifest_sha256": sha256_file(activation_path),
+            "scene_execution_authorization": str(scene_authorization_path),
+            "scene_execution_authorization_sha256": sha256_file(scene_authorization_path),
+            "formal_methods_manifest_sha256": sha256_file(methods_path),
             "artifact_schema": str(schema_path),
             "artifact_schema_sha256": sha256_file(schema_path),
             "split_manifest": str(split_path),
@@ -1044,6 +1045,8 @@ def main() -> None:
             "protocol_id": PROTOCOL_ID,
             "contract_file_sha256": sha256_file(contract_path),
             "activation_manifest_sha256": sha256_file(activation_path),
+            "scene_execution_authorization_sha256": sha256_file(scene_authorization_path),
+            "formal_methods_manifest_sha256": sha256_file(methods_path),
             "protocol_manifest_canonical_sha256": protocol["canonical_sha256"],
             "scene": args.scene,
             "method_id": method_id,

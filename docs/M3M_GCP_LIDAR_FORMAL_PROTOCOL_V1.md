@@ -118,6 +118,12 @@ distance arrays are retained and independently recomputed into all published
 metrics.  The validator must pass centimetre preservation, deterministic
 voxel uniqueness, point-order invariance, and chunk-order invariance tests.
 
+Before creating any formal output, the launch gate hashes the nine actual LAZ
+files and every NPZ depth packet of the selected method.  It checks each
+packet's byte count, SHA-256, exact ten-key inventory, array dtype and camera
+shape, image name, and `split=train` declaration.  A hash of only an inventory
+or packet manifest is insufficient.
+
 Raw rendered depth packets are scratch artifacts.  They may be deleted only
 after independent metric recomputation passes and a lightweight, hash-bound
 archive containing metrics, distance arrays, manifests, logs, and failure
@@ -140,16 +146,25 @@ The protocol ID alone is not an identity.  Formal v1 binds the geometry-v2
 release pin (`7bf9db0c...ffe8e6`), release manifest
 (`21fbac75...28bea4`), the six individual `common_sim3.json` hashes, the
 surveyed GCP coordinate and role files, and the source native-quarter release
-and split hashes.  The exact values are normative in the machine contract.
+and split hashes.  It additionally binds the file SHA-256 and canonical
+SHA-256 of all six `NATIVE_QUARTER_INPUT_MANIFEST.json` files, requires the
+exact four COLMAP model files in each manifest, and re-hashes those model bytes
+at launch.  The exact values are normative in the machine contract.
+
+The LiDAR contract contains the relative path, byte count and SHA-256 of
+`cloud0.laz` through `cloud8.laz`.  The evaluator has no LAZ-directory
+override: it always reads the exact `lidars/terra_laz_1_4` directory under the
+reviewed LiDAR release root.
 
 The active method registry is bound by SHA-256
 `b409b164...a5043`.  The formal pool is exactly ten methods.  3DGS, 2DGS,
 PGSR, RaDe-GS, QGS, GSPrior and SoF are in `rgb_colmap_only`;
 CityGaussianV2, CityGS-X and MetroGS are in
 `rgb_colmap_external_geometry_prior`.  GOF is not in the active formal pool.
-Every scene attempt supplies an immutable methods manifest whose checkpoint,
-recipe, renderer adapter and packet manifest paths and hashes are rechecked
-before any output directory is created.
+Every scene attempt supplies one immutable, ordered ten-method manifest whose
+checkpoint, recipe, renderer adapter and packet manifest paths and hashes are
+rechecked before any output directory is created.  Subset or ad-hoc method
+manifests are rejected.
 
 ## 10. Frozen implementation, artifacts and launch gate
 
@@ -157,20 +172,29 @@ The exact evaluator, independent verifier, six-scene ranker, artifact schema
 and launch gate paths and SHA-256 values are frozen in the machine contract.
 The artifact schema fixes the NPZ key names, float64 local-metre coordinate and
 distance dtypes, shapes, units, origins and point counts.  It also fixes JSON
-canonicalization, lightweight archive inventory rules and the 17 diagnostic
-metric fields.
+canonicalization, lightweight archive inventory rules, the 17 diagnostic
+metric fields, scene-execution authorization, method-result, independent
+verification-report and six-scene results-manifest field sets.
 
 Ranking compares each key in order and treats an absolute difference at most
 `1e-9` as tied for that key.  If every key is tied, methods receive the same
 competition rank; equal-rank display is by `method_id`, and the next rank skips
-the number of tied rows.  The executable ranker enforces unweighted six-scene
-macro averaging, refuses fabricated results for failed/OOM scenes and assigns
-an official rank only to 6/6 complete methods within the same input class.
+the number of tied rows.  The executable ranker accepts exactly the frozen ten
+methods and six scenes.  For every `COMPLETE_RANKED` scene it requires a
+hash-bound independent `PASS_VERIFIED_FORMAL_V1` report, checks all result
+identity/count/metric fields, implementation hashes, retained-array hashes and
+recomputed metrics, then enforces unweighted six-scene macro averaging.
+Failed/OOM scenes may not carry result or verifier artifacts, and only 6/6
+complete methods receive an official within-class rank.
 
 Formal execution is impossible while this contract is a review candidate.
 After review, a separate canonical activation manifest must bind the approved
 contract and artifact schema hashes plus the exact clean benchmark commit and
-tree.  The launch gate rechecks that activation, all implementation hashes,
+tree.  Protocol activation alone does not authorize a scene.  Each scene also
+requires a separately reviewed execution-authorization manifest binding the
+exact formal input, full ten-method manifest, benchmark commit/tree and one
+fresh absolute output root per method.  The launch gate rechecks that
+authorization, all implementation hashes,
 the geometry release and scene Sim(3), LiDAR inventory, GCP coordinates,
 formal input manifest/COLMAP bytes, method registry/class mapping and all
 per-method assets.  It then requires a previously nonexistent absolute output

@@ -11,6 +11,18 @@
     "split_manifest_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
     "split_manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2"
   },
+  "formal_input_binding": {
+    "manifest_filename": "NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "source_model_files_exact": ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"],
+    "scene_manifests": {
+      "gcp_3000_20260602": {"file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e", "canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8"},
+      "gcp_5000_20260602": {"file_sha256": "7a57cf1009a360695f87fd8a2f4f881e2892dd8b9562aa0cc5119257bb5c1e38", "canonical_sha256": "4a7a7576b990e3af3ba7918792366106e63935bc3b433e75d5477e51ce568b99"},
+      "gcp_20000_20260602": {"file_sha256": "8dc444f767f5a65bc8612eacd1527077a9dcd457f7fe04ebd8bf2f683be71fa7", "canonical_sha256": "1d305e78974c299c7e63cc7774ea6e63ac3f428511d5b85b4dd252790cd2e64c"},
+      "gcp_10000_20260610": {"file_sha256": "3b8e25a46916c26a793d51d39e8c2a0cdcac9b36c9a7a2fa554792e92b886249", "canonical_sha256": "e9b8a74348e8935ad022e35a48c5734d668862e020505dc751f7821b0fc29124"},
+      "gcp_50000_20260610": {"file_sha256": "35734cdcb94766fcad7bfcdf461e715b4266e98f16b426effd50126ffa9c27e1", "canonical_sha256": "0679bc78d3c6c1e426692c5d19d5b10f2355f42d34d21221970c8e0f96b85c27"},
+      "gcp_100000_20260610": {"file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d", "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d"}
+    }
+  },
   "source_geometry_binding": {
     "release_pin_path": "configs/m3m_gcp_native_quarter_protocol_release_v2.json",
     "release_pin_sha256": "7bf9db0c62bb0bae9ecca06b97b08fcd5f26913e52f9dd2a29745b09e6ffe8e6",
@@ -69,6 +81,17 @@
     "normal_minus_ellipsoid_m": 23.980600991639484,
     "training_access": "FORBIDDEN_EVALUATION_ONLY",
     "method_specific_reference_selection": false
+    ,"laz_files_exact": {
+      "lidars/terra_laz_1_4/cloud0.laz": {"bytes": 851011162, "sha256": "a3828d6ca693219974f7c035983a023a5b0233a852b144119357e048b76aa516"},
+      "lidars/terra_laz_1_4/cloud1.laz": {"bytes": 679843190, "sha256": "717886fd32a6c6eeabd0fe86633f71bde25f3309811eac99e91c5cdee657179f"},
+      "lidars/terra_laz_1_4/cloud2.laz": {"bytes": 337330794, "sha256": "13e5d16b22e1172f94ab345f6786daa2b8649e1fa883fbc0d536b55e17c52a9e"},
+      "lidars/terra_laz_1_4/cloud3.laz": {"bytes": 544251683, "sha256": "31f6296ba830bfc4598c5c0ac95479b98a229ce919df1dc6640bd712b3541061"},
+      "lidars/terra_laz_1_4/cloud4.laz": {"bytes": 189672787, "sha256": "66a20a9ec17493cf22f48ec7ccffc6952f577e48aaeb6897b1678718f50f30dd"},
+      "lidars/terra_laz_1_4/cloud5.laz": {"bytes": 291678006, "sha256": "35a1775abd16d059d6b4c13e0976c4e4079250f60d3d7b02785a8f4e290b5966"},
+      "lidars/terra_laz_1_4/cloud6.laz": {"bytes": 487722156, "sha256": "9f6c9372c8202c6cb8b4b48acb6c7e4e9918f1cc47424df3110445d4b9e9f99f"},
+      "lidars/terra_laz_1_4/cloud7.laz": {"bytes": 259018961, "sha256": "73b3394c4ae62eea20e16c73beb07f2327ff4b6057e6ec64cf5a2c61b747e137"},
+      "lidars/terra_laz_1_4/cloud8.laz": {"bytes": 224786263, "sha256": "320f8610869a82618227bc47b50452e3c0c563b4412dec3caecadc2886abdbd6"}
+    }
   },
   "scenes": [
     {
@@ -254,15 +277,15 @@
   },
   "implementation": {
     "evaluator_path": "code/gcp/evaluate_m3m_gcp_lidar_formal_v1.py",
-    "evaluator_sha256": "92f20f863c88a6008d33e3460aec4f595abeef3a98ebda66f07087bc17912913",
+    "evaluator_sha256": "4cb868dfcfab4a46a88b71e6da03e47ca6b9b31a25d8a553160af202c6c84e89",
     "verifier_path": "code/gcp/verify_m3m_gcp_lidar_formal_v1.py",
-    "verifier_sha256": "c61ed444aaa10c979fab10547b8b2af8edae24311394b28fc490f954dc3fb014",
+    "verifier_sha256": "1aa907eb5a4ec71f9d0269c1c43742468749b31d73f08018218ad489fef44570",
     "artifact_schema_path": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
-    "artifact_schema_sha256": "ad872d736acf7ab2a7208099acf81a18ae8cee6043bf325e4f4173bd9a1ceac0",
+    "artifact_schema_sha256": "d1d61b3f5aedce82ad761b1a0f7891c5f8b4f23258b5c6cd8ee8c3795e18f420",
     "ranker_path": "code/gcp/rank_m3m_gcp_lidar_formal_v1.py",
-    "ranker_sha256": "0edc9e5db279095fb41154cc0f0c6aa38303ba2f74c1a36b2e6d62a6b91a5f95",
+    "ranker_sha256": "54eb371db461db6cc668a909563fae495f01ad17391b4535cc3bc874d3ca9883",
     "launch_gate_path": "code/gcp/check_m3m_gcp_lidar_formal_launch.py",
-    "launch_gate_sha256": "1aab1f76b9f2203d35b0682ec5c25c8636e7530053b9c2bf74e316cc71203ab1",
+    "launch_gate_sha256": "1676042568c9b59fb68e765d183031c0cb03f4ff8cac7897a950b2845d03f812",
     "formal_methods_manifest_schema": "m3m_gcp_lidar_formal_methods_v1",
     "implementation_version_commit": "BOUND_BY_REVIEWED_ACTIVATION_MANIFEST_BEFORE_EXECUTION"
   },
@@ -275,6 +298,12 @@
     "formal_output_root_must_not_exist": true,
     "resume_or_overwrite_formal_result": "FORBIDDEN",
     "quality_threshold_early_stop": false
+    ,"scene_execution_authorization_schema": "m3m_gcp_lidar_scene_execution_authorization_v1",
+    "scene_plan_review_required": true,
+    "full_ten_method_manifest_required_before_result": true,
+    "scene_authorization_must_bind_methods_manifest_file_and_canonical_sha256": true,
+    "selected_method_packet_bytes_must_be_verified_before_output": true,
+    "lidar_laz_bytes_must_be_verified_before_output": true
   },
   "pilot_transition": {
     "pilot_protocol_id": "m3m_gcp_lidar_rendered_surface_v0_2_pilot",

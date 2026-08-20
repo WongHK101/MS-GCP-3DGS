@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
+
+import numpy as np
 
 
 PROTOCOL_ID = "m3m_gcp_lidar_rendered_surface_v1"
@@ -47,6 +50,91 @@ def git_value(repo: Path, *args: str) -> str:
     ).strip()
 
 
+def safe_payload_path(root: Path, relative_path: str) -> Path:
+    rel = PurePosixPath(relative_path)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(f"unsafe payload path: {relative_path}")
+    return root.joinpath(*rel.parts)
+
+
+def validate_packet_files(
+    *,
+    manifest_path: Path,
+    expected_image_names: tuple[str, ...],
+    packet_schema: dict[str, Any],
+) -> list[str]:
+    """Verify every selected-method packet byte and NPZ contract before output."""
+    errors: list[str] = []
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [f"packet manifest unreadable: {exc}"]
+    required = {
+        "schema": "ms_gcp_metric_depth_packet_manifest_v2",
+        "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+        "primary_depth_tensor": "alpha_normalized_expected_camera_z",
+        "primary_depth_semantics": "camera_z",
+        "image_domain": "colmap_4_0_4_image_undistorter_pinhole_max_1414",
+        "pixel_coordinate_convention": "zero_based_pixel_centers",
+        "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+        "adapter_conformance_status": "PASS",
+        "camera_sets": "train",
+    }
+    for key, expected in required.items():
+        if payload.get(key) != expected:
+            errors.append(f"packet manifest {key} mismatch")
+    entries = payload.get("depth_index", [])
+    names = tuple(sorted(str(row.get("image_name", "")) for row in entries))
+    if names != expected_image_names or int(payload.get("rendered_view_count", -1)) != len(expected_image_names):
+        errors.append("packet image inventory differs from exact train-view allowlist")
+    if len(names) != len(set(names)):
+        errors.append("packet image names are not unique")
+    keys_exact = set(packet_schema.get("keys_exact", []))
+    required_fields = set(packet_schema.get("depth_index_fields_required", []))
+    manifest_dir = manifest_path.parent.resolve()
+    for entry in entries:
+        image_name = str(entry.get("image_name", "<missing>"))
+        missing = sorted(required_fields - set(entry))
+        if missing:
+            errors.append(f"{image_name}: depth-index fields missing: {missing}")
+            continue
+        if entry.get("split") != "train":
+            errors.append(f"{image_name}: packet split is not train")
+        if entry.get("dtype") != "float32":
+            errors.append(f"{image_name}: depth-index dtype is not float32")
+        try:
+            width, height = int(entry["width"]), int(entry["height"])
+            packet_path = Path(str(entry["packet_path"])).resolve()
+            if packet_path.parent != manifest_dir:
+                errors.append(f"{image_name}: packet path escapes manifest directory")
+                continue
+            if not packet_path.is_file():
+                errors.append(f"{image_name}: packet missing")
+                continue
+            if packet_path.stat().st_size != int(entry["packet_bytes"]):
+                errors.append(f"{image_name}: packet byte count mismatch")
+                continue
+            if sha256_file(packet_path) != entry["packet_sha256"]:
+                errors.append(f"{image_name}: packet SHA mismatch")
+                continue
+            with np.load(packet_path, allow_pickle=False) as packet:
+                if set(packet.files) != keys_exact:
+                    errors.append(f"{image_name}: packet NPZ keys mismatch")
+                    continue
+                declared_keys = set(str(entry["tensor_names"]).split("|"))
+                if declared_keys != keys_exact:
+                    errors.append(f"{image_name}: tensor_names does not match NPZ keys")
+                for key in packet.files:
+                    expected_dtype = np.dtype("bool" if key == "metric_depth_valid_mask" else "float32")
+                    if packet[key].dtype != expected_dtype:
+                        errors.append(f"{image_name}: {key} dtype mismatch")
+                    if packet[key].shape != (height, width):
+                        errors.append(f"{image_name}: {key} shape mismatch")
+        except (OSError, ValueError, KeyError) as exc:
+            errors.append(f"{image_name}: packet validation error: {exc}")
+    return errors
+
+
 def validate_launch(
     *,
     repo: Path,
@@ -59,10 +147,13 @@ def validate_launch(
     formal_input_root: Path,
     colmap_model: Path,
     lidar_inventory_path: Path,
+    lidar_root: Path,
     gcp_path: Path,
     sim3_path: Path,
     methods_path: Path,
+    scene_authorization_path: Path,
     scene: str,
+    selected_method_id: str,
     output_root: Path,
 ) -> list[str]:
     errors: list[str] = []
@@ -77,6 +168,7 @@ def validate_launch(
     split = json.loads(split_path.read_text(encoding="utf-8"))
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
     methods = json.loads(methods_path.read_text(encoding="utf-8"))
+    scene_authorization = json.loads(scene_authorization_path.read_text(encoding="utf-8"))
     sim3 = json.loads(sim3_path.read_text(encoding="utf-8"))
 
     require(contract.get("protocol_id") == PROTOCOL_ID, "contract protocol mismatch")
@@ -90,6 +182,20 @@ def validate_launch(
     require(activation.get("artifact_schema_sha256") == sha256_file(schema_path), "activation artifact-schema SHA mismatch")
     require(activation.get("canonical_sha256") == canonical_sha256(activation), "activation canonical SHA mismatch")
     require(schema.get("schema") == "m3m_gcp_lidar_formal_artifact_schema_v1", "artifact schema mismatch")
+    authorization_fields = set(
+        schema.get("scene_execution_authorization", {}).get("required_fields_exact", [])
+    )
+    require(set(scene_authorization) == authorization_fields, "scene authorization fields mismatch")
+    require(scene_authorization.get("schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene authorization schema mismatch")
+    require(scene_authorization.get("protocol_id") == PROTOCOL_ID, "scene authorization protocol mismatch")
+    require(scene_authorization.get("scene") == scene, "scene authorization scene mismatch")
+    require(scene_authorization.get("review_task_id") == contract.get("review", {}).get("review_task_id"), "scene authorization review task mismatch")
+    require(str(scene_authorization.get("review_verdict", "")).startswith("PASS_"), "scene authorization review verdict is not PASS")
+    require(scene_authorization.get("execution_authorized") is True, "scene authorization does not authorize execution")
+    require(scene_authorization.get("contract_file_sha256") == sha256_file(contract_path), "scene authorization contract SHA mismatch")
+    require(scene_authorization.get("activation_manifest_sha256") == sha256_file(activation_path), "scene authorization activation SHA mismatch")
+    require(scene_authorization.get("artifact_schema_sha256") == sha256_file(schema_path), "scene authorization artifact-schema SHA mismatch")
+    require(scene_authorization.get("canonical_sha256") == canonical_sha256(scene_authorization), "scene authorization canonical SHA mismatch")
 
     implementation = contract.get("implementation", {})
     repo_files = {
@@ -123,6 +229,33 @@ def validate_launch(
     require(lidar_inventory_path.is_file(), "LiDAR inventory file missing")
     if lidar_inventory_path.is_file():
         require(sha256_file(lidar_inventory_path) == lidar.get("payload_sha256_inventory_file_sha256"), "LiDAR inventory SHA mismatch")
+        with lidar_inventory_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            inventory_rows = list(csv.DictReader(handle))
+        inventory_laz = {
+            row.get("relative_path_utf8_nfc", ""): {
+                "bytes": int(row.get("bytes", -1)),
+                "sha256": row.get("sha256"),
+            }
+            for row in inventory_rows
+            if row.get("relative_path_utf8_nfc", "").endswith(".laz")
+        }
+        expected_laz = lidar.get("laz_files_exact", {})
+        require(inventory_laz == expected_laz, "LiDAR LAZ rows differ from contract")
+        actual_laz = {
+            path.relative_to(lidar_root).as_posix()
+            for path in lidar_root.joinpath("lidars", "terra_laz_1_4").glob("*.laz")
+        }
+        require(actual_laz == set(expected_laz), "LiDAR directory is not the exact frozen nine-LAZ set")
+        for relative, identity in expected_laz.items():
+            try:
+                path = safe_payload_path(lidar_root, relative)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+            require(path.is_file(), f"LiDAR file missing: {relative}")
+            if path.is_file():
+                require(path.stat().st_size == int(identity["bytes"]), f"LiDAR byte count mismatch: {relative}")
+                require(sha256_file(path) == identity["sha256"], f"LiDAR SHA mismatch: {relative}")
     method_binding = contract.get("method_registry_binding", {})
     require(sha256_file(registry_path) == method_binding.get("file_sha256"), "method registry SHA mismatch")
     require(registry.get("active_benchmark_method_ids") == list(ACTIVE_METHOD_CLASSES), "active method order mismatch")
@@ -146,10 +279,15 @@ def validate_launch(
     require(input_manifest_path.is_file(), "formal input manifest missing")
     if input_manifest_path.is_file():
         input_manifest = json.loads(input_manifest_path.read_text(encoding="utf-8"))
+        frozen_input = contract.get("formal_input_binding", {}).get("scene_manifests", {}).get(scene, {})
+        require(sha256_file(input_manifest_path) == frozen_input.get("file_sha256"), "formal input manifest file SHA mismatch")
         require(input_manifest.get("scene") == scene, "formal input scene mismatch")
         require(input_manifest.get("release_root_digest_sha256") == contract["source_data_release"]["release_root_digest_sha256"], "formal input release mismatch")
         require(input_manifest.get("manifest_sha256") == canonical_sha256(input_manifest, self_field="manifest_sha256"), "formal input canonical SHA mismatch")
+        require(input_manifest.get("manifest_sha256") == frozen_input.get("canonical_sha256"), "formal input manifest frozen canonical SHA mismatch")
         require(input_manifest.get("train_view_count") == scene_rows.get(scene, {}).get("train_views"), "formal input train-view count mismatch")
+        expected_model_files = set(contract.get("formal_input_binding", {}).get("source_model_files_exact", []))
+        require(set(input_manifest.get("source_model_sha256", {})) == expected_model_files, "formal input source-model inventory mismatch")
         for filename, expected_sha in input_manifest.get("source_model_sha256", {}).items():
             path = colmap_model / filename
             require(path.is_file(), f"COLMAP model file missing: {filename}")
@@ -164,18 +302,23 @@ def validate_launch(
     require(methods.get("protocol_id") == PROTOCOL_ID, "methods protocol mismatch")
     require(methods.get("scene") == scene, "methods scene mismatch")
     require(methods.get("canonical_sha256") == canonical_sha256(methods), "methods canonical SHA mismatch")
-    require(bool(methods_rows), "methods list is empty")
+    require([row.get("method_id") for row in methods_rows] == list(ACTIVE_METHOD_CLASSES), "methods manifest is not the exact ordered ten-method pool")
+    require(selected_method_id in ACTIVE_METHOD_CLASSES, "selected method is not in the frozen pool")
+    require(scene_authorization.get("methods_manifest_file_sha256") == sha256_file(methods_path), "scene authorization methods file SHA mismatch")
+    require(scene_authorization.get("methods_manifest_canonical_sha256") == methods.get("canonical_sha256"), "scene authorization methods canonical SHA mismatch")
+    require(scene_authorization.get("formal_input_manifest_file_sha256") == sha256_file(input_manifest_path), "scene authorization formal-input file SHA mismatch")
+    require(scene_authorization.get("formal_input_manifest_canonical_sha256") == contract.get("formal_input_binding", {}).get("scene_manifests", {}).get(scene, {}).get("canonical_sha256"), "scene authorization formal-input canonical SHA mismatch")
     expected_method_fields = set(
         schema.get("formal_methods_manifest", {}).get("method_fields_exact", [])
     )
     seen: set[str] = set()
     for row in methods_rows:
         require(set(row) == expected_method_fields, f"method fields differ from artifact schema: {row.get('method_id')}")
-        method_id = row.get("method_id")
-        require(method_id in ACTIVE_METHOD_CLASSES, f"unknown method: {method_id}")
-        require(method_id not in seen, f"duplicate method: {method_id}")
-        seen.add(method_id)
-        require(row.get("input_class") == ACTIVE_METHOD_CLASSES.get(method_id), f"{method_id}: input class mismatch")
+        row_method_id = row.get("method_id")
+        require(row_method_id in ACTIVE_METHOD_CLASSES, f"unknown method: {row_method_id}")
+        require(row_method_id not in seen, f"duplicate method: {row_method_id}")
+        seen.add(row_method_id)
+        require(row.get("input_class") == ACTIVE_METHOD_CLASSES.get(row_method_id), f"{row_method_id}: input class mismatch")
         for field in (
             "run_root",
             "model_checkpoint_path",
@@ -187,7 +330,7 @@ def validate_launch(
             "packet_manifest_path",
             "packet_manifest_sha256",
         ):
-            require(bool(row.get(field)), f"{method_id}: missing {field}")
+            require(bool(row.get(field)), f"{row_method_id}: missing {field}")
         for path_field, sha_field in (
             ("model_checkpoint_path", "model_checkpoint_sha256"),
             ("recipe_path", "recipe_sha256"),
@@ -195,16 +338,34 @@ def validate_launch(
             ("packet_manifest_path", "packet_manifest_sha256"),
         ):
             path = Path(str(row.get(path_field, "")))
-            require(path.is_file(), f"{method_id}: missing {path_field}")
+            require(path.is_file(), f"{row_method_id}: missing {path_field}")
             if path.is_file():
-                require(sha256_file(path) == row.get(sha_field), f"{method_id}: {sha_field} mismatch")
+                require(sha256_file(path) == row.get(sha_field), f"{row_method_id}: {sha_field} mismatch")
+
+    selected = next((row for row in methods_rows if row.get("method_id") == selected_method_id), None)
+    if selected is not None:
+        packet_manifest_path = Path(str(selected["packet_manifest_path"]))
+        errors.extend(
+            f"{selected_method_id}: {error}"
+            for error in validate_packet_files(
+                manifest_path=packet_manifest_path,
+                expected_image_names=tuple(train_names),
+                packet_schema=schema.get("depth_packet_manifest", {}).get("packet_npz", {}),
+            )
+        )
 
     expected_commit = activation.get("benchmark_commit")
     expected_tree = activation.get("benchmark_tree")
     require(git_value(repo, "rev-parse", "HEAD") == expected_commit, "benchmark commit mismatch")
     require(git_value(repo, "show", "-s", "--format=%T", "HEAD") == expected_tree, "benchmark tree mismatch")
     require(git_value(repo, "status", "--porcelain") == "", "benchmark checkout is dirty")
+    require(scene_authorization.get("benchmark_commit") == expected_commit, "scene authorization benchmark commit mismatch")
+    require(scene_authorization.get("benchmark_tree") == expected_tree, "scene authorization benchmark tree mismatch")
     require(output_root.is_absolute(), "output root must be absolute")
+    authorized_roots = scene_authorization.get("authorized_output_roots", {})
+    require(set(authorized_roots) == set(ACTIVE_METHOD_CLASSES), "scene authorization output-root map is not exact ten-method pool")
+    if selected_method_id in authorized_roots:
+        require(Path(str(authorized_roots[selected_method_id])).resolve() == output_root.resolve(), "output root is not authorized for selected method")
     require(not output_root.exists(), "formal output root already exists; overwrite/resume is forbidden")
     return errors
 
@@ -221,10 +382,13 @@ def main() -> int:
     parser.add_argument("--formal-input-root", type=Path, required=True)
     parser.add_argument("--colmap-model", type=Path, required=True)
     parser.add_argument("--lidar-inventory", type=Path, required=True)
+    parser.add_argument("--lidar-root", type=Path, required=True)
     parser.add_argument("--gcp-csv", type=Path, required=True)
     parser.add_argument("--sim3", type=Path, required=True)
     parser.add_argument("--methods", type=Path, required=True)
+    parser.add_argument("--scene-authorization", type=Path, required=True)
     parser.add_argument("--scene", required=True)
+    parser.add_argument("--method-id", required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     args = parser.parse_args()
     errors = validate_launch(
@@ -238,10 +402,13 @@ def main() -> int:
         formal_input_root=args.formal_input_root.resolve(),
         colmap_model=args.colmap_model.resolve(),
         lidar_inventory_path=args.lidar_inventory.resolve(),
+        lidar_root=args.lidar_root.resolve(),
         gcp_path=args.gcp_csv.resolve(),
         sim3_path=args.sim3.resolve(),
         methods_path=args.methods.resolve(),
+        scene_authorization_path=args.scene_authorization.resolve(),
         scene=args.scene,
+        selected_method_id=args.method_id,
         output_root=args.output_root,
     )
     print(json.dumps({"status": "PASS_READY" if not errors else "FAIL", "errors": errors}, indent=2))
