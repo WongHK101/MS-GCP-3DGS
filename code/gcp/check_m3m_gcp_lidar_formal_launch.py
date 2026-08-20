@@ -288,8 +288,13 @@ def validate_launch(
         require(input_manifest.get("train_view_count") == scene_rows.get(scene, {}).get("train_views"), "formal input train-view count mismatch")
         expected_model_files = set(contract.get("formal_input_binding", {}).get("source_model_files_exact", []))
         require(set(input_manifest.get("source_model_sha256", {})) == expected_model_files, "formal input source-model inventory mismatch")
+        model_locations = contract.get("formal_input_binding", {}).get("source_model_file_locations", {})
         for filename, expected_sha in input_manifest.get("source_model_sha256", {}).items():
-            path = colmap_model / filename
+            path = (
+                formal_input_root / "train" / "sparse" / "0" / filename
+                if model_locations.get(filename, "").startswith("formal_input_root/")
+                else colmap_model / filename
+            )
             require(path.is_file(), f"COLMAP model file missing: {filename}")
             if path.is_file():
                 require(sha256_file(path) == expected_sha, f"COLMAP model SHA mismatch: {filename}")

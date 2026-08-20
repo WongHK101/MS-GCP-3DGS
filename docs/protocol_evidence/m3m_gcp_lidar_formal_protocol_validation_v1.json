@@ -1,5 +1,5 @@
 {
-  "contract_file_sha256": "123eb26fad356039855ed00e2bb68fa2dba449ec835e29b0ac949490203f5bd6",
+  "contract_file_sha256": "7c2a8c8f3f4accad7dda1e1a1db2a866cac77e7c68300597da634ef54bcc42ff",
   "errors": [],
   "execution_authorized": false,
   "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
