@@ -102,12 +102,7 @@ def validate_contract(
     require(split.get("release_root_digest") == source.get("release_root_digest_sha256"), "split release mismatch")
     formal_inputs = contract.get("formal_input_binding", {})
     require(formal_inputs.get("source_model_files_exact") == ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"], "formal input source-model inventory mismatch")
-    require(formal_inputs.get("source_model_file_locations") == {
-        "cameras.bin": "colmap_model_root/cameras.bin",
-        "images.bin": "colmap_model_root/images.bin",
-        "points3D.bin": "colmap_model_root/points3D.bin",
-        "points3D.ply": "formal_input_root/train/sparse/0/points3D.ply",
-    }, "formal input source-model location mapping mismatch")
+    require(formal_inputs.get("execution_input_bytes") == "exact train role cameras.bin, images.bin, points3D.ply and every train JPEG are rehashed from the externally bound manifest", "formal execution-input byte rule mismatch")
     actual_input_bindings = {
         scene: (row.get("file_sha256"), row.get("canonical_sha256"))
         for scene, row in formal_inputs.get("scene_manifests", {}).items()

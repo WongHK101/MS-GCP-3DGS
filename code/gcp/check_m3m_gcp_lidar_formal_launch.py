@@ -277,6 +277,7 @@ def validate_launch(
 
     input_manifest_path = formal_input_root / "NATIVE_QUARTER_INPUT_MANIFEST.json"
     require(input_manifest_path.is_file(), "formal input manifest missing")
+    input_manifest: dict[str, Any] = {}
     if input_manifest_path.is_file():
         input_manifest = json.loads(input_manifest_path.read_text(encoding="utf-8"))
         frozen_input = contract.get("formal_input_binding", {}).get("scene_manifests", {}).get(scene, {})
@@ -288,20 +289,44 @@ def validate_launch(
         require(input_manifest.get("train_view_count") == scene_rows.get(scene, {}).get("train_views"), "formal input train-view count mismatch")
         expected_model_files = set(contract.get("formal_input_binding", {}).get("source_model_files_exact", []))
         require(set(input_manifest.get("source_model_sha256", {})) == expected_model_files, "formal input source-model inventory mismatch")
-        model_locations = contract.get("formal_input_binding", {}).get("source_model_file_locations", {})
-        for filename, expected_sha in input_manifest.get("source_model_sha256", {}).items():
-            path = (
-                formal_input_root / "train" / "sparse" / "0" / filename
-                if model_locations.get(filename, "").startswith("formal_input_root/")
-                else colmap_model / filename
-            )
-            require(path.is_file(), f"COLMAP model file missing: {filename}")
+        expected_colmap_model = formal_input_root / "train" / "sparse" / "0"
+        require(colmap_model.resolve() == expected_colmap_model.resolve(), "COLMAP model is not the exact formal train model")
+        train_roles = [row for row in input_manifest.get("roles", []) if row.get("role") == "train"]
+        require(len(train_roles) == 1, "formal input must contain exactly one train role")
+        train_role = train_roles[0] if len(train_roles) == 1 else {}
+        train_model_hashes = {
+            "cameras.bin": train_role.get("cameras_bin_sha256"),
+            "images.bin": train_role.get("images_bin_sha256"),
+            "points3D.ply": train_role.get("points3d_ply_sha256"),
+        }
+        for filename, expected_sha in train_model_hashes.items():
+            path = expected_colmap_model / filename
+            require(path.is_file(), f"formal train model file missing: {filename}")
             if path.is_file():
-                require(sha256_file(path) == expected_sha, f"COLMAP model SHA mismatch: {filename}")
+                require(sha256_file(path) == expected_sha, f"formal train model SHA mismatch: {filename}")
+        train_images = [row for row in input_manifest.get("images", []) if row.get("role") == "train"]
+        require(len(train_images) == scene_rows.get(scene, {}).get("train_views"), "formal train JPEG inventory count mismatch")
+        for row in train_images:
+            try:
+                path = safe_payload_path(formal_input_root, str(row.get("relative_path", "")))
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+            image_name = str(row.get("image_name", "<missing>"))
+            require(path.is_file(), f"formal train JPEG missing: {image_name}")
+            if path.is_file():
+                require(path.stat().st_size == int(row.get("jpeg_bytes", -1)), f"formal train JPEG byte count mismatch: {image_name}")
+                require(sha256_file(path) == row.get("jpeg_sha256"), f"formal train JPEG SHA mismatch: {image_name}")
 
     split_rows = {row["scene"]: row for row in split.get("scenes", [])}
     train_names = sorted(split_rows.get(scene, {}).get("train_image_names", []))
     require(len(train_names) == scene_rows.get(scene, {}).get("train_views"), "frozen train-view count mismatch")
+    manifest_train_names = sorted(
+        str(row.get("image_name", ""))
+        for row in input_manifest.get("images", [])
+        if row.get("role") == "train"
+    )
+    require(manifest_train_names == train_names, "formal train JPEG names differ from frozen split")
     methods_rows = methods.get("methods", [])
     require(methods.get("schema") == "m3m_gcp_lidar_formal_methods_v1", "methods schema mismatch")
     require(methods.get("protocol_id") == PROTOCOL_ID, "methods protocol mismatch")

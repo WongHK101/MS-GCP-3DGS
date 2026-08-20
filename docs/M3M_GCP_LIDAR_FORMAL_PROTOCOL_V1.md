@@ -148,7 +148,8 @@ release pin (`7bf9db0c...ffe8e6`), release manifest
 surveyed GCP coordinate and role files, and the source native-quarter release
 and split hashes.  It additionally binds the file SHA-256 and canonical
 SHA-256 of all six `NATIVE_QUARTER_INPUT_MANIFEST.json` files, requires the
-exact four COLMAP model files in each manifest, and re-hashes those model bytes
+exact four-file source-model provenance inventory, and re-hashes the actual
+formal train `cameras.bin`, `images.bin`, `points3D.ply`, plus every train JPEG
 at launch.  The exact values are normative in the machine contract.
 
 The LiDAR contract contains the relative path, byte count and SHA-256 of

@@ -14,12 +14,7 @@
   "formal_input_binding": {
     "manifest_filename": "NATIVE_QUARTER_INPUT_MANIFEST.json",
     "source_model_files_exact": ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"],
-    "source_model_file_locations": {
-      "cameras.bin": "colmap_model_root/cameras.bin",
-      "images.bin": "colmap_model_root/images.bin",
-      "points3D.bin": "colmap_model_root/points3D.bin",
-      "points3D.ply": "formal_input_root/train/sparse/0/points3D.ply"
-    },
+    "execution_input_bytes": "exact train role cameras.bin, images.bin, points3D.ply and every train JPEG are rehashed from the externally bound manifest",
     "scene_manifests": {
       "gcp_3000_20260602": {"file_sha256": "ae29817198f54f04e4133a7b5fd03df679dd6f259b2d1ef4125e825cbb8e422e", "canonical_sha256": "4ae07aad9278e2eb5af2f04268f3301df56c6f6ada9ee51c6f125fdbb29e7ec8"},
       "gcp_5000_20260602": {"file_sha256": "7a57cf1009a360695f87fd8a2f4f881e2892dd8b9562aa0cc5119257bb5c1e38", "canonical_sha256": "4a7a7576b990e3af3ba7918792366106e63935bc3b433e75d5477e51ce568b99"},
@@ -291,7 +286,7 @@
     "ranker_path": "code/gcp/rank_m3m_gcp_lidar_formal_v1.py",
     "ranker_sha256": "54eb371db461db6cc668a909563fae495f01ad17391b4535cc3bc874d3ca9883",
     "launch_gate_path": "code/gcp/check_m3m_gcp_lidar_formal_launch.py",
-    "launch_gate_sha256": "c67ec07cf5de21b2bfa90a29e6f7c853082764f98af65b9900c5c3b115bc2629",
+    "launch_gate_sha256": "948fc1c76db14c711a0e6b7a8e46bb58744859e67f49587f2b2de2e770030996",
     "formal_methods_manifest_schema": "m3m_gcp_lidar_formal_methods_v1",
     "implementation_version_commit": "BOUND_BY_REVIEWED_ACTIVATION_MANIFEST_BEFORE_EXECUTION"
   },

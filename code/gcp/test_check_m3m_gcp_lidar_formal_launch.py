@@ -96,12 +96,17 @@ class LaunchGateTest(unittest.TestCase):
         self.colmap.mkdir(parents=True)
         for name in ("cameras.bin", "images.bin", "points3D.bin", "points3D.ply"):
             (self.colmap / name).write_bytes(name.encode())
+        train_image = self.formal_input / "train" / "images" / "a.JPG"
+        train_image.parent.mkdir(parents=True)
+        train_image.write_bytes(b"image")
         input_manifest = {
             "scene": "scene", "release_root_digest_sha256": "release", "train_view_count": 1,
             "source_model_sha256": {
                 name: sha256_file(self.colmap / name)
                 for name in ("cameras.bin", "images.bin", "points3D.bin", "points3D.ply")
             },
+            "roles": [{"role": "train", "root": "train", "camera_count": 1, "image_count": 1, "points2d_tracks_present": False, "points3d_bin_present": False, "cameras_bin_sha256": sha256_file(self.colmap / "cameras.bin"), "images_bin_sha256": sha256_file(self.colmap / "images.bin"), "points3d_ply_sha256": sha256_file(self.colmap / "points3D.ply")}],
+            "images": [{"role": "train", "image_name": "a.JPG", "relative_path": "train/images/a.JPG", "jpeg_bytes": train_image.stat().st_size, "jpeg_sha256": sha256_file(train_image)}],
         }
         input_manifest["manifest_sha256"] = canonical_sha256(input_manifest, self_field="manifest_sha256")
         self.input_manifest_path = self.formal_input / "NATIVE_QUARTER_INPUT_MANIFEST.json"
@@ -170,7 +175,7 @@ class LaunchGateTest(unittest.TestCase):
             "execution_authorized": True, "source_geometry_protocol_id": "m3m_gcp_native_quarter_geometry_v2",
             "review": {"review_task_id": "review"},
             "source_data_release": {"split_manifest_file_sha256": sha256_file(self.split_path), "release_root_digest_sha256": "release"},
-            "formal_input_binding": {"manifest_filename": "NATIVE_QUARTER_INPUT_MANIFEST.json", "source_model_files_exact": ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"], "source_model_file_locations": {"cameras.bin": "colmap_model_root/cameras.bin", "images.bin": "colmap_model_root/images.bin", "points3D.bin": "colmap_model_root/points3D.bin", "points3D.ply": "formal_input_root/train/sparse/0/points3D.ply"}, "scene_manifests": {"scene": {"file_sha256": sha256_file(self.input_manifest_path), "canonical_sha256": input_manifest["manifest_sha256"]}}},
+            "formal_input_binding": {"manifest_filename": "NATIVE_QUARTER_INPUT_MANIFEST.json", "source_model_files_exact": ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"], "execution_input_bytes": "exact train role cameras.bin, images.bin, points3D.ply and every train JPEG are rehashed from the externally bound manifest", "scene_manifests": {"scene": {"file_sha256": sha256_file(self.input_manifest_path), "canonical_sha256": input_manifest["manifest_sha256"]}}},
             "source_geometry_binding": {"release_pin_path": "release_pin.json", "release_pin_sha256": sha256_file(self.release_pin), "release_manifest_relative_path": "protocol_release_manifest.json", "release_manifest_sha256": sha256_file(self.release_manifest), "gcp_points_sha256": sha256_file(self.gcp), "scene_common_sim3_sha256": {"scene": sha256_file(self.sim3)}},
             "lidar_source": {"payload_sha256_inventory_file_sha256": sha256_file(self.lidar_inventory), "laz_files_exact": {"lidars/terra_laz_1_4/cloud0.laz": {"bytes": laz.stat().st_size, "sha256": sha256_file(laz)}}},
             "method_registry_binding": {"file_sha256": sha256_file(self.registry_path), "active_method_input_classes": ACTIVE_METHOD_CLASSES},
