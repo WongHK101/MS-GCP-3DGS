@@ -5,7 +5,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from run_metrogs_training import build_commands, build_resolved_config
+from run_metrogs_training import (
+    build_commands,
+    build_resolved_config,
+    build_subprocess_envs,
+)
 
 
 def official_config() -> dict:
@@ -106,6 +110,13 @@ def main() -> int:
     assert Path(merge[-1]) == Path("/run/model")
     assert Path(convert[-2]) == Path("/repo/utils/ckpt2ply.py")
     assert Path(convert[-1]) == Path("/run/model")
+
+    train_env, merge_env, convert_env = build_subprocess_envs(
+        python=Path("/env/bin/python"), repo=Path("/repo")
+    )
+    assert "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD" not in train_env
+    assert "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD" not in merge_env
+    assert convert_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] == "1"
 
     for mode, iterations in (("formal", 149_999), ("qualification", 4)):
         try:

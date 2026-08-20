@@ -1,0 +1,219 @@
+{
+  "schema": "m3m_gcp_lidar_rendered_surface_contract_v1",
+  "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "execution_authorized": false,
+  "source_geometry_protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+  "source_data_release": {
+    "directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "split_manifest_path": "configs/gs_gcp_rgb_holdout_split_manifest_v1.json",
+    "split_manifest_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+    "split_manifest_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2"
+  },
+  "lidar_source": {
+    "release_name": "M3M-GCP-LiDAR-reference-v1",
+    "payload_file_count": 52,
+    "payload_bytes": 4008188380,
+    "payload_sha256_inventory_file_sha256": "61fb3cf950513d70c4d90c640be447f8ef772fbe70ea5a2743bf84fdd3e5150b",
+    "horizontal_crs": "EPSG:32649",
+    "source_vertical_frame": "WGS84_ellipsoid_height",
+    "target_vertical_frame": "1985_National_Height_Datum_normal_height_approximation",
+    "normal_minus_ellipsoid_m": 23.980600991639484,
+    "training_access": "FORBIDDEN_EVALUATION_ONLY",
+    "method_specific_reference_selection": false
+  },
+  "scenes": [
+    {
+      "scene": "gcp_3000_20260602",
+      "rgb_date": "2026-06-02",
+      "lidar_date": "2026-08-12",
+      "temporal_gap_days": 71,
+      "full_views": 94,
+      "train_views": 82,
+      "test_views": 12
+    },
+    {
+      "scene": "gcp_5000_20260602",
+      "rgb_date": "2026-06-02",
+      "lidar_date": "2026-08-12",
+      "temporal_gap_days": 71,
+      "full_views": 101,
+      "train_views": 88,
+      "test_views": 13
+    },
+    {
+      "scene": "gcp_20000_20260602",
+      "rgb_date": "2026-06-02",
+      "lidar_date": "2026-08-12",
+      "temporal_gap_days": 71,
+      "full_views": 298,
+      "train_views": 260,
+      "test_views": 38
+    },
+    {
+      "scene": "gcp_10000_20260610",
+      "rgb_date": "2026-06-10",
+      "lidar_date": "2026-08-12",
+      "temporal_gap_days": 63,
+      "full_views": 976,
+      "train_views": 854,
+      "test_views": 122
+    },
+    {
+      "scene": "gcp_50000_20260610",
+      "rgb_date": "2026-06-10",
+      "lidar_date": "2026-08-12",
+      "temporal_gap_days": 63,
+      "full_views": 2208,
+      "train_views": 1932,
+      "test_views": 276
+    },
+    {
+      "scene": "gcp_100000_20260610",
+      "rgb_date": "2026-06-10",
+      "lidar_date": "2026-08-12",
+      "temporal_gap_days": 63,
+      "full_views": 2510,
+      "train_views": 2196,
+      "test_views": 314
+    }
+  ],
+  "registration": {
+    "scene_transform": "single_frozen_common_sim3_from_source_geometry_protocol",
+    "method_specific_sim3_refit": "FORBIDDEN",
+    "method_specific_icp": "FORBIDDEN",
+    "result_dependent_alignment": "FORBIDDEN",
+    "horizontal_conversion": "EPSG:4545_to_EPSG:32649_always_xy"
+  },
+  "reference_surface": {
+    "roi": "convex_hull_of_frozen_active_control_and_checkpoint_points_buffered_in_EPSG32649",
+    "roi_buffer_m": 8.0,
+    "roi_is_identical_across_methods": true,
+    "finite_xyz_required": true,
+    "las_class_filter": "NONE_SOURCE_CLASSIFICATION_IS_NOT_SEMANTICALLY_RELIABLE",
+    "return_number_filter": "NONE_ALL_LIDAR_RETURNS_DEFINE_THE_REFERENCE_SAMPLE_SET",
+    "reference_voxel_m": 0.05,
+    "voxel_grid_origin": "floor_scene_roi_min_xy_to_5cm_grid_z0",
+    "voxel_representative": "deterministic_voxel_center",
+    "coordinate_dtype": "float64",
+    "coordinate_frame": "local_metric_metres_relative_to_scene_voxel_grid_origin",
+    "absolute_utm_float32": "FORBIDDEN"
+  },
+  "reconstruction_surface": {
+    "claim": "common_rendered_expected_depth_surface_samples_not_raw_gaussian_centres_or_universal_mesh",
+    "packet_schema": "ms_gcp_metric_depth_packet_manifest_v2",
+    "primary_depth": "alpha_normalized_expected_camera_z",
+    "camera_domain": "colmap_4_0_4_image_undistorter_pinhole_max_1414",
+    "pixel_convention": "zero_based_pixel_centers",
+    "view_allowlist_source": "frozen_rgb_holdout_split_manifest",
+    "view_role": "train",
+    "all_train_views_required": true,
+    "heldout_rgb_read": false,
+    "gcp_annotation_used_for_view_selection": false,
+    "common_view_set_required_across_methods": true,
+    "alpha_min_inclusive": 0.5,
+    "pixel_stride": 4,
+    "reconstruction_voxel_m": 0.05,
+    "voxel_grid_shared_with_reference": true,
+    "voxel_representative": "deterministic_voxel_center",
+    "coordinate_dtype": "float64",
+    "threshold_comparison_epsilon_m": 1e-09
+  },
+  "metrics": {
+    "thresholds_m": [0.05, 0.1, 0.2],
+    "main_table": [
+      "fscore_10cm",
+      "precision_10cm",
+      "recall_10cm",
+      "chamfer_l1_mean_m"
+    ],
+    "appendix_robustness": [
+      "fscore_5cm",
+      "fscore_20cm",
+      "accuracy_p95_m",
+      "completeness_p95_m"
+    ],
+    "machine_readable_diagnostics": [
+      "accuracy_mean_m",
+      "accuracy_median_m",
+      "accuracy_p95_m",
+      "completeness_mean_m",
+      "completeness_median_m",
+      "completeness_p95_m",
+      "chamfer_l1_mean_m",
+      "symmetric_rmse_m",
+      "precision_5cm",
+      "recall_5cm",
+      "fscore_5cm",
+      "precision_10cm",
+      "recall_10cm",
+      "fscore_10cm",
+      "precision_20cm",
+      "recall_20cm",
+      "fscore_20cm"
+    ],
+    "additional_metric_expansion": "NOT_AUTHORIZED_WITHOUT_PROTOCOL_REVISION"
+  },
+  "ranking": {
+    "scene_primary": "fscore_10cm_descending",
+    "scene_tiebreakers": [
+      "chamfer_l1_mean_m_ascending",
+      "precision_10cm_descending"
+    ],
+    "dataset_aggregation": "unweighted_arithmetic_macro_average_of_per_scene_metrics",
+    "micro_pooling_across_scenes": "FORBIDDEN",
+    "overall_primary": "macro_fscore_10cm_descending",
+    "overall_tiebreakers": [
+      "macro_chamfer_l1_mean_m_ascending",
+      "macro_precision_10cm_descending"
+    ],
+    "tie_numeric_tolerance": 1e-09,
+    "overall_rank_eligibility": "COMPLETE_ALL_6_SCENES_ONLY",
+    "failed_or_oom_scene_metric_imputation": "FORBIDDEN",
+    "incomplete_method_reporting": "UNRANKED_WITH_COMPLETED_SCENE_COUNT_AND_PARTIAL_MACRO_DIAGNOSTIC",
+    "input_class_official_ranking": "WITHIN_EACH_FROZEN_METHOD_REGISTRY_INPUT_CLASS",
+    "cross_input_class_order": "DESCRIPTIVE_ONLY_NOT_AN_OFFICIAL_WINNER_CLAIM"
+  },
+  "failure_policy": {
+    "statuses": [
+      "COMPLETE_RANKED",
+      "OOM_UNRANKED",
+      "FAILED_UNRANKED",
+      "INCOMPLETE_UNRANKED"
+    ],
+    "record_and_continue": true,
+    "quality_threshold_early_stop": false,
+    "resource_failure_is_a_benchmark_result": true
+  },
+  "evidence": {
+    "required_per_scene_reference_audit": true,
+    "required_common_view_allowlist_hash": true,
+    "required_packet_manifest_and_file_hashes": true,
+    "required_model_checkpoint_and_recipe_hashes": true,
+    "required_evaluator_and_verifier_hashes": true,
+    "required_float64_bidirectional_distance_array_hashes": true,
+    "required_independent_metric_recomputation": true,
+    "required_numeric_regression_tests": [
+      "centimetre_distance_preservation",
+      "voxel_uniqueness",
+      "point_order_invariance",
+      "chunk_order_invariance"
+    ],
+    "raw_depth_packets_may_be_deleted_after": "independent_recomputation_PASS_and_hash_bound_lightweight_archive_PASS",
+    "distance_arrays_must_be_retained": true
+  },
+  "pilot_transition": {
+    "pilot_protocol_id": "m3m_gcp_lidar_rendered_surface_v0_2_pilot",
+    "pilot_status": "VALID_PROTOCOL_PILOT_NOT_FORMAL_RANKING",
+    "pilot_results_reusable_as_formal": false,
+    "models_require_retraining_for_lidar_v1": false,
+    "three_k_requires_v1_rerun": true,
+    "reason": "formal v1 uses every frozen training view instead of the pilot 66-view packet allowlist"
+  },
+  "review": {
+    "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "verdict": "PENDING",
+    "activation_requires_exact_commit_review": true
+  }
+}

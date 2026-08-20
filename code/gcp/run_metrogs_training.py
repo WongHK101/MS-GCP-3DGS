@@ -172,6 +172,38 @@ def build_commands(
     return train, merge, convert
 
 
+def build_subprocess_envs(*, python: Path, repo: Path) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    """Build isolated environments for train, merge, and checkpoint conversion.
+
+    PyTorch 2.6's legacy checkpoint opt-out is required only by the frozen
+    upstream ``ckpt2ply.py`` conversion utility.  It must never leak into the
+    fresh training or checkpoint-merge subprocesses, even when inherited from
+    the wrapper's parent environment.
+    """
+    base = dict(os.environ)
+    base["PATH"] = str(python.parent) + os.pathsep + base.get("PATH", "")
+    base["PYTHONPATH"] = str(repo) + os.pathsep + base.get("PYTHONPATH", "")
+    base["PYTHONUNBUFFERED"] = "1"
+    base["PYTHONDONTWRITEBYTECODE"] = "1"
+    base["PYTHONHASHSEED"] = "0"
+    base["CUDA_VISIBLE_DEVICES"] = "0"
+    base["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    base["NCCL_SHM_DISABLE"] = "1"
+    base["WANDB_MODE"] = "offline"
+    base.pop("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", None)
+    for name in ("RANK", "WORLD_SIZE", "LOCAL_RANK", "MASTER_ADDR", "MASTER_PORT"):
+        base.pop(name, None)
+
+    train_env = dict(base)
+    merge_env = dict(base)
+    convert_env = dict(base)
+    # The frozen converter reads the self-produced Lightning checkpoint and
+    # requires the pre-2.6 torch.load behavior.  This trust exception is
+    # deliberately confined to this one post-training subprocess.
+    convert_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
+    return train_env, merge_env, convert_env
+
+
 def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     repo = args.repo.resolve()
     # Preserve the virtual-environment launcher instead of resolving its
@@ -395,30 +427,16 @@ def main() -> int:
         resolved_config=resolved_config_path,
     )
 
-    env = dict(os.environ)
-    env["PATH"] = str(python.parent) + os.pathsep + env.get("PATH", "")
-    env["PYTHONPATH"] = str(repo) + os.pathsep + env.get("PYTHONPATH", "")
-    env["PYTHONUNBUFFERED"] = "1"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env["PYTHONHASHSEED"] = "0"
-    env["CUDA_VISIBLE_DEVICES"] = "0"
-    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-    env["NCCL_SHM_DISABLE"] = "1"
-    env["WANDB_MODE"] = "offline"
-    # PyTorch 2.6+ defaults torch.load to weights_only=True, while the frozen
-    # upstream ckpt2ply utility loads Lightning metadata from the checkpoint
-    # produced moments earlier by this same clean run.  Trust only that
-    # self-produced checkpoint for the official post-training conversion.
-    env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
-    for name in ("RANK", "WORLD_SIZE", "LOCAL_RANK", "MASTER_ADDR", "MASTER_PORT"):
-        env.pop(name, None)
+    train_env, merge_env, convert_env = build_subprocess_envs(
+        python=python, repo=repo
+    )
 
     print("RUN", json.dumps(train_command, ensure_ascii=False), flush=True)
-    subprocess.run(train_command, cwd=repo, env=env, check=True)
+    subprocess.run(train_command, cwd=repo, env=train_env, check=True)
     print("RUN", json.dumps(merge_command, ensure_ascii=False), flush=True)
-    subprocess.run(merge_command, cwd=repo, env=env, check=True)
+    subprocess.run(merge_command, cwd=repo, env=merge_env, check=True)
     print("RUN", json.dumps(convert_command, ensure_ascii=False), flush=True)
-    subprocess.run(convert_command, cwd=repo, env=env, check=True)
+    subprocess.run(convert_command, cwd=repo, env=convert_env, check=True)
 
     checkpoint_dir = model_path / "checkpoints"
     point_cloud = model_path / "point_cloud" / f"iteration_{args.iterations}" / "point_cloud.ply"
