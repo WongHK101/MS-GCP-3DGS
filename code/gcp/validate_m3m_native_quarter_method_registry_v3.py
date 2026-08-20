@@ -130,6 +130,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
             "EIGHT_METHOD_3K_BATCH_PGSR_AND_RADE_GS_COMPLETE_QGS_ONE_USE_GATE_OPEN",
             "EIGHT_METHOD_3K_BATCH_ONE_USE_GATE_OPEN",
             "EIGHT_METHOD_3K_BATCH_ACTIVE",
+            "EIGHT_METHOD_3K_BATCH_COMPLETE_REVIEWED_100K_PLAN_LOCKED",
         },
         "unexpected registry status",
     )
@@ -203,7 +204,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(scope.get("per_method_external_audit_pause") is False, "per-method audit pause was reintroduced")
     require(scope.get("single_consolidated_audit_after_batch") is True, "consolidated audit contract missing")
     require(scope.get("technical_qualification_is_separate_from_result_completeness") is True, "qualification/result separation missing")
-    require(scope.get("six_scene_matrix_status") == "LOCKED_PENDING_3K_BATCH_CLOSURE", "six-scene matrix unlocked")
+    require(scope.get("six_scene_matrix_status") == "LOCKED_PENDING_100K_PLAN_REVIEW", "six-scene matrix lock/review state mismatch")
 
     boundary = value.get("training_data_boundary", {})
     require(
@@ -662,7 +663,7 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     require(metro_method.get("recipe") == metro_recipe_relative, "MetroGS recipe path mismatch")
     require(
         metro_method.get("recipe_sha256")
-        == "acbf4b79f26fe21ec9ab92ad0e54ab2412a41442c2abf5ee4343dab214470f14",
+        == "7cd9fbd41d787e21c9c22aa596d81476d9ee26128f919c0a8b7d97655ef898ce",
         "MetroGS recipe recorded SHA mismatch",
     )
     require(metro_method.get("renderer_adapter") == metro_adapter_relative, "MetroGS adapter path mismatch")
@@ -901,7 +902,14 @@ def validate_registry(repo_root: Path, registry_path: Path) -> dict[str, Any]:
     gate_ref = value.get("current_one_use_launch_gate")
     if not allowlist:
         require(gate_ref is None, "one-use gate must be absent while the allowlist is empty")
-        require(value.get("status") == "EIGHT_METHOD_3K_BATCH_ACTIVE", "no-gate registry must use the active status")
+        require(
+            value.get("status")
+            in {
+                "EIGHT_METHOD_3K_BATCH_ACTIVE",
+                "EIGHT_METHOD_3K_BATCH_COMPLETE_REVIEWED_100K_PLAN_LOCKED",
+            },
+            "no-gate registry must use an allowed closed status",
+        )
     else:
         method_id = str(allowlist[0])
         require(method_id in EXPECTED_CANDIDATES, "one-use gate targets a non-candidate method")

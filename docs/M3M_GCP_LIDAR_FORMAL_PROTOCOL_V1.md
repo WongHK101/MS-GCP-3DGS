@@ -170,7 +170,7 @@ override: it always reads the exact `lidars/terra_laz_1_4` directory under the
 reviewed LiDAR release root.
 
 The active method registry is bound by SHA-256
-`b409b164...a5043`.  The formal pool is exactly ten methods.  3DGS, 2DGS,
+`9bcd8935...744518`.  The formal pool is exactly ten methods.  3DGS, 2DGS,
 PGSR, RaDe-GS, QGS, GSPrior and SoF are in `rgb_colmap_only`;
 CityGaussianV2, CityGS-X and MetroGS are in
 `rgb_colmap_external_geometry_prior`.  GOF is not in the active formal pool.

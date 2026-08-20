@@ -45,7 +45,7 @@
   },
   "method_registry_binding": {
     "path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
-    "file_sha256": "b409b16435642eb02f865b41532b3856ba05a100e8fbef523d9d3401f89a5043",
+    "file_sha256": "9bcd89358358669bfdbe2ec54d3c7f64d774c8e5ab07ce98035153cf20744518",
     "active_method_ids_in_order": [
       "3dgs_original",
       "2dgs",

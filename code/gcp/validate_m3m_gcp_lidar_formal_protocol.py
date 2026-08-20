@@ -123,7 +123,7 @@ def validate_contract(
 
     method_binding = contract.get("method_registry_binding", {})
     require(method_binding.get("path") == "configs/m3m_gcp_native_quarter_method_registry_v3.json", "method-registry path mismatch")
-    require(method_binding.get("file_sha256") == "b409b16435642eb02f865b41532b3856ba05a100e8fbef523d9d3401f89a5043", "method-registry SHA mismatch")
+    require(method_binding.get("file_sha256") == "9bcd89358358669bfdbe2ec54d3c7f64d774c8e5ab07ce98035153cf20744518", "method-registry SHA mismatch")
     require(method_binding.get("active_method_ids_in_order") == list(EXPECTED_METHOD_CLASSES), "active method order mismatch")
     require(method_binding.get("active_method_input_classes") == EXPECTED_METHOD_CLASSES, "method input-class mapping mismatch")
     registry_path = repo_root / str(method_binding.get("path", "__missing__"))

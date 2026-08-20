@@ -115,7 +115,7 @@
   },
   "execution": {
     "wrapper": "code/gcp/run_metrogs_training.py",
-    "wrapper_sha256": "b98e60b99d1127fb6ec875e7a33a1c43da6834ba7d19626017cc7cb896f1fa22",
+    "wrapper_sha256": "296d5ecbaebb0dc2ad3a857192739a4101af4536cc073244848a5adf78b63113",
     "checkpoint_to_ply_utility_sha256": "fe3a6f540cba658696d9c2e64d13ad76deb8df1401f81820bf79ddedd23231e9",
     "formal_command_template": "python code/gcp/run_metrogs_training.py --repo <clean_official_train> --python <frozen_python> --dataset <metrogs_training_copy> --model_path <new_run_root>/model --prior_manifest <prior_pass_json> --prior_pass_marker <prior_pass_marker> --additional_ply <pi3_merged_ply> --mode formal --iterations 150000",
     "working_directory": "clean official training source",

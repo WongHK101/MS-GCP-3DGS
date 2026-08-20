@@ -1,7 +1,7 @@
 {
   "schema": "m3m_gcp_native_quarter_method_registry_v3",
   "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-  "status": "EIGHT_METHOD_3K_BATCH_ACTIVE",
+  "status": "EIGHT_METHOD_3K_BATCH_COMPLETE_REVIEWED_100K_PLAN_LOCKED",
   "batch_id": "m3m-gcp-3k-eight-method-seed0-20260818",
   "execution_plan": {
     "path": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
@@ -76,7 +76,7 @@
     "multi_seed_authorized": false,
     "per_method_external_audit_pause": false,
     "single_consolidated_audit_after_batch": true,
-    "six_scene_matrix_status": "LOCKED_PENDING_3K_BATCH_CLOSURE",
+    "six_scene_matrix_status": "LOCKED_PENDING_100K_PLAN_REVIEW",
     "non_red_line_method_failure_policy": "RECORD_AND_CONTINUE",
     "technical_qualification_is_separate_from_result_completeness": true
   },
@@ -498,7 +498,7 @@
         "pi3_weight_sha256": "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
       },
       "recipe": "configs/m3m_gcp_native_quarter_metrogs_3k_recipe_v1.json",
-      "recipe_sha256": "acbf4b79f26fe21ec9ab92ad0e54ab2412a41442c2abf5ee4343dab214470f14",
+      "recipe_sha256": "7cd9fbd41d787e21c9c22aa596d81476d9ee26128f919c0a8b7d97655ef898ce",
       "renderer_adapter": "configs/m3m_gcp_native_quarter_metrogs_renderer_adapter_v1.json",
       "renderer_adapter_sha256": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82",
       "qualification_report": "docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json",
