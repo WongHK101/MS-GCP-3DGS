@@ -176,11 +176,23 @@ def validate_distance_npz(path: Path, *, reconstruction_count: int, reference_co
     return accuracy, completeness
 
 
-def validate_archive_manifest(path: Path, root: Path) -> list[str]:
+def validate_archive_manifest(
+    path: Path, root: Path, *, expected_scene_attempt_freeze_sha256: str
+) -> list[str]:
     errors: list[str] = []
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("schema") != "m3m_gcp_lidar_lightweight_archive_manifest_v1":
         errors.append("archive schema mismatch")
+    expected_fields = {
+        "schema", "protocol_id", "scene", "method_id",
+        "scene_attempt_freeze_sha256", "inventory", "canonical_sha256",
+    }
+    if set(payload) != expected_fields:
+        errors.append("archive top-level field inventory mismatch")
+    if payload.get("protocol_id") != PROTOCOL_ID:
+        errors.append("archive protocol mismatch")
+    if payload.get("scene_attempt_freeze_sha256") != expected_scene_attempt_freeze_sha256:
+        errors.append("archive scene-attempt-freeze SHA mismatch")
     if payload.get("canonical_sha256") != canonical_sha256(payload):
         errors.append("archive canonical SHA mismatch")
     for row in payload.get("inventory", []):
@@ -210,6 +222,7 @@ def verify_method_result(
     contract_path: Path,
     activation_path: Path,
     scene_authorization_path: Path,
+    scene_attempt_freeze_path: Path,
     methods_path: Path,
 ) -> dict[str, Any]:
     errors: list[str] = []
@@ -218,6 +231,7 @@ def verify_method_result(
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     activation = json.loads(activation_path.read_text(encoding="utf-8"))
     scene_authorization = json.loads(scene_authorization_path.read_text(encoding="utf-8"))
+    scene_attempt_freeze = json.loads(scene_attempt_freeze_path.read_text(encoding="utf-8"))
     methods = json.loads(methods_path.read_text(encoding="utf-8"))
     method_dir = result_path.parent
     surface_path = method_dir / "surface_voxel_centres_local_metric.npz"
@@ -264,12 +278,24 @@ def verify_method_result(
         errors.append("activation SHA mismatch")
     if result.get("scene_execution_authorization_sha256") != sha256_file(scene_authorization_path):
         errors.append("scene authorization SHA mismatch")
+    if result.get("scene_attempt_freeze_sha256") != sha256_file(scene_attempt_freeze_path):
+        errors.append("scene attempt freeze SHA mismatch")
     if result.get("formal_methods_manifest_sha256") != sha256_file(methods_path):
         errors.append("formal methods manifest SHA mismatch")
     if activation.get("canonical_sha256") != canonical_sha256(activation):
         errors.append("activation canonical SHA mismatch")
     if scene_authorization.get("canonical_sha256") != canonical_sha256(scene_authorization):
         errors.append("scene authorization canonical SHA mismatch")
+    if scene_attempt_freeze.get("canonical_sha256") != canonical_sha256(scene_attempt_freeze):
+        errors.append("scene attempt freeze canonical SHA mismatch")
+    if scene_attempt_freeze.get("scene") != result.get("scene"):
+        errors.append("scene attempt freeze scene mismatch")
+    if scene_attempt_freeze.get("methods_manifest_file_sha256") != sha256_file(methods_path):
+        errors.append("scene attempt freeze methods file SHA mismatch")
+    if scene_attempt_freeze.get("methods_manifest_canonical_sha256") != methods.get("canonical_sha256"):
+        errors.append("scene attempt freeze methods canonical SHA mismatch")
+    if scene_authorization.get("scene_attempt_freeze_sha256") != sha256_file(scene_attempt_freeze_path):
+        errors.append("authorization scene attempt freeze SHA mismatch")
     if methods.get("canonical_sha256") != canonical_sha256(methods):
         errors.append("methods manifest canonical SHA mismatch")
     if result.get("scene") != scene_authorization.get("scene") or result.get("scene") != methods.get("scene"):
@@ -325,6 +351,7 @@ def verify_method_result(
         "contract_file_sha256": sha256_file(contract_path),
         "activation_manifest_sha256": sha256_file(activation_path),
         "scene_execution_authorization_sha256": sha256_file(scene_authorization_path),
+        "scene_attempt_freeze_sha256": sha256_file(scene_attempt_freeze_path),
         "formal_methods_manifest_sha256": sha256_file(methods_path),
         "artifact_schema_sha256": sha256_file(schema_path),
         "evaluator_sha256": result.get("evaluator_sha256"),
@@ -349,6 +376,7 @@ def main() -> int:
     parser.add_argument("--contract", type=Path, required=True)
     parser.add_argument("--activation", type=Path, required=True)
     parser.add_argument("--scene-authorization", type=Path, required=True)
+    parser.add_argument("--scene-attempt-freeze", type=Path, required=True)
     parser.add_argument("--methods", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
@@ -359,6 +387,7 @@ def main() -> int:
         contract_path=args.contract.resolve(),
         activation_path=args.activation.resolve(),
         scene_authorization_path=args.scene_authorization.resolve(),
+        scene_attempt_freeze_path=args.scene_attempt_freeze.resolve(),
         methods_path=args.methods.resolve(),
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

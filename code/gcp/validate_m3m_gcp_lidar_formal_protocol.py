@@ -169,6 +169,23 @@ def validate_contract(
 
     surface = contract.get("reconstruction_surface", {})
     require(surface.get("primary_depth") == "alpha_normalized_expected_camera_z", "surface depth semantic changed")
+    require(surface.get("view_allowlist_manifest_path") == "configs/m3m_gcp_lidar_train_view_allowlists_v1.json", "view allowlist manifest path changed")
+    allowlist_path = repo_root / str(surface.get("view_allowlist_manifest_path", "__missing__"))
+    require(allowlist_path.is_file(), "view allowlist manifest missing")
+    if allowlist_path.is_file():
+        require(sha256_file(allowlist_path) == surface.get("view_allowlist_manifest_file_sha256"), "view allowlist manifest file SHA mismatch")
+        allowlists = json.loads(allowlist_path.read_text(encoding="utf-8"))
+        require(allowlists.get("canonical_sha256") == surface.get("view_allowlist_manifest_canonical_sha256"), "view allowlist manifest canonical SHA mismatch")
+        require(allowlists.get("source_split_canonical_sha256") == source.get("split_manifest_canonical_sha256"), "view allowlist split binding mismatch")
+        allowlist_rows = {row.get("scene"): row for row in allowlists.get("rows", [])}
+        require(set(allowlist_rows) == set(EXPECTED_SCENES), "view allowlist scene set mismatch")
+        for allowlist_scene, (_, train_count, _, _) in EXPECTED_SCENES.items():
+            row = allowlist_rows.get(allowlist_scene, {})
+            path = repo_root / str(row.get("path", "__missing__"))
+            require(row.get("train_view_count") == train_count, f"{allowlist_scene}: view allowlist count mismatch")
+            require(path.is_file(), f"{allowlist_scene}: view allowlist file missing")
+            if path.is_file():
+                require(sha256_file(path) == row.get("sha256"), f"{allowlist_scene}: view allowlist SHA mismatch")
     require(surface.get("view_role") == "train" and surface.get("all_train_views_required") is True, "view allowlist changed")
     require(surface.get("heldout_rgb_read") is False, "heldout RGB access enabled")
     require(surface.get("gcp_annotation_used_for_view_selection") is False, "GCP-dependent view selection enabled")
@@ -221,6 +238,7 @@ def validate_contract(
         "artifact_schema": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
         "ranker": "code/gcp/rank_m3m_gcp_lidar_formal_v1.py",
         "launch_gate": "code/gcp/check_m3m_gcp_lidar_formal_launch.py",
+        "artifact_helpers": "code/gcp/m3m_gcp_lidar_artifacts.py",
     }
     for key, expected_path in expected_impl_paths.items():
         require(implementation.get(f"{key}_path") == expected_path, f"{key} path mismatch")
@@ -233,7 +251,7 @@ def validate_contract(
 
     launch = contract.get("launch_policy", {})
     require(launch.get("activation_manifest_schema") == "m3m_gcp_lidar_formal_activation_v1", "activation schema changed")
-    require(launch.get("required_review_verdict") == "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION", "activation review verdict changed")
+    require(launch.get("required_review_verdict") == "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1", "activation review verdict changed")
     require(launch.get("active_frozen_required") is True, "ACTIVE_FROZEN launch gate disabled")
     require(launch.get("exact_clean_benchmark_commit_and_tree_required") is True, "exact clean commit gate disabled")
     require(launch.get("implementation_file_hashes_rechecked_before_output_creation") is True, "implementation pre-output hash gate disabled")
@@ -246,6 +264,9 @@ def validate_contract(
         "scene_authorization_must_bind_methods_manifest_file_and_canonical_sha256",
         "formal_methods_manifest_excludes_packet_artifacts",
         "formal_methods_manifest_supports_hash_bound_failed_or_oom_attempts_without_model",
+        "structured_failure_evidence_semantic_validation_required",
+        "unique_scene_attempt_freeze_required",
+        "scene_attempt_freeze_sha_shared_by_authorization_result_verifier_ranker_and_archive",
         "rolling_selected_method_authorization_required",
         "rolling_authorization_must_bind_selected_method_packet_manifest_and_fresh_output_root",
         "selected_method_packet_bytes_must_be_verified_before_output",
@@ -264,6 +285,12 @@ def validate_contract(
         require(schema.get("formal_methods_manifest", {}).get("method_ids") == list(EXPECTED_METHOD_CLASSES), "formal methods exact pool changed")
         require(schema.get("formal_methods_manifest", {}).get("attempt_statuses") == ["READY_FOR_EVALUATION", "OOM_UNRANKED", "FAILED_UNRANKED"], "method attempt/failure statuses changed")
         require("packet_manifest_path" not in schema.get("formal_methods_manifest", {}).get("method_fields_exact", []), "rolling packet lifecycle disabled by methods manifest")
+        failure_schema = schema.get("failure_evidence", {})
+        require(failure_schema.get("schema") == "m3m_gcp_lidar_failure_evidence_v1", "failure-evidence artifact schema changed")
+        require(failure_schema.get("oom_signals") == ["CUDA_OUT_OF_MEMORY", "CGROUP_OOM_KILL", "HOST_OOM"], "failure-evidence OOM semantics changed")
+        freeze_schema = schema.get("scene_attempt_freeze", {})
+        require(freeze_schema.get("schema") == "m3m_gcp_lidar_scene_attempt_freeze_v1", "scene-attempt-freeze artifact schema changed")
+        require(freeze_schema.get("method_ids") == list(EXPECTED_METHOD_CLASSES), "scene-attempt-freeze exact pool changed")
         require(schema.get("depth_packet_manifest", {}).get("packet_npz", {}).get("keys_exact") == EXPECTED_PACKET_KEYS, "packet NPZ exact keys changed")
         require(schema.get("scene_execution_authorization", {}).get("schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene authorization artifact schema changed")
         authorization_fields = set(schema.get("scene_execution_authorization", {}).get("required_fields_exact", []))
@@ -271,7 +298,8 @@ def validate_contract(
         require("authorized_output_roots" not in authorization_fields, "legacy simultaneous packet/output authorization remains enabled")
         require(schema.get("method_verification_report_json", {}).get("required_status") == "PASS_VERIFIED_FORMAL_V1", "independent verification PASS requirement changed")
         require(schema.get("six_scene_results_manifest", {}).get("schema") == "m3m_gcp_lidar_six_scene_results_manifest_v1", "six-scene results manifest schema changed")
-        require(schema.get("six_scene_results_manifest", {}).get("scene_entry_fields_exact") == ["scene", "status", "method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256"], "ranking verifier-evidence binding changed")
+        require(schema.get("six_scene_results_manifest", {}).get("scene_entry_fields_exact") == ["scene", "status", "method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256", "failure_evidence_path", "failure_evidence_sha256"], "ranking verifier/failure-evidence binding changed")
+        require(schema.get("six_scene_results_manifest", {}).get("scene_attempt_freeze_fields_exact") == ["scene", "path", "sha256"], "ranking scene-attempt-freeze binding changed")
         require(schema.get("method_result_json", {}).get("metric_fields_exact") == metrics.get("machine_readable_diagnostics"), "method-result metric schema changed")
         comparator = schema.get("ranking_comparator", {})
         require(comparator.get("numeric_tolerance") == 1e-9, "artifact ranking tolerance changed")

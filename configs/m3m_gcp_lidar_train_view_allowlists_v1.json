@@ -1,0 +1,47 @@
+{
+  "canonical_sha256": "2deb3cc5eb76b2d14950bdd709d103283cf339aba4474836cee8633327c085ae",
+  "ordering": "frozen split-manifest assignment order",
+  "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+  "rows": [
+    {
+      "path": "configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_3000_20260602.csv",
+      "scene": "gcp_3000_20260602",
+      "sha256": "5731b8d9e057757dd327f9809be9dda7b637531d9fd14482795085e14cf04b69",
+      "train_view_count": 82
+    },
+    {
+      "path": "configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_5000_20260602.csv",
+      "scene": "gcp_5000_20260602",
+      "sha256": "271b268fe345349707f76116c3ec16df233ca61ff2ffd07d66e77289585ad1d5",
+      "train_view_count": 88
+    },
+    {
+      "path": "configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_20000_20260602.csv",
+      "scene": "gcp_20000_20260602",
+      "sha256": "3dd36e735f8ae7951bcfe9c739dfc5acbb62ff0eee275f4914b009be99091fd4",
+      "train_view_count": 260
+    },
+    {
+      "path": "configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_10000_20260610.csv",
+      "scene": "gcp_10000_20260610",
+      "sha256": "711dcf971274728504366a62897a32269f3fe93c0aaefe973a4eeee2e31676cd",
+      "train_view_count": 854
+    },
+    {
+      "path": "configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_50000_20260610.csv",
+      "scene": "gcp_50000_20260610",
+      "sha256": "f4350def8743faf94aec0e9bf3955b780662a31ef3945747fe0eb14b7d63d445",
+      "train_view_count": 1932
+    },
+    {
+      "path": "configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
+      "scene": "gcp_100000_20260610",
+      "sha256": "2a20c65f515f9be46b7abe0f4119dd459e3d35cc123212c6142202a3facb2851",
+      "train_view_count": 2196
+    }
+  ],
+  "schema": "m3m_gcp_lidar_train_view_allowlists_v1",
+  "source_split_canonical_sha256": "823c992c400b625afa126d8f0d9f5e50af129b43f38199662316017e753302b2",
+  "source_split_file_sha256": "4535ce1b72dd36a0ba9a46fcf80843bba86b3af1f486ab11fa6d2ca636d1c37e",
+  "source_split_path": "configs/gs_gcp_rgb_holdout_split_manifest_v1.json"
+}

@@ -13,6 +13,11 @@ from typing import Any
 
 import numpy as np
 
+from m3m_gcp_lidar_artifacts import (
+    validate_failure_evidence_file,
+    validate_scene_attempt_freeze,
+)
+
 
 PROTOCOL_ID = "m3m_gcp_lidar_rendered_surface_v1"
 ACTIVE_METHOD_CLASSES = {
@@ -151,6 +156,7 @@ def validate_launch(
     gcp_path: Path,
     sim3_path: Path,
     methods_path: Path,
+    scene_attempt_freeze_path: Path,
     scene_authorization_path: Path,
     scene: str,
     selected_method_id: str,
@@ -172,15 +178,30 @@ def validate_launch(
     sim3 = json.loads(sim3_path.read_text(encoding="utf-8"))
 
     require(contract.get("protocol_id") == PROTOCOL_ID, "contract protocol mismatch")
-    require(contract.get("status") == "ACTIVE_FROZEN", "contract is not ACTIVE_FROZEN")
-    require(contract.get("execution_authorized") is True, "contract execution is not authorized")
+    require(contract.get("status") == "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED", "reviewed contract candidate identity changed")
+    require(contract.get("execution_authorized") is False, "reviewed contract authorization bit changed")
+    activation_schema = schema.get("activation_manifest", {})
+    require(set(activation) == set(activation_schema.get("required_fields_exact", [])), "activation fields mismatch")
     require(activation.get("schema") == "m3m_gcp_lidar_formal_activation_v1", "activation schema mismatch")
     require(activation.get("protocol_id") == PROTOCOL_ID, "activation protocol mismatch")
-    require(activation.get("review_verdict") == "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION", "activation review verdict mismatch")
+    required_verdict = "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1"
+    require(activation.get("review_verdict") == required_verdict, "activation review verdict mismatch")
+    require(activation.get("review_task_id") == contract.get("review", {}).get("review_task_id"), "activation review task mismatch")
     require(activation.get("execution_authorized") is True, "activation does not authorize execution")
     require(activation.get("contract_file_sha256") == sha256_file(contract_path), "activation contract SHA mismatch")
     require(activation.get("artifact_schema_sha256") == sha256_file(schema_path), "activation artifact-schema SHA mismatch")
     require(activation.get("canonical_sha256") == canonical_sha256(activation), "activation canonical SHA mismatch")
+    for path_field, sha_field, label in (
+        ("execution_plan_path", "execution_plan_sha256", "execution plan"),
+        ("recipe_manifest_path", "recipe_manifest_sha256", "recipe manifest"),
+    ):
+        raw_path = Path(str(activation.get(path_field, "")))
+        bound_path = raw_path if raw_path.is_absolute() else repo / raw_path
+        require(bound_path.is_file(), f"activation {label} file missing")
+        if bound_path.is_file():
+            require(sha256_file(bound_path) == activation.get(sha_field), f"activation {label} SHA mismatch")
+    require(activation.get("benchmark_commit") == activation.get("reviewed_commit"), "activation reviewed commit mismatch")
+    require(activation.get("benchmark_tree") == activation.get("reviewed_tree"), "activation reviewed tree mismatch")
     require(schema.get("schema") == "m3m_gcp_lidar_formal_artifact_schema_v1", "artifact schema mismatch")
     authorization_fields = set(
         schema.get("scene_execution_authorization", {}).get("required_fields_exact", [])
@@ -191,11 +212,12 @@ def validate_launch(
     require(scene_authorization.get("scene") == scene, "scene authorization scene mismatch")
     require(scene_authorization.get("selected_method_id") == selected_method_id, "scene authorization selected method mismatch")
     require(scene_authorization.get("review_task_id") == contract.get("review", {}).get("review_task_id"), "scene authorization review task mismatch")
-    require(str(scene_authorization.get("review_verdict", "")).startswith("PASS_"), "scene authorization review verdict is not PASS")
+    require(scene_authorization.get("review_verdict") == required_verdict, "scene authorization review verdict mismatch")
     require(scene_authorization.get("execution_authorized") is True, "scene authorization does not authorize execution")
     require(scene_authorization.get("contract_file_sha256") == sha256_file(contract_path), "scene authorization contract SHA mismatch")
     require(scene_authorization.get("activation_manifest_sha256") == sha256_file(activation_path), "scene authorization activation SHA mismatch")
     require(scene_authorization.get("artifact_schema_sha256") == sha256_file(schema_path), "scene authorization artifact-schema SHA mismatch")
+    require(scene_authorization.get("execution_plan_sha256") == activation.get("execution_plan_sha256"), "scene authorization execution-plan SHA mismatch")
     require(scene_authorization.get("canonical_sha256") == canonical_sha256(scene_authorization), "scene authorization canonical SHA mismatch")
 
     implementation = contract.get("implementation", {})
@@ -205,6 +227,7 @@ def validate_launch(
         "artifact_schema": repo / implementation.get("artifact_schema_path", "__missing__"),
         "ranker": repo / implementation.get("ranker_path", "__missing__"),
         "launch_gate": repo / implementation.get("launch_gate_path", "__missing__"),
+        "artifact_helpers": repo / implementation.get("artifact_helpers_path", "__missing__"),
     }
     for key, path in repo_files.items():
         require(path.is_file(), f"{key} file missing")
@@ -328,6 +351,41 @@ def validate_launch(
         if row.get("role") == "train"
     )
     require(manifest_train_names == train_names, "formal train JPEG names differ from frozen split")
+    surface_binding = contract.get("reconstruction_surface", {})
+    allowlist_manifest_path = repo / str(
+        surface_binding.get("view_allowlist_manifest_path", "__missing__")
+    )
+    require(allowlist_manifest_path.is_file(), "frozen view-allowlist manifest missing")
+    if allowlist_manifest_path.is_file():
+        require(
+            sha256_file(allowlist_manifest_path)
+            == surface_binding.get("view_allowlist_manifest_file_sha256"),
+            "frozen view-allowlist manifest file SHA mismatch",
+        )
+        allowlist_manifest = json.loads(
+            allowlist_manifest_path.read_text(encoding="utf-8")
+        )
+        require(
+            allowlist_manifest.get("canonical_sha256")
+            == surface_binding.get("view_allowlist_manifest_canonical_sha256"),
+            "frozen view-allowlist manifest canonical SHA mismatch",
+        )
+        allowlist_row = next(
+            (row for row in allowlist_manifest.get("rows", []) if row.get("scene") == scene),
+            {},
+        )
+        allowlist_path = repo / str(allowlist_row.get("path", "__missing__"))
+        require(allowlist_path.is_file(), "scene view-allowlist CSV missing")
+        if allowlist_path.is_file():
+            require(
+                sha256_file(allowlist_path) == allowlist_row.get("sha256"),
+                "scene view-allowlist CSV SHA mismatch",
+            )
+            with allowlist_path.open("r", encoding="utf-8-sig", newline="") as handle:
+                allowlist_names = sorted(
+                    str(row.get("image_name", "")) for row in csv.DictReader(handle)
+                )
+            require(allowlist_names == train_names, "scene view-allowlist differs from frozen split")
     methods_rows = methods.get("methods", [])
     require(methods.get("schema") == "m3m_gcp_lidar_formal_methods_v1", "methods schema mismatch")
     require(methods.get("protocol_id") == PROTOCOL_ID, "methods protocol mismatch")
@@ -339,6 +397,19 @@ def validate_launch(
     require(scene_authorization.get("methods_manifest_canonical_sha256") == methods.get("canonical_sha256"), "scene authorization methods canonical SHA mismatch")
     require(scene_authorization.get("formal_input_manifest_file_sha256") == sha256_file(input_manifest_path), "scene authorization formal-input file SHA mismatch")
     require(scene_authorization.get("formal_input_manifest_canonical_sha256") == contract.get("formal_input_binding", {}).get("scene_manifests", {}).get(scene, {}).get("canonical_sha256"), "scene authorization formal-input canonical SHA mismatch")
+    require(scene_authorization.get("scene_attempt_freeze_path") == str(scene_attempt_freeze_path), "scene authorization freeze path mismatch")
+    require(scene_attempt_freeze_path.is_file(), "scene attempt freeze file missing")
+    if scene_attempt_freeze_path.is_file():
+        require(scene_authorization.get("scene_attempt_freeze_sha256") == sha256_file(scene_attempt_freeze_path), "scene authorization freeze SHA mismatch")
+        freeze_payload = json.loads(scene_attempt_freeze_path.read_text(encoding="utf-8"))
+        freeze_errors, frozen_methods = validate_scene_attempt_freeze(
+            freeze_payload, freeze_path=scene_attempt_freeze_path, expected_scene=scene
+        )
+        errors.extend(f"scene attempt freeze: {error}" for error in freeze_errors)
+        if frozen_methods is not None:
+            require(Path(str(freeze_payload.get("methods_manifest_path"))).resolve() == methods_path.resolve(), "scene attempt freeze references a different methods manifest")
+            require(freeze_payload.get("methods_manifest_file_sha256") == sha256_file(methods_path), "scene attempt freeze methods file SHA mismatch")
+            require(freeze_payload.get("methods_manifest_canonical_sha256") == methods.get("canonical_sha256"), "scene attempt freeze methods canonical SHA mismatch")
     expected_method_fields = set(
         schema.get("formal_methods_manifest", {}).get("method_fields_exact", [])
     )
@@ -392,7 +463,14 @@ def validate_launch(
             require(failure_path.is_file(), f"{row_method_id}: missing failure evidence")
             require(bool(row.get("failure_evidence_sha256")), f"{row_method_id}: missing failure evidence SHA")
             if failure_path.is_file():
-                require(sha256_file(failure_path) == row.get("failure_evidence_sha256"), f"{row_method_id}: failure evidence SHA mismatch")
+                failure_errors = validate_failure_evidence_file(
+                    failure_path,
+                    expected_sha256=str(row.get("failure_evidence_sha256", "")),
+                    expected_scene=scene,
+                    expected_method_id=str(row_method_id),
+                    expected_status=str(attempt_status),
+                )
+                errors.extend(f"{row_method_id}: {error}" for error in failure_errors)
 
     selected = next((row for row in methods_rows if row.get("method_id") == selected_method_id), None)
     if selected is not None:
@@ -457,6 +535,7 @@ def main() -> int:
     parser.add_argument("--gcp-csv", type=Path, required=True)
     parser.add_argument("--sim3", type=Path, required=True)
     parser.add_argument("--methods", type=Path, required=True)
+    parser.add_argument("--scene-attempt-freeze", type=Path, required=True)
     parser.add_argument("--scene-authorization", type=Path, required=True)
     parser.add_argument("--scene", required=True)
     parser.add_argument("--method-id", required=True)
@@ -477,6 +556,7 @@ def main() -> int:
         gcp_path=args.gcp_csv.resolve(),
         sim3_path=args.sim3.resolve(),
         methods_path=args.methods.resolve(),
+        scene_attempt_freeze_path=args.scene_attempt_freeze.resolve(),
         scene_authorization_path=args.scene_authorization.resolve(),
         scene=args.scene,
         selected_method_id=args.method_id,

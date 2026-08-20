@@ -16,6 +16,10 @@ from verify_m3m_gcp_lidar_formal_v1 import (
     competition_rank_rows,
     sha256_file,
 )
+from m3m_gcp_lidar_artifacts import (
+    validate_failure_evidence_file,
+    validate_scene_attempt_freeze,
+)
 
 
 PROTOCOL_ID = "m3m_gcp_lidar_rendered_surface_v1"
@@ -38,7 +42,7 @@ def macro_mean(rows: list[dict[str, Any]], field: str) -> float:
 def _validate_complete_result(
     *, entry: dict[str, Any], scene: str, method_id: str, input_class: str,
     contract: dict[str, Any], contract_sha256: str, activation_sha256: str,
-    schema: dict[str, Any], schema_sha256: str,
+    schema: dict[str, Any], schema_sha256: str, scene_attempt_freeze_sha256: str,
 ) -> dict[str, Any]:
     result_path = Path(str(entry["method_result_path"]))
     if not result_path.is_file() or sha256_file(result_path) != entry.get("method_result_sha256"):
@@ -63,6 +67,8 @@ def _validate_complete_result(
         raise ValueError(f"{method_id}/{scene}: activation SHA mismatch")
     if result.get("artifact_schema_sha256") != schema_sha256:
         raise ValueError(f"{method_id}/{scene}: artifact-schema SHA mismatch")
+    if result.get("scene_attempt_freeze_sha256") != scene_attempt_freeze_sha256:
+        raise ValueError(f"{method_id}/{scene}: scene-attempt-freeze SHA mismatch")
     implementation = contract["implementation"]
     for field, expected in (
         ("evaluator_sha256", implementation["evaluator_sha256"]),
@@ -99,6 +105,7 @@ def _validate_complete_result(
         "contract_file_sha256": contract_sha256,
         "activation_manifest_sha256": activation_sha256,
         "scene_execution_authorization_sha256": result["scene_execution_authorization_sha256"],
+        "scene_attempt_freeze_sha256": scene_attempt_freeze_sha256,
         "formal_methods_manifest_sha256": result["formal_methods_manifest_sha256"],
         "artifact_schema_sha256": schema_sha256,
         "evaluator_sha256": result["evaluator_sha256"],
@@ -133,6 +140,28 @@ def build_ranking(
         raise ValueError("activation canonical SHA mismatch")
     if activation.get("contract_file_sha256") != contract_sha256:
         raise ValueError("activation contract SHA mismatch")
+    results_schema = schema["six_scene_results_manifest"]
+    if set(manifest) != set(results_schema["top_level_fields_exact"]):
+        raise ValueError("six-scene results manifest field inventory mismatch")
+    freeze_rows = manifest.get("scene_attempt_freezes", [])
+    if [row.get("scene") for row in freeze_rows] != list(SCENES):
+        raise ValueError("scene attempt freeze order differs from frozen six scenes")
+    freeze_fields = set(results_schema["scene_attempt_freeze_fields_exact"])
+    scene_freezes: dict[str, tuple[str, dict[str, Any]]] = {}
+    for row in freeze_rows:
+        scene = str(row.get("scene"))
+        if set(row) != freeze_fields:
+            raise ValueError(f"{scene}: scene attempt freeze entry fields mismatch")
+        freeze_path = Path(str(row.get("path", "")))
+        if not freeze_path.is_file() or sha256_file(freeze_path) != row.get("sha256"):
+            raise ValueError(f"{scene}: scene attempt freeze path/SHA mismatch")
+        freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+        freeze_errors, frozen_methods = validate_scene_attempt_freeze(
+            freeze, freeze_path=freeze_path, expected_scene=scene
+        )
+        if freeze_errors or frozen_methods is None:
+            raise ValueError(f"{scene}: invalid scene attempt freeze: {freeze_errors}")
+        scene_freezes[scene] = (str(row["sha256"]), frozen_methods)
     binding = contract["method_registry_binding"]
     if registry_sha256 != binding["file_sha256"]:
         raise ValueError("method registry SHA mismatch")
@@ -144,8 +173,8 @@ def build_ranking(
     methods = manifest.get("methods", [])
     if [row.get("method_id") for row in methods] != method_ids:
         raise ValueError("results manifest is not the exact ordered ten-method pool")
-    method_fields = set(schema["six_scene_results_manifest"]["method_fields_exact"])
-    scene_fields = set(schema["six_scene_results_manifest"]["scene_entry_fields_exact"])
+    method_fields = set(results_schema["method_fields_exact"])
+    scene_fields = set(results_schema["scene_entry_fields_exact"])
 
     output_rows: list[dict[str, Any]] = []
     for method in methods:
@@ -170,16 +199,44 @@ def build_ranking(
                 raise ValueError(f"{method_id}/{scene}: unknown status {status}")
             statuses[scene] = status
             evidence_fields = ("method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256")
+            failure_fields = ("failure_evidence_path", "failure_evidence_sha256")
+            freeze_sha, frozen_methods = scene_freezes[scene]
+            frozen_method = next(
+                (row for row in frozen_methods.get("methods", []) if row.get("method_id") == method_id),
+                None,
+            )
+            if frozen_method is None:
+                raise ValueError(f"{method_id}/{scene}: absent from scene attempt freeze")
             if status != COMPLETE:
                 if any(entry.get(field) is not None for field in evidence_fields):
                     raise ValueError(f"{method_id}/{scene}: failed status cannot carry fabricated result")
+                if any(not entry.get(field) for field in failure_fields):
+                    raise ValueError(f"{method_id}/{scene}: failed status lacks immutable failure evidence")
+                if frozen_method.get("attempt_status") != status:
+                    raise ValueError(f"{method_id}/{scene}: final failure status differs from scene attempt freeze")
+                if frozen_method.get("failure_evidence_path") != entry.get("failure_evidence_path") or frozen_method.get("failure_evidence_sha256") != entry.get("failure_evidence_sha256"):
+                    raise ValueError(f"{method_id}/{scene}: failure evidence differs from scene attempt freeze")
+                failure_errors = validate_failure_evidence_file(
+                    Path(str(entry["failure_evidence_path"])),
+                    expected_sha256=str(entry["failure_evidence_sha256"]),
+                    expected_scene=scene,
+                    expected_method_id=method_id,
+                    expected_status=status,
+                )
+                if failure_errors:
+                    raise ValueError(f"{method_id}/{scene}: invalid failure evidence: {failure_errors}")
                 continue
             if any(not entry.get(field) for field in evidence_fields):
                 raise ValueError(f"{method_id}/{scene}: complete result lacks verifier evidence")
+            if any(entry.get(field) is not None for field in failure_fields):
+                raise ValueError(f"{method_id}/{scene}: complete result carries failure evidence")
+            if frozen_method.get("attempt_status") != "READY_FOR_EVALUATION":
+                raise ValueError(f"{method_id}/{scene}: complete result is not READY in scene attempt freeze")
             complete_results.append(_validate_complete_result(
                 entry=entry, scene=scene, method_id=method_id, input_class=method["input_class"],
                 contract=contract, contract_sha256=contract_sha256,
                 activation_sha256=activation_sha256, schema=schema, schema_sha256=schema_sha256,
+                scene_attempt_freeze_sha256=freeze_sha,
             ))
 
         completed = len(complete_results)

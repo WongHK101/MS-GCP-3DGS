@@ -10,6 +10,7 @@ from pathlib import Path
 
 from rank_m3m_gcp_lidar_formal_v1 import SCENES, build_ranking
 from verify_m3m_gcp_lidar_formal_v1 import METRIC_FIELDS, canonical_sha256, sha256_file
+from m3m_gcp_lidar_artifacts import command_sha256
 
 
 METHOD_CLASSES = {
@@ -47,12 +48,13 @@ class SixSceneRankerTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def result_entry(self, method_id: str, scene: str, value: float) -> dict:
+    def result_entry(self, method_id: str, scene: str, value: float, freeze_sha: str) -> dict:
         metrics = {field: value for field in METRIC_FIELDS}
         result = {
             "schema": "m3m_gcp_lidar_method_result_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
             "contract_file_sha256": self.contract_sha, "activation_manifest_sha256": self.activation_sha,
             "scene_execution_authorization_sha256": "x" * 64, "formal_methods_manifest_sha256": "m" * 64,
+            "scene_attempt_freeze_sha256": freeze_sha,
             "protocol_manifest_canonical_sha256": "p" * 64, "scene": scene, "method_id": method_id,
             "method": self.registry_names[method_id], "input_class": METHOD_CLASSES[method_id],
             "model_checkpoint_sha256": "1" * 64, "recipe_sha256": "2" * 64,
@@ -74,6 +76,7 @@ class SixSceneRankerTest(unittest.TestCase):
             "method_result_sha256": result_sha, "contract_file_sha256": self.contract_sha,
             "activation_manifest_sha256": self.activation_sha,
             "scene_execution_authorization_sha256": result["scene_execution_authorization_sha256"],
+            "scene_attempt_freeze_sha256": freeze_sha,
             "formal_methods_manifest_sha256": result["formal_methods_manifest_sha256"],
             "artifact_schema_sha256": self.schema_sha, "evaluator_sha256": self.evaluator_sha,
             "verifier_sha256": self.verifier_sha, "surface_npz_sha256": result["surface_npz_sha256"],
@@ -88,25 +91,85 @@ class SixSceneRankerTest(unittest.TestCase):
             "scene": scene, "status": "COMPLETE_RANKED",
             "method_result_path": str(result_path), "method_result_sha256": result_sha,
             "verification_report_path": str(report_path), "verification_report_sha256": sha256_file(report_path),
+            "failure_evidence_path": None, "failure_evidence_sha256": None,
         }
 
-    @staticmethod
-    def incomplete_entry(scene: str, status: str = "INCOMPLETE_UNRANKED") -> dict:
-        return {"scene": scene, "status": status, "method_result_path": None, "method_result_sha256": None, "verification_report_path": None, "verification_report_sha256": None}
+    def failure_entry(self, method_id: str, scene: str, status: str) -> dict:
+        root = self.root / f"{method_id}-{scene}-failure"
+        root.mkdir()
+        stdout, stderr, environment = root / "stdout.log", root / "stderr.log", root / "environment.json"
+        stdout.write_text("last progress 10\n", encoding="utf-8")
+        stderr.write_text("CUDA out of memory\n" if status == "OOM_UNRANKED" else "training failed\n", encoding="utf-8")
+        environment.write_text("{}\n", encoding="utf-8")
+        argv = ["python", "train.py"]
+        payload = {
+            "schema": "m3m_gcp_lidar_failure_evidence_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+            "scene": scene, "method_id": method_id, "input_class": METHOD_CLASSES[method_id], "seed": 0,
+            "status": status, "run_root": str(root.resolve()), "command_argv": argv, "command_sha256": command_sha256(argv),
+            "environment_manifest_path": str(environment.resolve()), "environment_manifest_sha256": sha256_file(environment),
+            "recipe_sha256": "2" * 64, "renderer_adapter_sha256": "3" * 64,
+            "started_at_utc": "2026-08-21T00:00:00Z", "ended_at_utc": "2026-08-21T00:01:00Z",
+            "exit_code": 1, "last_valid_progress": {"unit": "iterations", "value": 10},
+            "peak_gpu_memory_mib": 1000, "process_maximum_rss_kib": 2000,
+            "cgroup_memory_events_delta": {"oom": 0, "oom_kill": 0, "max": 0},
+            "oom_signal": "CUDA_OUT_OF_MEMORY" if status == "OOM_UNRANKED" else None,
+            "stdout_path": str(stdout.resolve()), "stdout_sha256": sha256_file(stdout),
+            "stderr_path": str(stderr.resolve()), "stderr_sha256": sha256_file(stderr), "errors": ["exit 1"],
+        }
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        path = root / "failure.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return {"scene": scene, "status": status, "method_result_path": None, "method_result_sha256": None,
+                "verification_report_path": None, "verification_report_sha256": None,
+                "failure_evidence_path": str(path.resolve()), "failure_evidence_sha256": sha256_file(path)}
+
+    def scene_freeze(self, scene: str, failure_entries: dict[str, dict]) -> dict:
+        methods = []
+        for method_id in METHOD_CLASSES:
+            failure = failure_entries.get(method_id)
+            methods.append({
+                "method_id": method_id, "attempt_status": failure["status"] if failure else "READY_FOR_EVALUATION",
+                "failure_evidence_path": failure["failure_evidence_path"] if failure else None,
+                "failure_evidence_sha256": failure["failure_evidence_sha256"] if failure else None,
+            })
+        methods_payload = {"schema": "m3m_gcp_lidar_formal_methods_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene": scene, "methods": methods}
+        methods_payload["canonical_sha256"] = canonical_sha256(methods_payload)
+        methods_path = (self.root / f"{scene}-methods.json").resolve()
+        methods_path.write_text(json.dumps(methods_payload), encoding="utf-8")
+        freeze = {"schema": "m3m_gcp_lidar_scene_attempt_freeze_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+                  "scene": scene, "methods_manifest_path": str(methods_path), "methods_manifest_file_sha256": sha256_file(methods_path),
+                  "methods_manifest_canonical_sha256": methods_payload["canonical_sha256"], "frozen_method_ids": list(METHOD_CLASSES),
+                  "created_at_utc": "2026-08-21T00:00:00Z"}
+        freeze["canonical_sha256"] = canonical_sha256(freeze)
+        freeze_path = (self.root / f"{scene}-freeze.json").resolve()
+        freeze_path.write_text(json.dumps(freeze), encoding="utf-8")
+        return {"scene": scene, "path": str(freeze_path), "sha256": sha256_file(freeze_path)}
 
     def manifest(self) -> dict:
+        failures_by_scene: dict[str, dict[str, dict]] = {}
+        freeze_rows = []
+        for scene in SCENES:
+            failures = {
+                method_id: self.failure_entry(method_id, scene, "FAILED_UNRANKED")
+                for method_id in METHOD_CLASSES if method_id not in {"3dgs_original", "2dgs", "pgsr"}
+            }
+            if scene == SCENES[-1]:
+                failures["pgsr"] = self.failure_entry("pgsr", scene, "OOM_UNRANKED")
+            failures_by_scene[scene] = failures
+            freeze_rows.append(self.scene_freeze(scene, failures))
+        freeze_sha = {row["scene"]: row["sha256"] for row in freeze_rows}
         methods = []
         for method_id in METHOD_CLASSES:
             if method_id == "3dgs_original":
-                scenes = [self.result_entry(method_id, scene, 0.8) for scene in SCENES]
+                scenes = [self.result_entry(method_id, scene, 0.8, freeze_sha[scene]) for scene in SCENES]
             elif method_id == "2dgs":
-                scenes = [self.result_entry(method_id, scene, 0.8 + 5e-10) for scene in SCENES]
+                scenes = [self.result_entry(method_id, scene, 0.8 + 5e-10, freeze_sha[scene]) for scene in SCENES]
             elif method_id == "pgsr":
-                scenes = [self.result_entry(method_id, scene, 0.7) for scene in SCENES[:-1]] + [self.incomplete_entry(SCENES[-1], "OOM_UNRANKED")]
+                scenes = [self.result_entry(method_id, scene, 0.7, freeze_sha[scene]) for scene in SCENES[:-1]] + [failures_by_scene[SCENES[-1]][method_id]]
             else:
-                scenes = [self.incomplete_entry(scene) for scene in SCENES]
+                scenes = [failures_by_scene[scene][method_id] for scene in SCENES]
             methods.append({"method_id": method_id, "method_name": self.registry_names[method_id], "input_class": METHOD_CLASSES[method_id], "scenes": scenes})
-        payload = {"schema": "m3m_gcp_lidar_six_scene_results_manifest_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "methods": methods}
+        payload = {"schema": "m3m_gcp_lidar_six_scene_results_manifest_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene_attempt_freezes": freeze_rows, "methods": methods}
         payload["canonical_sha256"] = canonical_sha256(payload)
         return payload
 

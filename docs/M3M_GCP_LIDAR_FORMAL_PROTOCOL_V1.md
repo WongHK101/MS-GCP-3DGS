@@ -57,6 +57,9 @@ centres and not a universal physical mesh.
 For every scene and method:
 
 - the view allowlist is exactly every `train` image in the frozen RGB split;
+- the six generated CSV allowlists and their ordered manifest are immutable,
+  hash-bound protocol artifacts; the launch gate compares their names with the
+  source split and formal input manifest rather than trusting counts;
 - test RGB is never read and GCP annotations do not select views;
 - all methods must have the identical image-name set;
 - camera domain is the COLMAP 4.0.4 native-quarter PINHOLE output;
@@ -143,6 +146,15 @@ evidence passes verification.  Final models and formal evidence remain on
 901.  A failed or OOM run retains its command, environment, resource trace,
 last valid progress, stderr, and cgroup OOM counters.
 
+Failure labels are semantic, not filename-based.  `OOM_UNRANKED` requires a
+non-zero child exit plus an explicit CUDA OOM signature or a positive cgroup
+`oom`/`oom_kill` delta.  `FAILED_UNRANKED` likewise requires a non-zero exit
+and retained command/log/resource evidence.  An arbitrary JSON containing the
+word `oom` is rejected.  Before any rolling evaluation, one exclusive-create
+scene-attempt freeze binds the exact ordered ten rows.  Its byte SHA is shared
+by every per-method authorization, result, verification report, rank input and
+archive; a second or replacement freeze is forbidden.
+
 ## 8. Declared reference limitations
 
 LiDAR was acquired on 2026-08-12.  RGB was acquired on 2026-06-02 for 3K,
@@ -206,7 +218,13 @@ complete methods receive an official within-class rank.
 Formal execution is impossible while this contract is a review candidate.
 After review, a separate canonical activation manifest must bind the approved
 contract and artifact schema hashes plus the exact clean benchmark commit and
-tree.  Protocol activation alone does not authorize a scene.  Each scene first
+tree.  For the current staged rollout, the LiDAR/data contract and six-scene
+common preparation are reviewed first.  A separate second review must return
+the exact verdict `PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1` against the clean
+commit/tree, the 100K execution-plan SHA and the ten-recipe-manifest SHA
+(nine fresh training recipes plus one packet-only frozen-3DGS reuse recipe).
+Neither a prior LiDAR PASS nor a free-form approval authorizes 100K execution.
+Protocol activation alone does not authorize a scene.  Each scene first
 requires a reviewed execution plan binding the exact formal input, full
 ten-method model/recipe/renderer manifest, and benchmark commit/tree.  Under
 that reviewed plan, each selected method receives a separate immutable
@@ -217,6 +235,14 @@ the geometry release and scene Sim(3), LiDAR inventory, GCP coordinates,
 formal input manifest/COLMAP bytes, method registry/class mapping and all
 per-method assets.  It then requires a previously nonexistent absolute output
 root.  Formal resume or overwrite is forbidden.
+
+The executable 100K guard additionally enforces: no foreign GPU process;
+300 GiB free before prior generation or training; 180 GiB free before packet
+export; a persistent exclusive one-packet mutex; and a 100 GiB cumulative raw
+packet cap.  It re-hashes the formal train stream, prepared COLMAP track input,
+external weights, source commits/trees/approved modified files, plan, recipes
+and reviewed activation before spawning a child.  Capacity failure is a stop,
+not permission to delete final models or formal evidence.
 
 The normative machine-readable contract is
 `configs/m3m_gcp_lidar_formal_v1.json`.

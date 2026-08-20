@@ -663,6 +663,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gcp-csv", type=Path, required=True)
     parser.add_argument("--sim3-json", type=Path, required=True)
     parser.add_argument("--methods-json", type=Path, required=True)
+    parser.add_argument("--scene-attempt-freeze", type=Path, required=True)
     parser.add_argument("--scene-authorization", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--method-id", required=True)
@@ -690,6 +691,7 @@ def main() -> None:
     registry_path = args.registry.resolve()
     sim3_path = args.sim3_json.resolve()
     methods_path = args.methods_json.resolve()
+    scene_attempt_freeze_path = args.scene_attempt_freeze.resolve()
     scene_authorization_path = args.scene_authorization.resolve()
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     launch_errors = validate_launch(
@@ -707,6 +709,7 @@ def main() -> None:
         gcp_path=args.gcp_csv.resolve(),
         sim3_path=sim3_path,
         methods_path=methods_path,
+        scene_attempt_freeze_path=scene_attempt_freeze_path,
         scene_authorization_path=scene_authorization_path,
         scene=args.scene,
         selected_method_id=args.method_id,
@@ -855,6 +858,7 @@ def main() -> None:
             "activation_manifest_sha256": sha256_file(activation_path),
             "scene_execution_authorization": str(scene_authorization_path),
             "scene_execution_authorization_sha256": sha256_file(scene_authorization_path),
+            "scene_attempt_freeze_sha256": sha256_file(scene_attempt_freeze_path),
             "formal_methods_manifest_sha256": sha256_file(methods_path),
             "artifact_schema": str(schema_path),
             "artifact_schema_sha256": sha256_file(schema_path),
@@ -1050,6 +1054,7 @@ def main() -> None:
             "contract_file_sha256": sha256_file(contract_path),
             "activation_manifest_sha256": sha256_file(activation_path),
             "scene_execution_authorization_sha256": sha256_file(scene_authorization_path),
+            "scene_attempt_freeze_sha256": sha256_file(scene_attempt_freeze_path),
             "formal_methods_manifest_sha256": sha256_file(methods_path),
             "protocol_manifest_canonical_sha256": protocol["canonical_sha256"],
             "scene": args.scene,
