@@ -45,8 +45,11 @@
   },
   "failure_evidence": {
     "schema": "m3m_gcp_lidar_failure_evidence_v1",
-    "required_fields_exact": ["schema", "protocol_id", "scene", "method_id", "input_class", "seed", "status", "run_root", "command_argv", "command_sha256", "environment_manifest_path", "environment_manifest_sha256", "recipe_sha256", "renderer_adapter_sha256", "started_at_utc", "ended_at_utc", "exit_code", "last_valid_progress", "peak_gpu_memory_mib", "process_maximum_rss_kib", "cgroup_memory_events_delta", "oom_signal", "stdout_path", "stdout_sha256", "stderr_path", "stderr_sha256", "errors", "canonical_sha256"],
+    "required_fields_exact": ["schema", "protocol_id", "scene", "method_id", "input_class", "seed", "status", "failure_stage", "run_root", "model_checkpoint_sha256", "scene_attempt_freeze_sha256", "command_argv", "command_sha256", "environment_manifest_path", "environment_manifest_sha256", "recipe_sha256", "renderer_adapter_sha256", "started_at_utc", "ended_at_utc", "exit_code", "last_valid_progress", "peak_gpu_memory_mib", "process_maximum_rss_kib", "cgroup_memory_events_delta", "oom_signal", "stdout_path", "stdout_sha256", "stderr_path", "stderr_sha256", "errors", "canonical_sha256"],
     "statuses": ["OOM_UNRANKED", "FAILED_UNRANKED", "INCOMPLETE_UNRANKED"],
+    "pre_freeze_stages": ["prior", "training"],
+    "post_freeze_stages": ["packet_export", "formal_evaluation", "verification", "archive"],
+    "state_transition_rule": "OOM_UNRANKED and FAILED_UNRANKED are frozen pre-evaluation attempt outcomes with null model/freeze SHA; a READY_FOR_EVALUATION row may only transition to INCOMPLETE_UNRANKED through post-freeze evidence binding the original model, recipe, renderer and immutable scene-attempt-freeze SHA",
     "oom_signals": ["CUDA_OUT_OF_MEMORY", "CGROUP_OOM_KILL", "HOST_OOM"],
     "oom_rule": "non-zero exit required; CUDA_OUT_OF_MEMORY requires an immutable stderr OOM marker, CGROUP_OOM_KILL requires a positive oom_kill delta, and HOST_OOM requires a positive cgroup oom/oom_kill delta",
     "failed_rule": "oom_signal must be null and exit code must be non-zero; exact command, last valid progress, resource counters, environment and immutable stdout/stderr hashes remain mandatory",
@@ -61,8 +64,10 @@
   },
   "activation_manifest": {
     "schema": "m3m_gcp_lidar_formal_activation_v1",
-    "required_fields_exact": ["schema", "protocol_id", "review_task_id", "review_verdict", "execution_authorized", "contract_file_sha256", "artifact_schema_sha256", "execution_plan_path", "execution_plan_sha256", "recipe_manifest_path", "recipe_manifest_sha256", "benchmark_commit", "benchmark_tree", "reviewed_commit", "reviewed_tree", "canonical_sha256"],
-    "required_review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+    "required_fields_exact": ["schema", "protocol_id", "protocol_review_task_id", "protocol_review_verdict", "protocol_reviewed_commit", "protocol_reviewed_tree", "execution_plan_review_task_id", "execution_plan_review_verdict", "execution_plan_reviewed_commit", "execution_plan_reviewed_tree", "execution_authorized", "contract_file_sha256", "artifact_schema_sha256", "common_preparation_local_path", "common_preparation_local_sha256", "common_preparation_remote_path", "common_preparation_remote_sha256", "execution_plan_path", "execution_plan_sha256", "recipe_manifest_path", "recipe_manifest_sha256", "benchmark_commit", "benchmark_tree", "canonical_sha256"],
+    "required_protocol_review_verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",
+    "required_execution_plan_review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+    "dual_review_rule": "both exact verdicts and their separate reviewed commit/tree bindings are mandatory; protocol/data PASS alone never authorizes execution",
     "canonical_sha256_required": true
   },
   "scene_execution_authorization": {

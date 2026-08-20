@@ -55,6 +55,13 @@ def git_value(repo: Path, *args: str) -> str:
     ).strip()
 
 
+def git_blob_sha256(repo: Path, commit: str, relative_path: str) -> str:
+    payload = subprocess.check_output(
+        ["git", "-C", str(repo), "show", f"{commit}:{relative_path}"]
+    )
+    return hashlib.sha256(payload).hexdigest()
+
+
 def safe_payload_path(root: Path, relative_path: str) -> Path:
     rel = PurePosixPath(relative_path)
     if rel.is_absolute() or ".." in rel.parts:
@@ -184,14 +191,21 @@ def validate_launch(
     require(set(activation) == set(activation_schema.get("required_fields_exact", [])), "activation fields mismatch")
     require(activation.get("schema") == "m3m_gcp_lidar_formal_activation_v1", "activation schema mismatch")
     require(activation.get("protocol_id") == PROTOCOL_ID, "activation protocol mismatch")
+    protocol_verdict = "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2"
     required_verdict = "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1"
-    require(activation.get("review_verdict") == required_verdict, "activation review verdict mismatch")
-    require(activation.get("review_task_id") == contract.get("review", {}).get("review_task_id"), "activation review task mismatch")
+    require(activation.get("protocol_review_verdict") == protocol_verdict, "activation protocol/data review verdict mismatch")
+    require(activation.get("execution_plan_review_verdict") == required_verdict, "activation execution-plan review verdict mismatch")
+    review = contract.get("review", {})
+    require(activation.get("protocol_review_task_id") == review.get("protocol_review_task_id"), "activation protocol review task mismatch")
+    require(activation.get("execution_plan_review_task_id") == review.get("execution_plan_review_task_id"), "activation execution-plan review task mismatch")
     require(activation.get("execution_authorized") is True, "activation does not authorize execution")
     require(activation.get("contract_file_sha256") == sha256_file(contract_path), "activation contract SHA mismatch")
     require(activation.get("artifact_schema_sha256") == sha256_file(schema_path), "activation artifact-schema SHA mismatch")
     require(activation.get("canonical_sha256") == canonical_sha256(activation), "activation canonical SHA mismatch")
+    bound_activation_files: dict[str, Path] = {}
     for path_field, sha_field, label in (
+        ("common_preparation_local_path", "common_preparation_local_sha256", "local common preparation"),
+        ("common_preparation_remote_path", "common_preparation_remote_sha256", "remote common preparation"),
         ("execution_plan_path", "execution_plan_sha256", "execution plan"),
         ("recipe_manifest_path", "recipe_manifest_sha256", "recipe manifest"),
     ):
@@ -200,8 +214,53 @@ def validate_launch(
         require(bound_path.is_file(), f"activation {label} file missing")
         if bound_path.is_file():
             require(sha256_file(bound_path) == activation.get(sha_field), f"activation {label} SHA mismatch")
-    require(activation.get("benchmark_commit") == activation.get("reviewed_commit"), "activation reviewed commit mismatch")
-    require(activation.get("benchmark_tree") == activation.get("reviewed_tree"), "activation reviewed tree mismatch")
+            bound_activation_files[path_field] = bound_path
+    for label in ("local", "remote"):
+        path = bound_activation_files.get(f"common_preparation_{label}_path")
+        if path is not None:
+            evidence = json.loads(path.read_text(encoding="utf-8"))
+            require(evidence.get("status") == "PASS_COMMON_SCENE_PREPARATION_NO_TRAINING", f"{label} common preparation is not PASS")
+            require(evidence.get("scene_count") == 6, f"{label} common preparation scene count mismatch")
+            require(evidence.get("contract_file_sha256") == sha256_file(contract_path), f"{label} common preparation contract mismatch")
+            require(evidence.get("training_started") is False and evidence.get("formal_evaluation") == "NOT_STARTED", f"{label} common preparation crossed execution boundary")
+    if all(
+        key in bound_activation_files
+        for key in ("common_preparation_local_path", "common_preparation_remote_path")
+    ):
+        require(
+            sha256_file(bound_activation_files["common_preparation_local_path"])
+            == sha256_file(bound_activation_files["common_preparation_remote_path"]),
+            "local/remote common preparation evidence bytes differ",
+        )
+    protocol_commit = str(activation.get("protocol_reviewed_commit", ""))
+    plan_commit = str(activation.get("execution_plan_reviewed_commit", ""))
+    try:
+        require(
+            git_value(repo, "show", "-s", "--format=%T", protocol_commit)
+            == activation.get("protocol_reviewed_tree"),
+            "activation protocol reviewed commit/tree mismatch",
+        )
+        protocol_paths = {
+            contract_path: activation.get("contract_file_sha256"),
+            schema_path: activation.get("artifact_schema_sha256"),
+            bound_activation_files.get("common_preparation_local_path"): activation.get("common_preparation_local_sha256"),
+            bound_activation_files.get("common_preparation_remote_path"): activation.get("common_preparation_remote_sha256"),
+        }
+        for path, expected_sha in protocol_paths.items():
+            if path is not None:
+                relative = path.resolve().relative_to(repo.resolve()).as_posix()
+                require(
+                    git_blob_sha256(repo, protocol_commit, relative) == expected_sha,
+                    f"protocol-reviewed commit blob mismatch: {relative}",
+                )
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        errors.append(f"activation protocol reviewed commit is not verifiable: {exc}")
+    require(activation.get("benchmark_commit") == plan_commit, "activation execution-plan reviewed commit mismatch")
+    require(activation.get("benchmark_tree") == activation.get("execution_plan_reviewed_tree"), "activation execution-plan reviewed tree mismatch")
+    try:
+        require(git_value(repo, "show", "-s", "--format=%T", plan_commit) == activation.get("execution_plan_reviewed_tree"), "activation execution-plan commit/tree is not Git-valid")
+    except subprocess.CalledProcessError as exc:
+        errors.append(f"activation execution-plan reviewed commit is not verifiable: {exc}")
     require(schema.get("schema") == "m3m_gcp_lidar_formal_artifact_schema_v1", "artifact schema mismatch")
     authorization_fields = set(
         schema.get("scene_execution_authorization", {}).get("required_fields_exact", [])
@@ -211,7 +270,7 @@ def validate_launch(
     require(scene_authorization.get("protocol_id") == PROTOCOL_ID, "scene authorization protocol mismatch")
     require(scene_authorization.get("scene") == scene, "scene authorization scene mismatch")
     require(scene_authorization.get("selected_method_id") == selected_method_id, "scene authorization selected method mismatch")
-    require(scene_authorization.get("review_task_id") == contract.get("review", {}).get("review_task_id"), "scene authorization review task mismatch")
+    require(scene_authorization.get("review_task_id") == activation.get("execution_plan_review_task_id"), "scene authorization review task mismatch")
     require(scene_authorization.get("review_verdict") == required_verdict, "scene authorization review verdict mismatch")
     require(scene_authorization.get("execution_authorized") is True, "scene authorization does not authorize execution")
     require(scene_authorization.get("contract_file_sha256") == sha256_file(contract_path), "scene authorization contract SHA mismatch")

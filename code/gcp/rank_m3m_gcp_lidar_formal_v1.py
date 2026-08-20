@@ -43,6 +43,7 @@ def _validate_complete_result(
     *, entry: dict[str, Any], scene: str, method_id: str, input_class: str,
     contract: dict[str, Any], contract_sha256: str, activation_sha256: str,
     schema: dict[str, Any], schema_sha256: str, scene_attempt_freeze_sha256: str,
+    methods_manifest_file_sha256: str, frozen_method: dict[str, Any],
 ) -> dict[str, Any]:
     result_path = Path(str(entry["method_result_path"]))
     if not result_path.is_file() or sha256_file(result_path) != entry.get("method_result_sha256"):
@@ -69,6 +70,17 @@ def _validate_complete_result(
         raise ValueError(f"{method_id}/{scene}: artifact-schema SHA mismatch")
     if result.get("scene_attempt_freeze_sha256") != scene_attempt_freeze_sha256:
         raise ValueError(f"{method_id}/{scene}: scene-attempt-freeze SHA mismatch")
+    if result.get("formal_methods_manifest_sha256") != methods_manifest_file_sha256:
+        raise ValueError(f"{method_id}/{scene}: methods-manifest SHA differs from scene freeze")
+    for result_field, frozen_field in (
+        ("model_checkpoint_sha256", "model_checkpoint_sha256"),
+        ("recipe_sha256", "recipe_sha256"),
+        ("renderer_adapter_sha256", "renderer_adapter_sha256"),
+    ):
+        if result.get(result_field) != frozen_method.get(frozen_field):
+            raise ValueError(
+                f"{method_id}/{scene}: {result_field} differs from frozen method row"
+            )
     implementation = contract["implementation"]
     for field, expected in (
         ("evaluator_sha256", implementation["evaluator_sha256"]),
@@ -79,6 +91,8 @@ def _validate_complete_result(
             raise ValueError(f"{method_id}/{scene}: {field} differs from contract")
     if result.get("scene") != scene or result.get("method_id") != method_id:
         raise ValueError(f"{method_id}/{scene}: result identity mismatch")
+    if result.get("method") != frozen_method.get("method_name"):
+        raise ValueError(f"{method_id}/{scene}: result method name differs from freeze")
     if result.get("input_class") != input_class:
         raise ValueError(f"{method_id}/{scene}: input class mismatch")
     if set(result.get("metrics", {})) != set(METRIC_FIELDS):
@@ -136,10 +150,23 @@ def build_ranking(
         raise ValueError("six-scene results manifest schema mismatch")
     if manifest.get("protocol_id") != PROTOCOL_ID or manifest.get("canonical_sha256") != canonical_sha256(manifest):
         raise ValueError("six-scene results manifest protocol/canonical mismatch")
+    activation_schema = schema["activation_manifest"]
+    if set(activation) != set(activation_schema["required_fields_exact"]):
+        raise ValueError("activation field inventory mismatch")
+    if activation.get("schema") != activation_schema["schema"] or activation.get("protocol_id") != PROTOCOL_ID:
+        raise ValueError("activation schema/protocol mismatch")
     if activation.get("canonical_sha256") != canonical_sha256(activation):
         raise ValueError("activation canonical SHA mismatch")
     if activation.get("contract_file_sha256") != contract_sha256:
         raise ValueError("activation contract SHA mismatch")
+    if (
+        activation.get("protocol_review_verdict")
+        != activation_schema["required_protocol_review_verdict"]
+        or activation.get("execution_plan_review_verdict")
+        != activation_schema["required_execution_plan_review_verdict"]
+        or activation.get("execution_authorized") is not True
+    ):
+        raise ValueError("activation lacks both exact review approvals")
     results_schema = schema["six_scene_results_manifest"]
     if set(manifest) != set(results_schema["top_level_fields_exact"]):
         raise ValueError("six-scene results manifest field inventory mismatch")
@@ -147,7 +174,7 @@ def build_ranking(
     if [row.get("scene") for row in freeze_rows] != list(SCENES):
         raise ValueError("scene attempt freeze order differs from frozen six scenes")
     freeze_fields = set(results_schema["scene_attempt_freeze_fields_exact"])
-    scene_freezes: dict[str, tuple[str, dict[str, Any]]] = {}
+    scene_freezes: dict[str, tuple[str, dict[str, Any], dict[str, Any]]] = {}
     for row in freeze_rows:
         scene = str(row.get("scene"))
         if set(row) != freeze_fields:
@@ -161,7 +188,7 @@ def build_ranking(
         )
         if freeze_errors or frozen_methods is None:
             raise ValueError(f"{scene}: invalid scene attempt freeze: {freeze_errors}")
-        scene_freezes[scene] = (str(row["sha256"]), frozen_methods)
+        scene_freezes[scene] = (str(row["sha256"]), freeze, frozen_methods)
     binding = contract["method_registry_binding"]
     if registry_sha256 != binding["file_sha256"]:
         raise ValueError("method registry SHA mismatch")
@@ -200,22 +227,34 @@ def build_ranking(
             statuses[scene] = status
             evidence_fields = ("method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256")
             failure_fields = ("failure_evidence_path", "failure_evidence_sha256")
-            freeze_sha, frozen_methods = scene_freezes[scene]
+            freeze_sha, freeze, frozen_methods = scene_freezes[scene]
             frozen_method = next(
                 (row for row in frozen_methods.get("methods", []) if row.get("method_id") == method_id),
                 None,
             )
             if frozen_method is None:
                 raise ValueError(f"{method_id}/{scene}: absent from scene attempt freeze")
+            if (
+                frozen_method.get("method_name") != method.get("method_name")
+                or frozen_method.get("input_class") != method.get("input_class")
+            ):
+                raise ValueError(
+                    f"{method_id}/{scene}: method name/input class differs from scene freeze"
+                )
             if status != COMPLETE:
                 if any(entry.get(field) is not None for field in evidence_fields):
                     raise ValueError(f"{method_id}/{scene}: failed status cannot carry fabricated result")
                 if any(not entry.get(field) for field in failure_fields):
                     raise ValueError(f"{method_id}/{scene}: failed status lacks immutable failure evidence")
-                if frozen_method.get("attempt_status") != status:
-                    raise ValueError(f"{method_id}/{scene}: final failure status differs from scene attempt freeze")
-                if frozen_method.get("failure_evidence_path") != entry.get("failure_evidence_path") or frozen_method.get("failure_evidence_sha256") != entry.get("failure_evidence_sha256"):
-                    raise ValueError(f"{method_id}/{scene}: failure evidence differs from scene attempt freeze")
+                frozen_status = frozen_method.get("attempt_status")
+                if status in {"OOM_UNRANKED", "FAILED_UNRANKED"}:
+                    if frozen_status != status:
+                        raise ValueError(f"{method_id}/{scene}: pre-freeze failure status differs from scene attempt freeze")
+                    if frozen_method.get("failure_evidence_path") != entry.get("failure_evidence_path") or frozen_method.get("failure_evidence_sha256") != entry.get("failure_evidence_sha256"):
+                        raise ValueError(f"{method_id}/{scene}: pre-freeze failure evidence differs from scene attempt freeze")
+                elif status == "INCOMPLETE_UNRANKED":
+                    if frozen_status != "READY_FOR_EVALUATION":
+                        raise ValueError(f"{method_id}/{scene}: only a frozen READY row may become incomplete")
                 failure_errors = validate_failure_evidence_file(
                     Path(str(entry["failure_evidence_path"])),
                     expected_sha256=str(entry["failure_evidence_sha256"]),
@@ -225,6 +264,23 @@ def build_ranking(
                 )
                 if failure_errors:
                     raise ValueError(f"{method_id}/{scene}: invalid failure evidence: {failure_errors}")
+                failure = json.loads(
+                    Path(str(entry["failure_evidence_path"])).read_text(encoding="utf-8")
+                )
+                for evidence_field, frozen_field in (
+                    ("run_root", "run_root"),
+                    ("recipe_sha256", "recipe_sha256"),
+                    ("renderer_adapter_sha256", "renderer_adapter_sha256"),
+                ):
+                    if failure.get(evidence_field) != frozen_method.get(frozen_field):
+                        raise ValueError(
+                            f"{method_id}/{scene}: failure {evidence_field} differs from frozen method row"
+                        )
+                if status == "INCOMPLETE_UNRANKED":
+                    if failure.get("model_checkpoint_sha256") != frozen_method.get("model_checkpoint_sha256"):
+                        raise ValueError(f"{method_id}/{scene}: incomplete evidence model differs from freeze")
+                    if failure.get("scene_attempt_freeze_sha256") != freeze_sha:
+                        raise ValueError(f"{method_id}/{scene}: incomplete evidence freeze SHA mismatch")
                 continue
             if any(not entry.get(field) for field in evidence_fields):
                 raise ValueError(f"{method_id}/{scene}: complete result lacks verifier evidence")
@@ -237,6 +293,8 @@ def build_ranking(
                 contract=contract, contract_sha256=contract_sha256,
                 activation_sha256=activation_sha256, schema=schema, schema_sha256=schema_sha256,
                 scene_attempt_freeze_sha256=freeze_sha,
+                methods_manifest_file_sha256=str(freeze["methods_manifest_file_sha256"]),
+                frozen_method=frozen_method,
             ))
 
         completed = len(complete_results)

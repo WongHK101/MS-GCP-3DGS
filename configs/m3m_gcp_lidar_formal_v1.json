@@ -285,19 +285,21 @@
     "verifier_path": "code/gcp/verify_m3m_gcp_lidar_formal_v1.py",
     "verifier_sha256": "836795635fd483ba9ef37cc9f69f6e666ab46f65365c29fd4777d37ef815d91d",
     "artifact_schema_path": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
-    "artifact_schema_sha256": "2ceb3e441ccf5441ee541e378b9da5ec428466ae2810f4846972bed8103a1a7c",
+    "artifact_schema_sha256": "6d18ccf30c12d070c1d6a692ac8c81024799f44028a487b9fe1f8c2a8cf38c1e",
     "ranker_path": "code/gcp/rank_m3m_gcp_lidar_formal_v1.py",
-    "ranker_sha256": "d03a7177c8122132337bfe7999b6734b3bbf7ec837c4560a91a80df0c52701ba",
+    "ranker_sha256": "e071beb95cb9015456574e9f9d08a84cd6190f87cdbc1c2e3343efe4090351e2",
     "launch_gate_path": "code/gcp/check_m3m_gcp_lidar_formal_launch.py",
-    "launch_gate_sha256": "33c8ca18e49f28768aff256ade3c33d647c7594b6748962463e3603182c36876",
+    "launch_gate_sha256": "edfa32776d04dda6deb9a5b14de5058c6fd9e9059959dc621b9517ff34b4d702",
     "artifact_helpers_path": "code/gcp/m3m_gcp_lidar_artifacts.py",
-    "artifact_helpers_sha256": "6db8fb12b992434ae29578c9ef7969799c08aff4ea5931c1860580a3369cef26",
+    "artifact_helpers_sha256": "4b4ae962423da39fdc1f4fc22da82cfa6f4cfc3cd0d7f8315ccc711698d04f05",
     "formal_methods_manifest_schema": "m3m_gcp_lidar_formal_methods_v1",
     "implementation_version_commit": "BOUND_BY_REVIEWED_ACTIVATION_MANIFEST_BEFORE_EXECUTION"
   },
   "launch_policy": {
     "activation_manifest_schema": "m3m_gcp_lidar_formal_activation_v1",
-    "required_review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+    "required_protocol_review_verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",
+    "required_execution_plan_review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+    "both_review_approvals_required": true,
     "active_frozen_required": true,
     "exact_clean_benchmark_commit_and_tree_required": true,
     "implementation_file_hashes_rechecked_before_output_creation": true,
@@ -310,6 +312,8 @@
     "scene_authorization_must_bind_methods_manifest_file_and_canonical_sha256": true,
     "formal_methods_manifest_excludes_packet_artifacts": true,
     "formal_methods_manifest_supports_hash_bound_failed_or_oom_attempts_without_model": true,
+    "ready_attempt_post_freeze_failure_transition": "INCOMPLETE_UNRANKED_WITH_IMMUTABLE_STAGE_EVIDENCE",
+    "original_scene_attempt_freeze_mutation": "FORBIDDEN",
     "structured_failure_evidence_semantic_validation_required": true,
     "unique_scene_attempt_freeze_required": true,
     "scene_attempt_freeze_sha_shared_by_authorization_result_verifier_ranker_and_archive": true,
@@ -327,8 +331,10 @@
     "reason": "formal v1 uses every frozen training view instead of the pilot 66-view packet allowlist"
   },
   "review": {
-    "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
-    "verdict": "PENDING",
+    "protocol_review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "protocol_review_verdict": "PENDING",
+    "execution_plan_review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "execution_plan_review_verdict": "PENDING",
     "activation_requires_exact_commit_review": true
   }
 }

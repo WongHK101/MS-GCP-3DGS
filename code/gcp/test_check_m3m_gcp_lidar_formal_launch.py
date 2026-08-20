@@ -60,11 +60,15 @@ class LaunchGateTest(unittest.TestCase):
         write_json(self.schema_path, {
             "schema": "m3m_gcp_lidar_formal_artifact_schema_v1",
             "activation_manifest": {"required_fields_exact": [
-                "schema", "protocol_id", "review_task_id", "review_verdict", "execution_authorized",
-                "contract_file_sha256", "artifact_schema_sha256", "execution_plan_path",
+                "schema", "protocol_id", "protocol_review_task_id", "protocol_review_verdict",
+                "protocol_reviewed_commit", "protocol_reviewed_tree",
+                "execution_plan_review_task_id", "execution_plan_review_verdict",
+                "execution_plan_reviewed_commit", "execution_plan_reviewed_tree",
+                "execution_authorized", "contract_file_sha256", "artifact_schema_sha256",
+                "common_preparation_local_path", "common_preparation_local_sha256",
+                "common_preparation_remote_path", "common_preparation_remote_sha256", "execution_plan_path",
                 "execution_plan_sha256", "recipe_manifest_path", "recipe_manifest_sha256",
-                "benchmark_commit", "benchmark_tree", "reviewed_commit", "reviewed_tree",
-                "canonical_sha256",
+                "benchmark_commit", "benchmark_tree", "canonical_sha256",
             ]},
             "formal_methods_manifest": {"method_fields_exact": method_fields},
             "scene_execution_authorization": {"required_fields_exact": auth_fields},
@@ -193,7 +197,10 @@ class LaunchGateTest(unittest.TestCase):
         contract = {
             "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "execution_authorized": False, "source_geometry_protocol_id": "m3m_gcp_native_quarter_geometry_v2",
-            "review": {"review_task_id": "review"},
+            "review": {
+                "protocol_review_task_id": "phase1-review",
+                "execution_plan_review_task_id": "phase2-review",
+            },
             "source_data_release": {"split_manifest_file_sha256": sha256_file(self.split_path), "release_root_digest_sha256": "release"},
             "formal_input_binding": {"manifest_filename": "NATIVE_QUARTER_INPUT_MANIFEST.json", "source_model_files_exact": ["cameras.bin", "images.bin", "points3D.bin", "points3D.ply"], "execution_input_bytes": "exact train role cameras.bin, images.bin, points3D.ply and every train JPEG are rehashed from the externally bound manifest", "scene_manifests": {"scene": {"file_sha256": sha256_file(self.input_manifest_path), "canonical_sha256": input_manifest["manifest_sha256"]}}},
             "source_geometry_binding": {"release_pin_path": "release_pin.json", "release_pin_sha256": sha256_file(self.release_pin), "release_manifest_relative_path": "protocol_release_manifest.json", "release_manifest_sha256": sha256_file(self.release_manifest), "gcp_points_sha256": sha256_file(self.gcp), "scene_common_sim3_sha256": {"scene": sha256_file(self.sim3)}},
@@ -219,6 +226,17 @@ class LaunchGateTest(unittest.TestCase):
         self.recipe_manifest_path = self.repo / "recipes.json"
         write_json(self.plan_path, {"scene": "scene", "seed": 0})
         write_json(self.recipe_manifest_path, {"recipes": []})
+        common_preparation = {
+            "status": "PASS_COMMON_SCENE_PREPARATION_NO_TRAINING",
+            "scene_count": 6,
+            "contract_file_sha256": sha256_file(self.contract_path),
+            "training_started": False,
+            "formal_evaluation": "NOT_STARTED",
+        }
+        self.local_preparation_path = self.repo / "common-preparation-local.json"
+        self.remote_preparation_path = self.repo / "common-preparation-remote.json"
+        write_json(self.local_preparation_path, common_preparation)
+        write_json(self.remote_preparation_path, common_preparation)
         subprocess.run(["git", "-C", str(self.repo), "add", "."], check=True)
         subprocess.run(["git", "-C", str(self.repo), "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "fixture"], check=True)
         commit = subprocess.check_output(["git", "-C", str(self.repo), "rev-parse", "HEAD"], text=True).strip()
@@ -226,12 +244,21 @@ class LaunchGateTest(unittest.TestCase):
         self.activation_path = self.root / "activation.json"
         activation = {
             "schema": "m3m_gcp_lidar_formal_activation_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
-            "review_task_id": "review", "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+            "protocol_review_task_id": "phase1-review",
+            "protocol_review_verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",
+            "protocol_reviewed_commit": commit, "protocol_reviewed_tree": tree,
+            "execution_plan_review_task_id": "phase2-review",
+            "execution_plan_review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+            "execution_plan_reviewed_commit": commit, "execution_plan_reviewed_tree": tree,
             "execution_authorized": True, "contract_file_sha256": sha256_file(self.contract_path),
             "artifact_schema_sha256": sha256_file(self.schema_path),
+            "common_preparation_local_path": "common-preparation-local.json",
+            "common_preparation_local_sha256": sha256_file(self.local_preparation_path),
+            "common_preparation_remote_path": "common-preparation-remote.json",
+            "common_preparation_remote_sha256": sha256_file(self.remote_preparation_path),
             "execution_plan_path": "plan.json", "execution_plan_sha256": sha256_file(self.plan_path),
             "recipe_manifest_path": "recipes.json", "recipe_manifest_sha256": sha256_file(self.recipe_manifest_path),
-            "benchmark_commit": commit, "benchmark_tree": tree, "reviewed_commit": commit, "reviewed_tree": tree,
+            "benchmark_commit": commit, "benchmark_tree": tree,
         }
         activation["canonical_sha256"] = canonical_sha256(activation)
         write_json(self.activation_path, activation)
@@ -248,7 +275,7 @@ class LaunchGateTest(unittest.TestCase):
         write_json(self.scene_attempt_freeze_path, freeze)
         self.scene_authorization_path = self.root / "scene-authorization.json"
         authorization = {
-            "schema": "m3m_gcp_lidar_scene_execution_authorization_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene": "scene", "selected_method_id": "3dgs_original", "review_task_id": "review", "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1", "execution_authorized": True,
+            "schema": "m3m_gcp_lidar_scene_execution_authorization_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene": "scene", "selected_method_id": "3dgs_original", "review_task_id": "phase2-review", "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1", "execution_authorized": True,
             "contract_file_sha256": sha256_file(self.contract_path), "activation_manifest_sha256": sha256_file(self.activation_path), "artifact_schema_sha256": sha256_file(self.schema_path),
             "execution_plan_sha256": sha256_file(self.plan_path),
             "formal_input_manifest_file_sha256": sha256_file(self.input_manifest_path), "formal_input_manifest_canonical_sha256": input_manifest["manifest_sha256"],
@@ -344,10 +371,17 @@ class LaunchGateTest(unittest.TestCase):
 
     def test_old_or_arbitrary_pass_verdict_is_rejected(self) -> None:
         activation = json.loads(self.activation_path.read_text(encoding="utf-8"))
-        activation["review_verdict"] = "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION"
+        activation["protocol_review_verdict"] = "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION"
         activation["canonical_sha256"] = canonical_sha256(activation)
         write_json(self.activation_path, activation)
-        self.assertTrue(any("activation review verdict mismatch" in error for error in validate_launch(**self.kwargs)))
+        self.assertTrue(any("activation protocol/data review verdict mismatch" in error for error in validate_launch(**self.kwargs)))
+
+    def test_phase2_pass_without_phase1_pass_is_rejected(self) -> None:
+        activation = json.loads(self.activation_path.read_text(encoding="utf-8"))
+        activation["protocol_review_verdict"] = "PENDING"
+        activation["canonical_sha256"] = canonical_sha256(activation)
+        write_json(self.activation_path, activation)
+        self.assertTrue(any("activation protocol/data review verdict mismatch" in error for error in validate_launch(**self.kwargs)))
 
     def test_arbitrary_failure_text_is_rejected(self) -> None:
         payload = json.loads(self.methods_path.read_text(encoding="utf-8"))
@@ -389,7 +423,8 @@ class LaunchGateTest(unittest.TestCase):
         evidence = {
             "schema": "m3m_gcp_lidar_failure_evidence_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
             "scene": "scene", "method_id": method_id, "input_class": ACTIVE_METHOD_CLASSES[method_id],
-            "seed": 0, "status": status, "run_root": str(root), "command_argv": argv,
+            "seed": 0, "status": status, "failure_stage": "training", "run_root": str(root),
+            "model_checkpoint_sha256": None, "scene_attempt_freeze_sha256": None, "command_argv": argv,
             "command_sha256": command_sha256(argv), "environment_manifest_path": str(environment),
             "environment_manifest_sha256": sha256_file(environment), "recipe_sha256": row["recipe_sha256"],
             "renderer_adapter_sha256": row["renderer_adapter_sha256"], "started_at_utc": "2026-08-21T00:00:00Z",

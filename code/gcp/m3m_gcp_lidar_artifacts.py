@@ -33,6 +33,13 @@ METHOD_CLASSES = {
 }
 FAILURE_STATUSES = {"OOM_UNRANKED", "FAILED_UNRANKED", "INCOMPLETE_UNRANKED"}
 OOM_SIGNALS = {"CUDA_OUT_OF_MEMORY", "CGROUP_OOM_KILL", "HOST_OOM"}
+PRE_FREEZE_FAILURE_STAGES = {"prior", "training"}
+POST_FREEZE_FAILURE_STAGES = {
+    "packet_export",
+    "formal_evaluation",
+    "verification",
+    "archive",
+}
 FAILURE_FIELDS = {
     "schema",
     "protocol_id",
@@ -41,7 +48,10 @@ FAILURE_FIELDS = {
     "input_class",
     "seed",
     "status",
+    "failure_stage",
     "run_root",
+    "model_checkpoint_sha256",
+    "scene_attempt_freeze_sha256",
     "command_argv",
     "command_sha256",
     "environment_manifest_path",
@@ -73,6 +83,21 @@ FREEZE_FIELDS = {
     "frozen_method_ids",
     "created_at_utc",
     "canonical_sha256",
+}
+METHOD_ROW_FIELDS = {
+    "method_id",
+    "method_name",
+    "input_class",
+    "attempt_status",
+    "run_root",
+    "model_checkpoint_path",
+    "model_checkpoint_sha256",
+    "recipe_path",
+    "recipe_sha256",
+    "renderer_adapter_path",
+    "renderer_adapter_sha256",
+    "failure_evidence_path",
+    "failure_evidence_sha256",
 }
 
 
@@ -139,6 +164,23 @@ def validate_failure_evidence(
         errors.append("failure evidence input class mismatch")
     if payload.get("seed") != 0:
         errors.append("failure evidence seed is not zero")
+    failure_stage = str(payload.get("failure_stage", ""))
+    model_sha = payload.get("model_checkpoint_sha256")
+    freeze_sha = payload.get("scene_attempt_freeze_sha256")
+    if status in {"OOM_UNRANKED", "FAILED_UNRANKED"}:
+        if failure_stage not in PRE_FREEZE_FAILURE_STAGES:
+            errors.append("pre-freeze failure stage mismatch")
+        if model_sha is not None or freeze_sha is not None:
+            errors.append("pre-freeze failure carries model/freeze binding")
+    elif status == "INCOMPLETE_UNRANKED":
+        if failure_stage not in POST_FREEZE_FAILURE_STAGES:
+            errors.append("post-freeze failure stage mismatch")
+        for field, value in (
+            ("model_checkpoint_sha256", model_sha),
+            ("scene_attempt_freeze_sha256", freeze_sha),
+        ):
+            if not isinstance(value, str) or len(value) != 64:
+                errors.append(f"post-freeze failure {field} is invalid")
     if not isinstance(payload.get("run_root"), str) or not Path(payload["run_root"]).is_absolute():
         errors.append("failure evidence run root is not absolute")
     argv = payload.get("command_argv")
@@ -187,7 +229,9 @@ def validate_failure_evidence(
         errors.append("failure evidence cgroup counters are invalid")
         events = {"oom": 0, "oom_kill": 0, "max": 0}
     oom_signal = payload.get("oom_signal")
-    if status == "OOM_UNRANKED":
+    if status == "OOM_UNRANKED" or (
+        status == "INCOMPLETE_UNRANKED" and oom_signal is not None
+    ):
         if oom_signal not in OOM_SIGNALS:
             errors.append("OOM failure lacks a recognized OOM signal")
         stderr_text = ""
@@ -272,10 +316,69 @@ def validate_scene_attempt_freeze(
         errors.append("scene attempt methods canonical SHA mismatch")
     if methods.get("canonical_sha256") != payload.get("methods_manifest_canonical_sha256"):
         errors.append("scene attempt freeze methods canonical binding mismatch")
+    if set(methods) != {"schema", "protocol_id", "scene", "methods", "canonical_sha256"}:
+        errors.append("scene attempt methods field inventory mismatch")
+    if methods.get("schema") != "m3m_gcp_lidar_formal_methods_v1":
+        errors.append("scene attempt methods schema mismatch")
+    if methods.get("protocol_id") != PROTOCOL_ID:
+        errors.append("scene attempt methods protocol mismatch")
     if methods.get("scene") != expected_scene:
         errors.append("scene attempt methods scene mismatch")
-    if [row.get("method_id") for row in methods.get("methods", [])] != list(METHOD_IDS):
+    rows = methods.get("methods", [])
+    if [row.get("method_id") for row in rows] != list(METHOD_IDS):
         errors.append("scene attempt methods pool mismatch")
+    for row in rows:
+        method_id = str(row.get("method_id", ""))
+        if set(row) != METHOD_ROW_FIELDS:
+            errors.append(f"{method_id}: frozen method row field inventory mismatch")
+            continue
+        if row.get("input_class") != METHOD_CLASSES.get(method_id):
+            errors.append(f"{method_id}: frozen method input class mismatch")
+        if not isinstance(row.get("method_name"), str) or not row.get("method_name"):
+            errors.append(f"{method_id}: frozen method name missing")
+        if not Path(str(row.get("run_root", ""))).is_absolute():
+            errors.append(f"{method_id}: frozen run root is not absolute")
+        for path_field, sha_field, label in (
+            ("recipe_path", "recipe_sha256", "recipe"),
+            ("renderer_adapter_path", "renderer_adapter_sha256", "renderer adapter"),
+        ):
+            errors.extend(
+                f"{method_id}: {item}"
+                for item in _validate_bound_file(
+                    row.get(path_field), row.get(sha_field), label
+                )
+            )
+        status = row.get("attempt_status")
+        if status == "READY_FOR_EVALUATION":
+            errors.extend(
+                f"{method_id}: {item}"
+                for item in _validate_bound_file(
+                    row.get("model_checkpoint_path"),
+                    row.get("model_checkpoint_sha256"),
+                    "model checkpoint",
+                )
+            )
+            if row.get("failure_evidence_path") is not None or row.get(
+                "failure_evidence_sha256"
+            ) is not None:
+                errors.append(f"{method_id}: ready row carries failure evidence")
+        elif status in {"OOM_UNRANKED", "FAILED_UNRANKED"}:
+            if row.get("model_checkpoint_path") is not None or row.get(
+                "model_checkpoint_sha256"
+            ) is not None:
+                errors.append(f"{method_id}: failed row carries model checkpoint")
+            errors.extend(
+                f"{method_id}: {item}"
+                for item in validate_failure_evidence_file(
+                    Path(str(row.get("failure_evidence_path", ""))),
+                    expected_sha256=str(row.get("failure_evidence_sha256", "")),
+                    expected_scene=expected_scene,
+                    expected_method_id=method_id,
+                    expected_status=str(status),
+                )
+            )
+        else:
+            errors.append(f"{method_id}: frozen attempt status mismatch")
     if not freeze_path.is_absolute():
         errors.append("scene attempt freeze path is not absolute")
     return errors, methods

@@ -251,13 +251,17 @@ def validate_contract(
 
     launch = contract.get("launch_policy", {})
     require(launch.get("activation_manifest_schema") == "m3m_gcp_lidar_formal_activation_v1", "activation schema changed")
-    require(launch.get("required_review_verdict") == "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1", "activation review verdict changed")
+    require(launch.get("required_protocol_review_verdict") == "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2", "protocol/data review verdict changed")
+    require(launch.get("required_execution_plan_review_verdict") == "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1", "execution-plan review verdict changed")
+    require(launch.get("both_review_approvals_required") is True, "dual-review activation gate disabled")
     require(launch.get("active_frozen_required") is True, "ACTIVE_FROZEN launch gate disabled")
     require(launch.get("exact_clean_benchmark_commit_and_tree_required") is True, "exact clean commit gate disabled")
     require(launch.get("implementation_file_hashes_rechecked_before_output_creation") is True, "implementation pre-output hash gate disabled")
     require(launch.get("formal_output_root_must_not_exist") is True, "formal no-overwrite gate disabled")
     require(launch.get("resume_or_overwrite_formal_result") == "FORBIDDEN", "formal overwrite/resume enabled")
     require(launch.get("quality_threshold_early_stop") is False, "launch quality-threshold early stop enabled")
+    require(launch.get("ready_attempt_post_freeze_failure_transition") == "INCOMPLETE_UNRANKED_WITH_IMMUTABLE_STAGE_EVIDENCE", "post-freeze incomplete transition changed")
+    require(launch.get("original_scene_attempt_freeze_mutation") == "FORBIDDEN", "scene-attempt freeze mutation permitted")
     require(launch.get("scene_execution_authorization_schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene execution authorization schema changed")
     for key in (
         "scene_plan_review_required", "full_ten_method_manifest_required_before_result",

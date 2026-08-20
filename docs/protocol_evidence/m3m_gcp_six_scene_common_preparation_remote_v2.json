@@ -1,7 +1,7 @@
 {
   "builder_script_sha256": "7622d65d88cddddf385cd6055f7085e1f843700f4207616113205c3f8a04b91f",
-  "canonical_sha256": "3f753186caa41b11061b46bee9d7995b911c89cedc3aca9a9c1b28960ad76103",
-  "contract_file_sha256": "fbc2e7bb6e77753df74fee97d492fbbdd842dddcda656a9b2d41cdb2cc31ac9e",
+  "canonical_sha256": "61095dcfab74e21d97d5eb8cdb505c6a10752e9853f400a67cea7d42b10d3c83",
+  "contract_file_sha256": "e049be7722a976e619c8d13c2902ab2f1ed3b46124d35f095ed6384d4323d0ce",
   "failures": [],
   "formal_evaluation": "NOT_STARTED",
   "gpu_required_for_this_preparation": false,
