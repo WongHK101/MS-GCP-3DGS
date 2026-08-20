@@ -274,6 +274,10 @@ def verify_method_result(
         errors.append("methods manifest canonical SHA mismatch")
     if result.get("scene") != scene_authorization.get("scene") or result.get("scene") != methods.get("scene"):
         errors.append("scene identity differs across result/authorization/methods")
+    if result.get("method_id") != scene_authorization.get("selected_method_id"):
+        errors.append("result method differs from selected method authorization")
+    if result.get("packet_manifest_sha256") != scene_authorization.get("packet_manifest_sha256"):
+        errors.append("result packet manifest differs from method authorization")
     method_row = next(
         (row for row in methods.get("methods", []) if row.get("method_id") == result.get("method_id")),
         None,
@@ -286,7 +290,6 @@ def verify_method_result(
             ("model_checkpoint_sha256", "model_checkpoint_sha256"),
             ("recipe_sha256", "recipe_sha256"),
             ("renderer_adapter_sha256", "renderer_adapter_sha256"),
-            ("packet_manifest_sha256", "packet_manifest_sha256"),
         ):
             if result.get(result_field) != method_row.get(method_field):
                 errors.append(f"result/methods mismatch: {result_field}")

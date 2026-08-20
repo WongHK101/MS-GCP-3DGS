@@ -244,6 +244,10 @@ def validate_contract(
     for key in (
         "scene_plan_review_required", "full_ten_method_manifest_required_before_result",
         "scene_authorization_must_bind_methods_manifest_file_and_canonical_sha256",
+        "formal_methods_manifest_excludes_packet_artifacts",
+        "formal_methods_manifest_supports_hash_bound_failed_or_oom_attempts_without_model",
+        "rolling_selected_method_authorization_required",
+        "rolling_authorization_must_bind_selected_method_packet_manifest_and_fresh_output_root",
         "selected_method_packet_bytes_must_be_verified_before_output",
         "lidar_laz_bytes_must_be_verified_before_output",
     ):
@@ -258,8 +262,13 @@ def validate_contract(
         require(schema.get("distance_npz", {}).get("reconstruction_to_lidar_m", {}).get("dtype") == "float64", "distance dtype changed")
         require(schema.get("formal_methods_manifest", {}).get("schema") == "m3m_gcp_lidar_formal_methods_v1", "formal methods artifact schema changed")
         require(schema.get("formal_methods_manifest", {}).get("method_ids") == list(EXPECTED_METHOD_CLASSES), "formal methods exact pool changed")
+        require(schema.get("formal_methods_manifest", {}).get("attempt_statuses") == ["READY_FOR_EVALUATION", "OOM_UNRANKED", "FAILED_UNRANKED"], "method attempt/failure statuses changed")
+        require("packet_manifest_path" not in schema.get("formal_methods_manifest", {}).get("method_fields_exact", []), "rolling packet lifecycle disabled by methods manifest")
         require(schema.get("depth_packet_manifest", {}).get("packet_npz", {}).get("keys_exact") == EXPECTED_PACKET_KEYS, "packet NPZ exact keys changed")
         require(schema.get("scene_execution_authorization", {}).get("schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene authorization artifact schema changed")
+        authorization_fields = set(schema.get("scene_execution_authorization", {}).get("required_fields_exact", []))
+        require({"selected_method_id", "packet_manifest_path", "packet_manifest_sha256", "authorized_output_root"}.issubset(authorization_fields), "per-method rolling authorization binding weakened")
+        require("authorized_output_roots" not in authorization_fields, "legacy simultaneous packet/output authorization remains enabled")
         require(schema.get("method_verification_report_json", {}).get("required_status") == "PASS_VERIFIED_FORMAL_V1", "independent verification PASS requirement changed")
         require(schema.get("six_scene_results_manifest", {}).get("schema") == "m3m_gcp_lidar_six_scene_results_manifest_v1", "six-scene results manifest schema changed")
         require(schema.get("six_scene_results_manifest", {}).get("scene_entry_fields_exact") == ["scene", "status", "method_result_path", "method_result_sha256", "verification_report_path", "verification_report_sha256"], "ranking verifier-evidence binding changed")

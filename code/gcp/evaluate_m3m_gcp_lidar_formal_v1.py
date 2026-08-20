@@ -764,25 +764,29 @@ def main() -> None:
     split_scene = next(row for row in split_payload["scenes"] if row["scene"] == args.scene)
     expected_image_names = tuple(sorted(str(name) for name in split_scene["train_image_names"]))
     methods_payload = json.loads(args.methods_json.read_text(encoding="utf-8"))
+    scene_authorization = json.loads(scene_authorization_path.read_text(encoding="utf-8"))
     methods = [
         method for method in methods_payload["methods"]
         if method["method_id"] == args.method_id
     ]
     if len(methods) != 1:
         raise ValueError("--method-id must select exactly one frozen formal method")
+    if methods[0].get("attempt_status") != "READY_FOR_EVALUATION":
+        raise ValueError("--method-id selected a failed or OOM method without a formal checkpoint")
     common_packet_images: tuple[str, ...] | None = None
     packet_inputs: list[dict[str, Any]] = []
     for method in methods:
-        manifest_path = (
+        manifest_path = Path(scene_authorization["packet_manifest_path"])
+        expected_manifest_path = (
             Path(method["run_root"])
             / "formal_evaluation"
             / "packets"
             / "depth_export_manifest.json"
         )
-        if manifest_path.resolve() != Path(method["packet_manifest_path"]).resolve():
-            raise ValueError(f"{method['method_id']}: packet manifest path differs from frozen methods manifest")
-        if sha256_file(manifest_path) != method["packet_manifest_sha256"]:
-            raise ValueError(f"{method['method_id']}: packet manifest SHA differs from frozen methods manifest")
+        if manifest_path.resolve() != expected_manifest_path.resolve():
+            raise ValueError(f"{method['method_id']}: packet manifest is not under the frozen run root")
+        if sha256_file(manifest_path) != scene_authorization["packet_manifest_sha256"]:
+            raise ValueError(f"{method['method_id']}: packet manifest SHA differs from method authorization")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         validate_packet_manifest(
             manifest, scene=args.scene, expected_image_names=expected_image_names

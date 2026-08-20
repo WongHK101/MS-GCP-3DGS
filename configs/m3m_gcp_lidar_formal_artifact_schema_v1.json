@@ -35,14 +35,19 @@
   "formal_methods_manifest": {
     "schema": "m3m_gcp_lidar_formal_methods_v1",
     "top_level_required": ["schema", "protocol_id", "scene", "methods", "canonical_sha256"],
-    "method_fields_exact": ["method_id", "method_name", "input_class", "run_root", "model_checkpoint_path", "model_checkpoint_sha256", "recipe_path", "recipe_sha256", "renderer_adapter_path", "renderer_adapter_sha256", "packet_manifest_path", "packet_manifest_sha256"],
+    "method_fields_exact": ["method_id", "method_name", "input_class", "attempt_status", "run_root", "model_checkpoint_path", "model_checkpoint_sha256", "recipe_path", "recipe_sha256", "renderer_adapter_path", "renderer_adapter_sha256", "failure_evidence_path", "failure_evidence_sha256"],
     "method_ids": ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof", "citygaussian_v2", "citygs_x", "metrogs"],
+    "attempt_statuses": ["READY_FOR_EVALUATION", "OOM_UNRANKED", "FAILED_UNRANKED"],
+    "ready_rule": "model checkpoint path/SHA required and failure evidence path/SHA null",
+    "failure_rule": "model checkpoint path/SHA null and immutable failure evidence path/SHA required; recipe, renderer adapter and run root remain required",
+    "packet_binding_rule": "packet artifacts are deliberately excluded so the exact ten model/recipe/renderer identities can be frozen before rolling one-method packet generation",
     "canonical_sha256_required": true
   },
   "scene_execution_authorization": {
     "schema": "m3m_gcp_lidar_scene_execution_authorization_v1",
-    "required_fields_exact": ["schema", "protocol_id", "scene", "review_task_id", "review_verdict", "execution_authorized", "contract_file_sha256", "activation_manifest_sha256", "artifact_schema_sha256", "formal_input_manifest_file_sha256", "formal_input_manifest_canonical_sha256", "methods_manifest_file_sha256", "methods_manifest_canonical_sha256", "benchmark_commit", "benchmark_tree", "authorized_output_roots", "canonical_sha256"],
-    "authorized_output_roots": "exact map from every frozen method_id to one fresh absolute output root",
+    "required_fields_exact": ["schema", "protocol_id", "scene", "selected_method_id", "review_task_id", "review_verdict", "execution_authorized", "contract_file_sha256", "activation_manifest_sha256", "artifact_schema_sha256", "formal_input_manifest_file_sha256", "formal_input_manifest_canonical_sha256", "methods_manifest_file_sha256", "methods_manifest_canonical_sha256", "packet_manifest_path", "packet_manifest_sha256", "benchmark_commit", "benchmark_tree", "authorized_output_root", "canonical_sha256"],
+    "packet_binding_rule": "one selected method's exact all-train-view packet manifest and actual packet bytes are bound immediately before that method's fresh formal output is created",
+    "authorized_output_root": "one fresh absolute output root for selected_method_id",
     "canonical_sha256_required": true
   },
   "reference_npz": {

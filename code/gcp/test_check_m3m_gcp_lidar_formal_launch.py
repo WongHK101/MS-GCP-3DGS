@@ -38,15 +38,15 @@ class LaunchGateTest(unittest.TestCase):
             "method_id", "method_name", "input_class", "run_root",
             "model_checkpoint_path", "model_checkpoint_sha256", "recipe_path", "recipe_sha256",
             "renderer_adapter_path", "renderer_adapter_sha256",
-            "packet_manifest_path", "packet_manifest_sha256",
+            "attempt_status", "failure_evidence_path", "failure_evidence_sha256",
         ]
         auth_fields = [
-            "schema", "protocol_id", "scene", "review_task_id", "review_verdict",
+            "schema", "protocol_id", "scene", "selected_method_id", "review_task_id", "review_verdict",
             "execution_authorized", "contract_file_sha256", "activation_manifest_sha256",
             "artifact_schema_sha256", "formal_input_manifest_file_sha256",
             "formal_input_manifest_canonical_sha256", "methods_manifest_file_sha256",
-            "methods_manifest_canonical_sha256", "benchmark_commit", "benchmark_tree",
-            "authorized_output_roots", "canonical_sha256",
+            "methods_manifest_canonical_sha256", "packet_manifest_path", "packet_manifest_sha256",
+            "benchmark_commit", "benchmark_tree", "authorized_output_root", "canonical_sha256",
         ]
         packet_keys = [
             "accumulated_alpha", "weighted_camera_z_sum", "weighted_camera_z_second_moment",
@@ -71,7 +71,7 @@ class LaunchGateTest(unittest.TestCase):
         write_json(self.registry_path, {
             "active_benchmark_method_ids": list(ACTIVE_METHOD_CLASSES),
             "methods": [
-                {"method_id": key, "method_name": key, "input_class": value}
+                {"method_id": key, "display_name": key, "input_class": value}
                 for key, value in ACTIVE_METHOD_CLASSES.items()
             ],
         })
@@ -123,8 +123,8 @@ class LaunchGateTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-        packets_dir = self.root / "packets"
-        packets_dir.mkdir()
+        packets_dir = self.root / "assets" / "3dgs_original" / "formal_evaluation" / "packets"
+        packets_dir.mkdir(parents=True)
         self.packet_path = packets_dir / "a_metric_depth_packet.npz"
         arrays = {key: np.ones((2, 3), dtype=np.float32) for key in packet_keys}
         arrays["metric_depth_valid_mask"] = np.ones((2, 3), dtype=np.bool_)
@@ -151,22 +151,22 @@ class LaunchGateTest(unittest.TestCase):
         rows = []
         for method_id, input_class in ACTIVE_METHOD_CLASSES.items():
             asset_root = self.root / "assets" / method_id
-            asset_root.mkdir(parents=True)
+            asset_root.mkdir(parents=True, exist_ok=True)
             model, recipe, adapter = (asset_root / name for name in ("model", "recipe", "adapter"))
             for path in (model, recipe, adapter):
                 path.write_text(f"{method_id}-{path.name}", encoding="utf-8")
             rows.append({
                 "method_id": method_id, "method_name": method_id, "input_class": input_class,
+                "attempt_status": "READY_FOR_EVALUATION",
                 "run_root": str(asset_root), "model_checkpoint_path": str(model),
                 "model_checkpoint_sha256": sha256_file(model), "recipe_path": str(recipe),
                 "recipe_sha256": sha256_file(recipe), "renderer_adapter_path": str(adapter),
                 "renderer_adapter_sha256": sha256_file(adapter),
-                "packet_manifest_path": str(self.packet_manifest_path),
-                "packet_manifest_sha256": sha256_file(self.packet_manifest_path),
+                "failure_evidence_path": None, "failure_evidence_sha256": None,
             })
         methods = {"schema": "m3m_gcp_lidar_formal_methods_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene": "scene", "methods": rows}
         methods["canonical_sha256"] = canonical_sha256(methods)
-        self.methods_path = self.repo / "methods.json"
+        self.methods_path = self.root / "methods.json"
         write_json(self.methods_path, methods)
 
         self.contract_path = self.repo / "contract.json"
@@ -200,12 +200,12 @@ class LaunchGateTest(unittest.TestCase):
         self.output_root = (self.root / "new-output").resolve()
         self.scene_authorization_path = self.root / "scene-authorization.json"
         authorization = {
-            "schema": "m3m_gcp_lidar_scene_execution_authorization_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene": "scene", "review_task_id": "review", "review_verdict": "PASS_SCENE_EXECUTION_PLAN", "execution_authorized": True,
+            "schema": "m3m_gcp_lidar_scene_execution_authorization_v1", "protocol_id": "m3m_gcp_lidar_rendered_surface_v1", "scene": "scene", "selected_method_id": "3dgs_original", "review_task_id": "review", "review_verdict": "PASS_SCENE_EXECUTION_PLAN", "execution_authorized": True,
             "contract_file_sha256": sha256_file(self.contract_path), "activation_manifest_sha256": sha256_file(self.activation_path), "artifact_schema_sha256": sha256_file(self.schema_path),
             "formal_input_manifest_file_sha256": sha256_file(self.input_manifest_path), "formal_input_manifest_canonical_sha256": input_manifest["manifest_sha256"],
             "methods_manifest_file_sha256": sha256_file(self.methods_path), "methods_manifest_canonical_sha256": methods["canonical_sha256"],
-            "benchmark_commit": commit, "benchmark_tree": tree,
-            "authorized_output_roots": {key: str(self.output_root if key == "3dgs_original" else (self.root / "outputs" / key).resolve()) for key in ACTIVE_METHOD_CLASSES},
+            "packet_manifest_path": str(self.packet_manifest_path), "packet_manifest_sha256": sha256_file(self.packet_manifest_path),
+            "benchmark_commit": commit, "benchmark_tree": tree, "authorized_output_root": str(self.output_root),
         }
         authorization["canonical_sha256"] = canonical_sha256(authorization)
         write_json(self.scene_authorization_path, authorization)
@@ -233,6 +233,20 @@ class LaunchGateTest(unittest.TestCase):
         self.packet_path.write_bytes(b"tampered")
         self.assertTrue(any("packet byte count mismatch" in error for error in validate_launch(**self.kwargs)))
 
+    def test_packet_manifest_is_bound_per_selected_method(self) -> None:
+        payload = json.loads(self.scene_authorization_path.read_text(encoding="utf-8"))
+        payload["packet_manifest_sha256"] = "0" * 64
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        write_json(self.scene_authorization_path, payload)
+        self.assertTrue(any("packet manifest SHA mismatch" in error for error in validate_launch(**self.kwargs)))
+
+    def test_selected_method_authorization_must_match_cli(self) -> None:
+        payload = json.loads(self.scene_authorization_path.read_text(encoding="utf-8"))
+        payload["selected_method_id"] = "2dgs"
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        write_json(self.scene_authorization_path, payload)
+        self.assertTrue(any("selected method mismatch" in error for error in validate_launch(**self.kwargs)))
+
     def test_tampered_laz_bytes_are_rejected(self) -> None:
         laz = self.lidar_root / "lidars" / "terra_laz_1_4" / "cloud0.laz"
         laz.write_bytes(b"tampered")
@@ -245,9 +259,46 @@ class LaunchGateTest(unittest.TestCase):
         write_json(self.methods_path, payload)
         self.assertTrue(any("exact ordered ten-method pool" in error for error in validate_launch(**self.kwargs)))
 
+    def test_failed_peer_does_not_block_ready_selected_method(self) -> None:
+        payload = json.loads(self.methods_path.read_text(encoding="utf-8"))
+        peer = next(row for row in payload["methods"] if row["method_id"] == "2dgs")
+        failure = self.root / "assets" / "2dgs" / "failure.json"
+        failure.write_text("oom", encoding="utf-8")
+        peer["attempt_status"] = "OOM_UNRANKED"
+        peer["model_checkpoint_path"] = None
+        peer["model_checkpoint_sha256"] = None
+        peer["failure_evidence_path"] = str(failure)
+        peer["failure_evidence_sha256"] = sha256_file(failure)
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        write_json(self.methods_path, payload)
+        self._rebind_methods_authorization(payload)
+        self.assertEqual(validate_launch(**self.kwargs), [])
+
+    def test_failed_method_cannot_be_selected_for_evaluation(self) -> None:
+        payload = json.loads(self.methods_path.read_text(encoding="utf-8"))
+        selected = next(row for row in payload["methods"] if row["method_id"] == "3dgs_original")
+        failure = self.root / "assets" / "3dgs_original" / "failure.json"
+        failure.write_text("oom", encoding="utf-8")
+        selected["attempt_status"] = "OOM_UNRANKED"
+        selected["model_checkpoint_path"] = None
+        selected["model_checkpoint_sha256"] = None
+        selected["failure_evidence_path"] = str(failure)
+        selected["failure_evidence_sha256"] = sha256_file(failure)
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        write_json(self.methods_path, payload)
+        self._rebind_methods_authorization(payload)
+        self.assertTrue(any("not ready for evaluation" in error for error in validate_launch(**self.kwargs)))
+
     def test_unreviewed_output_root_is_rejected(self) -> None:
         self.kwargs["output_root"] = (self.root / "unreviewed").resolve()
         self.assertTrue(any("not authorized" in error for error in validate_launch(**self.kwargs)))
+
+    def _rebind_methods_authorization(self, methods: dict) -> None:
+        authorization = json.loads(self.scene_authorization_path.read_text(encoding="utf-8"))
+        authorization["methods_manifest_file_sha256"] = sha256_file(self.methods_path)
+        authorization["methods_manifest_canonical_sha256"] = methods["canonical_sha256"]
+        authorization["canonical_sha256"] = canonical_sha256(authorization)
+        write_json(self.scene_authorization_path, authorization)
 
 
 if __name__ == "__main__":

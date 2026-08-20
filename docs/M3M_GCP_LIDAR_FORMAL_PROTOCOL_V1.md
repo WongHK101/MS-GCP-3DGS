@@ -124,6 +124,18 @@ packet's byte count, SHA-256, exact ten-key inventory, array dtype and camera
 shape, image name, and `split=train` declaration.  A hash of only an inventory
 or packet manifest is insufficient.
 
+The exact ordered ten-method model/recipe/renderer manifest is frozen once per
+scene before any formal result, but deliberately contains no packet paths.
+Every row records an attempt status.  A successful row binds the exact model;
+an OOM or failed row has a null model and instead binds immutable failure
+evidence.  Therefore one failed method cannot block formal evaluation of the
+other successful methods and cannot receive a fabricated score.
+Each method then receives a separate pre-result execution authorization that
+binds that selected method, its newly generated all-train-view packet manifest,
+and one fresh output root.  This rolling authorization is required so a large
+scene never needs to retain ten packet sets simultaneously; it does not permit
+a subset method pool or a result-dependent method identity.
+
 Raw rendered depth packets are scratch artifacts.  They may be deleted only
 after independent metric recomputation passes and a lightweight, hash-bound
 archive containing metrics, distance arrays, manifests, logs, and failure
@@ -163,9 +175,12 @@ PGSR, RaDe-GS, QGS, GSPrior and SoF are in `rgb_colmap_only`;
 CityGaussianV2, CityGS-X and MetroGS are in
 `rgb_colmap_external_geometry_prior`.  GOF is not in the active formal pool.
 Every scene attempt supplies one immutable, ordered ten-method manifest whose
-checkpoint, recipe, renderer adapter and packet manifest paths and hashes are
-rechecked before any output directory is created.  Subset or ad-hoc method
-manifests are rejected.
+checkpoint, recipe and renderer adapter paths and hashes are rechecked before
+any output directory is created.  Subset or ad-hoc method manifests are
+rejected.  Failed/OOM rows bind their failure evidence instead of a checkpoint.
+The selected successful method's packet path and hash are instead carried by
+its rolling execution authorization and are rechecked with every actual NPZ
+byte before that method's output is created.
 
 ## 10. Frozen implementation, artifacts and launch gate
 
@@ -191,11 +206,13 @@ complete methods receive an official within-class rank.
 Formal execution is impossible while this contract is a review candidate.
 After review, a separate canonical activation manifest must bind the approved
 contract and artifact schema hashes plus the exact clean benchmark commit and
-tree.  Protocol activation alone does not authorize a scene.  Each scene also
-requires a separately reviewed execution-authorization manifest binding the
-exact formal input, full ten-method manifest, benchmark commit/tree and one
-fresh absolute output root per method.  The launch gate rechecks that
-authorization, all implementation hashes,
+tree.  Protocol activation alone does not authorize a scene.  Each scene first
+requires a reviewed execution plan binding the exact formal input, full
+ten-method model/recipe/renderer manifest, and benchmark commit/tree.  Under
+that reviewed plan, each selected method receives a separate immutable
+pre-result authorization binding its exact packet manifest and one fresh
+absolute output root.  The launch gate rechecks that authorization, all
+implementation hashes,
 the geometry release and scene Sim(3), LiDAR inventory, GCP coordinates,
 formal input manifest/COLMAP bytes, method registry/class mapping and all
 per-method assets.  It then requires a previously nonexistent absolute output

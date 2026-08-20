@@ -1,0 +1,96 @@
+{
+  "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1",
+  "plan_id": "m3m-gcp-native-quarter-100k-ten-method-seed0-v1",
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "execution_authorized": false,
+  "scene": "gcp_100000_20260610",
+  "seed": 0,
+  "train_view_count": 2196,
+  "heldout_view_count": 314,
+  "other_prepared_scenes_locked": [
+    "gcp_5000_20260602",
+    "gcp_20000_20260602",
+    "gcp_10000_20260610",
+    "gcp_50000_20260610"
+  ],
+  "method_order": [
+    "3dgs_original",
+    "2dgs",
+    "pgsr",
+    "rade_gs",
+    "sof",
+    "gsprior",
+    "qgs",
+    "citygaussian_v2",
+    "citygs_x",
+    "metrogs"
+  ],
+  "active_pool_order_for_results": [
+    "3dgs_original",
+    "2dgs",
+    "pgsr",
+    "rade_gs",
+    "qgs",
+    "gsprior",
+    "sof",
+    "citygaussian_v2",
+    "citygs_x",
+    "metrogs"
+  ],
+  "reuse": {
+    "method_id": "3dgs_original",
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
+    "model_checkpoint_relative_path": "model/point_cloud/iteration_30000/point_cloud.ply",
+    "model_checkpoint_bytes": 2340432588,
+    "model_checkpoint_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "retrain_allowed": false
+  },
+  "budgets": {
+    "2dgs": {"type": "iterations", "value": 30000},
+    "pgsr": {"type": "iterations", "value": 30000},
+    "rade_gs": {"type": "iterations", "value": 30000},
+    "sof": {"type": "iterations", "value": 30000},
+    "gsprior": {"type": "iterations", "value": 40000},
+    "qgs": {"type": "iterations", "value": 30000},
+    "citygaussian_v2": {"type": "official_matrixcity_aerial_4x4_two_stage", "coarse_steps": 30000, "fine_steps": 60000},
+    "citygs_x": {"type": "iterations", "value": 100000},
+    "metrogs": {"type": "effective_image_iterations", "value": 150000, "optimizer_steps": 37500}
+  },
+  "attempt_statuses": ["READY_FOR_EVALUATION", "OOM_UNRANKED", "FAILED_UNRANKED"],
+  "rolling_packet_lifecycle": {
+    "simultaneous_raw_packet_sets_max": 1,
+    "selected_method_all_train_views_required": true,
+    "per_method_pre_result_authorization_required": true,
+    "independent_verification_required_before_packet_deletion": true,
+    "lightweight_archive_pass_required_before_packet_deletion": true,
+    "final_models_and_distance_arrays_retained_on_901": true
+  },
+  "storage": {
+    "observed_free_bytes": 604395982848,
+    "observed_existing_run_tree_bytes": 118762414978,
+    "estimated_packet_scratch_gib_range": [83, 90],
+    "packet_scratch_hard_cap_gib": 100,
+    "minimum_free_before_training_gib": 300,
+    "minimum_free_before_packet_export_gib": 180,
+    "all_ten_packet_sets_simultaneously_forbidden": true
+  },
+  "time": {
+    "existing_3dgs_packet_seconds_per_view": 3.510931,
+    "successful_method_packet_export_hours_range": [2.0, 3.5],
+    "whole_queue_wall_days_range": [5, 10],
+    "working_expectation_days_range": [6, 9],
+    "estimate_is_not_early_stop_or_budget": true
+  },
+  "truth_deny": {
+    "heldout_rgb_visible_to_training": false,
+    "gcp_visible_to_training_or_selection": false,
+    "lidar_visible_to_training_prior_or_selection": false,
+    "result_driven_retry_or_recipe_change": false
+  },
+  "review": {
+    "task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "required_pass_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+    "verdict": "PENDING",
+    "exact_clean_commit_and_tree_binding_required": true
+  }
+}

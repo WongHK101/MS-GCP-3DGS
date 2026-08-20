@@ -1,0 +1,21 @@
+{
+  "schema": "m3m_gcp_lidar_v1_rolling_lifecycle_supersession_v1",
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "recorded_at": "2026-08-21T08:00:00+08:00",
+  "superseded_review_verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION",
+  "supersession_scope": "formal LiDAR artifact and launch lifecycle only; source data, six-scene preparation, metrics, thresholds, registration, ROI, ranking comparator and method pool are unchanged",
+  "reason": [
+    "the reviewed schema required all ten packet manifests before the first method result while forbidding packet deletion before verification; projected 100K packet storage was approximately 0.83 TiB versus approximately 563 GiB free",
+    "the reviewed schema required checkpoints for all ten methods and therefore could not evaluate successful methods after a peer method OOM or failure"
+  ],
+  "replacement": {
+    "formal_methods_manifest": "exact ordered ten-method attempt manifest; packet paths excluded; successful rows bind checkpoint and failed/OOM rows bind failure evidence",
+    "execution_authorization": "rolling one-selected-method pre-result authorization binding its packet manifest and one fresh output root",
+    "simultaneous_raw_packet_sets_max": 1
+  },
+  "scientific_semantics_changed": false,
+  "formal_results_produced_under_superseded_bytes": false,
+  "training_started_under_replacement": false,
+  "new_independent_review_required": true,
+  "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b"
+}

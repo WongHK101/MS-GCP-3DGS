@@ -189,6 +189,7 @@ def validate_launch(
     require(scene_authorization.get("schema") == "m3m_gcp_lidar_scene_execution_authorization_v1", "scene authorization schema mismatch")
     require(scene_authorization.get("protocol_id") == PROTOCOL_ID, "scene authorization protocol mismatch")
     require(scene_authorization.get("scene") == scene, "scene authorization scene mismatch")
+    require(scene_authorization.get("selected_method_id") == selected_method_id, "scene authorization selected method mismatch")
     require(scene_authorization.get("review_task_id") == contract.get("review", {}).get("review_task_id"), "scene authorization review task mismatch")
     require(str(scene_authorization.get("review_verdict", "")).startswith("PASS_"), "scene authorization review verdict is not PASS")
     require(scene_authorization.get("execution_authorized") is True, "scene authorization does not authorize execution")
@@ -349,40 +350,79 @@ def validate_launch(
         require(row_method_id not in seen, f"duplicate method: {row_method_id}")
         seen.add(row_method_id)
         require(row.get("input_class") == ACTIVE_METHOD_CLASSES.get(row_method_id), f"{row_method_id}: input class mismatch")
+        registry_row = next(
+            (item for item in registry.get("methods", []) if item.get("method_id") == row_method_id),
+            {},
+        )
+        require(row.get("method_name") == registry_row.get("display_name"), f"{row_method_id}: method name mismatch")
         for field in (
             "run_root",
-            "model_checkpoint_path",
-            "model_checkpoint_sha256",
             "recipe_path",
             "recipe_sha256",
             "renderer_adapter_path",
             "renderer_adapter_sha256",
-            "packet_manifest_path",
-            "packet_manifest_sha256",
         ):
             require(bool(row.get(field)), f"{row_method_id}: missing {field}")
         for path_field, sha_field in (
-            ("model_checkpoint_path", "model_checkpoint_sha256"),
             ("recipe_path", "recipe_sha256"),
             ("renderer_adapter_path", "renderer_adapter_sha256"),
-            ("packet_manifest_path", "packet_manifest_sha256"),
         ):
             path = Path(str(row.get(path_field, "")))
             require(path.is_file(), f"{row_method_id}: missing {path_field}")
             if path.is_file():
                 require(sha256_file(path) == row.get(sha_field), f"{row_method_id}: {sha_field} mismatch")
+        attempt_status = row.get("attempt_status")
+        require(
+            attempt_status in {"READY_FOR_EVALUATION", "OOM_UNRANKED", "FAILED_UNRANKED"},
+            f"{row_method_id}: invalid attempt status",
+        )
+        if attempt_status == "READY_FOR_EVALUATION":
+            require(bool(row.get("model_checkpoint_path")), f"{row_method_id}: missing model checkpoint path")
+            require(bool(row.get("model_checkpoint_sha256")), f"{row_method_id}: missing model checkpoint SHA")
+            require(row.get("failure_evidence_path") is None, f"{row_method_id}: ready method carries failure evidence path")
+            require(row.get("failure_evidence_sha256") is None, f"{row_method_id}: ready method carries failure evidence SHA")
+            model_path = Path(str(row.get("model_checkpoint_path", "")))
+            require(model_path.is_file(), f"{row_method_id}: missing model checkpoint")
+            if model_path.is_file():
+                require(sha256_file(model_path) == row.get("model_checkpoint_sha256"), f"{row_method_id}: model checkpoint SHA mismatch")
+        elif attempt_status in {"OOM_UNRANKED", "FAILED_UNRANKED"}:
+            require(row.get("model_checkpoint_path") is None, f"{row_method_id}: failed method carries model checkpoint path")
+            require(row.get("model_checkpoint_sha256") is None, f"{row_method_id}: failed method carries model checkpoint SHA")
+            failure_path = Path(str(row.get("failure_evidence_path", "")))
+            require(failure_path.is_file(), f"{row_method_id}: missing failure evidence")
+            require(bool(row.get("failure_evidence_sha256")), f"{row_method_id}: missing failure evidence SHA")
+            if failure_path.is_file():
+                require(sha256_file(failure_path) == row.get("failure_evidence_sha256"), f"{row_method_id}: failure evidence SHA mismatch")
 
     selected = next((row for row in methods_rows if row.get("method_id") == selected_method_id), None)
     if selected is not None:
-        packet_manifest_path = Path(str(selected["packet_manifest_path"]))
-        errors.extend(
-            f"{selected_method_id}: {error}"
-            for error in validate_packet_files(
-                manifest_path=packet_manifest_path,
-                expected_image_names=tuple(train_names),
-                packet_schema=schema.get("depth_packet_manifest", {}).get("packet_npz", {}),
-            )
+        require(selected.get("attempt_status") == "READY_FOR_EVALUATION", f"{selected_method_id}: selected method is not ready for evaluation")
+        packet_manifest_path = Path(str(scene_authorization.get("packet_manifest_path", "")))
+        expected_packet_manifest_path = (
+            Path(str(selected["run_root"]))
+            / "formal_evaluation"
+            / "packets"
+            / "depth_export_manifest.json"
         )
+        require(
+            packet_manifest_path.resolve() == expected_packet_manifest_path.resolve(),
+            f"{selected_method_id}: packet manifest is not under the frozen run root",
+        )
+        require(packet_manifest_path.is_file(), f"{selected_method_id}: missing packet manifest")
+        if packet_manifest_path.is_file():
+            require(
+                sha256_file(packet_manifest_path)
+                == scene_authorization.get("packet_manifest_sha256"),
+                f"{selected_method_id}: packet manifest SHA mismatch",
+            )
+            errors.extend(
+                f"{selected_method_id}: {error}"
+                for error in validate_packet_files(
+                    manifest_path=packet_manifest_path,
+                    expected_image_names=tuple(train_names),
+                    packet_schema=schema.get("depth_packet_manifest", {}).get("packet_npz", {}),
+                )
+            )
 
     expected_commit = activation.get("benchmark_commit")
     expected_tree = activation.get("benchmark_tree")
@@ -392,10 +432,11 @@ def validate_launch(
     require(scene_authorization.get("benchmark_commit") == expected_commit, "scene authorization benchmark commit mismatch")
     require(scene_authorization.get("benchmark_tree") == expected_tree, "scene authorization benchmark tree mismatch")
     require(output_root.is_absolute(), "output root must be absolute")
-    authorized_roots = scene_authorization.get("authorized_output_roots", {})
-    require(set(authorized_roots) == set(ACTIVE_METHOD_CLASSES), "scene authorization output-root map is not exact ten-method pool")
-    if selected_method_id in authorized_roots:
-        require(Path(str(authorized_roots[selected_method_id])).resolve() == output_root.resolve(), "output root is not authorized for selected method")
+    require(
+        Path(str(scene_authorization.get("authorized_output_root", ""))).resolve()
+        == output_root.resolve(),
+        "output root is not authorized for selected method",
+    )
     require(not output_root.exists(), "formal output root already exists; overwrite/resume is forbidden")
     return errors
 
