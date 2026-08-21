@@ -232,6 +232,8 @@ def main() -> int:
             "training_child_must_create_products_inside_new_run_root": True,
             "zero_exit_requires_phase_product_postvalidation": True,
             "prior_phase_success_and_product_required_before_training": True,
+            "ready_model_identity_requires_exact_phase_success_markers": True,
+            "phase_success_command_rehashed_against_frozen_recipe": True,
         },
         "attempt_freeze": {
             "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",

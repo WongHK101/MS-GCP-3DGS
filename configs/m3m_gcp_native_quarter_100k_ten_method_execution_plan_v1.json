@@ -55,7 +55,7 @@
       "value": 30000
     }
   },
-  "canonical_sha256": "21ff876f12fec245f9a5e630771f6c5018c9b8d0ef125e817c338094c041ac35",
+  "canonical_sha256": "47006f392dc1c26cdec029ac5cf5c613c3a4897609e9f7a3ce2cad265ac498c4",
   "execution_authorized": false,
   "execution_closure": {
     "activation_builder": {
@@ -68,7 +68,7 @@
     },
     "attempt_manifest_builder": {
       "path": "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
-      "sha256": "1f0d6a4ee70ad11a3ef1d8724a893cf69bae5c8017d297fb65de2345afe9f3cc"
+      "sha256": "015ae483263bc1ff4b6a733b356f000ad1a3d9d020e6257a42fb6908a51eb9c8"
     },
     "evaluation_camera_root_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py",
@@ -79,7 +79,7 @@
     "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
     "guarded_runner": {
       "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
-      "sha256": "9c4852f28a42c4f0e866f7a168f63cb75e08ffd4e0c2fac084999955e9d6b01c"
+      "sha256": "a48130622a0656a5a115ca6bd4bfc044f593ab0a25b252566a054319ce3bb39a"
     },
     "method_input_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_method_inputs.py",
@@ -93,6 +93,7 @@
       "path": "code/gcp/m3m_gcp_100k_phase_products.py",
       "sha256": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82"
     },
+    "phase_success_command_rehashed_against_frozen_recipe": true,
     "post_sfm_track_compatibility_materializers": [
       {
         "path": "code/gcp/filter_colmap_model_to_frozen_train_streaming.py",
@@ -106,6 +107,7 @@
     "prior_and_training_require_absent_run_root_at_guard_admission": true,
     "prior_phase_success_and_product_required_before_training": true,
     "progress_monitor_bound_by_each_recipe": true,
+    "ready_model_identity_requires_exact_phase_success_markers": true,
     "structured_failure_evidence_required": true,
     "training_child_must_create_products_inside_new_run_root": true,
     "zero_exit_requires_phase_product_postvalidation": true

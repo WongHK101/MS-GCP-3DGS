@@ -105,6 +105,8 @@ class Guarded100KTest(unittest.TestCase):
             "input_class": "rgb_colmap_only",
             "budget": {"type": "iterations", "value": 30000},
             "renderer_adapter_sha256": sha256_file(self.adapter),
+            "authorized_run_root": str((self.root / "selected-run").resolve()),
+            "authorized_evidence_root": str((self.root / "selected-evidence").resolve()),
             "authorized_packet_set_root": str((self.root / "packet-set").resolve()),
             "authorized_packet_state": str((self.root / "packet-state.json").resolve()),
             "fresh_run_root_policy": {
@@ -115,6 +117,15 @@ class Guarded100KTest(unittest.TestCase):
             },
             "phase_commands": {"training": [sys.executable, "-c", "print('ok')"],
                                "packet": [sys.executable, "-c", "import time; time.sleep(5)"]},
+            "phase_roots": {
+                "training": {
+                    "dataset_root": str((self.root / "dataset").resolve()),
+                    "prior_root": str((self.root / "dataset").resolve()),
+                }
+            },
+            "source_bindings": {
+                "training": {"root": str((self.root / "source").resolve())}
+            },
         }
         recipe["canonical_sha256"] = canonical_sha256(recipe)
         write_json(self.recipe, recipe)
@@ -162,6 +173,8 @@ class Guarded100KTest(unittest.TestCase):
                 "exact_review_verdict_required": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
                 "prior_and_training_require_absent_run_root_at_guard_admission": True,
                 "training_child_must_create_products_inside_new_run_root": True,
+                "ready_model_identity_requires_exact_phase_success_markers": True,
+                "phase_success_command_rehashed_against_frozen_recipe": True,
             },
             "preparation": {"per_method_input_evidence": {
                 "path": str(preparation), "sha256": sha256_file(preparation),
@@ -512,17 +525,52 @@ class Guarded100KTest(unittest.TestCase):
                 write_gaussian_ply(model)
             else:
                 model.write_text(method_id, encoding="utf-8")
+            inventory = [{
+                "path": str(model.resolve()),
+                "bytes": model.stat().st_size,
+                "sha256": sha256_file(model),
+            }]
+            if method_id == "2dgs":
+                recipe_payload = json.loads(self.recipe.read_text())
+                marker = (
+                    Path(recipe_payload["authorized_evidence_root"])
+                    / "training" / "phase_success.json"
+                )
+                marker_payload = {
+                    "schema": "m3m_gcp_100k_phase_success_v1",
+                    "status": "PASS",
+                    "scene": "gcp_100000_20260610",
+                    "method_id": "2dgs",
+                    "phase": "training",
+                    "recipe_sha256": sha256_file(self.recipe),
+                    "command_sha256": command_sha256(
+                        recipe_payload["phase_commands"]["training"]
+                    ),
+                    "frozen_budget": recipe_payload["budget"],
+                    "completion_evidence": {
+                        "progress_unit": "iterations",
+                        "last_valid_progress": 30000.0,
+                        "required_product_postvalidation_passed": True,
+                    },
+                    "products": build_phase_product_rows(
+                        [model], phase="training", method_id="2dgs"
+                    ),
+                    "ended_at_utc": "2026-08-21T00:00:00Z",
+                }
+                marker_payload["canonical_sha256"] = canonical_sha256(marker_payload)
+                write_json(marker, marker_payload)
+                inventory.append({
+                    "path": str(marker.resolve()),
+                    "bytes": marker.stat().st_size,
+                    "sha256": sha256_file(marker),
+                })
             identity = {
                 "schema": "m3m_gcp_100k_model_identity_v1",
                 "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
                 "scene": "gcp_100000_20260610",
                 "method_id": method_id,
                 "run_root": str(asset_root),
-                "inventory": [{
-                    "path": str(model.resolve()),
-                    "bytes": model.stat().st_size,
-                    "sha256": sha256_file(model),
-                }],
+                "inventory": sorted(inventory, key=lambda row: row["path"]),
             }
             identity["canonical_sha256"] = canonical_sha256(identity)
             identity_path = identity_root / f"{method_id}.json"
@@ -569,7 +617,7 @@ class Guarded100KTest(unittest.TestCase):
         write_json(freeze_path, freeze)
         args = argparse.Namespace(
             scene_attempt_freeze=freeze_path, method_id="2dgs",
-            run_root=selected_run, recipe=self.recipe,
+            run_root=selected_run, recipe=self.recipe, repo=self.repo,
         )
         frozen, freeze_sha = validate_packet_freeze_binding(
             args=args,
@@ -639,6 +687,97 @@ class Guarded100KTest(unittest.TestCase):
                     "method_id": "2dgs",
                     "budget": {"type": "iterations", "value": 30000},
                 },
+                repo=self.repo,
+            )
+
+    def test_model_identity_requires_exact_training_success_marker(self) -> None:
+        run_root = (self.root / "missing-marker-run").resolve()
+        model = (
+            run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        )
+        write_gaussian_ply(model)
+        payload = {
+            "schema": "m3m_gcp_100k_model_identity_v1",
+            "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+            "scene": "gcp_100000_20260610",
+            "method_id": "2dgs",
+            "run_root": str(run_root),
+            "inventory": [{
+                "path": str(model),
+                "bytes": model.stat().st_size,
+                "sha256": sha256_file(model),
+            }],
+        }
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        identity = self.root / "missing-marker-identity.json"
+        write_json(identity, payload)
+        recipe = json.loads(self.recipe.read_text())
+        recipe["_recipe_path"] = str(self.recipe)
+        with self.assertRaisesRegex(RuntimeError, "phase-success marker inventory"):
+            validate_model_identity_bundle(
+                manifest_path=identity,
+                method_id="2dgs",
+                run_root=run_root,
+                recipe=recipe,
+                repo=self.repo,
+            )
+
+    def test_model_identity_rejects_wrong_training_command_hash(self) -> None:
+        run_root = (self.root / "wrong-command-run").resolve()
+        model = (
+            run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        )
+        write_gaussian_ply(model)
+        recipe = json.loads(self.recipe.read_text())
+        recipe["_recipe_path"] = str(self.recipe)
+        marker = (
+            Path(recipe["authorized_evidence_root"])
+            / "training" / "phase_success.json"
+        )
+        marker_payload = {
+            "schema": "m3m_gcp_100k_phase_success_v1",
+            "status": "PASS",
+            "scene": "gcp_100000_20260610",
+            "method_id": "2dgs",
+            "phase": "training",
+            "recipe_sha256": sha256_file(self.recipe),
+            "command_sha256": command_sha256(["wrong-command"]),
+            "frozen_budget": recipe["budget"],
+            "completion_evidence": {
+                "progress_unit": "iterations",
+                "last_valid_progress": 30000.0,
+                "required_product_postvalidation_passed": True,
+            },
+            "products": build_phase_product_rows(
+                [model], phase="training", method_id="2dgs"
+            ),
+            "ended_at_utc": "2026-08-21T00:00:00Z",
+        }
+        marker_payload["canonical_sha256"] = canonical_sha256(marker_payload)
+        write_json(marker, marker_payload)
+        inventory = [
+            {"path": str(path.resolve()), "bytes": path.stat().st_size,
+             "sha256": sha256_file(path)}
+            for path in (model, marker)
+        ]
+        payload = {
+            "schema": "m3m_gcp_100k_model_identity_v1",
+            "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+            "scene": "gcp_100000_20260610",
+            "method_id": "2dgs",
+            "run_root": str(run_root),
+            "inventory": sorted(inventory, key=lambda row: row["path"]),
+        }
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        identity = self.root / "wrong-command-identity.json"
+        write_json(identity, payload)
+        with self.assertRaisesRegex(RuntimeError, "phase success identity mismatch"):
+            validate_model_identity_bundle(
+                manifest_path=identity,
+                method_id="2dgs",
+                run_root=run_root,
+                recipe=recipe,
+                repo=self.repo,
             )
 
     def test_packet_cumulative_cap_terminates_command_and_writes_failure(self) -> None:

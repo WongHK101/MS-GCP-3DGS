@@ -287,6 +287,12 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertTrue(
             closure["prior_phase_success_and_product_required_before_training"]
         )
+        self.assertTrue(
+            closure["ready_model_identity_requires_exact_phase_success_markers"]
+        )
+        self.assertTrue(
+            closure["phase_success_command_rehashed_against_frozen_recipe"]
+        )
         self.assertEqual(
             plan["formal_lidar_protocol"]["phase1_review"]["verdict"],
             "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",

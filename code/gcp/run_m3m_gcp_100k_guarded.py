@@ -330,6 +330,10 @@ def validate_activation_and_recipe(
         is not True
         or closure.get("training_child_must_create_products_inside_new_run_root")
         is not True
+        or closure.get("ready_model_identity_requires_exact_phase_success_markers")
+        is not True
+        or closure.get("phase_success_command_rehashed_against_frozen_recipe")
+        is not True
     ):
         raise RuntimeError("execution plan fresh-run-root closure mismatch")
     preparation = plan.get("preparation", {}).get("per_method_input_evidence", {})
@@ -1316,7 +1320,8 @@ def classify_oom(stderr_text: str, delta: dict[str, int]) -> tuple[str, str | No
 
 
 def validate_model_identity_bundle(
-    *, manifest_path: Path, method_id: str, run_root: Path, recipe: dict[str, Any]
+    *, manifest_path: Path, method_id: str, run_root: Path, recipe: dict[str, Any],
+    repo: Path,
 ) -> dict[str, Any]:
     """Rehash every file in the frozen 100K model-identity bundle."""
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1364,18 +1369,51 @@ def validate_model_identity_bundle(
             "100K model identity omits the method's actual final model: "
             + ", ".join(missing)
         )
-    phase_markers = [
-        Path(path) for path in paths if Path(path).name == "phase_success.json"
+    required_phases = [
+        phase
+        for phase in ("prior", "training")
+        if phase in recipe.get("phase_commands", {})
     ]
-    for marker_path in phase_markers:
+    evidence_root = Path(str(recipe.get("authorized_evidence_root", ""))).resolve()
+    expected_marker_paths = {
+        phase: (evidence_root / phase / "phase_success.json").resolve()
+        for phase in required_phases
+    }
+    phase_markers = {
+        Path(path).resolve()
+        for path in paths
+        if Path(path).name == "phase_success.json"
+    }
+    if phase_markers != set(expected_marker_paths.values()):
+        raise RuntimeError(
+            "100K model identity phase-success marker inventory mismatch"
+        )
+    for phase, marker_path in expected_marker_paths.items():
         marker = read_bound_json(marker_path, label="frozen phase success")
-        phase = str(marker.get("phase", ""))
+        roots = recipe.get("phase_roots", {}).get(phase, {})
+        source = recipe.get("source_bindings", {}).get(phase, {})
+        replacements = {
+            "repo": str(repo.resolve()),
+            "dataset_root": str(
+                Path(str(roots.get("dataset_root", ""))).resolve()
+            ),
+            "source_root": str(Path(str(source.get("root", ""))).resolve()),
+            "prior_root": str(Path(str(roots.get("prior_root", ""))).resolve()),
+            "run_root": str(run_root.resolve()),
+            "packet_set_root": str(
+                Path(str(recipe.get("authorized_packet_set_root", ""))).resolve()
+            ),
+        }
+        template = recipe.get("phase_commands", {}).get(phase, [])
+        expected_command = [str(item).format(**replacements) for item in template]
         if (
             marker.get("schema") != "m3m_gcp_100k_phase_success_v1"
             or marker.get("status") != "PASS"
             or marker.get("scene") != SCENE
             or marker.get("method_id") != method_id
+            or marker.get("phase") != phase
             or marker.get("recipe_sha256") != sha256_file(Path(recipe["_recipe_path"]))
+            or marker.get("command_sha256") != command_sha256(expected_command)
             or marker.get("canonical_sha256") != canonical_sha256(marker)
         ):
             raise RuntimeError("frozen phase success identity mismatch")
@@ -1442,6 +1480,7 @@ def validate_packet_freeze_binding(
         method_id=args.method_id,
         run_root=args.run_root,
         recipe=bound_recipe,
+        repo=args.repo,
     )
     return row, sha256_file(freeze_path)
 

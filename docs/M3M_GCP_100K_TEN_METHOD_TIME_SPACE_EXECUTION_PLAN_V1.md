@@ -100,6 +100,13 @@ attempt because recipe-changing rescue runs are forbidden.
    Failed/OOM rows have null model fields and bind failure evidence.  One
    failed method therefore cannot invalidate successful methods.
 
+   Except for the reused packet-only 3DGS model, every READY identity must
+   contain the exact fixed-path training `phase_success.json`; methods with an
+   authorized prior must also contain the exact prior success marker.  Both the
+   attempt builder and packet guard re-expand the frozen phase command and
+   require its SHA-256 to equal the marker's `command_sha256`.  Missing,
+   relocated, extra-phase, or wrong-command markers fail closed.
+
 The execution-plan file, recipe manifest, method registry, attempt-manifest
 output, model-identity directory and scene-freeze output are all exact paths in
 the frozen plan.  The builders reject alternate CLI destinations.  Each model

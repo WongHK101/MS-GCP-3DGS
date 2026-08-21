@@ -14,6 +14,7 @@ from m3m_gcp_lidar_artifacts import (
     METHOD_IDS,
     PROTOCOL_ID,
     canonical_sha256,
+    command_sha256,
     sha256_file,
     validate_failure_evidence_file,
 )
@@ -112,6 +113,7 @@ def validate_frozen_attempt_paths(
 
 def phase_success_inventory(
     path: Path, *, method_id: str, phase: str, recipe_sha256: str,
+    expected_command_sha256: str,
     frozen_budget: dict[str, Any] | None = None,
     expected_product_paths: list[Path] | None = None,
 ) -> dict[str, Any]:
@@ -138,6 +140,7 @@ def phase_success_inventory(
         or payload.get("method_id") != method_id
         or payload.get("phase") != phase
         or payload.get("recipe_sha256") != recipe_sha256
+        or payload.get("command_sha256") != expected_command_sha256
         or payload.get("frozen_budget") != (frozen_budget or {})
         or payload.get("canonical_sha256") != canonical_sha256(payload)
     ):
@@ -169,6 +172,27 @@ def phase_success_inventory(
         if products != expected_rows:
             raise RuntimeError(f"phase success products differ from final model: {path}")
     return inventory_row(path)
+
+
+def frozen_phase_command_sha256(
+    *, recipe: dict[str, Any], phase: str, repo: Path
+) -> str:
+    roots = recipe.get("phase_roots", {}).get(phase, {})
+    source = recipe.get("source_bindings", {}).get(phase, {})
+    template = recipe.get("phase_commands", {}).get(phase)
+    if not isinstance(template, list) or not template:
+        raise RuntimeError(f"recipe has no frozen {phase} command")
+    replacements = {
+        "repo": str(repo.resolve()),
+        "dataset_root": str(Path(str(roots.get("dataset_root", ""))).resolve()),
+        "source_root": str(Path(str(source.get("root", ""))).resolve()),
+        "prior_root": str(Path(str(roots.get("prior_root", ""))).resolve()),
+        "run_root": str(Path(str(recipe.get("authorized_run_root", ""))).resolve()),
+        "packet_set_root": str(
+            Path(str(recipe.get("authorized_packet_set_root", ""))).resolve()
+        ),
+    }
+    return command_sha256([str(item).format(**replacements) for item in template])
 
 
 def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
@@ -469,6 +493,9 @@ def main() -> int:
                             method_id=method_id,
                             phase=phase,
                             recipe_sha256=sha256_file(recipe_path),
+                            expected_command_sha256=frozen_phase_command_sha256(
+                                recipe=recipe, phase=phase, repo=repo
+                            ),
                             frozen_budget=recipe.get("budget", {}),
                             expected_product_paths=(
                                 required_training_product_paths(method_id, recipe)

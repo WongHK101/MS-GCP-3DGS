@@ -150,8 +150,20 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                 method_id="2dgs",
                 phase="training",
                 recipe_sha256="a" * 64,
+                expected_command_sha256="b" * 64,
             )
             self.assertEqual(row["sha256"], sha256_file(path))
+            payload["command_sha256"] = "c" * 64
+            payload["canonical_sha256"] = canonical_sha256(payload)
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "phase success identity mismatch"):
+                phase_success_inventory(
+                    path,
+                    method_id="2dgs",
+                    phase="training",
+                    recipe_sha256="a" * 64,
+                    expected_command_sha256="b" * 64,
+                )
 
     def test_plain_gaussian_binds_ply_and_cfg_args(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -205,6 +217,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                     method_id="2dgs",
                     phase="training",
                     recipe_sha256="a" * 64,
+                    expected_command_sha256="b" * 64,
                     frozen_budget={"type": "iterations", "value": 30000},
                     expected_product_paths=[final_model],
                 )
