@@ -273,6 +273,10 @@ class ExecutionCandidateTest(unittest.TestCase):
             "configs/m3m_gcp_native_quarter_method_registry_v3.json",
         )
         closure = plan["execution_closure"]
+        self.assertEqual(
+            closure["phase_product_validator"]["path"],
+            "code/gcp/m3m_gcp_100k_phase_products.py",
+        )
         self.assertTrue(closure["zero_exit_requires_phase_product_postvalidation"])
         self.assertTrue(
             closure["prior_phase_success_and_product_required_before_training"]
@@ -292,6 +296,10 @@ class ExecutionCandidateTest(unittest.TestCase):
         )
         self.assertNotIn("pre_child_or_zero_optimizer_progress", plan["retry_policy"])
         for recipe in self.recipes.values():
+            self.assertIn(
+                "code/gcp/m3m_gcp_100k_phase_products.py",
+                recipe["benchmark_required_files_sha256"],
+            )
             self.assertIn("once the child starts every exit is final", recipe["retry_policy"])
 
 

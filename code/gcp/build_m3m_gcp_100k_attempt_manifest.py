@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,13 @@ from m3m_gcp_lidar_artifacts import (
     canonical_sha256,
     sha256_file,
     validate_failure_evidence_file,
+)
+from m3m_gcp_100k_phase_products import (
+    phase_product_row,
+    revalidate_phase_product_row,
+    validate_gaussian_ply,
+    validate_npz,
+    validate_torch_checkpoint,
 )
 
 
@@ -43,8 +51,20 @@ def require_file(path: Path, expected_sha: str | None = None) -> Path:
     return path
 
 
-def inventory_row(path: Path) -> dict[str, Any]:
+def inventory_row(
+    path: Path, *, validate_model_container: bool = False,
+    method_id: str | None = None,
+) -> dict[str, Any]:
     path = require_file(path)
+    if validate_model_container:
+        if path.suffix.lower() == ".ply":
+            if not method_id:
+                raise RuntimeError("Gaussian model inventory validation requires a method ID")
+            validate_gaussian_ply(path, method_id=method_id)
+        elif path.suffix.lower() in {".ckpt", ".pth"}:
+            validate_torch_checkpoint(path)
+        elif path.suffix.lower() == ".npz":
+            validate_npz(path)
     return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
 
 
@@ -91,7 +111,9 @@ def validate_frozen_attempt_paths(
 
 
 def phase_success_inventory(
-    path: Path, *, method_id: str, phase: str, recipe_sha256: str
+    path: Path, *, method_id: str, phase: str, recipe_sha256: str,
+    frozen_budget: dict[str, Any] | None = None,
+    expected_product_paths: list[Path] | None = None,
 ) -> dict[str, Any]:
     payload = json.loads(require_file(path).read_text(encoding="utf-8"))
     if set(payload) != {
@@ -102,6 +124,9 @@ def phase_success_inventory(
         "phase",
         "recipe_sha256",
         "command_sha256",
+        "frozen_budget",
+        "completion_evidence",
+        "products",
         "ended_at_utc",
         "canonical_sha256",
     }:
@@ -113,9 +138,36 @@ def phase_success_inventory(
         or payload.get("method_id") != method_id
         or payload.get("phase") != phase
         or payload.get("recipe_sha256") != recipe_sha256
+        or payload.get("frozen_budget") != (frozen_budget or {})
         or payload.get("canonical_sha256") != canonical_sha256(payload)
     ):
         raise RuntimeError(f"phase success identity mismatch: {path}")
+    completion = payload.get("completion_evidence")
+    if (
+        not isinstance(completion, dict)
+        or completion.get("required_product_postvalidation_passed") is not True
+        or not isinstance(completion.get("progress_unit"), str)
+        or not isinstance(completion.get("last_valid_progress"), (int, float))
+        or not math.isfinite(float(completion.get("last_valid_progress", float("nan"))))
+    ):
+        raise RuntimeError(f"phase success completion evidence mismatch: {path}")
+    products = payload.get("products")
+    if not isinstance(products, list) or not products:
+        raise RuntimeError(f"phase success product inventory is empty: {path}")
+    product_paths = [revalidate_phase_product_row(row) for row in products]
+    if product_paths != sorted(product_paths, key=str) or len(product_paths) != len(set(product_paths)):
+        raise RuntimeError(f"phase success product order/cardinality mismatch: {path}")
+    if expected_product_paths is not None:
+        expected_rows = [
+            phase_product_row(
+                item,
+                validate_model_container=phase == "training",
+                method_id=method_id if phase == "training" else None,
+            )
+            for item in sorted((item.resolve() for item in expected_product_paths), key=str)
+        ]
+        if products != expected_rows:
+            raise RuntimeError(f"phase success products differ from final model: {path}")
     return inventory_row(path)
 
 
@@ -136,7 +188,9 @@ def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, 
             point_cloud = require_file(
                 run_root / "model" / "point_cloud" / f"iteration_{iteration}" / "point_cloud.ply"
             )
-        rows.append(inventory_row(point_cloud))
+        rows.append(inventory_row(
+            point_cloud, validate_model_container=True, method_id=method_id
+        ))
         cfg_args = run_root / "model" / "cfg_args"
         if cfg_args.is_file():
             rows.append(inventory_row(cfg_args))
@@ -151,19 +205,33 @@ def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, 
         iteration = int(budget.get("value", -1))
         rows.extend([
             inventory_row(run_root / "formal_training_config.yaml"),
-            inventory_row(run_root / "model" / "point_cloud" / f"iteration_{iteration}" / "point_cloud.ply"),
+            inventory_row(
+                run_root / "model" / "point_cloud" / f"iteration_{iteration}" / "point_cloud.ply",
+                validate_model_container=True,
+                method_id=method_id,
+            ),
         ])
     elif method_id == "citygaussian_v2":
         summary_path = run_root / "pipeline" / "pipeline_summary.json"
         summary = read_summary(summary_path, method_id=method_id, required_status="PIPELINE_PASS")
-        if int(summary.get("coarse_steps", -1)) != 30000 or int(summary.get("fine_steps", -1)) != 60000:
+        if (
+            summary.get("scene") != SCENE
+            or summary.get("protocol_id") != "m3m_gcp_native_quarter_geometry_v2"
+            or summary.get("formal_result") is not True
+            or int(summary.get("coarse_steps", -1)) != 30000
+            or int(summary.get("fine_steps", -1)) != 60000
+        ):
             raise RuntimeError("CityGaussianV2 summary budget mismatch")
         merged = summary.get("merged_checkpoint", {})
         config = summary.get("resolved_fine_config", {})
         cleanup = summary.get("transient_checkpoint_cleanup", {})
         rows.extend([
             inventory_row(summary_path),
-            inventory_row(require_file(Path(str(merged.get("path", ""))), str(merged.get("sha256", "")))),
+            inventory_row(
+                require_file(Path(str(merged.get("path", ""))), str(merged.get("sha256", ""))),
+                validate_model_container=True,
+                method_id=method_id,
+            ),
             inventory_row(require_file(Path(str(config.get("path", ""))), str(config.get("sha256", "")))),
             inventory_row(
                 require_file(
@@ -179,17 +247,47 @@ def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, 
     elif method_id == "citygs_x":
         summary_path = run_root / "model" / "training_wrapper_summary.json"
         summary = read_summary(summary_path, method_id=method_id, required_status="TRAINING_PASS")
-        if int(summary.get("iterations", -1)) != 100000:
+        if (
+            summary.get("scene") != SCENE
+            or summary.get("protocol_id") != "m3m_gcp_native_quarter_geometry_v2"
+            or summary.get("formal_result") is not True
+            or int(summary.get("iterations", -1)) != 100000
+        ):
             raise RuntimeError("CityGS-X summary budget mismatch")
         checkpoint = Path(str(summary.get("checkpoint", {}).get("path", ""))).resolve()
         point_cloud = require_file(
             checkpoint / str(summary.get("checkpoint", {}).get("point_cloud_file", "")),
             str(summary.get("checkpoint", {}).get("point_cloud_sha256", "")),
         )
+        checkpoint_row = summary.get("checkpoint", {})
+        attributes = checkpoint_row.get("additional_attributes", {})
+        optimizer = checkpoint_row.get("optimizer_checkpoint", {})
+        if (
+            point_cloud.stat().st_size != checkpoint_row.get("point_cloud_bytes")
+            or Path(str(attributes.get("path", ""))).resolve()
+            != checkpoint / "additional_attributes.npz"
+            or require_file(
+                checkpoint / "additional_attributes.npz", str(attributes.get("sha256", ""))
+            ).stat().st_size != attributes.get("bytes")
+            or Path(str(optimizer.get("path", ""))).resolve() != checkpoint / "checkpoints.pth"
+            or require_file(
+                checkpoint / "checkpoints.pth", str(optimizer.get("sha256", ""))
+            ).stat().st_size != optimizer.get("bytes")
+        ):
+            raise RuntimeError("CityGS-X companion checkpoint identity mismatch")
         rows.extend([
-            inventory_row(summary_path), inventory_row(point_cloud),
-            inventory_row(checkpoint / "additional_attributes.npz"),
-            inventory_row(checkpoint / "checkpoints.pth"),
+            inventory_row(summary_path),
+            inventory_row(point_cloud, validate_model_container=True, method_id=method_id),
+            inventory_row(
+                checkpoint / "additional_attributes.npz",
+                validate_model_container=True,
+                method_id=method_id,
+            ),
+            inventory_row(
+                checkpoint / "checkpoints.pth",
+                validate_model_container=True,
+                method_id=method_id,
+            ),
             inventory_row(
                 Path(str(recipe["phase_roots"]["prior"]["prior_root"]))
                 / "depth_and_multiview_prior_v1.json"
@@ -198,14 +296,28 @@ def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, 
     elif method_id == "metrogs":
         summary_path = run_root / "model" / "training_wrapper_summary.json"
         summary = read_summary(summary_path, method_id=method_id, required_status="TRAINING_PASS")
-        if int(summary.get("effective_iterations", -1)) != 150000:
+        if (
+            summary.get("scene") != SCENE
+            or summary.get("protocol_id") != "m3m_gcp_native_quarter_geometry_v2"
+            or summary.get("formal_result") is not True
+            or int(summary.get("effective_iterations", -1)) != 150000
+            or int(summary.get("optimizer_steps", -1)) != 37500
+        ):
             raise RuntimeError("MetroGS summary budget mismatch")
         checkpoint = summary.get("checkpoint", {})
         cleanup = summary.get("rank_checkpoint_cleanup", {})
         rows.extend([
             inventory_row(summary_path),
-            inventory_row(require_file(Path(str(checkpoint.get("merged_path", ""))), str(checkpoint.get("merged_sha256", "")))),
-            inventory_row(require_file(Path(str(checkpoint.get("point_cloud_path", ""))), str(checkpoint.get("point_cloud_sha256", "")))),
+            inventory_row(
+                require_file(Path(str(checkpoint.get("merged_path", ""))), str(checkpoint.get("merged_sha256", ""))),
+                validate_model_container=True,
+                method_id=method_id,
+            ),
+            inventory_row(
+                require_file(Path(str(checkpoint.get("point_cloud_path", ""))), str(checkpoint.get("point_cloud_sha256", ""))),
+                validate_model_container=True,
+                method_id=method_id,
+            ),
             inventory_row(
                 require_file(
                     Path(str(cleanup.get("inventory_path", ""))),
@@ -226,6 +338,47 @@ def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, 
     if len({row["path"] for row in rows}) != len(rows):
         raise RuntimeError(f"{method_id}: duplicate model-identity inventory path")
     return sorted(rows, key=lambda row: row["path"])
+
+
+def required_training_product_paths(method_id: str, recipe: dict[str, Any]) -> list[Path]:
+    run_root = Path(str(recipe["authorized_run_root"])).resolve()
+    budget = recipe.get("budget", {})
+    if method_id in PLAIN_METHODS:
+        if method_id == "3dgs_original":
+            return [run_root / str(recipe["reuse_model_binding"]["point_cloud_relative_path"])]
+        return [
+            run_root / "model" / "point_cloud"
+            / f"iteration_{int(budget.get('value', -1))}" / "point_cloud.ply"
+        ]
+    if method_id == "qgs":
+        return [
+            run_root / "model" / "point_cloud"
+            / f"iteration_{int(budget.get('value', -1))}" / "point_cloud.ply"
+        ]
+    if method_id == "citygaussian_v2":
+        summary_path = run_root / "pipeline" / "pipeline_summary.json"
+        summary = json.loads(require_file(summary_path).read_text(encoding="utf-8"))
+        return [summary_path, Path(str(summary["merged_checkpoint"]["path"])).resolve()]
+    summary_path = run_root / "model" / "training_wrapper_summary.json"
+    summary = json.loads(require_file(summary_path).read_text(encoding="utf-8"))
+    checkpoint = summary["checkpoint"]
+    if method_id == "citygs_x":
+        checkpoint_root = Path(str(checkpoint["path"])).resolve()
+        return [
+            summary_path,
+            checkpoint_root / str(checkpoint["point_cloud_file"]),
+            checkpoint_root / "additional_attributes.npz",
+            checkpoint_root / "checkpoints.pth",
+        ]
+    if method_id == "metrogs":
+        cleanup = summary["rank_checkpoint_cleanup"]
+        return [
+            summary_path,
+            Path(str(checkpoint["merged_path"])).resolve(),
+            Path(str(checkpoint["point_cloud_path"])).resolve(),
+            Path(str(cleanup["inventory_path"])).resolve(),
+        ]
+    raise RuntimeError(f"unsupported training product method: {method_id}")
 
 
 def main() -> int:
@@ -316,6 +469,11 @@ def main() -> int:
                             method_id=method_id,
                             phase=phase,
                             recipe_sha256=sha256_file(recipe_path),
+                            frozen_budget=recipe.get("budget", {}),
+                            expected_product_paths=(
+                                required_training_product_paths(method_id, recipe)
+                                if phase == "training" else None
+                            ),
                         )
                     )
             inventory = sorted(inventory, key=lambda row: row["path"])

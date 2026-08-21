@@ -691,6 +691,7 @@ def main() -> int:
             "weight_sha256": moge_hash,
             "runtime_source": str(moge_path),
             "depth_count": len(depth_rows),
+            "depth_outputs": depth_rows,
             "depth_hash_aggregate_sha256": hashlib.sha256(
                 "\n".join(
                     f'{row["image_name"]},{row["sha256"]},{row["bytes"]}'

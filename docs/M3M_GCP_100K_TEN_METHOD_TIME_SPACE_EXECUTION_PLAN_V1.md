@@ -66,11 +66,20 @@ attempt because recipe-changing rescue runs are forbidden.
    generate only its authorized prior, run the frozen budget once, and retain
    the final formal checkpoint plus resource and command evidence.
    A prior child is successful only after its exact prior manifest/PASS marker
-   passes method-specific validation; training cannot start without that
+   and every declared prior product pass method-specific validation.  For
+   CityGaussianV2 this rehashes all 2,196 depth arrays and the 2,196-row scale
+   file; for CityGS-X it additionally rehashes all 2,196 multi-view masks; for
+   MetroGS it rehashes all 2,196 joint depth/mask arrays, the scale and
+   multi-view files, four Pi3 block pointmaps and the merged pointmap.
+   Deleting or changing one item invalidates the phase.  Training cannot start without that
    immutable prior success marker and a second revalidation of the prior
    product.  Likewise, a zero exit from training is not success until the
    method's frozen final iteration/checkpoint and required companion files are
-   present, non-empty and internally hash-consistent.  A zero exit without the
+   present, non-empty and internally hash-consistent.  Gaussian PLYs are parsed
+   as binary PLY, must have a positive vertex count, exact binary extent,
+   finite sampled values and the method-specific field schema (including the
+   distinct 2DGS, MetroGS and CityGS-X layouts).  Torch checkpoint and NPZ
+   containers are structurally checked without unsafe model loading.  A zero exit without the
    required product is closed as structured `FAILED_UNRANKED` evidence.
 4. A method-specific CUDA OOM, host OOM or technical failure is closed as
    `OOM_UNRANKED` or `FAILED_UNRANKED`; its immutable failure evidence is
@@ -91,6 +100,12 @@ the frozen plan.  The builders reject alternate CLI destinations.  Each model
 identity must inventory the actual method-specific final model validated by
 the runner; a valid but unrelated checkpoint or decoy PLY cannot satisfy the
 freeze.
+Every exclusive `phase_success.json` records the frozen budget, completion
+evidence, and a sorted absolute path/byte-count/SHA/validator inventory for all
+phase products.  The attempt builder rehashes those rows and requires the
+training rows to equal the independently reconstructed method-specific final
+model set.  Packet launch repeats this nested success-product validation, so a
+prior or model changed after the attempt freeze is rejected.
 
 Before Phase A formal launches, each 100K scene recipe must be materialized as
 a hash-bound file and mechanically checked against its qualified 3K parent:

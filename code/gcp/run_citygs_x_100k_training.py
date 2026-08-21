@@ -266,6 +266,7 @@ def main() -> int:
         "schema": "m3m_gcp_native_quarter_citygs_x_training_run_v1",
         "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
         "method_id": "citygs_x",
+        "scene": "gcp_100000_20260610",
         "status": "TRAINING_PASS",
         "mode": args.mode,
         "formal_result": args.mode == "formal",
@@ -287,7 +288,18 @@ def main() -> int:
             "path": str(checkpoint),
             "point_cloud_file": point_cloud.name,
             "point_cloud_layout": point_cloud_layout,
+            "point_cloud_bytes": point_cloud.stat().st_size,
             "point_cloud_sha256": sha256(point_cloud),
+            "additional_attributes": {
+                "path": str(checkpoint / "additional_attributes.npz"),
+                "bytes": (checkpoint / "additional_attributes.npz").stat().st_size,
+                "sha256": sha256(checkpoint / "additional_attributes.npz"),
+            },
+            "optimizer_checkpoint": {
+                "path": str(checkpoint / "checkpoints.pth"),
+                "bytes": (checkpoint / "checkpoints.pth").stat().st_size,
+                "sha256": sha256(checkpoint / "checkpoints.pth"),
+            },
         },
         "command": command,
         "route": {

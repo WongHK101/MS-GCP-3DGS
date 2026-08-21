@@ -295,6 +295,7 @@ def main() -> int:
             *PACKET_PATCHES[method],
         ]
         dependency_paths.append("code/gcp/materialize_m3m_gcp_100k_method_inputs.py")
+        dependency_paths.append("code/gcp/m3m_gcp_100k_phase_products.py")
         dependency_paths.append(
             "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py"
         )

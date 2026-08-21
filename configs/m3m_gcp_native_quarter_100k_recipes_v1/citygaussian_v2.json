@@ -7,11 +7,12 @@
   "base_3k_recipe_sha256": "2ee37a3e85de03a3fe436b1b842c8caef439e8bedd2835be1167fc46bce6c188",
   "benchmark_required_files_sha256": {
     "code/gcp/export_citygaussian_v2_depth_maps.py": "0c6bc3263deb7bad8034553ff1c8c35a7b50f3bc000f2a651de24c51292136f6",
+    "code/gcp/m3m_gcp_100k_phase_products.py": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82",
     "code/gcp/materialize_colmap_train_track_compatibility_streaming.py": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e",
     "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
     "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
     "code/gcp/prepare_citygaussian_v2_100k_depth_prior.py": "ee87c5787e0adfc6572edf31ffc2488ad4880dc45da04b4a799c2e1f29ca675e",
-    "code/gcp/run_citygaussian_v2_100k_pipeline.py": "0758f03209ed490f2e57474be008c364d258cb1d465f4bca0c50878adcdf6f8a",
+    "code/gcp/run_citygaussian_v2_100k_pipeline.py": "af8dbf4c013bc613e461ff3a2174bdf3d208a8d707b2398d5739a1ecb252acd6",
     "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
     "patches/citygaussian_v2/native_quarter_raw_moments_rasterizer_9eefc03_v1.patch": "cb92c91b5af52c003bf91c6ae96d47894c4e55050adaac2e1d685dab60407412",
     "patches/citygaussian_v2/native_quarter_raw_moments_renderer_e84c7c8_v1.patch": "5b08f2a9b4a275b191230e8d20802261a4ed35c7120a3ecf2181060f264ebc64"
@@ -21,7 +22,7 @@
     "fine_steps": 60000,
     "type": "official_matrixcity_aerial_4x4"
   },
-  "canonical_sha256": "6f6057e73c3bcd6ff8516d438728326831ae4bee207ce9a210d7e1ef004d6505",
+  "canonical_sha256": "6cce03e9660791d71d4eb58b1ffa283bbeef16e550ab8b0553a549ce4ac5214f",
   "evaluation_camera_root_binding": {
     "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
     "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",

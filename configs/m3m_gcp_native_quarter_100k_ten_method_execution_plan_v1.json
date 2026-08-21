@@ -55,7 +55,7 @@
       "value": 30000
     }
   },
-  "canonical_sha256": "5925d3dbee9a4aa4b6ec77c9e6236e4fa217d8a0c48e02d674aea87754c94acb",
+  "canonical_sha256": "364f8d7fad65efdb4801015cb7f3f782680d2b477091a8e7afb212bce696396f",
   "execution_authorized": false,
   "execution_closure": {
     "activation_builder": {
@@ -68,7 +68,7 @@
     },
     "attempt_manifest_builder": {
       "path": "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
-      "sha256": "9b0020ad6b717b6edc2d080678d55b81a9e9c7bad23dc73be5f1c7bf04b0af00"
+      "sha256": "1f0d6a4ee70ad11a3ef1d8724a893cf69bae5c8017d297fb65de2345afe9f3cc"
     },
     "evaluation_camera_root_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py",
@@ -79,7 +79,7 @@
     "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
     "guarded_runner": {
       "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
-      "sha256": "85ec8f945695ef109d8aecb34ebe8ee0e13ccb76472e4a1a7d3f43e0069ed1b1"
+      "sha256": "08c7c796f2fbbdf0eab0714dbb43b64d15bfcf758f77f413a9e833b306545633"
     },
     "method_input_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_method_inputs.py",
@@ -88,6 +88,10 @@
     "packet_export_dispatcher": {
       "path": "code/gcp/run_m3m_gcp_100k_packet_export.py",
       "sha256": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e"
+    },
+    "phase_product_validator": {
+      "path": "code/gcp/m3m_gcp_100k_phase_products.py",
+      "sha256": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82"
     },
     "post_sfm_track_compatibility_materializers": [
       {
@@ -212,8 +216,8 @@
     }
   },
   "recipe_manifest": {
-    "canonical_sha256": "99e0f4648365dbe3ddc24741be617488ba2cf5a94168bebdbfb29e1912d85bb4",
-    "file_sha256": "fc69969f9e4849d4b2ae7218d7b71dd449bf87a5723e6cb6f3af657c9af9abe3",
+    "canonical_sha256": "c1ad85543e371e2787d5e9b7290825797da00aeb3cd2517b3738a26a266e8b08",
+    "file_sha256": "b83e29e60e733a3bb60ae06b2e85c0234d993752cad33619ce73fdb17f23b288",
     "method_order": [
       "3dgs_original",
       "2dgs",

@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,7 @@ from run_m3m_gcp_100k_guarded import (
     METHOD_ORDER,
     PACKET_CAP_BYTES,
     acquire_packet_state,
+    build_phase_product_rows,
     run_phase,
     sha256_file,
     validate_activation_and_recipe,
@@ -35,6 +37,21 @@ from run_m3m_gcp_100k_guarded import (
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+
+def write_gaussian_ply(path: Path) -> None:
+    names = [
+        "x", "y", "z", "f_dc_0", "f_dc_1", "f_dc_2",
+        *[f"f_rest_{index}" for index in range(45)],
+        "opacity", "scale_0", "scale_1", "scale_2",
+        "rot_0", "rot_1", "rot_2", "rot_3",
+    ]
+    header = "\n".join([
+        "ply", "format binary_little_endian 1.0", "element vertex 1",
+        *[f"property float {name}" for name in names], "end_header", "",
+    ]).encode("ascii")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(header + struct.pack(f"<{len(names)}f", *([0.0] * len(names))))
 
 
 class Guarded100KTest(unittest.TestCase):
@@ -291,6 +308,7 @@ class Guarded100KTest(unittest.TestCase):
         dataset.mkdir()
         recipe = {
             "method_id": "citygaussian_v2",
+            "budget": {"type": "official_matrixcity_aerial_4x4"},
             "authorized_evidence_root": str(evidence_root),
             "phase_commands": {"prior": ["prior-tool", "{dataset_root}"]},
         }
@@ -304,6 +322,13 @@ class Guarded100KTest(unittest.TestCase):
             "phase": "prior",
             "recipe_sha256": sha256_file(self.recipe),
             "command_sha256": command_sha256(command),
+            "frozen_budget": recipe["budget"],
+            "completion_evidence": {
+                "progress_unit": "prior_products",
+                "last_valid_progress": 2196.0,
+                "required_product_postvalidation_passed": True,
+            },
+            "products": [],
             "ended_at_utc": "2026-08-21T00:00:00Z",
         }
         success["canonical_sha256"] = canonical_sha256(success)
@@ -317,20 +342,69 @@ class Guarded100KTest(unittest.TestCase):
                 prior_root=dataset,
                 replacements=replacements,
             )
-        write_json(dataset / "depth_prior_v1.json", {
+        names = [f"image_{index:04d}.JPG" for index in range(2196)]
+        depth_rows = []
+        for index, name in enumerate(names):
+            path = dataset / "depths" / f"{index:04d}.npy"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"depth-{index}".encode("ascii"))
+            depth_rows.append({
+                "image_name": name,
+                "relative_path": path.relative_to(dataset).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            })
+        scales_path = dataset / "depth_scales.json"
+        write_json(scales_path, {
+            name: {"scale": 1.0, "offset": 0.0} for name in names
+        })
+        manifest_path = dataset / "depth_prior_v1.json"
+        write_json(manifest_path, {
             "status": "PASS", "passed": True,
             "method_id": "citygaussian_v2",
             "scene": "gcp_100000_20260610",
             "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+            "input_class": "rgb_colmap_external_geometry_prior",
+            "access_boundary": {
+                "isolated_dataset_root": str(dataset),
+                "training_rgb_opened": 2196,
+                "heldout_rgb_opened": 0,
+                "gcp_annotations_opened": 0,
+                "lidar_opened": 0,
+                "only_training_rgb_and_train_only_colmap_supplied_to_prior_commands": True,
+            },
+            "claims": {"heldout_gcp_lidar_or_orthophoto_truth_used": False},
+            "depth_outputs": depth_rows,
+            "depth_scales": {
+                "path": str(scales_path),
+                "sha256": sha256_file(scales_path),
+                "record_count": 2196,
+            },
         })
-        validate_prior_phase_success(
-            recipe=recipe,
-            recipe_path=self.recipe,
-            run_root=self.root / "run",
-            dataset_root=dataset,
-            prior_root=dataset,
-            replacements=replacements,
-        )
+        products = [manifest_path, *[dataset / row["relative_path"] for row in depth_rows], scales_path]
+        success["products"] = build_phase_product_rows(products, phase="prior")
+        success["canonical_sha256"] = canonical_sha256(success)
+        write_json(evidence_root / "prior" / "phase_success.json", success)
+        frozen_rows = [{"image_name": name} for name in names]
+        with mock.patch("run_m3m_gcp_100k_guarded.load_frozen_train_rows", return_value=frozen_rows):
+            validate_prior_phase_success(
+                recipe=recipe,
+                recipe_path=self.recipe,
+                run_root=self.root / "run",
+                dataset_root=dataset,
+                prior_root=dataset,
+                replacements=replacements,
+            )
+            (dataset / depth_rows[0]["relative_path"]).write_bytes(b"tampered")
+            with self.assertRaisesRegex(RuntimeError, "artifact changed"):
+                validate_prior_phase_success(
+                    recipe=recipe,
+                    recipe_path=self.recipe,
+                    run_root=self.root / "run",
+                    dataset_root=dataset,
+                    prior_root=dataset,
+                    replacements=replacements,
+                )
 
     @unittest.skipIf(os.name == "nt", "Windows test host lacks symlink privilege")
     def test_gsprior_normalized_input_binds_prepared_source_and_outputs(self) -> None:
@@ -421,7 +495,10 @@ class Guarded100KTest(unittest.TestCase):
                 else asset_root / "model.ply"
             )
             model.parent.mkdir(parents=True, exist_ok=True)
-            model.write_text(method_id, encoding="utf-8")
+            if method_id == "2dgs":
+                write_gaussian_ply(model)
+            else:
+                model.write_text(method_id, encoding="utf-8")
             identity = {
                 "schema": "m3m_gcp_100k_model_identity_v1",
                 "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
@@ -522,8 +599,7 @@ class Guarded100KTest(unittest.TestCase):
         final_model = (
             run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
         )
-        final_model.parent.mkdir(parents=True)
-        final_model.write_bytes(b"actual-final")
+        write_gaussian_ply(final_model)
         decoy = run_root / "decoy.ply"
         decoy.write_bytes(b"decoy")
         payload = {
@@ -602,15 +678,8 @@ class Guarded100KTest(unittest.TestCase):
         point_cloud = (
             args.run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
         )
-        command = [
-            sys.executable,
-            "-c",
-            (
-                "from pathlib import Path; "
-                f"p=Path({str(point_cloud)!r}); p.parent.mkdir(parents=True); "
-                "p.write_bytes(b'ply')"
-            ),
-        ]
+        write_gaussian_ply(point_cloud)
+        command = [sys.executable, "-c", "print('valid final model already materialized')"]
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
             self.assertEqual(run_phase(args, recipe, command), 0)
         marker = failure.parent / "phase_success.json"
@@ -648,6 +717,29 @@ class Guarded100KTest(unittest.TestCase):
         evidence = json.loads(failure.read_text())
         self.assertEqual(evidence["status"], "FAILED_UNRANKED")
         self.assertIn("required outputs did not validate", " ".join(evidence["errors"]))
+
+    def test_zero_exit_with_fake_ply_at_frozen_final_path_is_structured_failure(self) -> None:
+        failure = self.root / "fake-ply-evidence" / "failure.json"
+        run_root = self.root / "fake-ply-run"
+        point_cloud = run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        point_cloud.parent.mkdir(parents=True)
+        point_cloud.write_bytes(b"not-a-ply-model")
+        args = argparse.Namespace(
+            phase="training", capacity_root=self.root, packet_set_root=None,
+            packet_state=None, method_id="2dgs", run_root=run_root,
+            dataset_root=self.root / "dataset", prior_root=self.root / "prior",
+            failure_evidence=failure, progress_regex=None, progress_unit="iterations",
+            poll_seconds=0.01, recipe=self.recipe, replacements={},
+            scene_attempt_freeze=None,
+        )
+        recipe = json.loads(self.recipe.read_text())
+        recipe["budget"] = {"type": "iterations", "value": 30000}
+        with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
+            code = run_phase(args, recipe, [sys.executable, "-c", "print('zero exit')"])
+        self.assertNotEqual(code, 0)
+        evidence = json.loads(failure.read_text())
+        self.assertEqual(evidence["status"], "FAILED_UNRANKED")
+        self.assertIn("Gaussian PLY", " ".join(evidence["errors"]))
 
 
 if __name__ == "__main__":

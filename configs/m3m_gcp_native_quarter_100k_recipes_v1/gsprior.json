@@ -7,6 +7,7 @@
   "base_3k_recipe_sha256": "e02cfb0bb4db86b915c859c61ad16f98f9c15407f68661c56cb1c2b1642645f0",
   "benchmark_required_files_sha256": {
     "code/gcp/export_gaussian_depth_maps.py": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb",
+    "code/gcp/m3m_gcp_100k_phase_products.py": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82",
     "code/gcp/materialize_gsprior_normalized_scene.py": "f09a7a033e6f2744cec6b094ca41f5329006f566ac0cb37cb011a241beef06f0",
     "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
     "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
@@ -17,7 +18,7 @@
     "type": "iterations",
     "value": 40000
   },
-  "canonical_sha256": "f91e5a9ab5bba6029e22aa62d166a552e4e21b911d127457a5dd685dc7b62526",
+  "canonical_sha256": "4789775268ba6d48315edb637a2bcb99abcc3b58b8f875dc545edaf79c93b95a",
   "evaluation_camera_root_binding": {
     "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
     "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",

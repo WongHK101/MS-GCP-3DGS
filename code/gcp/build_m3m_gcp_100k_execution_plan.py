@@ -202,6 +202,9 @@ def main() -> int:
                 "code/gcp/build_m3m_gcp_100k_attempt_manifest.py"
             ),
             "guarded_runner": repo_file("code/gcp/run_m3m_gcp_100k_guarded.py"),
+            "phase_product_validator": repo_file(
+                "code/gcp/m3m_gcp_100k_phase_products.py"
+            ),
             "attempt_freezer": repo_file(
                 "code/gcp/freeze_m3m_gcp_lidar_scene_attempts.py"
             ),

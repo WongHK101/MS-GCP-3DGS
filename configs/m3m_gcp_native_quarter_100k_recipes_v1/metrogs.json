@@ -8,11 +8,12 @@
   "benchmark_required_files_sha256": {
     "code/gcp/export_metrogs_depth_maps.py": "14b2a33430d4f037ce7298d36d49eedfe2f3999cb263200d5048751c9196d96c",
     "code/gcp/filter_colmap_model_to_frozen_train_streaming.py": "4650448f759adc4fa49e1743549dc578d06abc5cc3c2a833a96066c631b67516",
+    "code/gcp/m3m_gcp_100k_phase_products.py": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82",
     "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
     "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
-    "code/gcp/prepare_metrogs_100k_training_priors.py": "22bcf1cfcb92244fb02e2166dae9f60b97ae7fa87910f4e9630bc3b5adecb6e2",
+    "code/gcp/prepare_metrogs_100k_training_priors.py": "9e38976ba596cbad6e07947eae33fd9f4548cc01256ff4cbc067c359830affdb",
     "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
-    "code/gcp/run_metrogs_100k_training.py": "b231fe85fd25405443290c4bd706a8e50f60c4789af185db7fb5807757d3b93c",
+    "code/gcp/run_metrogs_100k_training.py": "3c3620324dacb1c8507e970bd8642546e9fff82dd40c8a541a92cbf238cade0d",
     "patches/metrogs/native_quarter_raw_moments_rasterizer_8cf9ac1_v1.patch": "1d46e9039aa7e9973e7e25d2537412e496e9a95443afb0bfb67fb9ac895c006f",
     "patches/metrogs/native_quarter_raw_moments_renderer_8cf9ac1_v1.patch": "d7cc203ef57c59b14bffa3748e938c3fb4339858e86ac7e4cec643d39e3f5475"
   },
@@ -21,7 +22,7 @@
     "type": "effective_image_iterations",
     "value": 150000
   },
-  "canonical_sha256": "32ac3e543ebf4fb079c2c6e23476f133f99457fa3af91d04b52afcd3d8a3e8d0",
+  "canonical_sha256": "53e36329ba2a7d07f01a364bac16e2d2ad96d2f2746f41d5964a94eec8372ba9",
   "evaluation_camera_root_binding": {
     "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
     "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",

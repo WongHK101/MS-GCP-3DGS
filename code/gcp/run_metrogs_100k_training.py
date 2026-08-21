@@ -572,9 +572,11 @@ def main() -> int:
             "rank_sha256": checkpoint_cleanup["rank_checkpoint"]["sha256"],
             "rank_retained_after_merge": False,
             "merged_path": checkpoint_cleanup["merged_checkpoint"]["path"],
+            "merged_bytes": checkpoint_cleanup["merged_checkpoint"]["bytes"],
             "merged_sha256": checkpoint_cleanup["merged_checkpoint"]["sha256"],
             "merged_retained_after_merge": True,
             "point_cloud_path": str(point_cloud),
+            "point_cloud_bytes": point_cloud.stat().st_size,
             "point_cloud_sha256": sha256(point_cloud),
         },
         "rank_checkpoint_cleanup": {
