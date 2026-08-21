@@ -25,6 +25,7 @@ from run_m3m_gcp_100k_guarded import (
     acquire_packet_state,
     build_phase_product_rows,
     configure_nofile_limit,
+    git_porcelain_status,
     observe_child_nofile_limit,
     run_phase,
     sha256_file,
@@ -35,6 +36,7 @@ from run_m3m_gcp_100k_guarded import (
     validate_packet_freeze_binding,
     validate_prepared_method_input,
     validate_prior_phase_success,
+    validate_source_binding,
 )
 
 
@@ -126,6 +128,7 @@ class Guarded100KTest(unittest.TestCase):
         shutil.copy2(source_root / "freeze_m3m_gcp_lidar_scene_attempts.py", script_root)
         shutil.copy2(source_root / "build_m3m_gcp_lidar_100k_activation.py", script_root)
         shutil.copy2(source_root / "build_m3m_gcp_100k_attempt_manifest.py", script_root)
+        shutil.copy2(source_root / "m3m_gcp_100k_continuity.py", script_root)
         preparation = self.root / "per-method-inputs-v2.json"
         write_json(
             preparation,
@@ -183,14 +186,23 @@ class Guarded100KTest(unittest.TestCase):
         }
         recipe["canonical_sha256"] = canonical_sha256(recipe)
         write_json(self.recipe, recipe)
+        self.pgsr_recipe = self.repo / "pgsr-recipe.json"
+        pgsr_recipe = dict(recipe)
+        pgsr_recipe["method_id"] = "pgsr"
+        pgsr_recipe["canonical_sha256"] = canonical_sha256(pgsr_recipe)
+        write_json(self.pgsr_recipe, pgsr_recipe)
         recipe_order = ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof",
                         "citygaussian_v2", "citygs_x", "metrogs"]
         recipes = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
                    "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
                    "scene": "gcp_100000_20260610", "seed": 0,
                    "method_order": recipe_order,
-                   "recipes": [{"method_id": method_id, "path": "recipe.json",
-                                "sha256": sha256_file(self.recipe)} for method_id in recipe_order]}
+                   "recipes": [{
+                       "method_id": method_id,
+                       "path": "pgsr-recipe.json" if method_id == "pgsr" else "recipe.json",
+                       "sha256": sha256_file(self.pgsr_recipe)
+                       if method_id == "pgsr" else sha256_file(self.recipe),
+                   } for method_id in recipe_order]}
         recipes["canonical_sha256"] = canonical_sha256(recipes)
         write_json(self.recipes, recipes)
         superseded_files = []
@@ -215,8 +227,151 @@ class Guarded100KTest(unittest.TestCase):
         }
         supersession["canonical_sha256"] = canonical_sha256(supersession)
         write_json(supersession_receipt, supersession)
+
+        previous_plan_path = self.repo / "previous-plan.json"
+        previous_plan = {
+            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
+        }
+        previous_plan["canonical_sha256"] = canonical_sha256(previous_plan)
+        write_json(previous_plan_path, previous_plan)
+        previous_recipes_path = self.repo / "previous-recipes.json"
+        previous_recipes = {
+            "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2"
+        }
+        previous_recipes["canonical_sha256"] = canonical_sha256(previous_recipes)
+        write_json(previous_recipes_path, previous_recipes)
+        previous_note_path = self.repo / "previous-note.md"
+        previous_note_path.write_text("previous execution note\n", encoding="utf-8")
+
+        continuity_root = self.root / "continuity"
+        continuity_root.mkdir()
+        environment_path = continuity_root / "2dgs-environment.json"
+        write_json(environment_path, {"environment": "sealed"})
+        stdout_path = continuity_root / "2dgs.stdout.log"
+        stdout_path.write_text("stdout\n", encoding="utf-8")
+        stderr_path = continuity_root / "2dgs.stderr.log"
+        stderr_path.write_text("stderr\n", encoding="utf-8")
+        failure_path = continuity_root / "2dgs-failure.json"
+        failure = {
+            "schema": "m3m_gcp_lidar_failure_evidence_v1",
+            "scene": "gcp_100000_20260610",
+            "method_id": "2dgs",
+            "status": "FAILED_UNRANKED",
+            "oom_signal": None,
+            "environment_manifest_sha256": sha256_file(environment_path),
+            "stdout_sha256": sha256_file(stdout_path),
+            "stderr_sha256": sha256_file(stderr_path),
+        }
+        failure["canonical_sha256"] = canonical_sha256(failure)
+        write_json(failure_path, failure)
+        supplement_path = continuity_root / "2dgs-classification.json"
+        supplement = {
+            "formal_status_unchanged": "FAILED_UNRANKED",
+            "formal_attempt_consumed": True,
+            "retry_allowed": False,
+            "bound_evidence": {"failure_file_sha256": sha256_file(failure_path)},
+        }
+        write_json(supplement_path, supplement)
+        console_path = continuity_root / "pgsr-prechild.console.log"
+        console_path.write_text(
+            "RuntimeError: method source runtime status mismatch\n", encoding="utf-8"
+        )
+        activation_v2_path = continuity_root / "activation-v2.json"
+        activation_v2 = {
+            "schema": "m3m_gcp_lidar_formal_activation_v1",
+            "benchmark_commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+            "benchmark_tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+            "execution_plan_reviewed_commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+            "execution_plan_reviewed_tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+            "execution_plan_path": "previous-plan.json",
+            "execution_plan_sha256": sha256_file(previous_plan_path),
+            "recipe_manifest_path": "previous-recipes.json",
+            "recipe_manifest_sha256": sha256_file(previous_recipes_path),
+        }
+        activation_v2["canonical_sha256"] = canonical_sha256(activation_v2)
+        write_json(activation_v2_path, activation_v2)
+
+        def continuity_row(role: str, path: Path) -> dict:
+            return {
+                "role": role,
+                "path": str(path.resolve()),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            }
+
+        continuity_receipt = self.repo / "continuity.json"
+        continuity = {
+            "schema": "m3m_gcp_100k_activation_continuity_v1",
+            "status": "SEALED_V2_TO_V3_CONTINUITY",
+            "scene": "gcp_100000_20260610",
+            "previous_reviewed_checkout": {
+                "commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+                "tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+                "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+                "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+            },
+            "repository_artifacts": [
+                {
+                    **continuity_row("execution_plan_v2", previous_plan_path),
+                    "path": "previous-plan.json",
+                    "canonical_sha256": previous_plan["canonical_sha256"],
+                },
+                {
+                    **continuity_row("recipe_manifest_v2", previous_recipes_path),
+                    "path": "previous-recipes.json",
+                    "canonical_sha256": previous_recipes["canonical_sha256"],
+                },
+                {
+                    **continuity_row("execution_note_v2", previous_note_path),
+                    "path": "previous-note.md",
+                    "canonical_sha256": None,
+                },
+            ],
+            "remote_artifacts": [
+                continuity_row("activation_v2", activation_v2_path),
+                continuity_row("2dgs_failure", failure_path),
+                continuity_row("2dgs_classification_supplement", supplement_path),
+                continuity_row("2dgs_environment", environment_path),
+                continuity_row("2dgs_stdout", stdout_path),
+                continuity_row("2dgs_stderr", stderr_path),
+                continuity_row("pgsr_prechild_guard_console", console_path),
+            ],
+            "inherited_method_outcomes": [{
+                "method_id": "2dgs",
+                "formal_status": "FAILED_UNRANKED",
+                "formal_oom_signal": None,
+                "formal_attempt_consumed": True,
+                "retry_allowed": False,
+                "failure_sha256": sha256_file(failure_path),
+                "classification_supplement_sha256": sha256_file(supplement_path),
+            }],
+            "pre_child_guard_rejections": [{
+                "method_id": "pgsr",
+                "child_started": False,
+                "run_root_created": False,
+                "evidence_root_created": False,
+                "formal_attempt_consumed": False,
+                "retry_allowed_only_after_exact_guard_fix_and_new_review": True,
+                "run_root": str((self.root / "pgsr-run").resolve()),
+                "evidence_root": str((self.root / "pgsr-evidence").resolve()),
+                "console_sha256": sha256_file(console_path),
+            }],
+            "transition_policy": {
+                "activation_v2_immutable": True,
+                "activation_v3_path": str((self.root / "activation.json").resolve()),
+                "continued_run_namespace": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2",
+                "recipe_manifest_v2_bytes_unchanged": True,
+                "execution_plan_v2_bytes_unchanged": True,
+                "inherited_final_methods_forbidden_to_launch": ["2dgs"],
+                "final_attempt_freeze_authorization": "activation_v3_only",
+                "remote_artifacts_must_remain_byte_identical": True,
+                "manual_guard_bypass_forbidden": True,
+            },
+        }
+        continuity["canonical_sha256"] = canonical_sha256(continuity)
+        write_json(continuity_receipt, continuity)
         plan = {
-            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
             "activation_manifest_path": str((self.root / "activation.json").resolve()),
             "scene": "gcp_100000_20260610", "seed": 0,
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED", "execution_authorized": False,
@@ -236,6 +391,17 @@ class Guarded100KTest(unittest.TestCase):
                 "rankable": False,
                 "remote_artifacts_must_remain_byte_identical": True,
             },
+            "activation_continuity": {
+                "receipt": {
+                    "path": "continuity.json",
+                    "sha256": sha256_file(continuity_receipt),
+                },
+                "status_required": "SEALED_V2_TO_V3_CONTINUITY",
+                "remote_artifacts_must_remain_byte_identical": True,
+                "recipe_manifest_v2_bytes_unchanged": True,
+                "execution_plan_v2_bytes_unchanged": True,
+                "inherited_final_methods_forbidden_to_launch": ["2dgs"],
+            },
             "formal_lidar_protocol": {
                 "contract": {"path": "contract.json", "sha256": sha256_file(contract)},
                 "artifact_schema": {"path": "artifact-schema.json", "sha256": sha256_file(artifact_schema)},
@@ -253,6 +419,10 @@ class Guarded100KTest(unittest.TestCase):
                 "attempt_manifest_builder": {
                     "path": "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
                     "sha256": sha256_file(script_root / "build_m3m_gcp_100k_attempt_manifest.py"),
+                },
+                "activation_continuity_validator": {
+                    "path": "code/gcp/m3m_gcp_100k_continuity.py",
+                    "sha256": sha256_file(script_root / "m3m_gcp_100k_continuity.py"),
                 },
                 "guarded_runner": {"path": "code/gcp/run_m3m_gcp_100k_guarded.py",
                                    "sha256": sha256_file(script_root / "run_m3m_gcp_100k_guarded.py")},
@@ -332,9 +502,101 @@ class Guarded100KTest(unittest.TestCase):
     def test_exact_review_activation_and_recipe_pass(self) -> None:
         _, recipe = validate_activation_and_recipe(
             repo=self.repo, activation_path=self.activation, plan_path=self.plan,
-            recipe_manifest_path=self.recipes, recipe_path=self.recipe, method_id="2dgs",
+            recipe_manifest_path=self.recipes, recipe_path=self.pgsr_recipe,
+            method_id="pgsr",
         )
-        self.assertEqual(recipe["method_id"], "2dgs")
+        self.assertEqual(recipe["method_id"], "pgsr")
+
+    def test_activation_v3_forbids_inherited_2dgs_relaunch(self) -> None:
+        with self.assertRaisesRegex(
+            RuntimeError, "forbids relaunch of inherited final method: 2dgs"
+        ):
+            validate_activation_and_recipe(
+                repo=self.repo,
+                activation_path=self.activation,
+                plan_path=self.plan,
+                recipe_manifest_path=self.recipes,
+                recipe_path=self.recipe,
+                method_id="2dgs",
+            )
+
+    def test_pgsr_continuation_training_requires_absent_prechild_paths(self) -> None:
+        validate_activation_and_recipe(
+            repo=self.repo,
+            activation_path=self.activation,
+            plan_path=self.plan,
+            recipe_manifest_path=self.recipes,
+            recipe_path=self.pgsr_recipe,
+            method_id="pgsr",
+            phase="training",
+        )
+        (self.root / "pgsr-run").mkdir()
+        with self.assertRaisesRegex(RuntimeError, "requires absent run_root"):
+            validate_activation_and_recipe(
+                repo=self.repo,
+                activation_path=self.activation,
+                plan_path=self.plan,
+                recipe_manifest_path=self.recipes,
+                recipe_path=self.pgsr_recipe,
+                method_id="pgsr",
+                phase="training",
+            )
+
+    def test_porcelain_status_preserves_clean_unstaged_staged_and_multiline(self) -> None:
+        source = self.root / "porcelain-source"
+        subprocess.run(["git", "init", "-q", str(source)], check=True)
+        alpha = source / "alpha.txt"
+        beta = source / "beta.txt"
+        alpha.write_text("alpha\n", encoding="utf-8")
+        beta.write_text("beta\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(source), "add", "."], check=True)
+        subprocess.run(
+            [
+                "git", "-C", str(source), "-c", "user.name=Test", "-c",
+                "user.email=test@example.invalid", "commit", "-qm", "source",
+            ],
+            check=True,
+        )
+        self.assertEqual(git_porcelain_status(source), "")
+
+        alpha.write_text("alpha changed\n", encoding="utf-8")
+        self.assertEqual(git_porcelain_status(source), " M alpha.txt")
+        subprocess.run(["git", "-C", str(source), "add", "alpha.txt"], check=True)
+        self.assertEqual(git_porcelain_status(source), "M  alpha.txt")
+
+        beta.write_text("beta changed\n", encoding="utf-8")
+        expected = "M  alpha.txt\n M beta.txt"
+        self.assertEqual(git_porcelain_status(source), expected)
+        commit = subprocess.check_output(
+            ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
+        ).strip()
+        tree = subprocess.check_output(
+            ["git", "-C", str(source), "rev-parse", "HEAD^{tree}"], text=True
+        ).strip()
+        validate_source_binding(
+            {
+                "source_bindings": {
+                    "training": {
+                        "root": str(source.resolve()),
+                        "commit": commit,
+                        "tree": tree,
+                        "required_status": expected,
+                        "required_files_sha256": {},
+                    }
+                }
+            },
+            source,
+            "training",
+        )
+
+    def test_porcelain_reader_removes_only_trailing_crlf_bytes(self) -> None:
+        with mock.patch(
+            "run_m3m_gcp_100k_guarded.subprocess.check_output",
+            return_value=b" M first.py\nM  second.py\r\n",
+        ):
+            self.assertEqual(
+                git_porcelain_status(self.root), " M first.py\nM  second.py"
+            )
 
     def test_superseded_v1_artifact_tamper_is_rejected(self) -> None:
         plan = json.loads(self.plan.read_text())
@@ -347,7 +609,26 @@ class Guarded100KTest(unittest.TestCase):
             validate_activation_and_recipe(
                 repo=self.repo, activation_path=self.activation,
                 plan_path=self.plan, recipe_manifest_path=self.recipes,
-                recipe_path=self.recipe, method_id="2dgs",
+                recipe_path=self.pgsr_recipe, method_id="pgsr",
+            )
+
+    def test_activation_v2_continuity_artifact_tamper_is_rejected(self) -> None:
+        plan = json.loads(self.plan.read_text())
+        receipt_path = self.repo / plan["activation_continuity"]["receipt"]["path"]
+        receipt = json.loads(receipt_path.read_text())
+        console = next(
+            row for row in receipt["remote_artifacts"]
+            if row["role"] == "pgsr_prechild_guard_console"
+        )
+        Path(console["path"]).write_text("tampered", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "remote continuity artifact"):
+            validate_activation_and_recipe(
+                repo=self.repo,
+                activation_path=self.activation,
+                plan_path=self.plan,
+                recipe_manifest_path=self.recipes,
+                recipe_path=self.pgsr_recipe,
+                method_id="pgsr",
             )
 
     def test_old_or_arbitrary_pass_verdict_rejected(self) -> None:
@@ -358,7 +639,8 @@ class Guarded100KTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "both exact protocol/data and 100K review verdicts"):
             validate_activation_and_recipe(
                 repo=self.repo, activation_path=self.activation, plan_path=self.plan,
-                recipe_manifest_path=self.recipes, recipe_path=self.recipe, method_id="2dgs",
+                recipe_manifest_path=self.recipes, recipe_path=self.pgsr_recipe,
+                method_id="pgsr",
             )
 
     def test_executable_capacity_thresholds(self) -> None:

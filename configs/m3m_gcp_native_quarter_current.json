@@ -23,8 +23,15 @@
     "protocol_data_review_verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",
     "protocol_data_reviewed_commit": "e9c3414b808b374bd8632a45ee965e3f6acc1ac0",
     "protocol_data_reviewed_tree": "d1d6c73852e42bc02c519d0853e26c114dcb1f8f",
-    "one_hundred_k_execution_plan": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
+    "one_hundred_k_execution_plan": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
     "one_hundred_k_recipe_manifest": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+    "one_hundred_k_activation_continuity": {
+      "previous_activation": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v2.json",
+      "next_activation": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
+      "receipt": "docs/protocol_evidence/m3m_gcp_100k_activation_v2_to_v3_continuity.json",
+      "inherited_final_method": "2dgs",
+      "pgsr_prechild_rejection_consumed_attempt": false
+    },
     "superseded_100k_execution_instance": {
       "execution_plan": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
       "recipe_manifest": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
@@ -34,7 +41,7 @@
     "formal_training_or_prior_authorized": false,
     "formal_lidar_evaluation_authorized": false,
     "other_four_prepared_scenes_locked": true,
-    "active_review_artifact_rule": "only the v2 common-preparation evidence and exact current plan/recipe hashes may authorize work; earlier LiDAR review closures are historical only"
+    "active_review_artifact_rule": "only the v2 common-preparation evidence, exact v3 continuation plan, byte-identical v2 recipes, v2-to-v3 continuity receipt, and a new exact commit/tree review may authorize work; activation_v2 remains immutable and cannot authorize the new checkout"
   },
   "state_ownership": {
     "protocol_semantics": "protocol_document and protocol_release_pin",
@@ -76,6 +83,11 @@
     "configs/m3m_gcp_native_quarter_method_registry_v3.json",
     "docs/protocol_evidence/m3m_native_quarter_method_registry_validation_v3.json",
     "docs/protocol_evidence/m3m_eight_method_source_freeze_v1.json",
+    "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V3.md",
+    "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
+    "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+    "docs/protocol_evidence/m3m_gcp_100k_activation_v2_to_v3_continuity.json",
+    "code/gcp/m3m_gcp_100k_continuity.py",
     "code/gcp/validate_m3m_native_quarter_method_registry_v3.py",
     "code/gcp/test_validate_m3m_native_quarter_method_registry_v3.py",
     "code/gcp/check_m3m_native_quarter_batch_launch_v3.py",
@@ -159,6 +171,8 @@
     "configs/launch_gates/m3m_gcp_native_quarter_metrogs_3k_seed0_150k_gate_v1.json",
     "docs/protocol_evidence/metrogs_native_quarter_track_closure_v1.json",
     "docs/protocol_evidence/metrogs_native_quarter_gpu_real_3k_qualification_v1.json",
+    "docs/protocol_evidence/metrogs_native_quarter_formal_3k_seed0_150k_v1.json",
+    "docs/protocol_evidence/metrogs_formal_metadata_correction_v1.json",
     "code/gcp/prepare_metrogs_training_priors.py",
     "code/gcp/test_prepare_metrogs_training_priors.py",
     "code/gcp/run_metrogs_training.py",

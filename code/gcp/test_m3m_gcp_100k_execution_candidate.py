@@ -31,6 +31,7 @@ LOCKED_SCENES = [
     "gcp_50000_20260610",
 ]
 HEX64 = re.compile(r"[0-9a-f]{64}")
+HEX40 = re.compile(r"[0-9a-f]{40}")
 
 
 def sha256_file(path: Path) -> str:
@@ -57,7 +58,7 @@ class ExecutionCandidateTest(unittest.TestCase):
         cls.plan = json.loads(
             (
                 ROOT
-                / "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
+                / "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
             ).read_text(encoding="utf-8")
         )
         cls.recipes: dict[str, dict[str, Any]] = {}
@@ -231,17 +232,51 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertFalse(truth_deny["lidar_visible_to_training_prior_or_selection"])
         self.assertFalse(truth_deny["result_driven_retry_or_recipe_change"])
 
+    def test_all_ten_method_phase_source_status_bindings_are_complete(self) -> None:
+        expected_phases = {
+            "3dgs_original": {"packet"},
+            "2dgs": {"training", "packet"},
+            "pgsr": {"training", "packet"},
+            "rade_gs": {"training", "packet"},
+            "qgs": {"training", "packet"},
+            "gsprior": {"prior", "training", "packet"},
+            "sof": {"training", "packet"},
+            "citygaussian_v2": {"prior", "training", "packet"},
+            "citygs_x": {"prior", "training", "packet"},
+            "metrogs": {"prior", "training", "packet"},
+        }
+        saw_clean = False
+        saw_worktree = False
+        saw_multiline = False
+        for method in METHOD_ORDER:
+            bindings = self.recipes[method]["source_bindings"]
+            self.assertEqual(set(bindings), expected_phases[method], method)
+            for phase, binding in bindings.items():
+                status = binding["required_status"]
+                self.assertIsInstance(status, str, f"{method}:{phase}")
+                self.assertNotIn("\r", status, f"{method}:{phase}")
+                self.assertEqual(status.rstrip("\r\n"), status, f"{method}:{phase}")
+                saw_clean |= status == ""
+                saw_worktree |= status.startswith(" M ")
+                saw_multiline |= "\n" in status
+                self.assertTrue(PurePosixPath(binding["root"]).is_absolute())
+                self.assertIsNotNone(HEX40.fullmatch(binding["commit"]))
+                self.assertIsNotNone(HEX40.fullmatch(binding["tree"]))
+        self.assertTrue(saw_clean)
+        self.assertTrue(saw_worktree)
+        self.assertTrue(saw_multiline)
+
     def test_plan_scope_storage_review_and_attempt_freeze(self) -> None:
         plan = self.plan
         self.assertEqual(plan["method_order"], METHOD_ORDER)
         self.assertEqual(plan["scene"], "gcp_100000_20260610")
         self.assertEqual(
             plan["schema"],
-            "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+            "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
         )
         self.assertEqual(
             plan["activation_manifest_path"],
-            "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v2.json",
+            "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
         )
         self.assertEqual(plan["other_prepared_scenes_locked"], LOCKED_SCENES)
         self.assertFalse(
@@ -289,7 +324,7 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertTrue(plan["attempt_freeze"]["frozen_before_any_formal_lidar_result"])
         self.assertEqual(
             plan["attempt_freeze"]["execution_plan_path"],
-            "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
+            "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
         )
         self.assertEqual(
             plan["attempt_freeze"]["recipe_manifest_path"],
@@ -332,6 +367,35 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertTrue(
             closure["rlimit_nofile_child_actual_inheritance_evidence_required"]
         )
+        continuity = plan["activation_continuity"]
+        continuity_path = ROOT / continuity["receipt"]["path"]
+        self.assertEqual(
+            sha256_file(continuity_path), continuity["receipt"]["sha256"]
+        )
+        continuity_receipt = json.loads(
+            continuity_path.read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            continuity_receipt["canonical_sha256"],
+            canonical_sha256(continuity_receipt),
+        )
+        self.assertEqual(
+            continuity_receipt["status"], "SEALED_V2_TO_V3_CONTINUITY"
+        )
+        self.assertEqual(
+            continuity["inherited_final_methods_forbidden_to_launch"], ["2dgs"]
+        )
+        self.assertFalse(continuity["pgsr_prechild_rejection_consumed_attempt"])
+        previous_plan = ROOT / continuity["previous_execution_plan"]["path"]
+        self.assertEqual(
+            previous_plan.stat().st_size,
+            continuity["previous_execution_plan"]["bytes"],
+        )
+        self.assertEqual(
+            sha256_file(previous_plan),
+            continuity["previous_execution_plan"]["sha256"],
+        )
+        self.assertTrue(plan["preparation"]["formal_training_started"])
         supersession = plan["superseded_activation"]
         receipt_path = ROOT / supersession["receipt"]["path"]
         self.assertEqual(sha256_file(receipt_path), supersession["receipt"]["sha256"])

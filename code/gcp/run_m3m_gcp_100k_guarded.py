@@ -32,6 +32,7 @@ from m3m_gcp_100k_phase_products import (
     validate_npz,
     validate_torch_checkpoint,
 )
+from m3m_gcp_100k_continuity import validate_activation_continuity
 from verify_m3m_gcp_lidar_formal_v1 import validate_archive_manifest
 
 try:
@@ -168,6 +169,15 @@ def git_value(repo: Path, *args: str) -> str:
     return subprocess.check_output(
         ["git", "-C", str(repo), *args], text=True, encoding="utf-8"
     ).strip()
+
+
+def git_porcelain_status(repo: Path) -> str:
+    """Return porcelain-v1 bytes without destroying its significant XY columns."""
+
+    payload = subprocess.check_output(
+        ["git", "-C", str(repo), "status", "--porcelain=v1", "--untracked-files=no"]
+    )
+    return payload.rstrip(b"\r\n").decode("utf-8")
 
 
 def git_blob_sha256(repo: Path, commit: str, relative_path: str) -> str:
@@ -312,6 +322,7 @@ def validate_activation_and_recipe(
     recipe_manifest_path: Path,
     recipe_path: Path,
     method_id: str,
+    phase: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     activation = json.loads(activation_path.read_text(encoding="utf-8"))
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -368,13 +379,13 @@ def validate_activation_and_recipe(
         raise RuntimeError("checkout is not the exact reviewed tree")
     if git_value(repo, "status", "--porcelain"):
         raise RuntimeError("reviewed checkout is dirty")
-    if plan.get("schema") != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2":
+    if plan.get("schema") != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3":
         raise RuntimeError("execution plan schema mismatch")
     expected_activation_path = Path(
         str(plan.get("activation_manifest_path", ""))
     ).resolve()
     if activation_path.resolve() != expected_activation_path:
-        raise RuntimeError("activation path differs from the frozen v2 namespace")
+        raise RuntimeError("activation path differs from the frozen v3 continuation")
     if plan.get("scene") != SCENE or plan.get("seed") != 0:
         raise RuntimeError("execution plan is not frozen 100K seed0")
     if plan.get("status") != "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED" or plan.get("execution_authorized") is not False:
@@ -382,6 +393,12 @@ def validate_activation_and_recipe(
     if plan.get("canonical_sha256") != canonical_sha256(plan):
         raise RuntimeError("execution plan canonical SHA mismatch")
     validate_superseded_activation_receipt(repo=repo, plan=plan)
+    validate_activation_continuity(
+        repo=repo,
+        plan=plan,
+        method_id=method_id,
+        require_pgsr_absent=(method_id == "pgsr" and phase == "training"),
+    )
     if plan.get("method_order") != METHOD_ORDER:
         raise RuntimeError("execution plan method order mismatch")
     if activation.get("execution_plan_review_task_id") != plan.get("review", {}).get("task_id"):
@@ -451,6 +468,10 @@ def validate_activation_and_recipe(
         (
             "attempt_manifest_builder",
             repo / "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
+        ),
+        (
+            "activation_continuity_validator",
+            repo / "code/gcp/m3m_gcp_100k_continuity.py",
         ),
         ("guarded_runner", repo / "code/gcp/run_m3m_gcp_100k_guarded.py"),
         (
@@ -615,7 +636,7 @@ def validate_source_binding(recipe: dict[str, Any], source_root: Path, phase: st
         raise RuntimeError("method source commit mismatch")
     if git_value(source_root, "rev-parse", "HEAD^{tree}") != binding.get("tree"):
         raise RuntimeError("method source tree mismatch")
-    if git_value(source_root, "status", "--porcelain=v1", "--untracked-files=no") != binding.get("required_status", ""):
+    if git_porcelain_status(source_root) != binding.get("required_status", ""):
         raise RuntimeError("method source runtime status mismatch")
     for relative, expected_sha in binding.get("required_files_sha256", {}).items():
         path = source_root / relative
@@ -2046,6 +2067,7 @@ def main() -> int:
         recipe_manifest_path=args.recipe_manifest,
         recipe_path=args.recipe,
         method_id=args.method_id,
+        phase=args.phase,
     )
     args.execution_plan = plan
     expected_run_root = Path(str(recipe.get("authorized_run_root", ""))).resolve()

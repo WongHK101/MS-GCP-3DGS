@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
+from m3m_gcp_100k_continuity import validate_activation_continuity
 
 
 PROTOCOL_ID = "m3m_gcp_lidar_rendered_surface_v1"
@@ -20,7 +21,7 @@ CONTRACT = "configs/m3m_gcp_lidar_formal_v1.json"
 SCHEMA = "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json"
 LOCAL_PREPARATION = "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_local_v2.json"
 REMOTE_PREPARATION = "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_remote_v2.json"
-PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
+PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
 RECIPES = "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
 
 
@@ -107,7 +108,7 @@ def main() -> int:
         raise RuntimeError("execution plan does not bind the exact Phase-1 PASS")
     if (
         plan.get("schema")
-        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3"
         or plan.get("status") != "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
         or plan.get("execution_authorized") is not False
         or plan.get("review", {}).get("task_id") != REVIEW_TASK_ID
@@ -115,6 +116,13 @@ def main() -> int:
         or plan.get("canonical_sha256") != canonical_sha256(plan)
     ):
         raise RuntimeError("100K execution-plan candidate identity changed")
+    if output != Path(str(plan.get("activation_manifest_path", ""))).resolve():
+        raise RuntimeError("activation output differs from the reviewed v3 plan")
+    validate_activation_continuity(
+        repo=repo,
+        plan=plan,
+        require_pgsr_absent=True,
+    )
     if (
         recipes.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v2"
         or recipes.get("status") != "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"

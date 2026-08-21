@@ -1,0 +1,125 @@
+{
+  "schema": "m3m_gcp_100k_activation_continuity_v1",
+  "status": "SEALED_V2_TO_V3_CONTINUITY",
+  "scene": "gcp_100000_20260610",
+  "sealed_at_utc": "2026-08-21T16:02:42Z",
+  "previous_reviewed_checkout": {
+    "commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+    "tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+    "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1"
+  },
+  "repository_artifacts": [
+    {
+      "role": "execution_plan_v2",
+      "path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
+      "bytes": 13616,
+      "sha256": "2938b6931e3dffab97ab618c02168748e6d529a6b305a0549fcebcd470975ce1",
+      "canonical_sha256": "614110535e022036ec97a89d30d3706c033ede3f6aac347d040e5e7d0d01569e"
+    },
+    {
+      "role": "recipe_manifest_v2",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+      "bytes": 3425,
+      "sha256": "6f7caf49c7c9e7f8ba4a54b2bbb0c63a89a05d0132774d4c4f213582451c087f",
+      "canonical_sha256": "39c399e2272a197967d040ed41b768c0e8a1125106e96b0c4c0f80a97844e1d8"
+    },
+    {
+      "role": "execution_note_v2",
+      "path": "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V2.md",
+      "bytes": 4582,
+      "sha256": "f434dc1868482f157cdd219bc3b6a05da685fa0a422cb7bf5d12f81793cd3b62",
+      "canonical_sha256": null
+    }
+  ],
+  "remote_artifacts": [
+    {
+      "role": "activation_v2",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v2.json",
+      "bytes": 1964,
+      "sha256": "7452ac29426c80331f8b9c2ba170a995210932bed3ebb1f7f5667504546c6144"
+    },
+    {
+      "role": "2dgs_failure",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/2dgs/evidence/training/failure.json",
+      "bytes": 2492,
+      "sha256": "95c71f2c4099ffffa8fee5e3deaa69587d9d31e8ef50ab9d7499e1e46317e4bb"
+    },
+    {
+      "role": "2dgs_classification_supplement",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/2dgs/evidence/training/classification_supplement_v1.json",
+      "bytes": 3467,
+      "sha256": "d3060013b8c4c42b281a63020c9f5d855c6218574b4b27d3a235a2065b38549e"
+    },
+    {
+      "role": "2dgs_environment",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/2dgs/evidence/training/environment.json",
+      "bytes": 1655,
+      "sha256": "a90928bacf8f16497ede8de3be47c57da0191eb73c06f2a79673ecac14fad0a1"
+    },
+    {
+      "role": "2dgs_stdout",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/2dgs/evidence/training/command.stdout.log",
+      "bytes": 111,
+      "sha256": "9a8621cb8f81a84d04b36eef83b5be8e1a48329c706df8d8660ef967235b97e7"
+    },
+    {
+      "role": "2dgs_stderr",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/2dgs/evidence/training/command.stderr.log",
+      "bytes": 193184,
+      "sha256": "fe35c9d98703c006dbfbc3e14bfc0f7ed2709ab4ef420f056d1e9558a23200a2"
+    },
+    {
+      "role": "pgsr_prechild_guard_console",
+      "path": "/root/autodl-tmp/staging/pgsr_100k_v2_guard_20260821T1554Z.console.log",
+      "bytes": 583,
+      "sha256": "6bb5ea0112cdd820c81ee6548681783869e0996d3a61febb32915550d5aab3e2"
+    }
+  ],
+  "inherited_method_outcomes": [
+    {
+      "method_id": "2dgs",
+      "formal_status": "FAILED_UNRANKED",
+      "formal_oom_signal": null,
+      "formal_attempt_consumed": true,
+      "retry_allowed": false,
+      "failure_sha256": "95c71f2c4099ffffa8fee5e3deaa69587d9d31e8ef50ab9d7499e1e46317e4bb",
+      "classification_supplement_sha256": "d3060013b8c4c42b281a63020c9f5d855c6218574b4b27d3a235a2065b38549e"
+    }
+  ],
+  "pre_child_guard_rejections": [
+    {
+      "method_id": "pgsr",
+      "cause": "GIT_PORCELAIN_LEADING_SPACE_STRIPPED_BY_GENERIC_VALUE_READER",
+      "child_started": false,
+      "run_root_created": false,
+      "evidence_root_created": false,
+      "formal_attempt_consumed": false,
+      "retry_allowed_only_after_exact_guard_fix_and_new_review": true,
+      "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/pgsr/seed0-v2",
+      "evidence_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/pgsr/evidence",
+      "console_sha256": "6bb5ea0112cdd820c81ee6548681783869e0996d3a61febb32915550d5aab3e2"
+    }
+  ],
+  "transition_policy": {
+    "activation_v2_immutable": true,
+    "activation_v3_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
+    "continued_run_namespace": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2",
+    "recipe_manifest_v2_bytes_unchanged": true,
+    "execution_plan_v2_bytes_unchanged": true,
+    "inherited_final_methods_forbidden_to_launch": [
+      "2dgs"
+    ],
+    "final_attempt_freeze_authorization": "activation_v3_only",
+    "remote_artifacts_must_remain_byte_identical": true,
+    "manual_guard_bypass_forbidden": true
+  },
+  "reviewer_ruling": {
+    "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "pgsr_attempt_consumed": false,
+    "new_activation_required": "activation_v3",
+    "full_100k_and_lidar_regression_required": true,
+    "new_exact_commit_and_tree_review_required": true
+  },
+  "canonical_sha256": "cc9ded90488eba841dc2cde550968610f9c7af30fd7e772546b5365863e17c5b"
+}

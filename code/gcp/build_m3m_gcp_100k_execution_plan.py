@@ -51,6 +51,11 @@ SUPERSESSION_RECEIPT = (
     "docs/protocol_evidence/"
     "m3m_gcp_100k_activation_v1_infrastructure_supersession.json"
 )
+CONTINUITY_RECEIPT = (
+    "docs/protocol_evidence/"
+    "m3m_gcp_100k_activation_v2_to_v3_continuity.json"
+)
+PREVIOUS_PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
 REQUIRED_NOFILE_SOFT = 65536
 
 
@@ -88,14 +93,27 @@ def main() -> int:
         or supersession.get("canonical_sha256") != canonical(supersession)
     ):
         raise RuntimeError("v1 infrastructure supersession receipt is not sealed")
+    continuity_path = ROOT / CONTINUITY_RECEIPT
+    continuity = json.loads(continuity_path.read_text(encoding="utf-8"))
+    previous_plan_path = ROOT / PREVIOUS_PLAN
+    previous_plan = json.loads(previous_plan_path.read_text(encoding="utf-8"))
+    if (
+        continuity.get("schema") != "m3m_gcp_100k_activation_continuity_v1"
+        or continuity.get("status") != "SEALED_V2_TO_V3_CONTINUITY"
+        or continuity.get("canonical_sha256") != canonical(continuity)
+        or previous_plan.get("schema")
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
+        or previous_plan.get("canonical_sha256") != canonical(previous_plan)
+    ):
+        raise RuntimeError("v2-to-v3 continuity receipt is not sealed")
     payload: dict[str, Any] = {
-        "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
-        "plan_id": "m3m-gcp-native-quarter-100k-ten-method-seed0-v2",
+        "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
+        "plan_id": "m3m-gcp-native-quarter-100k-ten-method-seed0-v3-continuation",
         "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
         "execution_authorized": False,
         "activation_manifest_path": (
             "/root/autodl-tmp/runs/m3m-gcp-native-quarter/"
-            "formal-100k-v2/activation_v2.json"
+            "formal-100k-v2/activation_v3.json"
         ),
         "scene": SCENE,
         "seed": 0,
@@ -105,8 +123,27 @@ def main() -> int:
         "other_prepared_scenes_locked": LOCKED_SCENES,
         "other_prepared_scene_training_rendering_or_formal_evaluation_authorized": False,
         "execution_revision_note": repo_file(
-            "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V2.md"
+            "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V3.md"
         ),
+        "activation_continuity": {
+            "receipt": repo_file(CONTINUITY_RECEIPT),
+            "status_required": "SEALED_V2_TO_V3_CONTINUITY",
+            "previous_execution_plan": {
+                "path": PREVIOUS_PLAN,
+                "bytes": previous_plan_path.stat().st_size,
+                "sha256": sha(previous_plan_path),
+                "canonical_sha256": previous_plan["canonical_sha256"],
+            },
+            "execution_plan_v2_bytes_unchanged": True,
+            "recipe_manifest_v2_bytes_unchanged": True,
+            "remote_artifacts_must_remain_byte_identical": True,
+            "inherited_final_methods_forbidden_to_launch": ["2dgs"],
+            "pgsr_prechild_rejection_consumed_attempt": False,
+            "continued_run_namespace": (
+                "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2"
+            ),
+            "final_attempt_freeze_authorization": "activation_v3_only",
+        },
         "superseded_activation": {
             "receipt": repo_file(SUPERSESSION_RECEIPT),
             "status_required": "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE",
@@ -212,7 +249,7 @@ def main() -> int:
                 "sha256": OBSOLETE_ATTEMPT_CLEANUP_SHA,
                 "status_required": "PASS_OBSOLETE_FAILED_ATTEMPT_REMOVED",
             },
-            "formal_training_started": False,
+            "formal_training_started": True,
             "external_prior_generation_started": False,
             "formal_lidar_evaluation_started": False,
         },
@@ -231,6 +268,9 @@ def main() -> int:
             ),
             "attempt_manifest_builder": repo_file(
                 "code/gcp/build_m3m_gcp_100k_attempt_manifest.py"
+            ),
+            "activation_continuity_validator": repo_file(
+                "code/gcp/m3m_gcp_100k_continuity.py"
             ),
             "guarded_runner": repo_file("code/gcp/run_m3m_gcp_100k_guarded.py"),
             "phase_product_validator": repo_file(
@@ -271,12 +311,12 @@ def main() -> int:
             "rlimit_nofile_child_actual_inheritance_evidence_required": True,
         },
         "attempt_freeze": {
-            "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
+            "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
             "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
             "method_registry_path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
-            "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v2.json",
-            "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v2.json",
-            "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/model-identities-v2",
+            "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v3.json",
+            "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v3.json",
+            "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/model-identities-v3",
             "exclusive_create_no_replace": True,
             "frozen_before_any_formal_lidar_result": True,
             "shared_freeze_sha_required_by_authorization_result_verifier_ranker_and_archive": True,
@@ -316,6 +356,7 @@ def main() -> int:
             "pre_child_guard_rejection": "not an attempt; may relaunch only after the exact guard cause is corrected",
             "child_started_any_exit_including_zero_progress_or_oom": "final for that method",
             "superseded_v1_infrastructure_event": "not an algorithm attempt and never rankable; only the reviewer-authorized fresh v2 namespace may restart at 2dgs",
+            "activation_v2_to_v3_continuity": "2dgs FAILED_UNRANKED is inherited as final; PGSR pre-child rejection consumed no attempt; activation_v3 forbids 2dgs relaunch",
             "recipe_resolution_partition_loss_checkpoint_or_budget_change": "FORBIDDEN",
             "result_driven_retry": "FORBIDDEN",
         },
@@ -333,7 +374,7 @@ def main() -> int:
         },
     }
     payload["canonical_sha256"] = canonical(payload)
-    output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
+    output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
     with output.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

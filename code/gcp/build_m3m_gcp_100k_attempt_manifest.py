@@ -25,6 +25,7 @@ from m3m_gcp_100k_phase_products import (
     validate_npz,
     validate_torch_checkpoint,
 )
+from m3m_gcp_100k_continuity import validate_activation_continuity
 
 
 SCENE = "gcp_100000_20260610"
@@ -87,12 +88,13 @@ def validate_frozen_attempt_paths(
     plan = json.loads(require_file(plan_path).read_text(encoding="utf-8"))
     if (
         plan.get("schema")
-        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3"
         or plan.get("scene") != SCENE
         or plan.get("canonical_sha256") != canonical_sha256(plan)
         or plan.get("execution_authorized") is not False
     ):
         raise RuntimeError("100K execution plan identity mismatch")
+    validate_activation_continuity(repo=repo, plan=plan)
     freeze = plan.get("attempt_freeze", {})
     expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
     expected_recipe = (repo / str(freeze.get("recipe_manifest_path", ""))).resolve()

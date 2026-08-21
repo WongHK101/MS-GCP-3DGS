@@ -49,10 +49,148 @@ class ActivationBuilderTest(unittest.TestCase):
         self._commit("phase1")
         self.phase1_commit = self._git("rev-parse", "HEAD")
         self.phase1_tree = self._git("show", "-s", "--format=%T", "HEAD")
+        self.output = self.root / "activation.json"
+
+        previous_plan_path = self.repo / "previous-plan.json"
+        previous_plan = {
+            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
+        }
+        previous_plan["canonical_sha256"] = canonical_sha256(previous_plan)
+        write_json(previous_plan_path, previous_plan)
+        previous_recipes_path = self.repo / "previous-recipes.json"
+        previous_recipes = {
+            "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2"
+        }
+        previous_recipes["canonical_sha256"] = canonical_sha256(previous_recipes)
+        write_json(previous_recipes_path, previous_recipes)
+        previous_note_path = self.repo / "previous-note.md"
+        previous_note_path.write_text("previous\n", encoding="utf-8")
+
+        continuity_root = self.root / "continuity"
+        continuity_root.mkdir()
+        environment = continuity_root / "environment.json"
+        stdout = continuity_root / "stdout.log"
+        stderr = continuity_root / "stderr.log"
+        write_json(environment, {"sealed": True})
+        stdout.write_text("stdout\n", encoding="utf-8")
+        stderr.write_text("stderr\n", encoding="utf-8")
+        failure_path = continuity_root / "failure.json"
+        failure = {
+            "schema": "m3m_gcp_lidar_failure_evidence_v1",
+            "scene": "gcp_100000_20260610",
+            "method_id": "2dgs",
+            "status": "FAILED_UNRANKED",
+            "oom_signal": None,
+            "environment_manifest_sha256": sha256_file(environment),
+            "stdout_sha256": sha256_file(stdout),
+            "stderr_sha256": sha256_file(stderr),
+        }
+        failure["canonical_sha256"] = canonical_sha256(failure)
+        write_json(failure_path, failure)
+        supplement_path = continuity_root / "supplement.json"
+        write_json(supplement_path, {
+            "formal_status_unchanged": "FAILED_UNRANKED",
+            "formal_attempt_consumed": True,
+            "retry_allowed": False,
+            "bound_evidence": {"failure_file_sha256": sha256_file(failure_path)},
+        })
+        console = continuity_root / "pgsr-console.log"
+        console.write_text(
+            "RuntimeError: method source runtime status mismatch\n", encoding="utf-8"
+        )
+        activation_v2_path = continuity_root / "activation-v2.json"
+        activation_v2 = {
+            "schema": "m3m_gcp_lidar_formal_activation_v1",
+            "benchmark_commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+            "benchmark_tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+            "execution_plan_reviewed_commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+            "execution_plan_reviewed_tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+            "execution_plan_path": "previous-plan.json",
+            "execution_plan_sha256": sha256_file(previous_plan_path),
+            "recipe_manifest_path": "previous-recipes.json",
+            "recipe_manifest_sha256": sha256_file(previous_recipes_path),
+        }
+        activation_v2["canonical_sha256"] = canonical_sha256(activation_v2)
+        write_json(activation_v2_path, activation_v2)
+
+        def row(role: str, path: Path) -> dict:
+            return {
+                "role": role, "path": str(path.resolve()),
+                "bytes": path.stat().st_size, "sha256": sha256_file(path),
+            }
+
+        continuity_path = self.repo / "continuity.json"
+        continuity = {
+            "schema": "m3m_gcp_100k_activation_continuity_v1",
+            "status": "SEALED_V2_TO_V3_CONTINUITY",
+            "scene": "gcp_100000_20260610",
+            "previous_reviewed_checkout": {
+                "commit": "a64752b5f7375d79b0e9d82ca1f0e782ac6f0f86",
+                "tree": "9cbc07527c87614bf74cc3239360fe4a53519ef8",
+                "review_task_id": TASK,
+                "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+            },
+            "repository_artifacts": [
+                {**row("execution_plan_v2", previous_plan_path),
+                 "path": "previous-plan.json",
+                 "canonical_sha256": previous_plan["canonical_sha256"]},
+                {**row("recipe_manifest_v2", previous_recipes_path),
+                 "path": "previous-recipes.json",
+                 "canonical_sha256": previous_recipes["canonical_sha256"]},
+                {**row("execution_note_v2", previous_note_path),
+                 "path": "previous-note.md", "canonical_sha256": None},
+            ],
+            "remote_artifacts": [
+                row("activation_v2", activation_v2_path),
+                row("2dgs_failure", failure_path),
+                row("2dgs_classification_supplement", supplement_path),
+                row("2dgs_environment", environment),
+                row("2dgs_stdout", stdout),
+                row("2dgs_stderr", stderr),
+                row("pgsr_prechild_guard_console", console),
+            ],
+            "inherited_method_outcomes": [{
+                "method_id": "2dgs", "formal_status": "FAILED_UNRANKED",
+                "formal_oom_signal": None, "formal_attempt_consumed": True,
+                "retry_allowed": False, "failure_sha256": sha256_file(failure_path),
+                "classification_supplement_sha256": sha256_file(supplement_path),
+            }],
+            "pre_child_guard_rejections": [{
+                "method_id": "pgsr", "child_started": False,
+                "run_root_created": False, "evidence_root_created": False,
+                "formal_attempt_consumed": False,
+                "retry_allowed_only_after_exact_guard_fix_and_new_review": True,
+                "run_root": str((self.root / "pgsr-run").resolve()),
+                "evidence_root": str((self.root / "pgsr-evidence").resolve()),
+                "console_sha256": sha256_file(console),
+            }],
+            "transition_policy": {
+                "activation_v2_immutable": True,
+                "activation_v3_path": str(self.output.resolve()),
+                "continued_run_namespace": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2",
+                "recipe_manifest_v2_bytes_unchanged": True,
+                "execution_plan_v2_bytes_unchanged": True,
+                "inherited_final_methods_forbidden_to_launch": ["2dgs"],
+                "final_attempt_freeze_authorization": "activation_v3_only",
+                "remote_artifacts_must_remain_byte_identical": True,
+                "manual_guard_bypass_forbidden": True,
+            },
+        }
+        continuity["canonical_sha256"] = canonical_sha256(continuity)
+        write_json(continuity_path, continuity)
         plan = {
-            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "execution_authorized": False,
+            "activation_manifest_path": str(self.output.resolve()),
+            "activation_continuity": {
+                "receipt": {"path": "continuity.json", "sha256": sha256_file(continuity_path)},
+                "status_required": "SEALED_V2_TO_V3_CONTINUITY",
+                "remote_artifacts_must_remain_byte_identical": True,
+                "recipe_manifest_v2_bytes_unchanged": True,
+                "execution_plan_v2_bytes_unchanged": True,
+                "inherited_final_methods_forbidden_to_launch": ["2dgs"],
+            },
             "formal_lidar_protocol": {"phase1_review": {
                 "task_id": TASK,
                 "verdict": "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",
@@ -67,7 +205,7 @@ class ActivationBuilderTest(unittest.TestCase):
         }
         plan["canonical_sha256"] = canonical_sha256(plan)
         write_json(
-            self.repo / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
+            self.repo / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
             plan,
         )
         recipes = {
@@ -82,7 +220,6 @@ class ActivationBuilderTest(unittest.TestCase):
         )
         self._commit("phase2")
         self.phase2_commit = self._git("rev-parse", "HEAD")
-        self.output = self.root / "activation.json"
         self.script = Path(__file__).resolve().parent / "build_m3m_gcp_lidar_100k_activation.py"
 
     def tearDown(self) -> None:

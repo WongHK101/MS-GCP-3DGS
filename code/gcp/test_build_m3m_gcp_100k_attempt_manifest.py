@@ -9,6 +9,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 from build_m3m_gcp_100k_attempt_manifest import (
     phase_success_inventory,
@@ -97,7 +98,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             recipe_manifest.write_text("{}", encoding="utf-8")
             registry.write_text("{}", encoding="utf-8")
             plan = {
-                "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+                "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
                 "scene": "gcp_100000_20260610",
                 "execution_authorized": False,
                 "attempt_freeze": {
@@ -111,36 +112,41 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             }
             plan["canonical_sha256"] = canonical_sha256(plan)
             plan_path.write_text(json.dumps(plan), encoding="utf-8")
-            validate_frozen_attempt_paths(
-                repo=repo,
-                plan_path=plan_path,
-                recipe_manifest_path=recipe_manifest,
-                registry_path=registry,
-                identity_root=identity_root,
-                output=methods,
-            )
-            validate_frozen_100k_paths(
-                execution_plan=plan_path,
-                methods_path=methods,
-                output=freeze_output,
-                scene="gcp_100000_20260610",
-            )
-            with self.assertRaisesRegex(RuntimeError, "output path differs"):
+            with mock.patch(
+                "build_m3m_gcp_100k_attempt_manifest.validate_activation_continuity"
+            ), mock.patch(
+                "freeze_m3m_gcp_lidar_scene_attempts.validate_activation_continuity"
+            ):
                 validate_frozen_attempt_paths(
                     repo=repo,
                     plan_path=plan_path,
                     recipe_manifest_path=recipe_manifest,
                     registry_path=registry,
                     identity_root=identity_root,
-                    output=repo / "alternate-methods.json",
+                    output=methods,
                 )
-            with self.assertRaisesRegex(RuntimeError, "freeze output path differs"):
                 validate_frozen_100k_paths(
                     execution_plan=plan_path,
                     methods_path=methods,
-                    output=repo / "alternate-freeze.json",
+                    output=freeze_output,
                     scene="gcp_100000_20260610",
                 )
+                with self.assertRaisesRegex(RuntimeError, "output path differs"):
+                    validate_frozen_attempt_paths(
+                        repo=repo,
+                        plan_path=plan_path,
+                        recipe_manifest_path=recipe_manifest,
+                        registry_path=registry,
+                        identity_root=identity_root,
+                        output=repo / "alternate-methods.json",
+                    )
+                with self.assertRaisesRegex(RuntimeError, "freeze output path differs"):
+                    validate_frozen_100k_paths(
+                        execution_plan=plan_path,
+                        methods_path=methods,
+                        output=repo / "alternate-freeze.json",
+                        scene="gcp_100000_20260610",
+                    )
 
     def test_phase_success_marker_is_exactly_bound(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
