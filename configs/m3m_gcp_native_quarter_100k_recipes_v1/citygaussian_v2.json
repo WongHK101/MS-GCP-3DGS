@@ -1,0 +1,192 @@
+{
+  "authorized_evidence_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/citygaussian_v2/evidence",
+  "authorized_packet_set_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/packet-scratch/citygaussian_v2",
+  "authorized_packet_state": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/packet-scratch/ACTIVE_PACKET_STATE.json",
+  "authorized_run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/citygaussian_v2/seed0-v1",
+  "base_3k_recipe_path": "configs/m3m_gcp_native_quarter_citygaussian_v2_3k_recipe_v1.json",
+  "base_3k_recipe_sha256": "2ee37a3e85de03a3fe436b1b842c8caef439e8bedd2835be1167fc46bce6c188",
+  "benchmark_required_files_sha256": {
+    "code/gcp/export_citygaussian_v2_depth_maps.py": "0c6bc3263deb7bad8034553ff1c8c35a7b50f3bc000f2a651de24c51292136f6",
+    "code/gcp/materialize_colmap_train_track_compatibility_streaming.py": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e",
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "code/gcp/prepare_citygaussian_v2_100k_depth_prior.py": "ee87c5787e0adfc6572edf31ffc2488ad4880dc45da04b4a799c2e1f29ca675e",
+    "code/gcp/run_citygaussian_v2_100k_pipeline.py": "0758f03209ed490f2e57474be008c364d258cb1d465f4bca0c50878adcdf6f8a",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "f4c3cacebd578f5b6d52d335b7e095f45a7621d894bf42db38de97a20ae2f8c6",
+    "patches/citygaussian_v2/native_quarter_raw_moments_rasterizer_9eefc03_v1.patch": "cb92c91b5af52c003bf91c6ae96d47894c4e55050adaac2e1d685dab60407412",
+    "patches/citygaussian_v2/native_quarter_raw_moments_renderer_e84c7c8_v1.patch": "5b08f2a9b4a275b191230e8d20802261a4ed35c7120a3ecf2181060f264ebc64"
+  },
+  "budget": {
+    "coarse_steps": 30000,
+    "fine_steps": 60000,
+    "type": "official_matrixcity_aerial_4x4"
+  },
+  "canonical_sha256": "d1f7dffed2512279a77818d7ffec6dac82491547b44c8d75085313a56c50fbf0",
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
+  "input_class": "rgb_colmap_external_geometry_prior",
+  "input_validation_phases": [
+    "training",
+    "packet"
+  ],
+  "materializations": {},
+  "method_id": "citygaussian_v2",
+  "phase_commands": {
+    "packet": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/eval-py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_m3m_gcp_100k_packet_export.py",
+      "--method-id",
+      "citygaussian_v2",
+      "--benchmark-repo",
+      "{repo}",
+      "--evaluation-repo",
+      "{source_root}",
+      "--training-run-root",
+      "{run_root}",
+      "--dataset-root",
+      "{dataset_root}",
+      "--prior-root",
+      "{prior_root}",
+      "--camera-root",
+      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "--train-allowlist",
+      "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
+      "--packet-set-root",
+      "{packet_set_root}"
+    ],
+    "prior": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/prepare_citygaussian_v2_100k_depth_prior.py",
+      "--city_repo",
+      "{source_root}",
+      "--python",
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+      "--dataset",
+      "{dataset_root}",
+      "--formal_input_manifest",
+      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+      "--da2_root",
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1",
+      "--manifest_output",
+      "{prior_root}/depth_prior_v1.json",
+      "--expected_city_commit",
+      "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+      "--expected_da2_commit",
+      "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+      "--expected_da2_weight_sha256",
+      "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+      "--input_size",
+      "518",
+      "--point_max_error",
+      "1.5"
+    ],
+    "training": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_citygaussian_v2_100k_pipeline.py",
+      "--repo",
+      "{source_root}",
+      "--python",
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygaussian_v2/py310-torch2.7.1-cu128-v1/bin/python",
+      "--dataset",
+      "{dataset_root}",
+      "--output_root",
+      "{run_root}/pipeline",
+      "--mode",
+      "formal",
+      "--coarse_steps",
+      "30000",
+      "--fine_steps",
+      "60000"
+    ]
+  },
+  "phase_external_required_files_sha256": {
+    "packet": {
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/citygaussian_v2/e84c7c8774dd11d3f4189be3488e1220afa20a86/qualification-v1/raw_moment_conformance.json": "3c6f45d76fbe364ccdc8938a691206369687ecb8983af7f2d2b83911c6d5e5af"
+    },
+    "prior": {
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1/checkpoints/depth_anything_v2_vitl.pth": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1/run.py": "b8beab6341314bc864cfc0283e0e303f55571af4e2e456c3d3afbc4aae67249a"
+    }
+  },
+  "phase_roots": {
+    "packet": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610"
+    },
+    "prior": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610"
+    },
+    "training": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610"
+    }
+  },
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "city_train_records_with_full_all_image_sfm_points",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18dbe5",
+      "points3D.bin": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
+  "progress_monitor": {
+    "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+    "unit": "iterations_or_stage_steps"
+  },
+  "progress_monitors": {
+    "packet": {
+      "regex": "(?i)(?:exporting[^\\r\\n]{0,200}?)([0-9]+)/2196",
+      "unit": "train_views_exported"
+    },
+    "training": {
+      "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+      "unit": "iterations_or_stage_steps"
+    }
+  },
+  "renderer_adapter_path": "configs/m3m_gcp_native_quarter_citygaussian_v2_renderer_adapter_v1.json",
+  "renderer_adapter_sha256": "0d7946ee84f4c7f990d0f97e563973002f84a75cd06c8cb27e7b8de3d8bca4ab",
+  "result_selection_from_metrics": "FORBIDDEN",
+  "retry_policy": "a guard rejection before child creation is not an attempt and may be relaunched; once the child starts every exit is final",
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v1",
+  "seed": 0,
+  "source_bindings": {
+    "packet": {
+      "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+      "required_files_sha256": {
+        "internal/renderers/sep_depth_trim_2dgs_renderer.py": "e1cf2d09c90d425d503770fe3342739787921b339b181dba19da6ac6e1d21209"
+      },
+      "required_status": " M internal/renderers/sep_depth_trim_2dgs_renderer.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygaussian_v2/e84c7c8774dd11d3f4189be3488e1220afa20a86/eval-adapter-v1",
+      "tree": "be088977358cb36bac000caec396eff3758c74b2"
+    },
+    "prior": {
+      "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+      "required_files_sha256": {},
+      "required_status": "",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygaussian_v2/e84c7c8774dd11d3f4189be3488e1220afa20a86/official-train",
+      "tree": "be088977358cb36bac000caec396eff3758c74b2"
+    },
+    "training": {
+      "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",
+      "required_files_sha256": {},
+      "required_status": "",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygaussian_v2/e84c7c8774dd11d3f4189be3488e1220afa20a86/official-train",
+      "tree": "be088977358cb36bac000caec396eff3758c74b2"
+    }
+  },
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
+}

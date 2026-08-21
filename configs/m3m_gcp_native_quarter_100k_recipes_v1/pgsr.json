@@ -1,0 +1,157 @@
+{
+  "authorized_evidence_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/pgsr/evidence",
+  "authorized_packet_set_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/packet-scratch/pgsr",
+  "authorized_packet_state": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/packet-scratch/ACTIVE_PACKET_STATE.json",
+  "authorized_run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/pgsr/seed0-v1",
+  "base_3k_recipe_path": "configs/m3m_gcp_native_quarter_pgsr_3k_recipe_v1.json",
+  "base_3k_recipe_sha256": "ffa153ce396444dbbafedcb9fa9f11fef69ffb6f502315b4f02c14f25b1dabdd",
+  "benchmark_required_files_sha256": {
+    "code/gcp/export_gaussian_depth_maps.py": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb",
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "f4c3cacebd578f5b6d52d335b7e095f45a7621d894bf42db38de97a20ae2f8c6",
+    "patches/pgsr/native_quarter_raw_moments_rasterizer_de24f1a_v1.patch": "f5e2ee4e4873d5e2a66df48a4cbb01a6b623051e86ac273ff73a12b174ca0757",
+    "patches/pgsr/native_quarter_raw_moments_renderer_de24f1a_v1.patch": "322ce10b9d21bd69892ddebf1dc02fc0a8515a220fc26a1fa6f93e6c0f3e7f00"
+  },
+  "budget": {
+    "type": "iterations",
+    "value": 30000
+  },
+  "canonical_sha256": "90be4dc7c236cc17acd3b50dabc0a66154157a3e405d7d1cf05d95fcc3ded3c7",
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
+  "input_class": "rgb_colmap_only",
+  "input_validation_phases": [
+    "training",
+    "packet"
+  ],
+  "materializations": {},
+  "method_id": "pgsr",
+  "phase_commands": {
+    "packet": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/pgsr/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_m3m_gcp_100k_packet_export.py",
+      "--method-id",
+      "pgsr",
+      "--benchmark-repo",
+      "{repo}",
+      "--evaluation-repo",
+      "{source_root}",
+      "--training-run-root",
+      "{run_root}",
+      "--dataset-root",
+      "{dataset_root}",
+      "--prior-root",
+      "{prior_root}",
+      "--camera-root",
+      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "--train-allowlist",
+      "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
+      "--packet-set-root",
+      "{packet_set_root}"
+    ],
+    "training": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/pgsr/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{source_root}/train.py",
+      "-s",
+      "{dataset_root}",
+      "-m",
+      "{run_root}/model",
+      "--resolution",
+      "1",
+      "--iterations",
+      "30000",
+      "--test_iterations",
+      "7000",
+      "30000",
+      "--save_iterations",
+      "7000",
+      "30000",
+      "--max_abs_split_points",
+      "0",
+      "--opacity_cull_threshold",
+      "0.05",
+      "--multi_view_max_dis",
+      "1000000000",
+      "--quiet"
+    ]
+  },
+  "phase_external_required_files_sha256": {
+    "packet": {
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/logs/pgsr_raw_moment_cuda_conformance_v1.json": "d89771bc52aeda7e3cef40e07bce1da5c9bbd3149071e27708619b02c1bbf2a9"
+    }
+  },
+  "phase_roots": {
+    "packet": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train"
+    },
+    "training": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train"
+    }
+  },
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "exact_formal_train_view_from_shared_all_image_sfm",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
+  "progress_monitor": {
+    "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+    "unit": "iterations_or_stage_steps"
+  },
+  "progress_monitors": {
+    "packet": {
+      "regex": "(?i)(?:exporting[^\\r\\n]{0,200}?)([0-9]+)/2196",
+      "unit": "train_views_exported"
+    },
+    "training": {
+      "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+      "unit": "iterations_or_stage_steps"
+    }
+  },
+  "renderer_adapter_path": "configs/m3m_gcp_native_quarter_pgsr_renderer_adapter_v1.json",
+  "renderer_adapter_sha256": "1cbebcf6239a74c9d54aa6c28067f6a837461badb548f22f957d50e24e23acc7",
+  "result_selection_from_metrics": "FORBIDDEN",
+  "retry_policy": "a guard rejection before child creation is not an attempt and may be relaunched; once the child starts every exit is final",
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v1",
+  "seed": 0,
+  "source_bindings": {
+    "packet": {
+      "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+      "required_files_sha256": {
+        "gaussian_renderer/__init__.py": "833a4ab591accf0365f3f4d4a12633beb82d175c516b605833919ba07e4b71e8",
+        "scene/dataset_readers.py": "2c51048f9358f2a86af863eeda3897f11fea10dc7d8234fd6e6953ec38872281",
+        "submodules/diff-plane-rasterization/cuda_rasterizer/config.h": "1f4268c9bdbc4bd9ec5c5d4a0460ae3a9e72e178e8e64e2a2438be035391b5d3"
+      },
+      "required_status": " M gaussian_renderer/__init__.py\n M scene/dataset_readers.py\n M submodules/diff-plane-rasterization/cuda_rasterizer/config.h",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/eval-adapter-v1",
+      "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013"
+    },
+    "training": {
+      "commit": "de24f1a38b350387e8d8fe381b2cd70c1ae946e7",
+      "required_files_sha256": {
+        "scene/dataset_readers.py": "2c51048f9358f2a86af863eeda3897f11fea10dc7d8234fd6e6953ec38872281",
+        "train.py": "02dbe7852e54f31f9ea31e3eb18807eb9a47a75eb1c8995186fd7d6bed34fa0a"
+      },
+      "required_status": " M scene/dataset_readers.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/train-loader-compat-v1",
+      "tree": "8504a351b4a7938ef0b15647c1e5efb01e7ea013"
+    }
+  },
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
+}

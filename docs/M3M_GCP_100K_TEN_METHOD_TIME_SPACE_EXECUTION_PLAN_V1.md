@@ -38,9 +38,9 @@ review verdict.
 | 1 | 2DGS | new seed-0 run | 30K iterations | 3.5--7 h |
 | 2 | PGSR | new seed-0 run | 30K iterations, frozen nearest-eight rule | 4--8 h |
 | 3 | RaDe-GS | new seed-0 run or record OOM | 30K iterations, frozen nearest-eight rule | 3--7 h or earlier OOM |
-| 4 | SoF | new seed-0 run | 30K iterations, frozen unbounded/TnT route | 3.5--8 h |
+| 4 | QGS | new seed-0 run or record OOM | 30K iterations | 12.5--28 h or earlier OOM |
 | 5 | GSPrior | new seed-0 run | 40K iterations and frozen internal TSDF schedule | 7.5--18 h |
-| 6 | QGS | new seed-0 run or record OOM | 30K iterations | 12.5--28 h or earlier OOM |
+| 6 | SoF | new seed-0 run | 30K iterations, frozen unbounded/TnT route | 3.5--8 h |
 | 7 | CityGaussianV2 | new seed-0 run | official MatrixCity-aerial 4 x 4 partitions; 30K coarse + 60K fine per official block route, then official merge | 39--76 h |
 | 8 | CityGS-X | new seed-0 run | frozen DAv2 prior and official 100K all-block 100K-iteration route | 15--40 h |
 | 9 | MetroGS | new seed-0 run | frozen Pi3-Align + MoGe-2 route; 150K effective image iterations / 37.5K optimizer steps | 21--52 h |
@@ -50,7 +50,7 @@ use the measured 3K training times and the existing 3DGS 100K export.  The
 existing 3DGS exporter used 740.56 s for 211 views (3.51 s/view), projecting
 about 2.14 h for 2,196 views.  Allowing renderer variation gives 2--3.5 h of
 packet export per successful method.  The entire successful queue is therefore
-expected to take roughly 5--10 wall-clock days on one GPU; 6--9 days is the
+expected to take roughly 5.5--12 wall-clock days on one GPU; 7--10 days is the
 working expectation.  OOM/failure can shorten, not lengthen, an individual
 attempt because recipe-changing rescue runs are forbidden.
 
@@ -70,9 +70,13 @@ attempt because recipe-changing rescue runs are forbidden.
    retained and the queue continues.  Batch size, resolution, partition rule,
    loss, checkpoint or iteration budget is not changed to rescue it.
 5. After all ten attempts, freeze one exact ordered ten-row attempt manifest.
-   `READY_FOR_EVALUATION` rows bind model/recipe/renderer bytes.  Failed/OOM
-   rows have null model fields and bind failure evidence.  One failed method
-   therefore cannot invalidate successful methods.
+   Each `READY_FOR_EVALUATION` row binds an immutable model-identity manifest
+   containing the final model/config inventory and any generated prior
+   manifest/PASS marker, plus recipe and renderer bytes.  The packet guard
+   rehashes every inventoried file immediately before export; freezing only the
+   identity-manifest file is insufficient.
+   Failed/OOM rows have null model fields and bind failure evidence.  One
+   failed method therefore cannot invalidate successful methods.
 
 Before Phase A formal launches, each 100K scene recipe must be materialized as
 a hash-bound file and mechanically checked against its qualified 3K parent:
@@ -80,6 +84,44 @@ only scene identity, train-camera-derived lists/partitions and paths may differ.
 The CityGaussianV2 4 x 4 choice is the frozen upstream MatrixCity-aerial
 configuration, selected before any 100K result; it is not a result-driven
 memory workaround.
+
+The manifest contains ten recipes: nine fresh-training recipes and one
+packet-only recipe for the already frozen 3DGS model.  Every recipe contains
+an exact all-2,196-view packet-export command, evaluation-adapter source/file
+bindings and conformance-evidence hashes.  The reused 3DGS recipe exposes no
+training phase and the guard rejects any attempt to retrain it.
+
+The authoritative initialization is the already published, standard COLMAP
+4.0.4 native-quarter model produced from **all 2,510 images before the split**.
+Its 2,510-image `images.bin`, 1,262,896-point `points3D.bin`, PINHOLE camera and
+package audit are hash-bound.  No new SfM, train-first undistortion, feature
+extraction, matching or bundle adjustment is part of this plan.  The obsolete
+failed train-first undistorter candidate was removed under a hash-bound cleanup
+receipt.
+
+Per-method views inherit the exact reviewed 3K semantics.  3DGS, 2DGS, PGSR,
+RaDe-GS, QGS, GSPrior and SoF use the exact formal 2,196-view training root;
+QGS receives only its two required image aliases.  CityGaussianV2 and CityGS-X
+receive the 2,196 training image records selected byte-for-byte from the
+all-image model plus the byte-identical shared all-image `points3D.bin`, because
+their qualified consumers explicitly select training observations.  MetroGS
+alone receives a reciprocal post-SfM training track closure: held-out image
+records and their track elements are removed, 511 points having no remaining
+training observation are omitted, and every retained image record, point
+XYZ/RGB/error and track index remains byte-identical.  No pixel is decoded,
+resampled or re-encoded by either compatibility materializer.
+
+All method RGB directories are symlinks to the frozen formal train JPEGs and
+all reusable sparse files are same-filesystem hardlinks.  The preparation
+evidence has status
+`PASS_PER_METHOD_INPUT_PREPARATION_NO_TRAINING_NO_PRIOR`, proves that all-image
+SfM precedes the split, and is bound by exact SHA into the plan and every recipe.
+
+MetroGS's official Pi3 partitioner initially emits byte copies under its block
+directories.  After the official partition is fixed and before Pi3 runs, the
+preparation wrapper replaces each copy with a same-filesystem hardlink to its
+byte-identical frozen train JPEG, then verifies an exact device/inode multiset.
+This changes no partition, name or pixel and adds zero physical RGB bytes.
 
 ### Phase B: rolling packet evaluation
 
@@ -107,7 +149,8 @@ never substitutes zero metrics.
 
 Observed on 901 in no-card mode before this review:
 
-- free persistent bytes: 604,395,982,848 (about 563 GiB);
+- free persistent bytes after corrected input preparation and obsolete-attempt
+  cleanup: 602,138,341,376 (about 561 GiB);
 - frozen RGB release: 6,798,585,468 bytes;
 - LiDAR release: 4,201,008,981 bytes;
 - existing project run tree: 118,762,414,978 bytes;
@@ -125,11 +168,30 @@ gates:
 - at least 180 GiB free before starting any full 2,196-view packet export;
 - stop before the next launch if either gate fails; never delete a final model,
   formal result, distance array or failure evidence to force continuation;
-- intermediate iteration checkpoints, compiler caches, temporary merged files
-  and raw packets may be removed only after their designated final artifact,
-  full hash inventory and independent verification exist;
+- intermediate iteration checkpoints, compiler caches and temporary merged
+  files may be removed only after their designated final artifact and a full
+  hash inventory exist; raw packets additionally require independent formal
+  verification and full lightweight-archive byte verification;
+- CityGaussianV2 writes an exclusive, fsynced hash inventory for every coarse
+  and block checkpoint after the merged checkpoint is verified, then removes
+  only those inventoried transient files; the merged checkpoint, resolved
+  configuration, command logs and cleanup inventory remain retained;
+- MetroGS likewise inventories and fsyncs the single-GPU rank checkpoint after
+  the merged checkpoint and PLY conversion pass, deletes only that duplicated
+  rank file, and retains the merged checkpoint, PLY, configuration, summary
+  and inventory;
 - external prior payloads used for training remain retained through the 100K
   audit.  Any later deletion requires a separate reviewed retention decision.
+
+These are executable checks in `run_m3m_gcp_100k_guarded.py`, not operator
+reminders.  The guard rejects a different plan/recipe/commit/tree, a dirty or
+mis-hashed method source, missing external-weight bytes, a non-idle GPU, an
+unmatched prepared per-method input evidence file, insufficient free space, a
+second packet mutex, a changed file inside the frozen model-identity inventory,
+an unbound packet-state or packet-set path, or packet growth beyond 100 GiB.
+Packet release can delete only the method-specific packet root frozen in its
+recipe and requires both independent formal verification and full
+archive-inventory byte verification; the mutex persists on failure.
 
 ## 5. Result and retry policy
 
@@ -137,9 +199,11 @@ gates:
   scene.  OOM, failed and incomplete rows remain unranked.
 - No PSNR, GCP or LiDAR result is used to select routes, retries, partitions,
   checkpoints or hyperparameters.
-- A failure before the training child starts or before any optimizer progress
-  may receive only a byte-identical infrastructure retry under an already
-  frozen compatibility rule.  A progressed/OOM run is final for that method.
+- A fail-closed guard rejection before child creation is not an experiment
+  attempt and may be relaunched only after the exact guard cause is corrected.
+  Once a child process starts, any exit—including zero reported optimizer
+  progress, technical failure or OOM—is final for that method.  Phase logs,
+  failure evidence and success markers are exclusive-create and never reused.
 - Formal output roots are fresh and never resumed or overwritten.
 - The other four prepared scenes remain untouched after 100K completion; their
   later authorization requires a new user instruction and review.
@@ -152,6 +216,12 @@ The reviewer is asked to return one exact verdict:
 - `REVISE_100K_TIME_SPACE_EXECUTION_PLAN_V1` with concrete blocking items.
 
 This plan remains non-executable until the PASS verdict is recorded against
-the exact clean commit/tree and the LiDAR contract is activated with the
-reviewed rolling authorization schema.
-
+the exact clean commit/tree, execution-plan file/canonical SHA and ten-recipe
+manifest file/canonical SHA, and the LiDAR contract is activated with the
+reviewed rolling authorization schema.  The reviewed activation must contain
+the exact verdict string; the previous protocol-review PASS is insufficient.
+The prerequisite protocol/data review is independently frozen as
+`PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2` at commit
+`e9c3414b808b374bd8632a45ee965e3f6acc1ac0`, tree
+`d1d6c73852e42bc02c519d0853e26c114dcb1f8f`; it cannot substitute for the
+second execution-plan review.
