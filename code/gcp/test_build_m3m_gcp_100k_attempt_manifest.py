@@ -116,6 +116,10 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                 "build_m3m_gcp_100k_attempt_manifest.validate_activation_continuity"
             ), mock.patch(
                 "freeze_m3m_gcp_lidar_scene_attempts.validate_activation_continuity"
+            ), mock.patch(
+                "build_m3m_gcp_100k_attempt_manifest.validate_source_binding_correction"
+            ), mock.patch(
+                "freeze_m3m_gcp_lidar_scene_attempts.validate_source_binding_correction"
             ):
                 validate_frozen_attempt_paths(
                     repo=repo,

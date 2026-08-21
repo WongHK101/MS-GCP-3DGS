@@ -1,0 +1,116 @@
+{
+  "schema": "m3m_gcp_100k_source_binding_correction_v1",
+  "status": "SEALED_LINUX_IDENTITY_METADATA_CORRECTION",
+  "scene": "gcp_100000_20260610",
+  "method_id": "3dgs_original",
+  "phase": "packet",
+  "sealed_at_utc": "2026-08-21T16:26:37Z",
+  "classification": {
+    "type": "LINUX_IDENTITY_METADATA_CORRECTION_ONLY",
+    "source_modified": false,
+    "child_started": false,
+    "attempt_consumed": false,
+    "activation_v3_generated": false,
+    "dual_hash_tolerance": false,
+    "algorithm_or_renderer_semantics_changed": false,
+    "budget_command_input_or_output_path_changed": false
+  },
+  "source_runtime": {
+    "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/eval-adapter-v1",
+    "repository_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "repository_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4",
+    "rasterizer_commit": "59f5f77e3ddbac3ed9db93ec2cfe99ed6c5d121d",
+    "required_status": " M gaussian_renderer/__init__.py\n M submodules/diff-gaussian-rasterization"
+  },
+  "hash_correction": {
+    "path": "submodules/diff-gaussian-rasterization/rasterize_points.h",
+    "superseded_windows_checkout_sha256": "7fdf17df5880f2819551e70a162937abff526b7e6b0337ccb8d6fe184f18c3f2",
+    "formal_linux_sha256": "c4f5f2df458e75290bdaff7510b87395d5b8ca47ef07b51f47c9b5cb7e580629",
+    "formal_hash_count": 1
+  },
+  "formal_linux_patched_files_sha256": {
+    "gaussian_renderer/__init__.py": "1996207560bf23bf0df671bc1e801b5264ba08119e146e83c4a92493520dc062",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "af77279263d7cb39f09d7b2d5d089f396e14dbe3726a1a6af38cb4722f521ca2",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/forward.h": "14e991a00e1be7958d3375675e49c8cba81ab67b634932ae1b552e9fda31db2e",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer.h": "ae6cb41d90c60f8d9d8e2c8401a9e777e0c32167b02a84436acd131c3fa5465b",
+    "submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.cu": "d008f690da5cc27d1f74333df521b66532b6c56fe96e3fef29ce164e964291b2",
+    "submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/__init__.py": "61432710e2f150459d5f71b68529140d9ececa0d785d3ff91d24381696abfd89",
+    "submodules/diff-gaussian-rasterization/rasterize_points.cu": "cc7a9fd3b0d809f28da952f54d36bba20d78906b54bfe3934013f953ed87f8ba",
+    "submodules/diff-gaussian-rasterization/rasterize_points.h": "c4f5f2df458e75290bdaff7510b87395d5b8ca47ef07b51f47c9b5cb7e580629"
+  },
+  "trigger_audit": {
+    "local_path": "docs/protocol_evidence/m3m_gcp_100k_source_binding_preflight_e082664_v1.json",
+    "remote_path": "/root/autodl-tmp/staging/100k-v3-e082664-all-source-binding-audit.json",
+    "bytes": 722,
+    "sha256": "cdc38ad2b75af260606aeedb809fe555d0a33d2b53b4a9053463fbabb9b4194c",
+    "phase_binding_count": 23,
+    "failed_binding_count": 1
+  },
+  "repository_artifacts": [
+    {
+      "role": "recipe_manifest_v2",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+      "bytes": 3425,
+      "sha256": "6f7caf49c7c9e7f8ba4a54b2bbb0c63a89a05d0132774d4c4f213582451c087f",
+      "canonical_sha256": "39c399e2272a197967d040ed41b768c0e8a1125106e96b0c4c0f80a97844e1d8"
+    },
+    {
+      "role": "3dgs_recipe_v2",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/3dgs_original.json",
+      "bytes": 8873,
+      "sha256": "0d3ec6c7690f257a82371dac720275edc5af4cf9828cdc132b586957326da21b",
+      "canonical_sha256": "acbf034d1595b58414b5b6f4381c25efac908b4ee6b104ae1581bef992782691"
+    },
+    {
+      "role": "recipe_manifest_v3",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
+      "bytes": 3966,
+      "sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2",
+      "canonical_sha256": "02ac6c54b37cc2630286d9066701bfe5dbd4f574f2321467d58350751e7993ee"
+    },
+    {
+      "role": "3dgs_recipe_v3",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v3/3dgs_original.json",
+      "bytes": 10181,
+      "sha256": "53632c3d5c586951022f4d31e9cffffbb4fe0dcb1a3de9ec4d489bc13c211caa",
+      "canonical_sha256": "90a1adc77ecf6b58e9ee78da3f11c9c14f61a23caf50f69281fafe7465eee5d9"
+    },
+    {
+      "role": "linux_identity_proof",
+      "path": "docs/protocol_evidence/3dgs_native_quarter_adapter_linux_identity_proof_v1.json",
+      "bytes": 1673,
+      "sha256": "39a064fd8340d19deed15fe17bfaa888e2fec80f9d4bab8b64586b04d942420d",
+      "canonical_sha256": null
+    },
+    {
+      "role": "renderer_patch",
+      "path": "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch",
+      "bytes": 2451,
+      "sha256": "e88b1ca418751228862c4e4d99c2cf4b5f714838fdbdf1bfa81f75fb85e81363",
+      "canonical_sha256": null
+    },
+    {
+      "role": "rasterizer_patch",
+      "path": "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch",
+      "bytes": 11027,
+      "sha256": "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068",
+      "canonical_sha256": null
+    },
+    {
+      "role": "trigger_audit_local",
+      "path": "docs/protocol_evidence/m3m_gcp_100k_source_binding_preflight_e082664_v1.json",
+      "bytes": 722,
+      "sha256": "cdc38ad2b75af260606aeedb809fe555d0a33d2b53b4a9053463fbabb9b4194c",
+      "canonical_sha256": null
+    }
+  ],
+  "reviewer_ruling": {
+    "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "manifest_v3_required": true,
+    "actual_source_modification_forbidden": true,
+    "windows_hash_forbidden_in_formal_linux_binding": true,
+    "all_eight_patched_files_must_match_linux_proof": true,
+    "new_exact_commit_and_tree_review_required": true
+  },
+  "canonical_sha256": "3a192ed0540fa8f7f0e3c74cab6d2b6132abadfcd141a0eed34f3006467da476"
+}

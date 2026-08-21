@@ -34,7 +34,7 @@
     "frozen_before_any_formal_lidar_result": true,
     "method_registry_path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
     "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/model-identities-v3",
-    "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+    "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
     "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v3.json",
     "shared_freeze_sha_required_by_authorization_result_verifier_ranker_and_archive": true
   },
@@ -78,12 +78,12 @@
       "value": 30000
     }
   },
-  "canonical_sha256": "7025f3d7f595febdd51f3338625a2c99824f2924baf31b9b89af05f39d48e8b4",
+  "canonical_sha256": "ef969eb6112980bdcbfb51a8d4dfd04ad3996e132ac43ec748b3dfe21f72c2af",
   "execution_authorized": false,
   "execution_closure": {
     "activation_builder": {
       "path": "code/gcp/build_m3m_gcp_lidar_100k_activation.py",
-      "sha256": "7ea18dcfd701f9b8672eb94fa876880d259135e7400a9c2f14cd3e4e5478f7a7"
+      "sha256": "77c7784b234c8bf2eeccd324f1492e633408dd0400f7876affd22d2ff75f9ec4"
     },
     "activation_continuity_validator": {
       "path": "code/gcp/m3m_gcp_100k_continuity.py",
@@ -91,11 +91,11 @@
     },
     "attempt_freezer": {
       "path": "code/gcp/freeze_m3m_gcp_lidar_scene_attempts.py",
-      "sha256": "dd79fd5bc5bd052a8bfb96b5f9b2c2acaaeedfd54204293da126354107761007"
+      "sha256": "46adad7eabb70885f7b0244b3fcacda588dcd1f608d3baf55bc12712fc55e93e"
     },
     "attempt_manifest_builder": {
       "path": "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
-      "sha256": "23a5981068e585799cc3f027d22482cf5b22c6a95f009a609936c1b64f112196"
+      "sha256": "90a19c740f2634b0f5c898027dbe126e2e2956f0616abfa53173732344c5a245"
     },
     "evaluation_camera_root_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py",
@@ -106,7 +106,7 @@
     "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
     "guarded_runner": {
       "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
-      "sha256": "69bb4f328f007096619e44a023e2a8cfa14286716db3662b453b1588c526a1c4"
+      "sha256": "77ccbec5e589b460e58d45ca7a41086cbd894532008cf4eb7ec48e9f718a63e8"
     },
     "method_input_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_method_inputs.py",
@@ -135,17 +135,25 @@
     "prior_phase_success_and_product_required_before_training": true,
     "progress_monitor_bound_by_each_recipe": true,
     "ready_model_identity_requires_exact_phase_success_markers": true,
+    "recipe_manifest_v3_builder": {
+      "path": "code/gcp/build_m3m_gcp_100k_recipe_manifest_v3.py",
+      "sha256": "7e6022a4a12eefa3b42b6591498209fcfe73d144a39739ec5df65a1bfa09b7ee"
+    },
     "rlimit_nofile_child_actual_inheritance_evidence_required": true,
     "rlimit_nofile_hard_minimum_prechild_gate": 65536,
     "rlimit_nofile_parent_before_after_evidence_required": true,
     "rlimit_nofile_soft_required_for_child_phases": 65536,
+    "source_binding_correction_validator": {
+      "path": "code/gcp/m3m_gcp_100k_source_binding_correction.py",
+      "sha256": "8f99c1824bfbec9ea620738f81aafd4fc82d16c14bc359cd0498cb8170dde85e"
+    },
     "structured_failure_evidence_required": true,
     "training_child_must_create_products_inside_new_run_root": true,
     "zero_exit_requires_phase_product_postvalidation": true
   },
   "execution_revision_note": {
     "path": "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V3.md",
-    "sha256": "f2c09f05b522e4148ae7deea6ee27da805bc35a30d78c0a99b67a4e6f6edd8cf"
+    "sha256": "e79ee2f2606427d6299c98e2a3cfc2eb18ebd0400f1e7dba081f1a2b50a6eda1"
   },
   "formal_lidar_protocol": {
     "artifact_schema": {
@@ -255,8 +263,8 @@
     }
   },
   "recipe_manifest": {
-    "canonical_sha256": "39c399e2272a197967d040ed41b768c0e8a1125106e96b0c4c0f80a97844e1d8",
-    "file_sha256": "6f7caf49c7c9e7f8ba4a54b2bbb0c63a89a05d0132774d4c4f213582451c087f",
+    "canonical_sha256": "02ac6c54b37cc2630286d9066701bfe5dbd4f574f2321467d58350751e7993ee",
+    "file_sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2",
     "method_order": [
       "3dgs_original",
       "2dgs",
@@ -270,7 +278,7 @@
       "metrogs"
     ],
     "new_training_recipes": 9,
-    "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+    "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
     "recipe_count": 10,
     "reused_model_packet_only_recipes": 1
   },
@@ -309,6 +317,23 @@
   "scene": "gcp_100000_20260610",
   "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
   "seed": 0,
+  "source_binding_correction": {
+    "attempt_consumed": false,
+    "child_started": false,
+    "dual_hash_tolerance": false,
+    "receipt": {
+      "path": "docs/protocol_evidence/m3m_gcp_100k_3dgs_linux_source_binding_correction_v1.json",
+      "sha256": "07b4a9cc739dd765f16c96a9360fe06ac09b1b1dcf5f04d93c970f13c3795e84"
+    },
+    "recipe_manifest": {
+      "canonical_sha256": "02ac6c54b37cc2630286d9066701bfe5dbd4f574f2321467d58350751e7993ee",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
+      "sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2"
+    },
+    "source_modified": false,
+    "status_required": "SEALED_LINUX_IDENTITY_METADATA_CORRECTION",
+    "type": "LINUX_IDENTITY_METADATA_CORRECTION_ONLY"
+  },
   "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
   "storage": {
     "all_ten_packet_sets_simultaneously_forbidden": true,

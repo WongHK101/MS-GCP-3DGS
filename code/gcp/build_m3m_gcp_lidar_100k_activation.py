@@ -11,6 +11,9 @@ from pathlib import Path
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_source_binding_correction import (
+    validate_source_binding_correction,
+)
 
 
 PROTOCOL_ID = "m3m_gcp_lidar_rendered_surface_v1"
@@ -22,7 +25,7 @@ SCHEMA = "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json"
 LOCAL_PREPARATION = "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_local_v2.json"
 REMOTE_PREPARATION = "docs/protocol_evidence/m3m_gcp_six_scene_common_preparation_remote_v2.json"
 PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
-RECIPES = "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
+RECIPES = "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json"
 
 
 def git_value(repo: Path, *args: str) -> str:
@@ -123,8 +126,13 @@ def main() -> int:
         plan=plan,
         require_pgsr_absent=True,
     )
+    validate_source_binding_correction(
+        repo=repo,
+        plan=plan,
+        require_live_sources=True,
+    )
     if (
-        recipes.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v2"
+        recipes.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v3"
         or recipes.get("status") != "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
         or recipes.get("canonical_sha256") != canonical_sha256(recipes)
         or len(recipes.get("recipes", [])) != 10

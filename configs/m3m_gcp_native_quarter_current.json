@@ -24,7 +24,8 @@
     "protocol_data_reviewed_commit": "e9c3414b808b374bd8632a45ee965e3f6acc1ac0",
     "protocol_data_reviewed_tree": "d1d6c73852e42bc02c519d0853e26c114dcb1f8f",
     "one_hundred_k_execution_plan": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
-    "one_hundred_k_recipe_manifest": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+    "one_hundred_k_recipe_manifest": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
+    "one_hundred_k_source_binding_correction": "docs/protocol_evidence/m3m_gcp_100k_3dgs_linux_source_binding_correction_v1.json",
     "one_hundred_k_activation_continuity": {
       "previous_activation": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v2.json",
       "next_activation": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
@@ -41,7 +42,7 @@
     "formal_training_or_prior_authorized": false,
     "formal_lidar_evaluation_authorized": false,
     "other_four_prepared_scenes_locked": true,
-    "active_review_artifact_rule": "only the v2 common-preparation evidence, exact v3 continuation plan, byte-identical v2 recipes, v2-to-v3 continuity receipt, and a new exact commit/tree review may authorize work; activation_v2 remains immutable and cannot authorize the new checkout"
+    "active_review_artifact_rule": "only the v2 common-preparation evidence, exact v3 continuation plan, manifest v3 with nine byte-identical v2 rows and the single 3DGS Linux identity correction, both continuity/correction receipts, and a new exact commit/tree review may authorize work; activation_v2 remains immutable and cannot authorize the new checkout"
   },
   "state_ownership": {
     "protocol_semantics": "protocol_document and protocol_release_pin",
@@ -85,9 +86,15 @@
     "docs/protocol_evidence/m3m_eight_method_source_freeze_v1.json",
     "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V3.md",
     "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
+    "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
     "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+    "configs/m3m_gcp_native_quarter_100k_recipes_v3/3dgs_original.json",
     "docs/protocol_evidence/m3m_gcp_100k_activation_v2_to_v3_continuity.json",
+    "docs/protocol_evidence/m3m_gcp_100k_3dgs_linux_source_binding_correction_v1.json",
+    "docs/protocol_evidence/m3m_gcp_100k_source_binding_preflight_e082664_v1.json",
     "code/gcp/m3m_gcp_100k_continuity.py",
+    "code/gcp/m3m_gcp_100k_source_binding_correction.py",
+    "code/gcp/build_m3m_gcp_100k_recipe_manifest_v3.py",
     "code/gcp/validate_m3m_native_quarter_method_registry_v3.py",
     "code/gcp/test_validate_m3m_native_quarter_method_registry_v3.py",
     "code/gcp/check_m3m_native_quarter_batch_launch_v3.py",

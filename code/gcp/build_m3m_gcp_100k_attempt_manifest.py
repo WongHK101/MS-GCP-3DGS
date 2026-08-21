@@ -26,6 +26,9 @@ from m3m_gcp_100k_phase_products import (
     validate_torch_checkpoint,
 )
 from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_source_binding_correction import (
+    validate_source_binding_correction,
+)
 
 
 SCENE = "gcp_100000_20260610"
@@ -95,6 +98,7 @@ def validate_frozen_attempt_paths(
     ):
         raise RuntimeError("100K execution plan identity mismatch")
     validate_activation_continuity(repo=repo, plan=plan)
+    validate_source_binding_correction(repo=repo, plan=plan)
     freeze = plan.get("attempt_freeze", {})
     expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
     expected_recipe = (repo / str(freeze.get("recipe_manifest_path", ""))).resolve()

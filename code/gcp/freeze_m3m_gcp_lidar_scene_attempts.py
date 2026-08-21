@@ -17,6 +17,9 @@ from m3m_gcp_lidar_artifacts import (
     validate_failure_evidence_file,
 )
 from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_source_binding_correction import (
+    validate_source_binding_correction,
+)
 
 
 FORMAL_100K_SCENE = "gcp_100000_20260610"
@@ -46,6 +49,7 @@ def validate_frozen_100k_paths(
         raise RuntimeError("100K execution plan must be inside the repository configs directory")
     repo = plan_path.parents[1]
     validate_activation_continuity(repo=repo, plan=plan)
+    validate_source_binding_correction(repo=repo, plan=plan)
     expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
     if plan_path != expected_plan:
         raise RuntimeError("100K freeze plan path differs from the frozen plan")

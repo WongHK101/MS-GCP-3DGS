@@ -8,6 +8,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from m3m_gcp_100k_source_binding_correction import (
+    validate_source_binding_correction,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCENE = "gcp_100000_20260610"
@@ -55,7 +59,12 @@ CONTINUITY_RECEIPT = (
     "docs/protocol_evidence/"
     "m3m_gcp_100k_activation_v2_to_v3_continuity.json"
 )
+SOURCE_BINDING_CORRECTION_RECEIPT = (
+    "docs/protocol_evidence/"
+    "m3m_gcp_100k_3dgs_linux_source_binding_correction_v1.json"
+)
 PREVIOUS_PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
+RECIPE_MANIFEST = "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json"
 REQUIRED_NOFILE_SOFT = 65536
 
 
@@ -78,7 +87,7 @@ def repo_file(path: str) -> dict[str, str]:
 
 
 def main() -> int:
-    recipe_manifest_path = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
+    recipe_manifest_path = ROOT / RECIPE_MANIFEST
     recipe_manifest = json.loads(recipe_manifest_path.read_text(encoding="utf-8"))
     if recipe_manifest.get("method_order") != METHOD_ORDER:
         raise RuntimeError("ten-recipe manifest order differs from frozen active pool")
@@ -143,6 +152,20 @@ def main() -> int:
                 "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2"
             ),
             "final_attempt_freeze_authorization": "activation_v3_only",
+        },
+        "source_binding_correction": {
+            "receipt": repo_file(SOURCE_BINDING_CORRECTION_RECEIPT),
+            "status_required": "SEALED_LINUX_IDENTITY_METADATA_CORRECTION",
+            "type": "LINUX_IDENTITY_METADATA_CORRECTION_ONLY",
+            "source_modified": False,
+            "child_started": False,
+            "attempt_consumed": False,
+            "dual_hash_tolerance": False,
+            "recipe_manifest": {
+                "path": RECIPE_MANIFEST,
+                "sha256": sha(recipe_manifest_path),
+                "canonical_sha256": recipe_manifest["canonical_sha256"],
+            },
         },
         "superseded_activation": {
             "receipt": repo_file(SUPERSESSION_RECEIPT),
@@ -254,7 +277,7 @@ def main() -> int:
             "formal_lidar_evaluation_started": False,
         },
         "recipe_manifest": {
-            "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+            "path": RECIPE_MANIFEST,
             "file_sha256": sha(recipe_manifest_path),
             "canonical_sha256": recipe_manifest["canonical_sha256"],
             "method_order": METHOD_ORDER,
@@ -271,6 +294,12 @@ def main() -> int:
             ),
             "activation_continuity_validator": repo_file(
                 "code/gcp/m3m_gcp_100k_continuity.py"
+            ),
+            "source_binding_correction_validator": repo_file(
+                "code/gcp/m3m_gcp_100k_source_binding_correction.py"
+            ),
+            "recipe_manifest_v3_builder": repo_file(
+                "code/gcp/build_m3m_gcp_100k_recipe_manifest_v3.py"
             ),
             "guarded_runner": repo_file("code/gcp/run_m3m_gcp_100k_guarded.py"),
             "phase_product_validator": repo_file(
@@ -312,7 +341,7 @@ def main() -> int:
         },
         "attempt_freeze": {
             "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
-            "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+            "recipe_manifest_path": RECIPE_MANIFEST,
             "method_registry_path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
             "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v3.json",
             "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v3.json",
@@ -373,6 +402,7 @@ def main() -> int:
             "exact_clean_commit_and_tree_binding_required": True,
         },
     }
+    validate_source_binding_correction(repo=ROOT, plan=payload)
     payload["canonical_sha256"] = canonical(payload)
     output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
     with output.open("w", encoding="utf-8", newline="\n") as handle:

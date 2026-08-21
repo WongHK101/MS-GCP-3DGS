@@ -10,6 +10,12 @@ import unittest
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from m3m_gcp_100k_source_binding_correction import (
+    LINUX_HEADER_SHA,
+    WINDOWS_HEADER_SHA,
+    validate_source_binding_correction,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 METHOD_ORDER = [
@@ -52,9 +58,13 @@ class ExecutionCandidateTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.manifest_path = (
-            ROOT / "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
+            ROOT / "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json"
         )
         cls.manifest = json.loads(cls.manifest_path.read_text(encoding="utf-8"))
+        cls.old_manifest = json.loads(
+            (ROOT / "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json")
+            .read_text(encoding="utf-8")
+        )
         cls.plan = json.loads(
             (
                 ROOT
@@ -75,11 +85,16 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertEqual(self.manifest["method_order"], METHOD_ORDER)
         self.assertEqual(
             self.manifest["schema"],
-            "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
+            "m3m_gcp_native_quarter_100k_recipe_manifest_v3",
         )
         self.assertEqual([row["method_id"] for row in self.manifest["recipes"]], METHOD_ORDER)
         self.assertEqual(list(self.recipes), METHOD_ORDER)
         self.assertEqual(self.manifest["canonical_sha256"], canonical_sha256(self.manifest))
+        self.assertEqual(self.manifest["recipes"][1:], self.old_manifest["recipes"][1:])
+        self.assertEqual(
+            self.manifest["correction_scope"]["changed_method_ids"],
+            ["3dgs_original"],
+        )
 
         training = [
             method for method, recipe in self.recipes.items()
@@ -122,7 +137,11 @@ class ExecutionCandidateTest(unittest.TestCase):
             )
             self.assertEqual(
                 recipe["schema"],
-                "m3m_gcp_native_quarter_100k_execution_recipe_v2",
+                (
+                    "m3m_gcp_native_quarter_100k_execution_recipe_v3"
+                    if method == "3dgs_original"
+                    else "m3m_gcp_native_quarter_100k_execution_recipe_v2"
+                ),
             )
             self.assertEqual(
                 recipe["process_resource_limits"],
@@ -218,6 +237,22 @@ class ExecutionCandidateTest(unittest.TestCase):
             "compat/citygs_x/pytorch3d_transforms_minimal_v1/pytorch3d/transforms/__init__.py",
             citygs["benchmark_required_files_sha256"],
         )
+        reuse = self.recipes["3dgs_original"]
+        proof_relative = (
+            "docs/protocol_evidence/"
+            "3dgs_native_quarter_adapter_linux_identity_proof_v1.json"
+        )
+        self.assertIn(proof_relative, reuse["benchmark_required_files_sha256"])
+        patched = reuse["source_bindings"]["packet"]["required_files_sha256"]
+        self.assertEqual(len(patched), 8)
+        self.assertEqual(
+            patched[
+                "submodules/diff-gaussian-rasterization/rasterize_points.h"
+            ],
+            LINUX_HEADER_SHA,
+        )
+        self.assertNotIn(WINDOWS_HEADER_SHA, patched.values())
+        self.assertFalse(reuse["source_identity_correction"]["dual_hash_tolerance"])
 
     def test_training_and_prior_commands_do_not_open_benchmark_truth(self) -> None:
         forbidden = ("heldout", "lidar", "surveyed", "annotation", "gcp.json")
@@ -328,7 +363,7 @@ class ExecutionCandidateTest(unittest.TestCase):
         )
         self.assertEqual(
             plan["attempt_freeze"]["recipe_manifest_path"],
-            "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+            "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
         )
         self.assertEqual(
             plan["attempt_freeze"]["method_registry_path"],
@@ -366,6 +401,15 @@ class ExecutionCandidateTest(unittest.TestCase):
         )
         self.assertTrue(
             closure["rlimit_nofile_child_actual_inheritance_evidence_required"]
+        )
+        self.assertEqual(
+            closure["source_binding_correction_validator"]["path"],
+            "code/gcp/m3m_gcp_100k_source_binding_correction.py",
+        )
+        correction = validate_source_binding_correction(repo=ROOT, plan=plan)
+        self.assertEqual(
+            correction["classification"]["type"],
+            "LINUX_IDENTITY_METADATA_CORRECTION_ONLY",
         )
         continuity = plan["activation_continuity"]
         continuity_path = ROOT / continuity["receipt"]["path"]

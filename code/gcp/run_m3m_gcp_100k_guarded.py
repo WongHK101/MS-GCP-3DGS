@@ -33,6 +33,9 @@ from m3m_gcp_100k_phase_products import (
     validate_torch_checkpoint,
 )
 from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_source_binding_correction import (
+    validate_source_binding_correction,
+)
 from verify_m3m_gcp_lidar_formal_v1 import validate_archive_manifest
 
 try:
@@ -473,6 +476,14 @@ def validate_activation_and_recipe(
             "activation_continuity_validator",
             repo / "code/gcp/m3m_gcp_100k_continuity.py",
         ),
+        (
+            "source_binding_correction_validator",
+            repo / "code/gcp/m3m_gcp_100k_source_binding_correction.py",
+        ),
+        (
+            "recipe_manifest_v3_builder",
+            repo / "code/gcp/build_m3m_gcp_100k_recipe_manifest_v3.py",
+        ),
         ("guarded_runner", repo / "code/gcp/run_m3m_gcp_100k_guarded.py"),
         (
             "attempt_freezer",
@@ -526,7 +537,12 @@ def validate_activation_and_recipe(
         or Path(str(cleanup_payload.get("deleted_path", ""))).exists()
     ):
         raise RuntimeError("obsolete 100K attempt was not safely removed")
-    if recipe_manifest.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v2":
+    validate_source_binding_correction(
+        repo=repo,
+        plan=plan,
+        require_live_sources=True,
+    )
+    if recipe_manifest.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v3":
         raise RuntimeError("recipe manifest schema mismatch")
     if recipe_manifest.get("canonical_sha256") != canonical_sha256(recipe_manifest):
         raise RuntimeError("recipe manifest canonical SHA mismatch")
@@ -557,7 +573,12 @@ def validate_activation_and_recipe(
         raise RuntimeError("recipe SHA differs from recipe manifest")
     if recipe.get("canonical_sha256") != canonical_sha256(recipe):
         raise RuntimeError("recipe canonical SHA mismatch")
-    if recipe.get("schema") != "m3m_gcp_native_quarter_100k_execution_recipe_v2":
+    expected_recipe_schema = (
+        "m3m_gcp_native_quarter_100k_execution_recipe_v3"
+        if method_id == "3dgs_original"
+        else "m3m_gcp_native_quarter_100k_execution_recipe_v2"
+    )
+    if recipe.get("schema") != expected_recipe_schema:
         raise RuntimeError("recipe schema mismatch")
     if recipe.get("method_id") != method_id or recipe.get("scene") != SCENE or recipe.get("seed") != 0:
         raise RuntimeError("recipe identity mismatch")

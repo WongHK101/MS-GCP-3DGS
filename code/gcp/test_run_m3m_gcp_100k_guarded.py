@@ -106,10 +106,16 @@ class Guarded100KTest(unittest.TestCase):
             "run_m3m_gcp_100k_guarded.observe_child_nofile_limit",
             return_value={"soft": 65536, "hard": 1048576},
         )
+        self.source_correction_patch = mock.patch(
+            "run_m3m_gcp_100k_guarded.validate_source_binding_correction",
+            return_value={},
+        )
         self.configure_limit_patch.start()
         self.observe_limit_patch.start()
+        self.source_correction_patch.start()
         self.addCleanup(self.configure_limit_patch.stop)
         self.addCleanup(self.observe_limit_patch.stop)
+        self.addCleanup(self.source_correction_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name).resolve()
         self.repo = self.root / "repo"
@@ -129,6 +135,12 @@ class Guarded100KTest(unittest.TestCase):
         shutil.copy2(source_root / "build_m3m_gcp_lidar_100k_activation.py", script_root)
         shutil.copy2(source_root / "build_m3m_gcp_100k_attempt_manifest.py", script_root)
         shutil.copy2(source_root / "m3m_gcp_100k_continuity.py", script_root)
+        shutil.copy2(
+            source_root / "m3m_gcp_100k_source_binding_correction.py", script_root
+        )
+        shutil.copy2(
+            source_root / "build_m3m_gcp_100k_recipe_manifest_v3.py", script_root
+        )
         preparation = self.root / "per-method-inputs-v2.json"
         write_json(
             preparation,
@@ -193,7 +205,7 @@ class Guarded100KTest(unittest.TestCase):
         write_json(self.pgsr_recipe, pgsr_recipe)
         recipe_order = ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof",
                         "citygaussian_v2", "citygs_x", "metrogs"]
-        recipes = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
+        recipes = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v3",
                    "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
                    "scene": "gcp_100000_20260610", "seed": 0,
                    "method_order": recipe_order,
@@ -423,6 +435,18 @@ class Guarded100KTest(unittest.TestCase):
                 "activation_continuity_validator": {
                     "path": "code/gcp/m3m_gcp_100k_continuity.py",
                     "sha256": sha256_file(script_root / "m3m_gcp_100k_continuity.py"),
+                },
+                "source_binding_correction_validator": {
+                    "path": "code/gcp/m3m_gcp_100k_source_binding_correction.py",
+                    "sha256": sha256_file(
+                        script_root / "m3m_gcp_100k_source_binding_correction.py"
+                    ),
+                },
+                "recipe_manifest_v3_builder": {
+                    "path": "code/gcp/build_m3m_gcp_100k_recipe_manifest_v3.py",
+                    "sha256": sha256_file(
+                        script_root / "build_m3m_gcp_100k_recipe_manifest_v3.py"
+                    ),
                 },
                 "guarded_runner": {"path": "code/gcp/run_m3m_gcp_100k_guarded.py",
                                    "sha256": sha256_file(script_root / "run_m3m_gcp_100k_guarded.py")},

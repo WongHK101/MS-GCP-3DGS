@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,20 @@ class ActivationBuilderTest(unittest.TestCase):
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
         (self.repo / ".gitattributes").write_text("*.json text eol=lf\n", encoding="utf-8")
+        source_root = Path(__file__).resolve().parent
+        script_root = self.repo / "code" / "gcp"
+        script_root.mkdir(parents=True)
+        for name in (
+            "build_m3m_gcp_lidar_100k_activation.py",
+            "m3m_gcp_lidar_artifacts.py",
+            "m3m_gcp_100k_continuity.py",
+        ):
+            shutil.copy2(source_root / name, script_root / name)
+        (script_root / "m3m_gcp_100k_source_binding_correction.py").write_text(
+            "def validate_source_binding_correction(**kwargs):\n    return {}\n",
+            encoding="utf-8",
+        )
+        self.script = script_root / "build_m3m_gcp_lidar_100k_activation.py"
         contract = self.repo / "configs" / "m3m_gcp_lidar_formal_v1.json"
         schema = self.repo / "configs" / "m3m_gcp_lidar_formal_artifact_schema_v1.json"
         local = self.repo / "docs" / "protocol_evidence" / "m3m_gcp_six_scene_common_preparation_local_v2.json"
@@ -209,18 +224,17 @@ class ActivationBuilderTest(unittest.TestCase):
             plan,
         )
         recipes = {
-            "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
+            "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v3",
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "recipes": [{"method_id": str(index)} for index in range(10)],
         }
         recipes["canonical_sha256"] = canonical_sha256(recipes)
         write_json(
-            self.repo / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
+            self.repo / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
             recipes,
         )
         self._commit("phase2")
         self.phase2_commit = self._git("rev-parse", "HEAD")
-        self.script = Path(__file__).resolve().parent / "build_m3m_gcp_lidar_100k_activation.py"
 
     def tearDown(self) -> None:
         self.temp.cleanup()
