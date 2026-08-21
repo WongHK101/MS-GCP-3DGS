@@ -567,13 +567,101 @@ def validate_prepared_method_input(recipe: dict[str, Any], dataset_root: Path) -
             or helper_materializer.get("sha256") != dependencies.get(helper_dependency)
         ):
             raise RuntimeError("prepared track helper materializer identity mismatch")
-    if Path(str(binding.get("dataset_root", ""))).resolve() != dataset_root.resolve():
-        raise RuntimeError("prepared per-method input dataset root mismatch")
-    sparse = dataset_root / "sparse" / "0"
+    prepared_root = Path(str(binding.get("dataset_root", "")))
+    if not prepared_root.is_absolute() or not prepared_root.is_dir():
+        raise RuntimeError("prepared per-method input dataset root is missing")
+    phase_root = dataset_root.resolve()
+    prepared_root = prepared_root.resolve()
+    if prepared_root != phase_root:
+        if (
+            recipe.get("method_id") != "gsprior"
+            or profile != "exact_formal_train_view_from_shared_all_image_sfm"
+        ):
+            raise RuntimeError("prepared per-method input dataset root mismatch")
+        prior_command = recipe.get("phase_commands", {}).get("prior", [])
+        if (
+            "--source_scene" not in prior_command
+            or prior_command[prior_command.index("--source_scene") + 1]
+            != str(prepared_root)
+            or "--output_scene" not in prior_command
+            or prior_command[prior_command.index("--output_scene") + 1]
+            != "{dataset_root}"
+        ):
+            raise RuntimeError("GSPrior normalization lineage differs from prepared input")
+        validate_gsprior_normalized_input(
+            prepared_root=prepared_root,
+            normalized_root=phase_root,
+            binding=binding,
+        )
+    sparse = prepared_root / "sparse" / "0"
     for name, expected_sha in binding.get("sparse_sha256", {}).items():
         path = sparse / name
         if not path.is_file() or sha256_file(path) != expected_sha:
             raise RuntimeError(f"prepared per-method input sparse SHA mismatch: {name}")
+
+
+def validate_gsprior_normalized_input(
+    *, prepared_root: Path, normalized_root: Path, binding: dict[str, Any]
+) -> None:
+    manifest_path = normalized_root / "normalization_manifest.json"
+    if not manifest_path.is_file():
+        raise RuntimeError("GSPrior normalized-input manifest is missing")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        manifest.get("schema") != "m3m_gsprior_colmap_camera_normalization_v1"
+        or manifest.get("status") != "PASS"
+        or Path(str(manifest.get("source_scene", ""))).resolve() != prepared_root
+        or Path(str(manifest.get("reference_train_scene", ""))).resolve()
+        != prepared_root
+        or Path(str(manifest.get("output_scene", ""))).resolve() != normalized_root
+    ):
+        raise RuntimeError("GSPrior normalized-input manifest identity mismatch")
+    source = manifest.get("source", {})
+    source_key_by_name = {
+        "cameras.bin": "cameras_bin",
+        "images.bin": "images_bin",
+        "points3D.bin": "points3D_bin",
+        "points3D.ply": "points3D_ply",
+    }
+    for name, expected_sha in binding.get("sparse_sha256", {}).items():
+        row = source.get(source_key_by_name[name])
+        if not isinstance(row, dict) or row.get("sha256") != expected_sha:
+            raise RuntimeError(f"GSPrior normalization source SHA mismatch: {name}")
+    output = manifest.get("output", {})
+    image_link = normalized_root / "images"
+    if (
+        output.get("images_are_directory_symlink") is not True
+        or output.get("flat_and_sparse_zero_models_share_exact_files") is not True
+        or not image_link.is_symlink()
+        or image_link.resolve() != (prepared_root / "images").resolve()
+        or Path(str(output.get("images_directory_target", ""))).resolve()
+        != (prepared_root / "images").resolve()
+    ):
+        raise RuntimeError("GSPrior normalized-input image or sparse layout mismatch")
+    output_files = output.get("files", {})
+    if set(output_files) != set(binding.get("sparse_sha256", {})):
+        raise RuntimeError("GSPrior normalized sparse-file inventory mismatch")
+    for name, row in output_files.items():
+        path = normalized_root / "sparse" / name
+        nested = normalized_root / "sparse" / "0" / name
+        if (
+            not isinstance(row, dict)
+            or not path.is_file()
+            or path.stat().st_size != row.get("bytes")
+            or sha256_file(path) != row.get("sha256")
+            or not nested.is_symlink()
+            or nested.resolve() != path.resolve()
+        ):
+            raise RuntimeError(f"GSPrior normalized output identity mismatch: {name}")
+    validation = manifest.get("validation", {})
+    if (
+        validation.get("intrinsics_bytes_unchanged") is not True
+        or validation.get("image_names_unchanged") is not True
+        or validation.get("image_measurements_and_tracks_unchanged") is not True
+        or validation.get("gcp_or_lidar_used") is not False
+        or validation.get("image_pixels_resized_cropped_padded_or_reencoded") is not False
+    ):
+        raise RuntimeError("GSPrior normalized-input validation did not pass")
 
 
 def classify_oom(stderr_text: str, delta: dict[str, int]) -> tuple[str, str | None]:

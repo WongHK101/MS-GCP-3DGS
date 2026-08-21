@@ -100,8 +100,12 @@ failed train-first undistorter candidate was removed under a hash-bound cleanup
 receipt.
 
 Per-method views inherit the exact reviewed 3K semantics.  3DGS, 2DGS, PGSR,
-RaDe-GS, QGS, GSPrior and SoF use the exact formal 2,196-view training root;
-QGS receives only its two required image aliases.  CityGaussianV2 and CityGS-X
+RaDe-GS, QGS and SoF consume the exact formal 2,196-view training root directly;
+QGS receives only its two required image aliases.  GSPrior derives its required
+camera-coordinate normalization from that same hash-bound formal root just in
+time, and the guard verifies the normalization manifest, source hashes, output
+hashes, image symlink and sparse-file symlinks before training or packet export.
+CityGaussianV2 and CityGS-X
 receive the 2,196 training image records selected byte-for-byte from the
 all-image model plus the byte-identical shared all-image `points3D.bin`, because
 their qualified consumers explicitly select training observations.  MetroGS

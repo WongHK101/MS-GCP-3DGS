@@ -152,6 +152,20 @@ class ExecutionCandidateTest(unittest.TestCase):
                     binding["input_profile"],
                     "exact_formal_train_view_from_shared_all_image_sfm",
                 )
+            if method == "gsprior":
+                self.assertNotEqual(
+                    binding["dataset_root"],
+                    recipe["phase_roots"]["training"]["dataset_root"],
+                )
+                prior = recipe["phase_commands"]["prior"]
+                self.assertEqual(
+                    prior[prior.index("--source_scene") + 1],
+                    binding["dataset_root"],
+                )
+                self.assertEqual(
+                    prior[prior.index("--output_scene") + 1],
+                    "{dataset_root}",
+                )
         self.assertEqual(len(evidence_shas), 1)
         self.assertEqual(
             len({recipe["authorized_packet_state"] for recipe in self.recipes.values()}),

@@ -1,5 +1,5 @@
 {
-  "canonical_sha256": "0e01480cc34cea34289f95707a358775824a17bd3204d437919481159422e16a",
+  "canonical_sha256": "b038c841b4cb384b9e7fffb841534c8af9ecceffc8742a8634d6ee685665e01d",
   "method_order": [
     "3dgs_original",
     "2dgs",
@@ -44,10 +44,10 @@
       "sha256": "a5ee42fe6dce519d863ac62f20df255cca49fd233ad24a65bb419f72c1a33ddf"
     },
     {
-      "canonical_sha256": "c30e54bdaf3d8c810c9322aaeda0680147138e30c5678972f9ee8cd6f031d68e",
+      "canonical_sha256": "8fe28b1094b35a6ce2e48fe1a3f5e6720362eee846eea1d819f2dc59d80efdb5",
       "method_id": "gsprior",
       "path": "configs/m3m_gcp_native_quarter_100k_recipes_v1/gsprior.json",
-      "sha256": "a40f5898c390bed8d90241ec5d44034eeee8d319060f68f7354e79f9a85face1"
+      "sha256": "a573f341bc55ad1e5c1993bef5ac48f37e98cf5fa614571e31bdefc825abb09c"
     },
     {
       "canonical_sha256": "8bedeca9c2d5fb3ed5b4a21a81af31cad8b7b3cc87bd86aa39d8b5a7009b4e51",

@@ -142,7 +142,10 @@ def main() -> int:
             },
             "per_method_input_profiles": {
                 "formal_train_view": [
-                    "3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof"
+                    "3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "sof"
+                ],
+                "gsprior_formal_train_view_then_deterministic_camera_normalization": [
+                    "gsprior"
                 ],
                 "city_train_records_with_full_all_image_sfm_points": [
                     "citygaussian_v2", "citygs_x"

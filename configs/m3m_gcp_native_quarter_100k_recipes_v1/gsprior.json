@@ -16,7 +16,7 @@
     "type": "iterations",
     "value": 40000
   },
-  "canonical_sha256": "c30e54bdaf3d8c810c9322aaeda0680147138e30c5678972f9ee8cd6f031d68e",
+  "canonical_sha256": "8fe28b1094b35a6ce2e48fe1a3f5e6720362eee846eea1d819f2dc59d80efdb5",
   "formal_input_manifest": {
     "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
     "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
@@ -121,7 +121,7 @@
   },
   "prepared_method_input_binding": {
     "all_image_sfm_precedes_train_test_split": true,
-    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train",
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
     "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
     "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
     "input_profile": "exact_formal_train_view_from_shared_all_image_sfm",

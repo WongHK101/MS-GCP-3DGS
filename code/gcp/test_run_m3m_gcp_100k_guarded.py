@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,7 @@ from run_m3m_gcp_100k_guarded import (
     sha256_file,
     validate_activation_and_recipe,
     validate_capacity,
+    validate_gsprior_normalized_input,
     validate_packet_freeze_binding,
     validate_prepared_method_input,
 )
@@ -271,6 +273,81 @@ class Guarded100KTest(unittest.TestCase):
         acquire_packet_state(state, "2dgs", packet_root)
         with self.assertRaises(FileExistsError):
             acquire_packet_state(state, "pgsr", self.root / "other-packets")
+
+    @unittest.skipIf(os.name == "nt", "Windows test host lacks symlink privilege")
+    def test_gsprior_normalized_input_binds_prepared_source_and_outputs(self) -> None:
+        prepared = self.root / "prepared-gsprior"
+        prepared_sparse = prepared / "sparse" / "0"
+        prepared_images = prepared / "images"
+        prepared_sparse.mkdir(parents=True)
+        prepared_images.mkdir()
+        binding = {"sparse_sha256": {}}
+        for name, value in {
+            "cameras.bin": "cam",
+            "images.bin": "images",
+            "points3D.ply": "points",
+        }.items():
+            path = prepared_sparse / name
+            path.write_text(value, encoding="utf-8")
+            binding["sparse_sha256"][name] = sha256_file(path)
+        normalized = self.root / "normalized-gsprior"
+        flat = normalized / "sparse"
+        nested = flat / "0"
+        nested.mkdir(parents=True)
+        output_files = {}
+        for name, value in {
+            "cameras.bin": "cam",
+            "images.bin": "normalized-images",
+            "points3D.ply": "normalized-points",
+        }.items():
+            path = flat / name
+            path.write_text(value, encoding="utf-8")
+            (nested / name).symlink_to(Path("..") / name)
+            output_files[name] = {
+                "path": str(path),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            }
+        (normalized / "images").symlink_to(prepared_images, target_is_directory=True)
+        manifest = {
+            "schema": "m3m_gsprior_colmap_camera_normalization_v1",
+            "status": "PASS",
+            "source_scene": str(prepared),
+            "reference_train_scene": str(prepared),
+            "output_scene": str(normalized),
+            "source": {
+                "cameras_bin": {"sha256": binding["sparse_sha256"]["cameras.bin"]},
+                "images_bin": {"sha256": binding["sparse_sha256"]["images.bin"]},
+                "points3D_bin": None,
+                "points3D_ply": {"sha256": binding["sparse_sha256"]["points3D.ply"]},
+            },
+            "output": {
+                "files": output_files,
+                "images_are_directory_symlink": True,
+                "images_directory_target": str(prepared_images),
+                "flat_and_sparse_zero_models_share_exact_files": True,
+            },
+            "validation": {
+                "intrinsics_bytes_unchanged": True,
+                "image_names_unchanged": True,
+                "image_measurements_and_tracks_unchanged": True,
+                "gcp_or_lidar_used": False,
+                "image_pixels_resized_cropped_padded_or_reencoded": False,
+            },
+        }
+        write_json(normalized / "normalization_manifest.json", manifest)
+        validate_gsprior_normalized_input(
+            prepared_root=prepared,
+            normalized_root=normalized,
+            binding=binding,
+        )
+        (flat / "images.bin").write_text("tampered", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "normalized output identity"):
+            validate_gsprior_normalized_input(
+                prepared_root=prepared,
+                normalized_root=normalized,
+                binding=binding,
+            )
 
     def test_packet_phase_binds_immutable_ready_model_and_freeze(self) -> None:
         selected_run = (self.root / "selected-run").resolve()

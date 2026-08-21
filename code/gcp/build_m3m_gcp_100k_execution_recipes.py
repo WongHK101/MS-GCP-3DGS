@@ -447,10 +447,11 @@ def main() -> int:
                 "images.bin": FORMAL_IMAGES_SHA,
                 "points3D.ply": INITIAL_PLY_SHA,
             }
+        prepared_dataset = FORMAL if method == "gsprior" else dataset
         payload["prepared_method_input_binding"] = {
             "evidence_path": METHOD_INPUT_EVIDENCE,
             "evidence_sha256": METHOD_INPUT_EVIDENCE_SHA,
-            "dataset_root": dataset,
+            "dataset_root": prepared_dataset,
             "input_profile": input_profile,
             "sparse_sha256": sparse_hashes,
             "all_image_sfm_precedes_train_test_split": True,

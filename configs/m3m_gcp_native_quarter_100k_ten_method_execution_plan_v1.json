@@ -52,7 +52,7 @@
       "value": 30000
     }
   },
-  "canonical_sha256": "3f54deb1e26d5b6a41c294b0f39760a35177a2e59b294b985e0744cb17bcaeaa",
+  "canonical_sha256": "6473d913071a2ae0bfec30006c8075d0833650afbc5acd6061e042baa12f997b",
   "execution_authorized": false,
   "execution_closure": {
     "activation_builder": {
@@ -72,7 +72,7 @@
     "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
     "guarded_runner": {
       "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
-      "sha256": "51f12ad7a4fd6c65affb6189d4b7f17b5161cc15129c3e4d767e880728ea7b77"
+      "sha256": "c1abfe4abecc70e6776908d6c88cb932512c3710907d31343aa01ab2364c3192"
     },
     "method_input_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_method_inputs.py",
@@ -160,8 +160,10 @@
         "pgsr",
         "rade_gs",
         "qgs",
-        "gsprior",
         "sof"
+      ],
+      "gsprior_formal_train_view_then_deterministic_camera_normalization": [
+        "gsprior"
       ],
       "metrogs_reciprocal_train_track_closure_after_all_image_sfm": [
         "metrogs"
@@ -190,8 +192,8 @@
     }
   },
   "recipe_manifest": {
-    "canonical_sha256": "0e01480cc34cea34289f95707a358775824a17bd3204d437919481159422e16a",
-    "file_sha256": "45e6d526a9a1d85b955e8886d76b7a9b26dae82bf6958f562b65db976560701b",
+    "canonical_sha256": "b038c841b4cb384b9e7fffb841534c8af9ecceffc8742a8634d6ee685665e01d",
+    "file_sha256": "a6623b6a504414e925fc6952f55193778739f812fc1ca6e070fecc344e9e40f7",
     "method_order": [
       "3dgs_original",
       "2dgs",
