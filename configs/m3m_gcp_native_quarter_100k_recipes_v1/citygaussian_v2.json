@@ -8,10 +8,11 @@
   "benchmark_required_files_sha256": {
     "code/gcp/export_citygaussian_v2_depth_maps.py": "0c6bc3263deb7bad8034553ff1c8c35a7b50f3bc000f2a651de24c51292136f6",
     "code/gcp/materialize_colmap_train_track_compatibility_streaming.py": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e",
+    "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
     "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
     "code/gcp/prepare_citygaussian_v2_100k_depth_prior.py": "ee87c5787e0adfc6572edf31ffc2488ad4880dc45da04b4a799c2e1f29ca675e",
     "code/gcp/run_citygaussian_v2_100k_pipeline.py": "0758f03209ed490f2e57474be008c364d258cb1d465f4bca0c50878adcdf6f8a",
-    "code/gcp/run_m3m_gcp_100k_packet_export.py": "f4c3cacebd578f5b6d52d335b7e095f45a7621d894bf42db38de97a20ae2f8c6",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
     "patches/citygaussian_v2/native_quarter_raw_moments_rasterizer_9eefc03_v1.patch": "cb92c91b5af52c003bf91c6ae96d47894c4e55050adaac2e1d685dab60407412",
     "patches/citygaussian_v2/native_quarter_raw_moments_renderer_e84c7c8_v1.patch": "5b08f2a9b4a275b191230e8d20802261a4ed35c7120a3ecf2181060f264ebc64"
   },
@@ -20,7 +21,22 @@
     "fine_steps": 60000,
     "type": "official_matrixcity_aerial_4x4"
   },
-  "canonical_sha256": "d1f7dffed2512279a77818d7ffec6dac82491547b44c8d75085313a56c50fbf0",
+  "canonical_sha256": "6f6057e73c3bcd6ff8516d438728326831ae4bee207ce9a210d7e1ef004d6505",
+  "evaluation_camera_root_binding": {
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
+    "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+    "points3d_bin_point_count": 0,
+    "purpose": "pose-only all-train evaluation camera loader; never training or prior input",
+    "root": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    },
+    "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+    "view_count": 2196
+  },
   "formal_input_manifest": {
     "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
     "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
@@ -53,7 +69,7 @@
       "--prior-root",
       "{prior_root}",
       "--camera-root",
-      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
       "--train-allowlist",
       "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
       "--packet-set-root",

@@ -28,6 +28,22 @@ SOURCE_RELEASE_SHA256 = (
 IMAGE_DOMAIN = "colmap_4_0_4_image_undistorter_pinhole_max_1414"
 PIXEL_CONVENTION = "zero_based_pixel_centers"
 EXPECTED_TRAIN_VIEWS = 2196
+FORMAL_TRAIN_ROOT = Path(
+    "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/"
+    f"{SCENE}/train"
+)
+EVALUATION_CAMERA_ROOT = Path(
+    f"/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/{SCENE}"
+)
+EVALUATION_CAMERA_MANIFEST_SHA256 = (
+    "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac"
+)
+EVALUATION_CAMERA_SPARSE_SHA256 = {
+    "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+    "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+    "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+    "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e",
+}
 EXPECTED_3DGS_PLY_SHA256 = (
     "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5"
 )
@@ -183,15 +199,59 @@ def verify_allowlist(path: Path) -> None:
         raise RuntimeError("100K train allowlist contains an empty image name")
 
 
-def verify_camera_root(path: Path) -> None:
-    required = [
-        path / "images",
-        path / "sparse" / "0" / "cameras.bin",
-        path / "sparse" / "0" / "images.bin",
-        path / "sparse" / "0" / "points3D.bin",
-    ]
-    if not required[0].is_dir() or any(not item.is_file() for item in required[1:]):
-        raise RuntimeError(f"formal 100K camera root is incomplete: {path}")
+def canonical_sha256(payload: dict[str, Any]) -> str:
+    body = dict(payload)
+    body.pop("canonical_sha256", None)
+    encoded = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def verify_camera_root(path: Path) -> dict[str, Any]:
+    path = path.expanduser().resolve()
+    if path != EVALUATION_CAMERA_ROOT.resolve():
+        raise RuntimeError("packet camera root differs from the frozen evaluation-only root")
+    manifest_path = path / "EVALUATION_CAMERA_ROOT_MANIFEST.json"
+    require_file(manifest_path, EVALUATION_CAMERA_MANIFEST_SHA256)
+    manifest = read_json(manifest_path)
+    output = manifest.get("output", {})
+    if (
+        manifest.get("schema") != "m3m_gcp_100k_evaluation_camera_root_v1"
+        or manifest.get("status")
+        != "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION"
+        or manifest.get("scene") != SCENE
+        or manifest.get("canonical_sha256") != canonical_sha256(manifest)
+        or output.get("root") != str(path)
+        or output.get("view_count") != EXPECTED_TRAIN_VIEWS
+        or output.get("points3d_bin_point_count") != 0
+        or manifest.get("truth_boundary", {}).get("heldout_rgb_present") is not False
+        or manifest.get("truth_boundary", {}).get("gcp_or_lidar_used") is not False
+    ):
+        raise RuntimeError("evaluation camera-root manifest identity mismatch")
+    image_root = path / "images"
+    if (
+        not image_root.is_symlink()
+        or image_root.resolve() != (FORMAL_TRAIN_ROOT / "images").resolve()
+        or len([item for item in image_root.iterdir() if item.is_file()])
+        != EXPECTED_TRAIN_VIEWS
+    ):
+        raise RuntimeError("evaluation camera-root RGB boundary mismatch")
+    sparse = path / "sparse" / "0"
+    manifest_files = output.get("files", {})
+    if set(manifest_files) != set(EVALUATION_CAMERA_SPARSE_SHA256):
+        raise RuntimeError("evaluation camera-root sparse inventory mismatch")
+    for name, expected_sha in EVALUATION_CAMERA_SPARSE_SHA256.items():
+        file_path = sparse / name
+        row = manifest_files.get(name, {})
+        if (
+            not file_path.is_file()
+            or sha256(file_path) != expected_sha
+            or row.get("sha256") != expected_sha
+            or row.get("bytes") != file_path.stat().st_size
+        ):
+            raise RuntimeError(f"evaluation camera-root identity mismatch: {name}")
+    if (sparse / "points3D.bin").read_bytes() != (0).to_bytes(8, "little"):
+        raise RuntimeError("evaluation camera-root compatibility points3D.bin is not empty")
+    return manifest
 
 
 def verify_summary_file(path: Path, *, method_id: str, status: str) -> dict[str, Any]:

@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from m3m_gcp_lidar_artifacts import canonical_sha256
+from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256
 from run_m3m_gcp_100k_guarded import (
     GIB,
     METHOD_ORDER,
@@ -25,8 +25,10 @@ from run_m3m_gcp_100k_guarded import (
     validate_activation_and_recipe,
     validate_capacity,
     validate_gsprior_normalized_input,
+    validate_model_identity_bundle,
     validate_packet_freeze_binding,
     validate_prepared_method_input,
+    validate_prior_phase_success,
 )
 
 
@@ -79,6 +81,7 @@ class Guarded100KTest(unittest.TestCase):
             "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v1", "method_id": "2dgs",
             "scene": "gcp_100000_20260610", "seed": 0, "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "input_class": "rgb_colmap_only",
+            "budget": {"type": "iterations", "value": 30000},
             "renderer_adapter_sha256": sha256_file(self.adapter),
             "authorized_packet_set_root": str((self.root / "packet-set").resolve()),
             "authorized_packet_state": str((self.root / "packet-state.json").resolve()),
@@ -138,6 +141,14 @@ class Guarded100KTest(unittest.TestCase):
                     "status_required": "PASS_OBSOLETE_FAILED_ATTEMPT_REMOVED"}},
             "recipe_manifest": {"path": "recipes.json", "file_sha256": sha256_file(self.recipes),
                                 "canonical_sha256": recipes["canonical_sha256"]},
+            "attempt_freeze": {
+                "execution_plan_path": "plan.json",
+                "recipe_manifest_path": "recipes.json",
+                "method_registry_path": "registry.json",
+                "model_identity_root": str((self.root / "model-identities").resolve()),
+                "attempt_manifest_path": str((self.root / "methods.json").resolve()),
+                "scene_attempt_freeze_path": str((self.root / "freeze.json").resolve()),
+            },
             "review": {"task_id": "review-task"},
         }
         plan["canonical_sha256"] = canonical_sha256(plan)
@@ -274,6 +285,53 @@ class Guarded100KTest(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             acquire_packet_state(state, "pgsr", self.root / "other-packets")
 
+    def test_training_requires_exact_prior_success_and_outputs(self) -> None:
+        evidence_root = self.root / "city-prior-evidence"
+        dataset = self.root / "city-dataset"
+        dataset.mkdir()
+        recipe = {
+            "method_id": "citygaussian_v2",
+            "authorized_evidence_root": str(evidence_root),
+            "phase_commands": {"prior": ["prior-tool", "{dataset_root}"]},
+        }
+        replacements = {"dataset_root": str(dataset)}
+        command = ["prior-tool", str(dataset)]
+        success = {
+            "schema": "m3m_gcp_100k_phase_success_v1",
+            "status": "PASS",
+            "scene": "gcp_100000_20260610",
+            "method_id": "citygaussian_v2",
+            "phase": "prior",
+            "recipe_sha256": sha256_file(self.recipe),
+            "command_sha256": command_sha256(command),
+            "ended_at_utc": "2026-08-21T00:00:00Z",
+        }
+        success["canonical_sha256"] = canonical_sha256(success)
+        write_json(evidence_root / "prior" / "phase_success.json", success)
+        with self.assertRaisesRegex(RuntimeError, "prior manifest"):
+            validate_prior_phase_success(
+                recipe=recipe,
+                recipe_path=self.recipe,
+                run_root=self.root / "run",
+                dataset_root=dataset,
+                prior_root=dataset,
+                replacements=replacements,
+            )
+        write_json(dataset / "depth_prior_v1.json", {
+            "status": "PASS", "passed": True,
+            "method_id": "citygaussian_v2",
+            "scene": "gcp_100000_20260610",
+            "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+        })
+        validate_prior_phase_success(
+            recipe=recipe,
+            recipe_path=self.recipe,
+            run_root=self.root / "run",
+            dataset_root=dataset,
+            prior_root=dataset,
+            replacements=replacements,
+        )
+
     @unittest.skipIf(os.name == "nt", "Windows test host lacks symlink privilege")
     def test_gsprior_normalized_input_binds_prepared_source_and_outputs(self) -> None:
         prepared = self.root / "prepared-gsprior"
@@ -351,11 +409,18 @@ class Guarded100KTest(unittest.TestCase):
 
     def test_packet_phase_binds_immutable_ready_model_and_freeze(self) -> None:
         selected_run = (self.root / "selected-run").resolve()
+        identity_root = (self.root / "model-identities").resolve()
+        identity_root.mkdir()
         rows = []
         for method_id in METHOD_ORDER:
             asset_root = selected_run if method_id == "2dgs" else (self.root / "freeze-assets" / method_id).resolve()
             asset_root.mkdir(parents=True, exist_ok=True)
-            model = asset_root / "model.ply"
+            model = (
+                asset_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+                if method_id == "2dgs"
+                else asset_root / "model.ply"
+            )
+            model.parent.mkdir(parents=True, exist_ok=True)
             model.write_text(method_id, encoding="utf-8")
             identity = {
                 "schema": "m3m_gcp_100k_model_identity_v1",
@@ -370,7 +435,7 @@ class Guarded100KTest(unittest.TestCase):
                 }],
             }
             identity["canonical_sha256"] = canonical_sha256(identity)
-            identity_path = asset_root / "model-identity.json"
+            identity_path = identity_root / f"{method_id}.json"
             write_json(identity_path, identity)
             if method_id == "2dgs":
                 recipe_path, adapter_path = self.recipe.resolve(), self.adapter.resolve()
@@ -417,17 +482,74 @@ class Guarded100KTest(unittest.TestCase):
             run_root=selected_run, recipe=self.recipe,
         )
         frozen, freeze_sha = validate_packet_freeze_binding(
-            args=args, recipe=json.loads(self.recipe.read_text())
+            args=args,
+            recipe=json.loads(self.recipe.read_text()),
+            plan=json.loads(self.plan.read_text()),
         )
         self.assertEqual(
             frozen["model_checkpoint_sha256"],
-            sha256_file(selected_run / "model-identity.json"),
+            sha256_file(identity_root / "2dgs.json"),
         )
         self.assertEqual(freeze_sha, sha256_file(freeze_path))
-        (selected_run / "model.ply").write_text("tampered", encoding="utf-8")
+        model = selected_run / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        model.write_text("tampered", encoding="utf-8")
         with self.assertRaisesRegex(RuntimeError, "model-identity file changed"):
             validate_packet_freeze_binding(
-                args=args, recipe=json.loads(self.recipe.read_text())
+                args=args,
+                recipe=json.loads(self.recipe.read_text()),
+                plan=json.loads(self.plan.read_text()),
+            )
+
+    def test_packet_freeze_rejects_alternate_frozen_path(self) -> None:
+        plan = json.loads(self.plan.read_text())
+        alternate = self.root / "alternate-freeze.json"
+        write_json(alternate, {})
+        args = argparse.Namespace(
+            scene_attempt_freeze=alternate,
+            method_id="2dgs",
+            run_root=self.root / "selected-run",
+            recipe=self.recipe,
+        )
+        with self.assertRaisesRegex(RuntimeError, "differs from the frozen plan"):
+            validate_packet_freeze_binding(
+                args=args,
+                recipe=json.loads(self.recipe.read_text()),
+                plan=plan,
+            )
+
+    def test_model_identity_must_include_actual_final_model(self) -> None:
+        run_root = (self.root / "identity-run").resolve()
+        final_model = (
+            run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        )
+        final_model.parent.mkdir(parents=True)
+        final_model.write_bytes(b"actual-final")
+        decoy = run_root / "decoy.ply"
+        decoy.write_bytes(b"decoy")
+        payload = {
+            "schema": "m3m_gcp_100k_model_identity_v1",
+            "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+            "scene": "gcp_100000_20260610",
+            "method_id": "2dgs",
+            "run_root": str(run_root),
+            "inventory": [{
+                "path": str(decoy),
+                "bytes": decoy.stat().st_size,
+                "sha256": sha256_file(decoy),
+            }],
+        }
+        payload["canonical_sha256"] = canonical_sha256(payload)
+        identity = self.root / "decoy-identity.json"
+        write_json(identity, payload)
+        with self.assertRaisesRegex(RuntimeError, "omits the method's actual final model"):
+            validate_model_identity_bundle(
+                manifest_path=identity,
+                method_id="2dgs",
+                run_root=run_root,
+                recipe={
+                    "method_id": "2dgs",
+                    "budget": {"type": "iterations", "value": 30000},
+                },
             )
 
     def test_packet_cumulative_cap_terminates_command_and_writes_failure(self) -> None:
@@ -438,6 +560,7 @@ class Guarded100KTest(unittest.TestCase):
             packet_state=self.root / "packet-state.json", method_id="2dgs", run_root=self.root / "run",
             failure_evidence=failure, progress_regex=None, progress_unit="views", poll_seconds=0.01,
             recipe=self.recipe, replacements={}, scene_attempt_freeze=self.root / "freeze.json",
+            execution_plan={},
         )
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"), mock.patch(
             "run_m3m_gcp_100k_guarded.directory_bytes", return_value=PACKET_CAP_BYTES + 1
@@ -464,6 +587,8 @@ class Guarded100KTest(unittest.TestCase):
             packet_state=None,
             method_id="2dgs",
             run_root=self.root / "success-run",
+            dataset_root=self.root / "dataset",
+            prior_root=self.root / "prior",
             failure_evidence=failure,
             progress_regex=None,
             progress_unit="iterations",
@@ -473,7 +598,19 @@ class Guarded100KTest(unittest.TestCase):
             scene_attempt_freeze=None,
         )
         recipe = json.loads(self.recipe.read_text())
-        command = [sys.executable, "-c", "print('ok')"]
+        recipe["budget"] = {"type": "iterations", "value": 30000}
+        point_cloud = (
+            args.run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        )
+        command = [
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; "
+                f"p=Path({str(point_cloud)!r}); p.parent.mkdir(parents=True); "
+                "p.write_bytes(b'ply')"
+            ),
+        ]
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
             self.assertEqual(run_phase(args, recipe, command), 0)
         marker = failure.parent / "phase_success.json"
@@ -483,6 +620,34 @@ class Guarded100KTest(unittest.TestCase):
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
             with self.assertRaisesRegex(FileExistsError, "cannot be retried"):
                 run_phase(args, recipe, command)
+
+    def test_zero_exit_without_required_model_is_structured_failure(self) -> None:
+        failure = self.root / "zero-output-evidence" / "failure.json"
+        args = argparse.Namespace(
+            phase="training",
+            capacity_root=self.root,
+            packet_set_root=None,
+            packet_state=None,
+            method_id="2dgs",
+            run_root=self.root / "zero-output-run",
+            dataset_root=self.root / "dataset",
+            prior_root=self.root / "prior",
+            failure_evidence=failure,
+            progress_regex=None,
+            progress_unit="iterations",
+            poll_seconds=0.01,
+            recipe=self.recipe,
+            replacements={},
+            scene_attempt_freeze=None,
+        )
+        recipe = json.loads(self.recipe.read_text())
+        recipe["budget"] = {"type": "iterations", "value": 30000}
+        with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
+            code = run_phase(args, recipe, [sys.executable, "-c", "print('zero exit')"])
+        self.assertNotEqual(code, 0)
+        evidence = json.loads(failure.read_text())
+        self.assertEqual(evidence["status"], "FAILED_UNRANKED")
+        self.assertIn("required outputs did not validate", " ".join(evidence["errors"]))
 
 
 if __name__ == "__main__":

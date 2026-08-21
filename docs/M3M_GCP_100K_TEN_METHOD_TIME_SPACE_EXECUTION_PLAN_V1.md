@@ -65,6 +65,13 @@ attempt because recipe-changing rescue runs are forbidden.
 3. For each remaining method in the fixed order, create one fresh run root,
    generate only its authorized prior, run the frozen budget once, and retain
    the final formal checkpoint plus resource and command evidence.
+   A prior child is successful only after its exact prior manifest/PASS marker
+   passes method-specific validation; training cannot start without that
+   immutable prior success marker and a second revalidation of the prior
+   product.  Likewise, a zero exit from training is not success until the
+   method's frozen final iteration/checkpoint and required companion files are
+   present, non-empty and internally hash-consistent.  A zero exit without the
+   required product is closed as structured `FAILED_UNRANKED` evidence.
 4. A method-specific CUDA OOM, host OOM or technical failure is closed as
    `OOM_UNRANKED` or `FAILED_UNRANKED`; its immutable failure evidence is
    retained and the queue continues.  Batch size, resolution, partition rule,
@@ -77,6 +84,13 @@ attempt because recipe-changing rescue runs are forbidden.
    identity-manifest file is insufficient.
    Failed/OOM rows have null model fields and bind failure evidence.  One
    failed method therefore cannot invalidate successful methods.
+
+The execution-plan file, recipe manifest, method registry, attempt-manifest
+output, model-identity directory and scene-freeze output are all exact paths in
+the frozen plan.  The builders reject alternate CLI destinations.  Each model
+identity must inventory the actual method-specific final model validated by
+the runner; a valid but unrelated checkpoint or decoy PLY cannot satisfy the
+freeze.
 
 Before Phase A formal launches, each 100K scene recipe must be materialized as
 a hash-bound file and mechanically checked against its qualified 3K parent:
@@ -121,6 +135,19 @@ evidence has status
 `PASS_PER_METHOD_INPUT_PREPARATION_NO_TRAINING_NO_PRIOR`, proves that all-image
 SfM precedes the split, and is bound by exact SHA into the plan and every recipe.
 
+Packet export uses a separate evaluation-only all-train camera root.  Its
+2,196 camera records, initial PLY and RGB symlink are byte-identical to the
+formal train input.  Because generic COLMAP loaders require a complete
+`cameras.bin` / `images.bin` / `points3D.bin` triplet, it adds only the
+deterministic eight-byte zero-point `points3D.bin` already qualified by the
+3DGS 100K evaluation path.  The file contains no geometry or tracks, is never
+visible to training or prior construction, and has SHA-256
+`af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc`.
+The root manifest and external preparation evidence are byte-identical with
+SHA-256 `6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac`;
+both the outer guard and packet dispatcher rehash the full sparse identity and
+verify that no held-out RGB, GCP or LiDAR input is present.
+
 MetroGS's official Pi3 partitioner initially emits byte copies under its block
 directories.  After the official partition is fixed and before Pi3 runs, the
 preparation wrapper replaces each copy with a same-filesystem hardlink to its
@@ -132,7 +159,7 @@ This changes no partition, name or pixel and adds zero physical RGB bytes.
 For each `READY_FOR_EVALUATION` method, and never for a failed method:
 
 1. export exactly all 2,196 train-view metric-depth packets into that method's
-   own run root;
+   plan-frozen packet root;
 2. create a per-method pre-result authorization binding the full ten-attempt
    manifest, selected method ID, exact packet-manifest path/SHA and one fresh
    formal output root;
@@ -196,6 +223,12 @@ an unbound packet-state or packet-set path, or packet growth beyond 100 GiB.
 Packet release can delete only the method-specific packet root frozen in its
 recipe and requires both independent formal verification and full
 archive-inventory byte verification; the mutex persists on failure.
+Every prior, training and packet-export child is followed by a method-specific
+product postcondition before an exclusive phase-success marker can be written.
+Packet success additionally requires an exact 2,196-name inventory, every NPZ
+byte count/SHA and recomputation PASS, and an identical mapping CSV.  A child
+that exits zero but fails any of these checks is recorded as immutable
+`FAILED_UNRANKED` (prior/training) or `INCOMPLETE_UNRANKED` (packet export).
 
 ## 5. Result and retry policy
 

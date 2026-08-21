@@ -7,8 +7,9 @@
   "base_3k_recipe_sha256": "1a9550f9aed4add354e8b19e93ad6ddac11409399892359712463c65e737d058",
   "benchmark_required_files_sha256": {
     "code/gcp/export_gaussian_depth_maps.py": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb",
+    "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
     "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
-    "code/gcp/run_m3m_gcp_100k_packet_export.py": "f4c3cacebd578f5b6d52d335b7e095f45a7621d894bf42db38de97a20ae2f8c6",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
     "patches/3dgs_original/native_quarter_raw_moment_rasterizer_59f5f77_v1.patch": "f787df935f45af61dd836e5d430c216a67b93986d9c9fc57e615e1463e6d2068",
     "patches/3dgs_original/native_quarter_raw_moment_renderer_2eee0e26_v1.patch": "e88b1ca418751228862c4e4d99c2cf4b5f714838fdbdf1bfa81f75fb85e81363"
   },
@@ -16,7 +17,22 @@
     "type": "reuse_frozen_30k_model_no_retrain",
     "value": 30000
   },
-  "canonical_sha256": "bf63bbab3cea138f34492d7e88fc7e6c7f3dc9b126c917e48f9d0afe1995f639",
+  "canonical_sha256": "123bc35b97ea665d8a7008c1b436fa2f0fdb6de42761e797a2e447bd8e4ca1a7",
+  "evaluation_camera_root_binding": {
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
+    "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+    "points3d_bin_point_count": 0,
+    "purpose": "pose-only all-train evaluation camera loader; never training or prior input",
+    "root": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    },
+    "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+    "view_count": 2196
+  },
   "formal_input_manifest": {
     "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
     "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
@@ -48,7 +64,7 @@
       "--prior-root",
       "{prior_root}",
       "--camera-root",
-      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
       "--train-allowlist",
       "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
       "--packet-set-root",

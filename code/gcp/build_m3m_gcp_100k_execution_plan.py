@@ -34,6 +34,11 @@ METHOD_INPUT_PREPARATION_EVIDENCE = (
     "gcp_100000_20260610/per-method-inputs-v2.json"
 )
 METHOD_INPUT_PREPARATION_EVIDENCE_SHA = "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1"
+EVALUATION_CAMERA_EVIDENCE = (
+    "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/"
+    "gcp_100000_20260610/evaluation-camera-root-v1.json"
+)
+EVALUATION_CAMERA_EVIDENCE_SHA = "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac"
 OBSOLETE_ATTEMPT_CLEANUP = (
     "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/"
     "gcp_100000_20260610/obsolete-train-first-undistorter-cleanup-v1.json"
@@ -160,6 +165,17 @@ def main() -> int:
                 "status_required": "PASS_PER_METHOD_INPUT_PREPARATION_NO_TRAINING_NO_PRIOR",
                 "all_image_sfm_precedes_train_test_split": True,
             },
+            "evaluation_camera_root": {
+                "path": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+                "evidence_path": EVALUATION_CAMERA_EVIDENCE,
+                "evidence_sha256": EVALUATION_CAMERA_EVIDENCE_SHA,
+                "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+                "view_count": 2196,
+                "points2d_tracks_present": False,
+                "points3d_bin_point_count": 0,
+                "points3d_bin_sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+                "purpose": "evaluation-only all-train camera loader; never training or prior input",
+            },
             "obsolete_train_first_attempt_cleanup": {
                 "path": OBSOLETE_ATTEMPT_CLEANUP,
                 "sha256": OBSOLETE_ATTEMPT_CLEANUP_SHA,
@@ -192,6 +208,9 @@ def main() -> int:
             "method_input_materializer": repo_file(
                 "code/gcp/materialize_m3m_gcp_100k_method_inputs.py"
             ),
+            "evaluation_camera_root_materializer": repo_file(
+                "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py"
+            ),
             "packet_export_dispatcher": repo_file(
                 "code/gcp/run_m3m_gcp_100k_packet_export.py"
             ),
@@ -206,8 +225,13 @@ def main() -> int:
             "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
             "progress_monitor_bound_by_each_recipe": True,
             "structured_failure_evidence_required": True,
+            "zero_exit_requires_phase_product_postvalidation": True,
+            "prior_phase_success_and_product_required_before_training": True,
         },
         "attempt_freeze": {
+            "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
+            "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
+            "method_registry_path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
             "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/scene_attempts_v1.json",
             "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/scene_attempt_freeze_v1.json",
             "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/model-identities-v1",

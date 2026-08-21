@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import os
@@ -664,6 +665,318 @@ def validate_gsprior_normalized_input(
         raise RuntimeError("GSPrior normalized-input validation did not pass")
 
 
+def validate_evaluation_camera_root(recipe: dict[str, Any]) -> None:
+    binding = recipe.get("evaluation_camera_root_binding")
+    if not isinstance(binding, dict):
+        raise RuntimeError("evaluation camera-root binding is missing")
+    evidence_path = Path(str(binding.get("evidence_path", "")))
+    if (
+        not evidence_path.is_absolute()
+        or not evidence_path.is_file()
+        or sha256_file(evidence_path) != binding.get("evidence_sha256")
+    ):
+        raise RuntimeError("evaluation camera-root evidence identity mismatch")
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    if (
+        evidence.get("schema") != "m3m_gcp_100k_evaluation_camera_root_v1"
+        or evidence.get("status") != binding.get("status_required")
+        or evidence.get("canonical_sha256") != canonical_sha256(evidence)
+        or evidence.get("scene") != SCENE
+    ):
+        raise RuntimeError("evaluation camera-root evidence did not pass")
+    materializer = evidence.get("materializer", {})
+    materializer_path = Path(str(materializer.get("path", "")))
+    expected_materializer_sha = recipe.get("benchmark_required_files_sha256", {}).get(
+        "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py"
+    )
+    if (
+        not materializer_path.is_absolute()
+        or not materializer_path.is_file()
+        or sha256_file(materializer_path) != materializer.get("sha256")
+        or materializer.get("sha256") != expected_materializer_sha
+    ):
+        raise RuntimeError("evaluation camera-root materializer identity mismatch")
+    root = Path(str(binding.get("root", "")))
+    output = evidence.get("output", {})
+    if (
+        not root.is_absolute()
+        or not root.is_dir()
+        or Path(str(output.get("root", ""))).resolve() != root.resolve()
+        or output.get("view_count") != binding.get("view_count")
+        or output.get("points3d_bin_point_count") != 0
+        or binding.get("points3d_bin_point_count") != 0
+        or evidence.get("truth_boundary", {}).get("heldout_rgb_present") is not False
+        or evidence.get("truth_boundary", {}).get("gcp_or_lidar_used") is not False
+    ):
+        raise RuntimeError("evaluation camera-root boundary mismatch")
+    packet_command = recipe.get("phase_commands", {}).get("packet", [])
+    if (
+        "--camera-root" not in packet_command
+        or packet_command[packet_command.index("--camera-root") + 1] != str(root)
+    ):
+        raise RuntimeError("packet command does not bind the evaluation camera root")
+    manifest_path = root / "EVALUATION_CAMERA_ROOT_MANIFEST.json"
+    if not manifest_path.is_file() or sha256_file(manifest_path) != binding.get("evidence_sha256"):
+        raise RuntimeError("evaluation camera-root manifest/evidence mismatch")
+    images = root / "images"
+    expected_target = Path(str(evidence.get("source_train", {}).get("root", ""))) / "images"
+    if (
+        not images.is_symlink()
+        or images.resolve() != expected_target.resolve()
+        or len([path for path in images.iterdir() if path.is_file()])
+        != int(binding.get("view_count", -1))
+    ):
+        raise RuntimeError("evaluation camera-root RGB link mismatch")
+    sparse = root / "sparse" / "0"
+    output_files = output.get("files", {})
+    expected_files = binding.get("sparse_sha256", {})
+    if set(output_files) != set(expected_files):
+        raise RuntimeError("evaluation camera-root sparse inventory mismatch")
+    for name, expected_sha in expected_files.items():
+        path = sparse / name
+        row = output_files.get(name, {})
+        if (
+            not path.is_file()
+            or sha256_file(path) != expected_sha
+            or row.get("sha256") != expected_sha
+            or row.get("bytes") != path.stat().st_size
+        ):
+            raise RuntimeError(f"evaluation camera-root sparse identity mismatch: {name}")
+    if (sparse / "points3D.bin").read_bytes() != (0).to_bytes(8, "little"):
+        raise RuntimeError("evaluation camera-root compatibility points3D.bin is not empty")
+
+
+def read_bound_json(path: Path, *, label: str) -> dict[str, Any]:
+    if not path.is_file():
+        raise RuntimeError(f"{label} is missing: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"{label} is not a JSON object")
+    return payload
+
+
+def validate_prior_outputs(
+    recipe: dict[str, Any], *, dataset_root: Path, prior_root: Path
+) -> list[Path]:
+    method_id = str(recipe.get("method_id", ""))
+    if method_id == "gsprior":
+        binding = recipe.get("prepared_method_input_binding", {})
+        prepared_root = Path(str(binding.get("dataset_root", ""))).resolve()
+        validate_gsprior_normalized_input(
+            prepared_root=prepared_root,
+            normalized_root=dataset_root.resolve(),
+            binding=binding,
+        )
+        return [prior_root / "normalization_manifest.json"]
+    manifest_name = {
+        "citygaussian_v2": "depth_prior_v1.json",
+        "citygs_x": "depth_and_multiview_prior_v1.json",
+        "metrogs": "training_priors.json",
+    }.get(method_id)
+    if manifest_name is None:
+        raise RuntimeError(f"{method_id}: unexpected prior phase")
+    manifest_path = prior_root / manifest_name
+    payload = read_bound_json(manifest_path, label=f"{method_id} prior manifest")
+    if (
+        payload.get("status") != "PASS"
+        or payload.get("passed") is not True
+        or payload.get("method_id") != method_id
+        or payload.get("scene") != SCENE
+        or payload.get("protocol_id") != "m3m_gcp_native_quarter_geometry_v2"
+    ):
+        raise RuntimeError(f"{method_id} prior manifest did not pass")
+    outputs = [manifest_path]
+    if method_id == "metrogs":
+        marker_path = prior_root / "TRAINING_PRIORS_PASS"
+        marker = read_bound_json(marker_path, label="MetroGS prior PASS marker")
+        if (
+            marker.get("schema") != "m3m_gcp_100k_metrogs_prior_pass_v1"
+            or marker.get("status") != "PASS"
+            or marker.get("scene") != SCENE
+            or marker.get("method_id") != method_id
+            or Path(str(marker.get("prior_evidence_path", ""))).resolve()
+            != manifest_path.resolve()
+            or marker.get("prior_evidence_sha256") != sha256_file(manifest_path)
+        ):
+            raise RuntimeError("MetroGS prior PASS marker identity mismatch")
+        outputs.append(marker_path)
+    return outputs
+
+
+def validate_training_outputs(recipe: dict[str, Any], *, run_root: Path) -> list[Path]:
+    method_id = str(recipe.get("method_id", ""))
+    budget = recipe.get("budget", {})
+    if method_id in {"2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof"}:
+        iteration = int(budget.get("value", -1))
+        paths = [
+            run_root / "model" / "point_cloud" / f"iteration_{iteration}" / "point_cloud.ply"
+        ]
+    elif method_id == "3dgs_original":
+        reuse = recipe.get("reuse_model_binding", {})
+        paths = [run_root / str(reuse.get("point_cloud_relative_path", ""))]
+    elif method_id == "citygaussian_v2":
+        summary_path = run_root / "pipeline" / "pipeline_summary.json"
+        summary = read_bound_json(summary_path, label="CityGaussianV2 training summary")
+        checkpoint = summary.get("merged_checkpoint", {})
+        if (
+            summary.get("method_id") != method_id
+            or summary.get("status") != "PIPELINE_PASS"
+            or summary.get("mode") != "formal"
+            or summary.get("coarse_steps") != 30000
+            or summary.get("fine_steps") != 60000
+        ):
+            raise RuntimeError("CityGaussianV2 training summary did not pass")
+        checkpoint_path = Path(str(checkpoint.get("path", ""))).resolve()
+        if sha256_file(checkpoint_path) != checkpoint.get("sha256"):
+            raise RuntimeError("CityGaussianV2 merged checkpoint identity mismatch")
+        paths = [summary_path, checkpoint_path]
+    elif method_id == "citygs_x":
+        summary_path = run_root / "model" / "training_wrapper_summary.json"
+        summary = read_bound_json(summary_path, label="CityGS-X training summary")
+        checkpoint = summary.get("checkpoint", {})
+        checkpoint_root = Path(str(checkpoint.get("path", ""))).resolve()
+        point_cloud = checkpoint_root / str(checkpoint.get("point_cloud_file", ""))
+        if (
+            summary.get("method_id") != method_id
+            or summary.get("status") != "TRAINING_PASS"
+            or summary.get("mode") != "formal"
+            or summary.get("iterations") != 100000
+            or sha256_file(point_cloud) != checkpoint.get("point_cloud_sha256")
+        ):
+            raise RuntimeError("CityGS-X final checkpoint identity mismatch")
+        paths = [
+            summary_path,
+            point_cloud,
+            checkpoint_root / "additional_attributes.npz",
+            checkpoint_root / "checkpoints.pth",
+        ]
+    elif method_id == "metrogs":
+        summary_path = run_root / "model" / "training_wrapper_summary.json"
+        summary = read_bound_json(summary_path, label="MetroGS training summary")
+        checkpoint = summary.get("checkpoint", {})
+        cleanup = summary.get("rank_checkpoint_cleanup", {})
+        merged = Path(str(checkpoint.get("merged_path", ""))).resolve()
+        point_cloud = Path(str(checkpoint.get("point_cloud_path", ""))).resolve()
+        cleanup_inventory = Path(str(cleanup.get("inventory_path", ""))).resolve()
+        if (
+            summary.get("method_id") != method_id
+            or summary.get("status") != "TRAINING_PASS"
+            or summary.get("mode") != "formal"
+            or summary.get("effective_iterations") != 150000
+            or summary.get("optimizer_steps") != 37500
+            or sha256_file(merged) != checkpoint.get("merged_sha256")
+            or sha256_file(point_cloud) != checkpoint.get("point_cloud_sha256")
+            or sha256_file(cleanup_inventory) != cleanup.get("inventory_sha256")
+        ):
+            raise RuntimeError("MetroGS final checkpoint identity mismatch")
+        paths = [summary_path, merged, point_cloud, cleanup_inventory]
+    else:  # pragma: no cover - frozen pool is exhaustive
+        raise RuntimeError(f"unsupported method final-output validation: {method_id}")
+    for path in paths:
+        if not path.is_file() or path.stat().st_size <= 0:
+            raise RuntimeError(f"{method_id} required final output is missing or empty: {path}")
+    return paths
+
+
+def validate_packet_outputs(recipe: dict[str, Any], *, packet_root: Path) -> list[Path]:
+    manifest_path = packet_root / "depth_export_manifest.json"
+    mapping_path = packet_root / "depth_map_index.csv"
+    manifest = read_bound_json(manifest_path, label="packet manifest")
+    rows = manifest.get("depth_index")
+    if not isinstance(rows, list):
+        rows = manifest.get("packet_index")
+    if (
+        manifest.get("scene") != SCENE
+        or manifest.get("protocol_id") != "m3m_gcp_native_quarter_geometry_v2"
+        or manifest.get("rendered_view_count") != 2196
+        or not isinstance(rows, list)
+        or len(rows) != 2196
+    ):
+        raise RuntimeError("packet manifest did not cover all 2196 frozen train views")
+    expected_names = {
+        str(row.get("image_name", "")) for row in load_frozen_train_rows(recipe)
+    }
+    actual_names = [str(row.get("image_name", "")) for row in rows]
+    if len(set(actual_names)) != 2196 or set(actual_names) != expected_names:
+        raise RuntimeError("packet manifest image inventory differs from frozen train split")
+    packet_paths: list[Path] = []
+    packet_root_resolved = packet_root.resolve()
+    for row in rows:
+        path = Path(str(row.get("packet_path", ""))).resolve()
+        if (
+            path.parent != packet_root_resolved
+            or not path.is_file()
+            or path.stat().st_size != int(row.get("packet_bytes", -1))
+            or sha256_file(path) != row.get("packet_sha256")
+            or row.get("packet_recompute_passed") is not True
+        ):
+            raise RuntimeError(f"packet file identity/postcondition mismatch: {path}")
+        packet_paths.append(path)
+    if len(set(packet_paths)) != 2196:
+        raise RuntimeError("packet paths are not unique")
+    if not mapping_path.is_file():
+        raise RuntimeError("packet mapping CSV is missing")
+    with mapping_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        mapping = list(csv.DictReader(handle))
+    if (
+        len(mapping) != 2196
+        or [row.get("image_name") for row in mapping] != actual_names
+        or [Path(str(row.get("packet_path", ""))).resolve() for row in mapping]
+        != packet_paths
+    ):
+        raise RuntimeError("packet mapping CSV differs from the manifest")
+    return [manifest_path, mapping_path, *packet_paths]
+
+
+def validate_phase_postconditions(
+    recipe: dict[str, Any], *, phase: str, run_root: Path, dataset_root: Path,
+    prior_root: Path, packet_root: Path | None,
+) -> list[Path]:
+    if phase == "prior":
+        return validate_prior_outputs(
+            recipe, dataset_root=dataset_root, prior_root=prior_root
+        )
+    if phase == "training":
+        return validate_training_outputs(recipe, run_root=run_root)
+    if phase == "packet":
+        if packet_root is None:
+            raise RuntimeError("packet postcondition has no packet root")
+        return validate_packet_outputs(recipe, packet_root=packet_root)
+    raise RuntimeError(f"unsupported phase postcondition: {phase}")
+
+
+def validate_prior_phase_success(
+    *, recipe: dict[str, Any], recipe_path: Path, run_root: Path,
+    dataset_root: Path, prior_root: Path, replacements: dict[str, str],
+) -> None:
+    if "prior" not in recipe.get("phase_commands", {}):
+        return
+    path = (
+        Path(str(recipe.get("authorized_evidence_root", "")))
+        / "prior"
+        / "phase_success.json"
+    )
+    payload = read_bound_json(path, label="prior phase success")
+    expected_command = [
+        item.format(**replacements)
+        for item in recipe.get("phase_commands", {}).get("prior", [])
+    ]
+    if (
+        payload.get("schema") != "m3m_gcp_100k_phase_success_v1"
+        or payload.get("status") != "PASS"
+        or payload.get("scene") != SCENE
+        or payload.get("method_id") != recipe.get("method_id")
+        or payload.get("phase") != "prior"
+        or payload.get("recipe_sha256") != sha256_file(recipe_path)
+        or payload.get("command_sha256") != command_sha256(expected_command)
+        or payload.get("canonical_sha256") != canonical_sha256(payload)
+    ):
+        raise RuntimeError("training requires the exact successful prior phase")
+    validate_prior_outputs(
+        recipe, dataset_root=dataset_root, prior_root=prior_root
+    )
+
+
 def classify_oom(stderr_text: str, delta: dict[str, int]) -> tuple[str, str | None]:
     lower = stderr_text.lower()
     if "cuda" in lower and "out of memory" in lower:
@@ -676,8 +989,8 @@ def classify_oom(stderr_text: str, delta: dict[str, int]) -> tuple[str, str | No
 
 
 def validate_model_identity_bundle(
-    *, manifest_path: Path, method_id: str, run_root: Path
-) -> None:
+    *, manifest_path: Path, method_id: str, run_root: Path, recipe: dict[str, Any]
+) -> dict[str, Any]:
     """Rehash every file in the frozen 100K model-identity bundle."""
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     if set(payload) != {
@@ -714,13 +1027,30 @@ def validate_model_identity_bundle(
         paths.append(str(path))
     if paths != sorted(paths) or len(paths) != len(set(paths)):
         raise RuntimeError("100K model-identity inventory order/cardinality mismatch")
+    required_final_paths = {
+        str(path.resolve())
+        for path in validate_training_outputs(recipe, run_root=run_root)
+    }
+    if not required_final_paths.issubset(set(paths)):
+        missing = sorted(required_final_paths - set(paths))
+        raise RuntimeError(
+            "100K model identity omits the method's actual final model: "
+            + ", ".join(missing)
+        )
+    return payload
 
 
 def validate_packet_freeze_binding(
-    *, args: argparse.Namespace, recipe: dict[str, Any]
+    *, args: argparse.Namespace, recipe: dict[str, Any], plan: dict[str, Any]
 ) -> tuple[dict[str, Any], str]:
     freeze_path = args.scene_attempt_freeze
-    if freeze_path is None or not freeze_path.is_file():
+    frozen_paths = plan.get("attempt_freeze", {})
+    expected_freeze = Path(str(frozen_paths.get("scene_attempt_freeze_path", ""))).resolve()
+    expected_methods = Path(str(frozen_paths.get("attempt_manifest_path", ""))).resolve()
+    expected_identity_root = Path(str(frozen_paths.get("model_identity_root", ""))).resolve()
+    if freeze_path is None or freeze_path.resolve() != expected_freeze:
+        raise RuntimeError("packet scene-attempt freeze path differs from the frozen plan")
+    if not freeze_path.is_file():
         raise RuntimeError("packet phase requires an immutable scene-attempt freeze")
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
     errors, methods = validate_scene_attempt_freeze(
@@ -728,6 +1058,8 @@ def validate_packet_freeze_binding(
     )
     if errors or methods is None:
         raise RuntimeError("packet scene-attempt freeze is invalid: " + "; ".join(errors))
+    if Path(str(freeze.get("methods_manifest_path", ""))).resolve() != expected_methods:
+        raise RuntimeError("packet methods manifest path differs from the frozen plan")
     rows = [
         row for row in methods.get("methods", [])
         if row.get("method_id") == args.method_id
@@ -741,10 +1073,14 @@ def validate_packet_freeze_binding(
         raise RuntimeError("packet recipe differs from frozen method row")
     if row.get("renderer_adapter_sha256") != recipe.get("renderer_adapter_sha256"):
         raise RuntimeError("packet renderer adapter differs from frozen method row")
+    identity_path = Path(str(row.get("model_checkpoint_path", ""))).resolve()
+    if identity_path != expected_identity_root / f"{args.method_id}.json":
+        raise RuntimeError("packet model-identity path differs from the frozen plan")
     validate_model_identity_bundle(
-        manifest_path=Path(str(row.get("model_checkpoint_path", ""))),
+        manifest_path=identity_path,
         method_id=args.method_id,
         run_root=args.run_root,
+        recipe=recipe,
     )
     return row, sha256_file(freeze_path)
 
@@ -843,7 +1179,7 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
         if args.packet_set_root.exists():
             raise RuntimeError("packet set root already exists")
         frozen_method, freeze_sha = validate_packet_freeze_binding(
-            args=args, recipe=recipe
+            args=args, recipe=recipe, plan=args.execution_plan
         )
         acquire_packet_state(args.packet_state, args.method_id, args.packet_set_root)
     args.run_root.mkdir(parents=True, exist_ok=True)
@@ -896,6 +1232,23 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
     ended_at = utc_now()
     if cap_error and exit_code == 0:
         exit_code = 70
+    postcondition_error: str | None = None
+    if exit_code == 0:
+        try:
+            validate_phase_postconditions(
+                recipe,
+                phase=args.phase,
+                run_root=args.run_root,
+                dataset_root=args.dataset_root,
+                prior_root=args.prior_root,
+                packet_root=args.packet_set_root,
+            )
+        except Exception as exc:  # noqa: BLE001 - converted to immutable evidence
+            postcondition_error = (
+                f"phase child exited zero but required outputs did not validate: "
+                f"{type(exc).__name__}: {exc}"
+            )
+            exit_code = 70
     if exit_code != 0:
         recipe["_recipe_path"] = str(args.recipe)
         payload = write_failure_evidence(
@@ -917,7 +1270,9 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
                 if resource is not None else 0
             ),
             events_delta=memory_event_delta(before, after),
-            extra_error=cap_error,
+            extra_error="; ".join(
+                error for error in (cap_error, postcondition_error) if error
+            ) or None,
             failure_stage=("packet_export" if args.phase == "packet" else args.phase),
             model_checkpoint_sha256=(
                 str(frozen_method["model_checkpoint_sha256"])
@@ -1027,7 +1382,7 @@ def main() -> int:
         args.packet_set_root = Path(os.path.abspath(args.packet_set_root))
     if args.scene_attempt_freeze is not None:
         args.scene_attempt_freeze = args.scene_attempt_freeze.resolve()
-    _, recipe = validate_activation_and_recipe(
+    plan, recipe = validate_activation_and_recipe(
         repo=args.repo,
         activation_path=args.activation,
         plan_path=args.plan,
@@ -1035,6 +1390,7 @@ def main() -> int:
         recipe_path=args.recipe,
         method_id=args.method_id,
     )
+    args.execution_plan = plan
     expected_run_root = Path(str(recipe.get("authorized_run_root", ""))).resolve()
     if args.run_root != expected_run_root:
         raise RuntimeError("run root differs from the frozen method recipe")
@@ -1077,7 +1433,8 @@ def main() -> int:
             or sha256_file(point_cloud) != reuse.get("point_cloud_sha256")
         ):
             raise RuntimeError("reused 3DGS point-cloud identity mismatch")
-    args.gpu_prelaunch = require_idle_gpu()
+    if args.phase == "packet":
+        validate_evaluation_camera_root(recipe)
     templates = recipe.get("phase_commands", {})
     template = templates.get(args.phase)
     if not isinstance(template, list) or not template or any(not isinstance(item, str) for item in template):
@@ -1091,6 +1448,16 @@ def main() -> int:
         "packet_set_root": str(args.packet_set_root) if args.packet_set_root else "",
     }
     args.replacements = replacements
+    if args.phase == "training":
+        validate_prior_phase_success(
+            recipe=recipe,
+            recipe_path=args.recipe,
+            run_root=args.run_root,
+            dataset_root=args.dataset_root,
+            prior_root=args.prior_root,
+            replacements=replacements,
+        )
+    args.gpu_prelaunch = require_idle_gpu()
     validate_source_binding(recipe, args.source_root, args.phase)
     validate_phase_roots(
         recipe,

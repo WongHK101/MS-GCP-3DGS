@@ -348,6 +348,16 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("unexpected MetroGS prior protocol identity")
     if prior.get("scene") != "gcp_100000_20260610":
         raise RuntimeError("unexpected MetroGS prior scene identity")
+    marker = json.loads(pass_marker.read_text(encoding="utf-8"))
+    if (
+        marker.get("schema") != "m3m_gcp_100k_metrogs_prior_pass_v1"
+        or marker.get("status") != "PASS"
+        or marker.get("scene") != "gcp_100000_20260610"
+        or marker.get("method_id") != "metrogs"
+        or Path(str(marker.get("prior_evidence_path", ""))).resolve() != prior_path
+        or marker.get("prior_evidence_sha256") != sha256(prior_path)
+    ):
+        raise RuntimeError("MetroGS prior PASS marker identity mismatch")
     source = prior.get("source", {})
     if source.get("repository_commit") != METROGS_COMMIT:
         raise RuntimeError("MetroGS prior commit mismatch")

@@ -18,6 +18,41 @@ from m3m_gcp_lidar_artifacts import (
 )
 
 
+FORMAL_100K_SCENE = "gcp_100000_20260610"
+
+
+def validate_frozen_100k_paths(
+    *, execution_plan: Path | None, methods_path: Path, output: Path, scene: str
+) -> None:
+    if scene != FORMAL_100K_SCENE:
+        return
+    if execution_plan is None:
+        raise RuntimeError("100K attempt freeze requires the frozen execution plan")
+    plan_path = execution_plan.resolve()
+    if not plan_path.is_file():
+        raise FileNotFoundError(plan_path)
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    if (
+        plan.get("schema")
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1"
+        or plan.get("scene") != scene
+        or plan.get("canonical_sha256") != canonical_sha256(plan)
+        or plan.get("execution_authorized") is not False
+    ):
+        raise RuntimeError("100K execution plan identity mismatch")
+    freeze = plan.get("attempt_freeze", {})
+    if plan_path.parent.name != "configs":
+        raise RuntimeError("100K execution plan must be inside the repository configs directory")
+    repo = plan_path.parents[1]
+    expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
+    if plan_path != expected_plan:
+        raise RuntimeError("100K freeze plan path differs from the frozen plan")
+    if methods_path.resolve() != Path(str(freeze.get("attempt_manifest_path", ""))).resolve():
+        raise RuntimeError("100K freeze methods manifest path differs from the frozen plan")
+    if output.resolve() != Path(str(freeze.get("scene_attempt_freeze_path", ""))).resolve():
+        raise RuntimeError("100K scene freeze output path differs from the frozen plan")
+
+
 def require_bound_file(path_value: object, sha_value: object, label: str) -> None:
     path = Path(str(path_value))
     if not path.is_absolute() or not path.is_file():
@@ -96,6 +131,7 @@ def write_exclusive(path: Path, payload: dict) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--methods-manifest", type=Path, required=True)
+    parser.add_argument("--execution-plan", type=Path)
     parser.add_argument("--artifact-schema", type=Path, required=True)
     parser.add_argument("--scene", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -103,6 +139,12 @@ def main() -> int:
     methods_path = args.methods_manifest.resolve()
     schema_path = args.artifact_schema.resolve()
     output = args.output.resolve()
+    validate_frozen_100k_paths(
+        execution_plan=args.execution_plan,
+        methods_path=methods_path,
+        output=output,
+        scene=args.scene,
+    )
     if output.exists():
         raise FileExistsError("scene attempt freeze already exists; replacement is forbidden")
     methods = json.loads(methods_path.read_text(encoding="utf-8"))

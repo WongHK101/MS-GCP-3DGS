@@ -373,6 +373,7 @@ def main() -> int:
     parser.add_argument("--subset_track_closure_tool", type=Path, required=True)
     parser.add_argument("--additional_ply", type=Path, required=True)
     parser.add_argument("--evidence_output", type=Path, required=True)
+    parser.add_argument("--pass_marker", type=Path, required=True)
     parser.add_argument("--expected_repo_commit", required=True)
     parser.add_argument("--expected_repo_tree", required=True)
     parser.add_argument("--expected_runtime_status", default=" M utils/get_mask_depth_scales.py")
@@ -399,6 +400,7 @@ def main() -> int:
     subset_track_closure_tool = args.subset_track_closure_tool.resolve()
     additional_ply = args.additional_ply.resolve()
     evidence_output = args.evidence_output.resolve()
+    pass_marker = args.pass_marker.resolve()
 
     if args.split_num != 4:
         raise ValueError("the frozen MetroGS MatrixCity route uses exactly four Pi3 segments")
@@ -438,6 +440,7 @@ def main() -> int:
         dataset / "metrogs_pi3_config_frozen.yaml",
         additional_ply,
         evidence_output,
+        pass_marker,
     ):
         if forbidden.exists():
             raise FileExistsError(f"MetroGS prior output must be fresh: {forbidden}")
@@ -756,6 +759,23 @@ def main() -> int:
     evidence_output.write_text(
         json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    marker = {
+        "schema": "m3m_gcp_100k_metrogs_prior_pass_v1",
+        "status": "PASS",
+        "scene": "gcp_100000_20260610",
+        "method_id": "metrogs",
+        "prior_evidence_path": str(evidence_output),
+        "prior_evidence_sha256": sha256(evidence_output),
+    }
+    pass_marker.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(pass_marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o444)
+    try:
+        os.write(
+            descriptor,
+            (json.dumps(marker, indent=2, sort_keys=True) + "\n").encode("utf-8"),
+        )
+    finally:
+        os.close(descriptor)
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0
 

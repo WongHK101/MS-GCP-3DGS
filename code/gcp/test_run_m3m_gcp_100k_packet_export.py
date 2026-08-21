@@ -6,19 +6,86 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import run_m3m_gcp_100k_packet_export as packet_module
 from run_m3m_gcp_100k_packet_export import (
     CITYGS_X_PYTORCH3D_COMPAT_RELATIVE,
     SCENE,
     verify_allowlist,
+    verify_camera_root,
     verify_checkpoint,
 )
 
 
 class PacketExport100KTest(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "Windows test host lacks symlink privilege")
+    def test_evaluation_camera_root_is_pose_only_and_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            formal = root / "formal-train"
+            formal_images = formal / "images"
+            formal_images.mkdir(parents=True)
+            (formal_images / "a.jpg").write_bytes(b"jpeg")
+            camera = root / "camera"
+            sparse = camera / "sparse" / "0"
+            sparse.mkdir(parents=True)
+            (camera / "images").symlink_to(formal_images, target_is_directory=True)
+            values = {
+                "cameras.bin": b"cam",
+                "images.bin": b"poses",
+                "points3D.bin": (0).to_bytes(8, "little"),
+                "points3D.ply": b"ply",
+            }
+            files = {}
+            hashes = {}
+            for name, value in values.items():
+                path = sparse / name
+                path.write_bytes(value)
+                hashes[name] = packet_module.sha256(path)
+                files[name] = {
+                    "path": str(path),
+                    "bytes": path.stat().st_size,
+                    "sha256": hashes[name],
+                }
+            manifest = {
+                "schema": "m3m_gcp_100k_evaluation_camera_root_v1",
+                "status": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+                "scene": SCENE,
+                "output": {
+                    "root": str(camera.resolve()),
+                    "view_count": 1,
+                    "points3d_bin_point_count": 0,
+                    "files": files,
+                },
+                "truth_boundary": {
+                    "heldout_rgb_present": False,
+                    "gcp_or_lidar_used": False,
+                },
+            }
+            manifest["canonical_sha256"] = packet_module.canonical_sha256(manifest)
+            manifest_path = camera / "EVALUATION_CAMERA_ROOT_MANIFEST.json"
+            manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+            with (
+                mock.patch.object(packet_module, "EVALUATION_CAMERA_ROOT", camera),
+                mock.patch.object(packet_module, "FORMAL_TRAIN_ROOT", formal),
+                mock.patch.object(packet_module, "EXPECTED_TRAIN_VIEWS", 1),
+                mock.patch.object(packet_module, "EVALUATION_CAMERA_SPARSE_SHA256", hashes),
+                mock.patch.object(
+                    packet_module,
+                    "EVALUATION_CAMERA_MANIFEST_SHA256",
+                    packet_module.sha256(manifest_path),
+                ),
+            ):
+                verify_camera_root(camera)
+                (sparse / "points3D.bin").write_bytes(b"not-empty")
+                with self.assertRaisesRegex(RuntimeError, "identity mismatch"):
+                    verify_camera_root(camera)
+
     def test_citygs_compatibility_package_is_repository_bound(self) -> None:
         compat = Path(__file__).resolve().parents[2] / CITYGS_X_PYTORCH3D_COMPAT_RELATIVE
         self.assertTrue((compat / "pytorch3d/__init__.py").is_file())

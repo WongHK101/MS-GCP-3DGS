@@ -96,6 +96,7 @@ class ExecutionCandidateTest(unittest.TestCase):
 
     def test_per_method_inputs_and_adapter_bindings_are_final(self) -> None:
         evidence_shas: set[str] = set()
+        camera_evidence_shas: set[str] = set()
         for method in METHOD_ORDER:
             recipe = self.recipes[method]
             adapter = ROOT / recipe["renderer_adapter_path"]
@@ -118,6 +119,23 @@ class ExecutionCandidateTest(unittest.TestCase):
             self.assertIsNotNone(HEX64.fullmatch(binding["evidence_sha256"]), method)
             self.assertTrue(binding["all_image_sfm_precedes_train_test_split"], method)
             evidence_shas.add(binding["evidence_sha256"])
+            camera_binding = recipe["evaluation_camera_root_binding"]
+            camera_evidence_shas.add(camera_binding["evidence_sha256"])
+            self.assertEqual(camera_binding["view_count"], 2196)
+            self.assertEqual(camera_binding["points3d_bin_point_count"], 0)
+            self.assertEqual(
+                set(camera_binding["sparse_sha256"]),
+                {"cameras.bin", "images.bin", "points3D.bin", "points3D.ply"},
+            )
+            packet_command = recipe["phase_commands"]["packet"]
+            self.assertEqual(
+                packet_command[packet_command.index("--camera-root") + 1],
+                camera_binding["root"],
+            )
+            self.assertIn(
+                "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py",
+                recipe["benchmark_required_files_sha256"],
+            )
             expected_sparse = {"cameras.bin", "images.bin", "points3D.ply"}
             if method in {"citygaussian_v2", "citygs_x", "metrogs"}:
                 expected_sparse.add("points3D.bin")
@@ -167,6 +185,7 @@ class ExecutionCandidateTest(unittest.TestCase):
                     "{dataset_root}",
                 )
         self.assertEqual(len(evidence_shas), 1)
+        self.assertEqual(len(camera_evidence_shas), 1)
         self.assertEqual(
             len({recipe["authorized_packet_state"] for recipe in self.recipes.values()}),
             1,
@@ -217,6 +236,17 @@ class ExecutionCandidateTest(unittest.TestCase):
             plan["preparation"]["per_method_input_evidence"]
             ["all_image_sfm_precedes_train_test_split"]
         )
+        camera = plan["preparation"]["evaluation_camera_root"]
+        self.assertEqual(camera["view_count"], 2196)
+        self.assertEqual(camera["points3d_bin_point_count"], 0)
+        self.assertFalse(camera["points2d_tracks_present"])
+        self.assertEqual(
+            camera["evidence_sha256"],
+            next(iter({
+                self.recipes[method]["evaluation_camera_root_binding"]["evidence_sha256"]
+                for method in METHOD_ORDER
+            })),
+        )
         storage = plan["storage"]
         self.assertEqual(storage["packet_scratch_hard_cap_gib"], 100)
         self.assertEqual(storage["minimum_free_before_prior_gib"], 300)
@@ -230,6 +260,23 @@ class ExecutionCandidateTest(unittest.TestCase):
             lifecycle["full_archive_inventory_byte_reverification_required_before_packet_deletion"]
         )
         self.assertTrue(plan["attempt_freeze"]["frozen_before_any_formal_lidar_result"])
+        self.assertEqual(
+            plan["attempt_freeze"]["execution_plan_path"],
+            "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
+        )
+        self.assertEqual(
+            plan["attempt_freeze"]["recipe_manifest_path"],
+            "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
+        )
+        self.assertEqual(
+            plan["attempt_freeze"]["method_registry_path"],
+            "configs/m3m_gcp_native_quarter_method_registry_v3.json",
+        )
+        closure = plan["execution_closure"]
+        self.assertTrue(closure["zero_exit_requires_phase_product_postvalidation"])
+        self.assertTrue(
+            closure["prior_phase_success_and_product_required_before_training"]
+        )
         self.assertEqual(
             plan["formal_lidar_protocol"]["phase1_review"]["verdict"],
             "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",

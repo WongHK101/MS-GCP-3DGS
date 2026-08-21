@@ -57,6 +57,39 @@ def read_summary(path: Path, *, method_id: str, required_status: str) -> dict[st
     return payload
 
 
+def validate_frozen_attempt_paths(
+    *, repo: Path, plan_path: Path, recipe_manifest_path: Path,
+    registry_path: Path, identity_root: Path, output: Path,
+) -> dict[str, Any]:
+    plan_path = plan_path.resolve()
+    plan = json.loads(require_file(plan_path).read_text(encoding="utf-8"))
+    if (
+        plan.get("schema")
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1"
+        or plan.get("scene") != SCENE
+        or plan.get("canonical_sha256") != canonical_sha256(plan)
+        or plan.get("execution_authorized") is not False
+    ):
+        raise RuntimeError("100K execution plan identity mismatch")
+    freeze = plan.get("attempt_freeze", {})
+    expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
+    expected_recipe = (repo / str(freeze.get("recipe_manifest_path", ""))).resolve()
+    expected_registry = (repo / str(freeze.get("method_registry_path", ""))).resolve()
+    expected_identity = Path(str(freeze.get("model_identity_root", ""))).resolve()
+    expected_output = Path(str(freeze.get("attempt_manifest_path", ""))).resolve()
+    if plan_path != expected_plan:
+        raise RuntimeError("attempt builder plan path differs from the frozen plan")
+    if recipe_manifest_path.resolve() != expected_recipe:
+        raise RuntimeError("attempt builder recipe manifest path differs from the frozen plan")
+    if registry_path.resolve() != expected_registry:
+        raise RuntimeError("attempt builder method registry path differs from the frozen plan")
+    if identity_root.resolve() != expected_identity:
+        raise RuntimeError("attempt builder model-identity root differs from the frozen plan")
+    if output.resolve() != expected_output:
+        raise RuntimeError("attempt builder output path differs from the frozen plan")
+    return plan
+
+
 def phase_success_inventory(
     path: Path, *, method_id: str, phase: str, recipe_sha256: str
 ) -> dict[str, Any]:
@@ -198,16 +231,26 @@ def success_inventory(method_id: str, recipe: dict[str, Any]) -> list[dict[str, 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
+    parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--recipe-manifest", type=Path, required=True)
     parser.add_argument("--method-registry", type=Path, required=True)
     parser.add_argument("--model-identity-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     repo = args.repo.resolve()
+    plan_path = args.plan.resolve()
     recipe_manifest_path = args.recipe_manifest.resolve()
     registry_path = args.method_registry.resolve()
     identity_root = args.model_identity_root.resolve()
     output = args.output.resolve()
+    validate_frozen_attempt_paths(
+        repo=repo,
+        plan_path=plan_path,
+        recipe_manifest_path=recipe_manifest_path,
+        registry_path=registry_path,
+        identity_root=identity_root,
+        output=output,
+    )
     if output.exists() or identity_root.exists():
         raise FileExistsError("attempt/model-identity output already exists; overwrite is forbidden")
     manifest = json.loads(recipe_manifest_path.read_text(encoding="utf-8"))

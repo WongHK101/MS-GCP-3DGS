@@ -14,6 +14,9 @@ OUT = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipes_v1"
 SCENE = "gcp_100000_20260610"
 FORMAL = f"/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/{SCENE}/train"
 FORMAL_MANIFEST = f"/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/{SCENE}/NATIVE_QUARTER_INPUT_MANIFEST.json"
+EVALUATION_CAMERA_ROOT = f"/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/{SCENE}"
+EVALUATION_CAMERA_EVIDENCE = f"/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/{SCENE}/evaluation-camera-root-v1.json"
+EVALUATION_CAMERA_EVIDENCE_SHA = "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac"
 ENV = "/root/autodl-tmp/envs/m3m-gcp-native-quarter/{method}/py310-torch2.7.1-cu128-v1/bin/python"
 PACKET_ENV = {
     "3dgs_original": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/3dgs-original/py310-torch2.7.1-cu128-v1/bin/python",
@@ -31,6 +34,7 @@ CITY_IMAGES_SHA = "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18d
 FULL_POINTS_SHA = "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa"
 METRO_POINTS_SHA = "fcbb06d2b52770281b2b2c88f6d1a9deb5b2435e4578e63ca77bb8f197c37e7f"
 INITIAL_PLY_SHA = "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+EMPTY_POINTS_SHA = "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
 FORMAL_RUN_ROOT = f"/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/{SCENE}"
 PACKET_SCRATCH_ROOT = f"{FORMAL_RUN_ROOT}/packet-scratch"
 
@@ -103,7 +107,7 @@ METHODS: dict[str, dict[str, Any]] = {
         "input_class": "rgb_colmap_external_geometry_prior", "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f", "tree": "7e92b13095cf4a031d7eb8593e10616db154abbf", "sub": "official-train", "status": "", "files": {}, "renderer": "20aa83dc12ab0f3087b57c46597845cf2750beacc3b36ba119dd49a6bed78b82", "budget": {"type": "effective_image_iterations", "value": 150000, "optimizer_steps": 37500}, "dataset": f"/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/{SCENE}",
         "command": [ENV.format(method="metrogs"), "-B", "{repo}/code/gcp/run_metrogs_100k_training.py", "--repo", "{source_root}", "--python", ENV.format(method="metrogs"), "--dataset", "{dataset_root}", "--model_path", "{run_root}/model", "--prior_manifest", "{prior_root}/training_priors.json", "--prior_pass_marker", "{prior_root}/TRAINING_PRIORS_PASS", "--additional_ply", "{prior_root}/additional_points/metrogs_pi3_merged.ply", "--mode", "formal", "--iterations", "150000"],
         "prior_source": {"sub": "prior-runtime-v1", "status": " M utils/get_mask_depth_scales.py", "files": {"utils/get_mask_depth_scales.py": "b48d68d1355140af9b37caf3fee55d135ae5b59277eb43eb5d245d0e60a67106"}},
-        "prior_command": [ENV.format(method="metrogs"), "-B", "{repo}/code/gcp/prepare_metrogs_100k_training_priors.py", "--repo", "{source_root}", "--python", ENV.format(method="metrogs"), "--dataset", "{dataset_root}", "--formal_input_manifest", FORMAL_MANIFEST, "--moge_path", "{source_root}/utils/MoGe", "--moge_weight", MOGE_WEIGHT, "--pi3_weight", PI3_WEIGHT, "--compatibility_patch", "{repo}/patches/metrogs/numpy_bool_compat_get_mask_depth_scales_8cf9ac1_v1.patch", "--colmap_io", "{repo}/code/colmap/utils/read_write_model.py", "--subset_track_closure_tool", "{repo}/code/gcp/materialize_colmap_subset_track_closure.py", "--additional_ply", "{prior_root}/additional_points/metrogs_pi3_merged.ply", "--evidence_output", "{prior_root}/training_priors.json", "--expected_repo_commit", "8cf9ac13c0c34b65c1a935d181c4634909e60f3f", "--expected_repo_tree", "7e92b13095cf4a031d7eb8593e10616db154abbf", "--expected_runtime_status", " M utils/get_mask_depth_scales.py", "--expected_moge_sha256", "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01", "--expected_pi3_sha256", "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d", "--expected_cameras_sha256", FORMAL_CAMERAS_SHA, "--expected_images_sha256", CITY_IMAGES_SHA, "--expected_points3d_sha256", METRO_POINTS_SHA, "--split_num", "4", "--multi_view_max_dis", "1.5"],
+        "prior_command": [ENV.format(method="metrogs"), "-B", "{repo}/code/gcp/prepare_metrogs_100k_training_priors.py", "--repo", "{source_root}", "--python", ENV.format(method="metrogs"), "--dataset", "{dataset_root}", "--formal_input_manifest", FORMAL_MANIFEST, "--moge_path", "{source_root}/utils/MoGe", "--moge_weight", MOGE_WEIGHT, "--pi3_weight", PI3_WEIGHT, "--compatibility_patch", "{repo}/patches/metrogs/numpy_bool_compat_get_mask_depth_scales_8cf9ac1_v1.patch", "--colmap_io", "{repo}/code/colmap/utils/read_write_model.py", "--subset_track_closure_tool", "{repo}/code/gcp/materialize_colmap_subset_track_closure.py", "--additional_ply", "{prior_root}/additional_points/metrogs_pi3_merged.ply", "--evidence_output", "{prior_root}/training_priors.json", "--pass_marker", "{prior_root}/TRAINING_PRIORS_PASS", "--expected_repo_commit", "8cf9ac13c0c34b65c1a935d181c4634909e60f3f", "--expected_repo_tree", "7e92b13095cf4a031d7eb8593e10616db154abbf", "--expected_runtime_status", " M utils/get_mask_depth_scales.py", "--expected_moge_sha256", "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01", "--expected_pi3_sha256", "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d", "--expected_cameras_sha256", FORMAL_CAMERAS_SHA, "--expected_images_sha256", CITY_IMAGES_SHA, "--expected_points3d_sha256", METRO_POINTS_SHA, "--split_num", "4", "--multi_view_max_dis", "1.5"],
         "prior_external": {MOGE_WEIGHT: "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01", PI3_WEIGHT: "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"},
     },
 }
@@ -291,6 +295,9 @@ def main() -> int:
             *PACKET_PATCHES[method],
         ]
         dependency_paths.append("code/gcp/materialize_m3m_gcp_100k_method_inputs.py")
+        dependency_paths.append(
+            "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py"
+        )
         if method in {"citygaussian_v2", "citygs_x"}:
             dependency_paths.append(
                 "code/gcp/materialize_colmap_train_track_compatibility_streaming.py"
@@ -334,7 +341,7 @@ def main() -> int:
             "--prior-root",
             "{prior_root}",
             "--camera-root",
-            FORMAL,
+            EVALUATION_CAMERA_ROOT,
             "--train-allowlist",
             "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
             "--packet-set-root",
@@ -455,6 +462,21 @@ def main() -> int:
             "input_profile": input_profile,
             "sparse_sha256": sparse_hashes,
             "all_image_sfm_precedes_train_test_split": True,
+        }
+        payload["evaluation_camera_root_binding"] = {
+            "root": EVALUATION_CAMERA_ROOT,
+            "evidence_path": EVALUATION_CAMERA_EVIDENCE,
+            "evidence_sha256": EVALUATION_CAMERA_EVIDENCE_SHA,
+            "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+            "view_count": 2196,
+            "sparse_sha256": {
+                "cameras.bin": FORMAL_CAMERAS_SHA,
+                "images.bin": FORMAL_IMAGES_SHA,
+                "points3D.bin": EMPTY_POINTS_SHA,
+                "points3D.ply": INITIAL_PLY_SHA,
+            },
+            "points3d_bin_point_count": 0,
+            "purpose": "pose-only all-train evaluation camera loader; never training or prior input",
         }
         if "materialization" in spec:
             payload["materializations"]["training"] = [{"relative_path": "formal_training_config.yaml", "content": spec["materialization"]}]

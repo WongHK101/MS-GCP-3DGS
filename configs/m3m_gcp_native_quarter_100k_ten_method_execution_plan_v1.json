@@ -7,8 +7,11 @@
       "FAILED_UNRANKED"
     ],
     "exclusive_create_no_replace": true,
+    "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
     "frozen_before_any_formal_lidar_result": true,
+    "method_registry_path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
     "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/model-identities-v1",
+    "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
     "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/scene_attempt_freeze_v1.json",
     "shared_freeze_sha_required_by_authorization_result_verifier_ranker_and_archive": true
   },
@@ -52,7 +55,7 @@
       "value": 30000
     }
   },
-  "canonical_sha256": "6473d913071a2ae0bfec30006c8075d0833650afbc5acd6061e042baa12f997b",
+  "canonical_sha256": "5925d3dbee9a4aa4b6ec77c9e6236e4fa217d8a0c48e02d674aea87754c94acb",
   "execution_authorized": false,
   "execution_closure": {
     "activation_builder": {
@@ -61,18 +64,22 @@
     },
     "attempt_freezer": {
       "path": "code/gcp/freeze_m3m_gcp_lidar_scene_attempts.py",
-      "sha256": "8456d73635466199fd8e3575e97a63174e5aed55d946be10df93416f59914c7b"
+      "sha256": "81d70d690e4d8672a362db5493c4d013d1597ecdc73c95d1a1936b294be0cf68"
     },
     "attempt_manifest_builder": {
       "path": "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
-      "sha256": "b4529cd9f1539b730728eeb472a3471503b4d152cb148e786f0459002b587093"
+      "sha256": "9b0020ad6b717b6edc2d080678d55b81a9e9c7bad23dc73be5f1c7bf04b0af00"
+    },
+    "evaluation_camera_root_materializer": {
+      "path": "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py",
+      "sha256": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d"
     },
     "exact_review_verdict_required": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
     "exact_reviewed_commit_and_tree_required": true,
     "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
     "guarded_runner": {
       "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
-      "sha256": "c1abfe4abecc70e6776908d6c88cb932512c3710907d31343aa01ab2364c3192"
+      "sha256": "85ec8f945695ef109d8aecb34ebe8ee0e13ccb76472e4a1a7d3f43e0069ed1b1"
     },
     "method_input_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_method_inputs.py",
@@ -80,7 +87,7 @@
     },
     "packet_export_dispatcher": {
       "path": "code/gcp/run_m3m_gcp_100k_packet_export.py",
-      "sha256": "f4c3cacebd578f5b6d52d335b7e095f45a7621d894bf42db38de97a20ae2f8c6"
+      "sha256": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e"
     },
     "post_sfm_track_compatibility_materializers": [
       {
@@ -92,8 +99,10 @@
         "sha256": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e"
       }
     ],
+    "prior_phase_success_and_product_required_before_training": true,
     "progress_monitor_bound_by_each_recipe": true,
-    "structured_failure_evidence_required": true
+    "structured_failure_evidence_required": true,
+    "zero_exit_requires_phase_product_postvalidation": true
   },
   "formal_lidar_protocol": {
     "artifact_schema": {
@@ -135,6 +144,17 @@
   ],
   "plan_id": "m3m-gcp-native-quarter-100k-ten-method-seed0-v1",
   "preparation": {
+    "evaluation_camera_root": {
+      "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
+      "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+      "points2d_tracks_present": false,
+      "points3d_bin_point_count": 0,
+      "points3d_bin_sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "purpose": "evaluation-only all-train camera loader; never training or prior input",
+      "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+      "view_count": 2196
+    },
     "external_prior_generation_started": false,
     "formal_lidar_evaluation_started": false,
     "formal_training_started": false,
@@ -192,8 +212,8 @@
     }
   },
   "recipe_manifest": {
-    "canonical_sha256": "b038c841b4cb384b9e7fffb841534c8af9ecceffc8742a8634d6ee685665e01d",
-    "file_sha256": "a6623b6a504414e925fc6952f55193778739f812fc1ca6e070fecc344e9e40f7",
+    "canonical_sha256": "99e0f4648365dbe3ddc24741be617488ba2cf5a94168bebdbfb29e1912d85bb4",
+    "file_sha256": "fc69969f9e4849d4b2ae7218d7b71dd449bf87a5723e6cb6f3af657c9af9abe3",
     "method_order": [
       "3dgs_original",
       "2dgs",

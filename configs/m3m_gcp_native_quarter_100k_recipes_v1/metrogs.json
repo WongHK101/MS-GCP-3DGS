@@ -8,10 +8,11 @@
   "benchmark_required_files_sha256": {
     "code/gcp/export_metrogs_depth_maps.py": "14b2a33430d4f037ce7298d36d49eedfe2f3999cb263200d5048751c9196d96c",
     "code/gcp/filter_colmap_model_to_frozen_train_streaming.py": "4650448f759adc4fa49e1743549dc578d06abc5cc3c2a833a96066c631b67516",
+    "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
     "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
-    "code/gcp/prepare_metrogs_100k_training_priors.py": "9ec8b5301461fe9ce0a90c6f71f9776d42144091a4ff776b59cdd5c3bb7ec800",
-    "code/gcp/run_m3m_gcp_100k_packet_export.py": "f4c3cacebd578f5b6d52d335b7e095f45a7621d894bf42db38de97a20ae2f8c6",
-    "code/gcp/run_metrogs_100k_training.py": "b5ae617819b619ab51ba017374fd4b6467bd4f75cac70580d72dddf328face20",
+    "code/gcp/prepare_metrogs_100k_training_priors.py": "22bcf1cfcb92244fb02e2166dae9f60b97ae7fa87910f4e9630bc3b5adecb6e2",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
+    "code/gcp/run_metrogs_100k_training.py": "b231fe85fd25405443290c4bd706a8e50f60c4789af185db7fb5807757d3b93c",
     "patches/metrogs/native_quarter_raw_moments_rasterizer_8cf9ac1_v1.patch": "1d46e9039aa7e9973e7e25d2537412e496e9a95443afb0bfb67fb9ac895c006f",
     "patches/metrogs/native_quarter_raw_moments_renderer_8cf9ac1_v1.patch": "d7cc203ef57c59b14bffa3748e938c3fb4339858e86ac7e4cec643d39e3f5475"
   },
@@ -20,7 +21,22 @@
     "type": "effective_image_iterations",
     "value": 150000
   },
-  "canonical_sha256": "6730e4b35cf4b0193b86d2de237470d4f51f5548d04272453bc7c247010937e4",
+  "canonical_sha256": "32ac3e543ebf4fb079c2c6e23476f133f99457fa3af91d04b52afcd3d8a3e8d0",
+  "evaluation_camera_root_binding": {
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
+    "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+    "points3d_bin_point_count": 0,
+    "purpose": "pose-only all-train evaluation camera loader; never training or prior input",
+    "root": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    },
+    "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+    "view_count": 2196
+  },
   "formal_input_manifest": {
     "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
     "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
@@ -53,7 +69,7 @@
       "--prior-root",
       "{prior_root}",
       "--camera-root",
-      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
       "--train-allowlist",
       "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
       "--packet-set-root",
@@ -87,6 +103,8 @@
       "{prior_root}/additional_points/metrogs_pi3_merged.ply",
       "--evidence_output",
       "{prior_root}/training_priors.json",
+      "--pass_marker",
+      "{prior_root}/TRAINING_PRIORS_PASS",
       "--expected_repo_commit",
       "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",
       "--expected_repo_tree",
