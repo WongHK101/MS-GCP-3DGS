@@ -47,6 +47,11 @@ OBSOLETE_ATTEMPT_CLEANUP_SHA = "44b6722ff586d1c17aa8bdfd57fd5e926acb2cbd961a220d
 PHASE1_REVIEW_COMMIT = "e9c3414b808b374bd8632a45ee965e3f6acc1ac0"
 PHASE1_REVIEW_TREE = "d1d6c73852e42bc02c519d0853e26c114dcb1f8f"
 PHASE1_REVIEW_VERDICT = "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2"
+SUPERSESSION_RECEIPT = (
+    "docs/protocol_evidence/"
+    "m3m_gcp_100k_activation_v1_infrastructure_supersession.json"
+)
+REQUIRED_NOFILE_SOFT = 65536
 
 
 def sha(path: Path) -> str:
@@ -68,15 +73,30 @@ def repo_file(path: str) -> dict[str, str]:
 
 
 def main() -> int:
-    recipe_manifest_path = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v1.json"
+    recipe_manifest_path = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
     recipe_manifest = json.loads(recipe_manifest_path.read_text(encoding="utf-8"))
     if recipe_manifest.get("method_order") != METHOD_ORDER:
         raise RuntimeError("ten-recipe manifest order differs from frozen active pool")
+    supersession_path = ROOT / SUPERSESSION_RECEIPT
+    supersession = json.loads(supersession_path.read_text(encoding="utf-8"))
+    if (
+        supersession.get("status")
+        != "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE"
+        or supersession.get("classification", {}).get("algorithm_failure") is not False
+        or supersession.get("classification", {}).get("formal_retry_counted") is not False
+        or supersession.get("classification", {}).get("rankable") is not False
+        or supersession.get("canonical_sha256") != canonical(supersession)
+    ):
+        raise RuntimeError("v1 infrastructure supersession receipt is not sealed")
     payload: dict[str, Any] = {
-        "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1",
-        "plan_id": "m3m-gcp-native-quarter-100k-ten-method-seed0-v1",
+        "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+        "plan_id": "m3m-gcp-native-quarter-100k-ten-method-seed0-v2",
         "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
         "execution_authorized": False,
+        "activation_manifest_path": (
+            "/root/autodl-tmp/runs/m3m-gcp-native-quarter/"
+            "formal-100k-v2/activation_v2.json"
+        ),
         "scene": SCENE,
         "seed": 0,
         "train_view_count": 2196,
@@ -84,6 +104,17 @@ def main() -> int:
         "method_order": METHOD_ORDER,
         "other_prepared_scenes_locked": LOCKED_SCENES,
         "other_prepared_scene_training_rendering_or_formal_evaluation_authorized": False,
+        "execution_revision_note": repo_file(
+            "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V2.md"
+        ),
+        "superseded_activation": {
+            "receipt": repo_file(SUPERSESSION_RECEIPT),
+            "status_required": "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE",
+            "algorithm_failure": False,
+            "formal_retry_counted": False,
+            "rankable": False,
+            "remote_artifacts_must_remain_byte_identical": True,
+        },
         "formal_lidar_protocol": {
             "contract": repo_file("configs/m3m_gcp_lidar_formal_v1.json"),
             "artifact_schema": repo_file(
@@ -186,7 +217,7 @@ def main() -> int:
             "formal_lidar_evaluation_started": False,
         },
         "recipe_manifest": {
-            "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
+            "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
             "file_sha256": sha(recipe_manifest_path),
             "canonical_sha256": recipe_manifest["canonical_sha256"],
             "method_order": METHOD_ORDER,
@@ -234,14 +265,18 @@ def main() -> int:
             "prior_phase_success_and_product_required_before_training": True,
             "ready_model_identity_requires_exact_phase_success_markers": True,
             "phase_success_command_rehashed_against_frozen_recipe": True,
+            "rlimit_nofile_soft_required_for_child_phases": REQUIRED_NOFILE_SOFT,
+            "rlimit_nofile_hard_minimum_prechild_gate": REQUIRED_NOFILE_SOFT,
+            "rlimit_nofile_parent_before_after_evidence_required": True,
+            "rlimit_nofile_child_actual_inheritance_evidence_required": True,
         },
         "attempt_freeze": {
-            "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
-            "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
+            "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
+            "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
             "method_registry_path": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
-            "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/scene_attempts_v1.json",
-            "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/scene_attempt_freeze_v1.json",
-            "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/model-identities-v1",
+            "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v2.json",
+            "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v2.json",
+            "model_identity_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/model-identities-v2",
             "exclusive_create_no_replace": True,
             "frozen_before_any_formal_lidar_result": True,
             "shared_freeze_sha_required_by_authorization_result_verifier_ranker_and_archive": True,
@@ -280,6 +315,7 @@ def main() -> int:
         "retry_policy": {
             "pre_child_guard_rejection": "not an attempt; may relaunch only after the exact guard cause is corrected",
             "child_started_any_exit_including_zero_progress_or_oom": "final for that method",
+            "superseded_v1_infrastructure_event": "not an algorithm attempt and never rankable; only the reviewer-authorized fresh v2 namespace may restart at 2dgs",
             "recipe_resolution_partition_loss_checkpoint_or_budget_change": "FORBIDDEN",
             "result_driven_retry": "FORBIDDEN",
         },
@@ -297,7 +333,7 @@ def main() -> int:
         },
     }
     payload["canonical_sha256"] = canonical(payload)
-    output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json"
+    output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
     with output.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

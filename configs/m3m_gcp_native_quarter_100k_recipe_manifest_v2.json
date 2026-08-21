@@ -1,0 +1,81 @@
+{
+  "canonical_sha256": "39c399e2272a197967d040ed41b768c0e8a1125106e96b0c4c0f80a97844e1d8",
+  "method_order": [
+    "3dgs_original",
+    "2dgs",
+    "pgsr",
+    "rade_gs",
+    "qgs",
+    "gsprior",
+    "sof",
+    "citygaussian_v2",
+    "citygs_x",
+    "metrogs"
+  ],
+  "recipes": [
+    {
+      "canonical_sha256": "acbf034d1595b58414b5b6f4381c25efac908b4ee6b104ae1581bef992782691",
+      "method_id": "3dgs_original",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/3dgs_original.json",
+      "sha256": "0d3ec6c7690f257a82371dac720275edc5af4cf9828cdc132b586957326da21b"
+    },
+    {
+      "canonical_sha256": "e213e6344b3b531cd09177873c55b7ba9dc83846d3453446317156db20ebcb9a",
+      "method_id": "2dgs",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/2dgs.json",
+      "sha256": "7bbc434b3b2ea923b42d9e7c818ff3a8a39113cb78fe6732cfd5b0e481e8c3a6"
+    },
+    {
+      "canonical_sha256": "954c3d82bb861757b7cc12da2f5df022dc253ba580115f7cac4105b15e8294e2",
+      "method_id": "pgsr",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/pgsr.json",
+      "sha256": "32d51470c945753acee4fbf8ad7a5135133730f5b3dd325a1d91c03cf02f78e3"
+    },
+    {
+      "canonical_sha256": "dba43848d599f2214417c7d1ccbfe06538042bb4b156df575757f39b0a0f86fd",
+      "method_id": "rade_gs",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/rade_gs.json",
+      "sha256": "2070a992c871c79079220afbdf8df73405cfbe00293e2da069866fba558e6707"
+    },
+    {
+      "canonical_sha256": "0cac7e733baeeb93479d44a98cea5e2ef82b570c7ce703ef5f5fb12046c3fb03",
+      "method_id": "qgs",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/qgs.json",
+      "sha256": "fe076b501c946208de89a4d123f4d50f850628628dedc04aeda4f4189fb76a30"
+    },
+    {
+      "canonical_sha256": "87a8a7b1603273ff145614bbadf76fc2a4c34f97df5ec1f878561a492de84621",
+      "method_id": "gsprior",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/gsprior.json",
+      "sha256": "8605b1ae8661f8d9f2b8db9c0ee27e3fb4ed52eaa62431d4f6d4eab67de532cb"
+    },
+    {
+      "canonical_sha256": "cbacdb3195552590e99e0ce92c0b0ecfe15eab44276e6c66e39cd413a3c68198",
+      "method_id": "sof",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/sof.json",
+      "sha256": "4474918b7d1a68c41a739081d8085ef74e858ad452dbfe9d076a19c3320c196f"
+    },
+    {
+      "canonical_sha256": "894f8efeab9e46150ac7eba4302c477962cda0c6834f2f88ea231a8235705d4c",
+      "method_id": "citygaussian_v2",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/citygaussian_v2.json",
+      "sha256": "fcf1adc633657796d16c2bcf7b11f206df7bb8324692c66b1c79672c29517621"
+    },
+    {
+      "canonical_sha256": "1de76e6d22e19b2c92f8291aac8eb1410caa18eb9c249f919f601b04f85e7cc6",
+      "method_id": "citygs_x",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/citygs_x.json",
+      "sha256": "dfd36915c75c44ea2475114ec1f828074afb74d6a815de953d32da2fa84443b0"
+    },
+    {
+      "canonical_sha256": "d7317929d9731ad4104ea563ea34b91b64251f75d1bc7382cbb4cdf93e9779f1",
+      "method_id": "metrogs",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/metrogs.json",
+      "sha256": "1fc3d94c67d86a94798de631df274a921f82ff6afda09e56f68d5f0b08f0457d"
+    }
+  ],
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
+  "seed": 0,
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
+}

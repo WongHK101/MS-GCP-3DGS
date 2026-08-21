@@ -1,5 +1,10 @@
 # M3M-GCP 100K ten-method time/space execution plan v1
 
+> **SUPERSEDED / DO NOT EXECUTE.** Activation v1 exposed a deterministic
+> `RLIMIT_NOFILE` preflight omission. Its artifacts are retained only for audit;
+> the current executable candidate is
+> `M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V2.md`.
+
 Status: `REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED`
 
 Plan ID: `m3m-gcp-native-quarter-100k-ten-method-seed0-v1`

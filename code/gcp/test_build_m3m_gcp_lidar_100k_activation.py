@@ -50,7 +50,7 @@ class ActivationBuilderTest(unittest.TestCase):
         self.phase1_commit = self._git("rev-parse", "HEAD")
         self.phase1_tree = self._git("show", "-s", "--format=%T", "HEAD")
         plan = {
-            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1",
+            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "execution_authorized": False,
             "formal_lidar_protocol": {"phase1_review": {
@@ -67,17 +67,17 @@ class ActivationBuilderTest(unittest.TestCase):
         }
         plan["canonical_sha256"] = canonical_sha256(plan)
         write_json(
-            self.repo / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
+            self.repo / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
             plan,
         )
         recipes = {
-            "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v1",
+            "schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "recipes": [{"method_id": str(index)} for index in range(10)],
         }
         recipes["canonical_sha256"] = canonical_sha256(recipes)
         write_json(
-            self.repo / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
+            self.repo / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
             recipes,
         )
         self._commit("phase2")

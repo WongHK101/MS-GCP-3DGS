@@ -10,7 +10,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipes_v1"
+OUT = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipes_v2"
 SCENE = "gcp_100000_20260610"
 FORMAL = f"/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/{SCENE}/train"
 FORMAL_MANIFEST = f"/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/{SCENE}/NATIVE_QUARTER_INPUT_MANIFEST.json"
@@ -35,8 +35,9 @@ FULL_POINTS_SHA = "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc
 METRO_POINTS_SHA = "fcbb06d2b52770281b2b2c88f6d1a9deb5b2435e4578e63ca77bb8f197c37e7f"
 INITIAL_PLY_SHA = "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
 EMPTY_POINTS_SHA = "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
-FORMAL_RUN_ROOT = f"/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/{SCENE}"
+FORMAL_RUN_ROOT = f"/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/{SCENE}"
 PACKET_SCRATCH_ROOT = f"{FORMAL_RUN_ROOT}/packet-scratch"
+REQUIRED_NOFILE_SOFT = 65536
 
 
 REUSE_3DGS: dict[str, Any] = {
@@ -378,7 +379,7 @@ def main() -> int:
             }
             phase_external["prior"] = spec.get("prior_external", {})
         payload: dict[str, Any] = {
-            "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v1",
+            "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v2",
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "method_id": method,
             "scene": SCENE,
@@ -387,7 +388,7 @@ def main() -> int:
             "authorized_run_root": (
                 "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z"
                 if method == "3dgs_original"
-                else f"{FORMAL_RUN_ROOT}/{method}/seed0-v1"
+                else f"{FORMAL_RUN_ROOT}/{method}/seed0-v2"
             ),
             "authorized_evidence_root": f"{FORMAL_RUN_ROOT}/{method}/evidence",
             "authorized_packet_set_root": f"{PACKET_SCRATCH_ROOT}/{method}",
@@ -420,6 +421,13 @@ def main() -> int:
                     "regex": "(?i)(?:exporting[^\\r\\n]{0,200}?)([0-9]+)/2196",
                     "unit": "train_views_exported",
                 },
+            },
+            "process_resource_limits": {
+                "applies_to_phases": ["prior", "training", "packet"],
+                "rlimit_nofile_hard_minimum": REQUIRED_NOFILE_SOFT,
+                "rlimit_nofile_soft": REQUIRED_NOFILE_SOFT,
+                "record_parent_before_after": True,
+                "record_child_actual_inheritance": True,
             },
             "retry_policy": "a guard rejection before child creation is not an attempt and may be relaunched; once the child starts every exit is final",
             "fresh_run_root_policy": {
@@ -494,9 +502,9 @@ def main() -> int:
                 json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
             )
         rows.append({"method_id": method, "path": path.relative_to(ROOT).as_posix(), "sha256": sha(path), "canonical_sha256": payload["canonical_sha256"]})
-    manifest = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v1", "scene": SCENE, "seed": 0, "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED", "method_order": list(all_methods), "recipes": rows}
+    manifest = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2", "scene": SCENE, "seed": 0, "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED", "method_order": list(all_methods), "recipes": rows}
     manifest["canonical_sha256"] = canonical(manifest)
-    output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v1.json"
+    output = ROOT / "configs" / "m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
     with output.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(
             json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

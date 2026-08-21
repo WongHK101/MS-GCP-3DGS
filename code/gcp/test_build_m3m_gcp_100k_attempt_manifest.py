@@ -58,6 +58,30 @@ def write_npz(path: Path) -> None:
         archive.writestr("attributes.npy", b"npy")
 
 
+def bind_environment(
+    payload: dict, root: Path, *, method_id: str = "2dgs", phase: str = "training"
+) -> None:
+    environment_path = root / "environment.json"
+    environment = {
+        "schema": "m3m_gcp_100k_execution_environment_v2",
+        "scene": "gcp_100000_20260610",
+        "method_id": method_id,
+        "phase": phase,
+        "resource_limits": {
+            "resource": "RLIMIT_NOFILE",
+            "required_soft": 65536,
+            "hard_minimum": 65536,
+            "parent_before": {"soft": 1024, "hard": 1048576},
+            "parent_after": {"soft": 65536, "hard": 1048576},
+            "child_actual": {"soft": 65536, "hard": 1048576},
+        },
+    }
+    environment["canonical_sha256"] = canonical_sha256(environment)
+    environment_path.write_text(json.dumps(environment), encoding="utf-8")
+    payload["environment_manifest_path"] = str(environment_path.resolve())
+    payload["environment_manifest_sha256"] = sha256_file(environment_path)
+
+
 class AttemptManifestBuilderTest(unittest.TestCase):
     def test_frozen_attempt_and_freeze_paths_reject_alternates(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -73,7 +97,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             recipe_manifest.write_text("{}", encoding="utf-8")
             registry.write_text("{}", encoding="utf-8")
             plan = {
-                "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1",
+                "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
                 "scene": "gcp_100000_20260610",
                 "execution_authorized": False,
                 "attempt_freeze": {
@@ -122,7 +146,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory).resolve() / "phase_success.json"
             payload = {
-                "schema": "m3m_gcp_100k_phase_success_v1",
+                "schema": "m3m_gcp_100k_phase_success_v2",
                 "status": "PASS",
                 "scene": "gcp_100000_20260610",
                 "method_id": "2dgs",
@@ -143,6 +167,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             payload["products"] = [
                 phase_product_row(product, validate_model_container=False)
             ]
+            bind_environment(payload, Path(directory).resolve())
             payload["canonical_sha256"] = canonical_sha256(payload)
             path.write_text(json.dumps(payload), encoding="utf-8")
             row = phase_success_inventory(
@@ -189,7 +214,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             write_gaussian_ply(decoy_model)
             marker = root / "phase_success.json"
             payload = {
-                "schema": "m3m_gcp_100k_phase_success_v1",
+                "schema": "m3m_gcp_100k_phase_success_v2",
                 "status": "PASS",
                 "scene": "gcp_100000_20260610",
                 "method_id": "2dgs",
@@ -209,6 +234,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                 )],
                 "ended_at_utc": "2026-08-21T00:00:00Z",
             }
+            bind_environment(payload, root)
             payload["canonical_sha256"] = canonical_sha256(payload)
             marker.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "differ from final model"):

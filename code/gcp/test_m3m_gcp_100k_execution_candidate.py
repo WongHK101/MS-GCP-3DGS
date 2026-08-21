@@ -51,13 +51,13 @@ class ExecutionCandidateTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.manifest_path = (
-            ROOT / "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json"
+            ROOT / "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json"
         )
         cls.manifest = json.loads(cls.manifest_path.read_text(encoding="utf-8"))
         cls.plan = json.loads(
             (
                 ROOT
-                / "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json"
+                / "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json"
             ).read_text(encoding="utf-8")
         )
         cls.recipes: dict[str, dict[str, Any]] = {}
@@ -72,6 +72,10 @@ class ExecutionCandidateTest(unittest.TestCase):
 
     def test_exact_method_pool_and_phase_cardinality(self) -> None:
         self.assertEqual(self.manifest["method_order"], METHOD_ORDER)
+        self.assertEqual(
+            self.manifest["schema"],
+            "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
+        )
         self.assertEqual([row["method_id"] for row in self.manifest["recipes"]], METHOD_ORDER)
         self.assertEqual(list(self.recipes), METHOD_ORDER)
         self.assertEqual(self.manifest["canonical_sha256"], canonical_sha256(self.manifest))
@@ -114,6 +118,21 @@ class ExecutionCandidateTest(unittest.TestCase):
             )
             self.assertTrue(
                 recipe["authorized_packet_set_root"].endswith(f"/{method}"), method
+            )
+            self.assertEqual(
+                recipe["schema"],
+                "m3m_gcp_native_quarter_100k_execution_recipe_v2",
+            )
+            self.assertEqual(
+                recipe["process_resource_limits"],
+                {
+                    "applies_to_phases": ["prior", "training", "packet"],
+                    "rlimit_nofile_hard_minimum": 65536,
+                    "rlimit_nofile_soft": 65536,
+                    "record_parent_before_after": True,
+                    "record_child_actual_inheritance": True,
+                },
+                method,
             )
             binding = recipe["prepared_method_input_binding"]
             self.assertIsNotNone(HEX64.fullmatch(binding["evidence_sha256"]), method)
@@ -216,6 +235,14 @@ class ExecutionCandidateTest(unittest.TestCase):
         plan = self.plan
         self.assertEqual(plan["method_order"], METHOD_ORDER)
         self.assertEqual(plan["scene"], "gcp_100000_20260610")
+        self.assertEqual(
+            plan["schema"],
+            "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+        )
+        self.assertEqual(
+            plan["activation_manifest_path"],
+            "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v2.json",
+        )
         self.assertEqual(plan["other_prepared_scenes_locked"], LOCKED_SCENES)
         self.assertFalse(
             plan["other_prepared_scene_training_rendering_or_formal_evaluation_authorized"]
@@ -262,11 +289,11 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertTrue(plan["attempt_freeze"]["frozen_before_any_formal_lidar_result"])
         self.assertEqual(
             plan["attempt_freeze"]["execution_plan_path"],
-            "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
+            "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2.json",
         )
         self.assertEqual(
             plan["attempt_freeze"]["recipe_manifest_path"],
-            "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v1.json",
+            "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v2.json",
         )
         self.assertEqual(
             plan["attempt_freeze"]["method_registry_path"],
@@ -293,6 +320,29 @@ class ExecutionCandidateTest(unittest.TestCase):
         self.assertTrue(
             closure["phase_success_command_rehashed_against_frozen_recipe"]
         )
+        self.assertEqual(
+            closure["rlimit_nofile_soft_required_for_child_phases"], 65536
+        )
+        self.assertEqual(
+            closure["rlimit_nofile_hard_minimum_prechild_gate"], 65536
+        )
+        self.assertTrue(
+            closure["rlimit_nofile_parent_before_after_evidence_required"]
+        )
+        self.assertTrue(
+            closure["rlimit_nofile_child_actual_inheritance_evidence_required"]
+        )
+        supersession = plan["superseded_activation"]
+        receipt_path = ROOT / supersession["receipt"]["path"]
+        self.assertEqual(sha256_file(receipt_path), supersession["receipt"]["sha256"])
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        self.assertEqual(receipt["canonical_sha256"], canonical_sha256(receipt))
+        self.assertEqual(
+            receipt["status"], "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE"
+        )
+        self.assertFalse(supersession["algorithm_failure"])
+        self.assertFalse(supersession["formal_retry_counted"])
+        self.assertFalse(supersession["rankable"])
         self.assertEqual(
             plan["formal_lidar_protocol"]["phase1_review"]["verdict"],
             "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION_V2",
@@ -323,6 +373,11 @@ class ExecutionCandidateTest(unittest.TestCase):
             )
             self.assertTrue(fresh["training_child_must_create_final_products"])
             self.assertFalse(recipe.get("materializations", {}).get("prior", []))
+            serialized = json.dumps(recipe, sort_keys=True)
+            self.assertNotIn(
+                "/formal-100k/gcp_100000_20260610/", serialized,
+                recipe["method_id"],
+            )
 
 
 if __name__ == "__main__":

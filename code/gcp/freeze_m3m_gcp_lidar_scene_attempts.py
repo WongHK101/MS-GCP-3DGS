@@ -34,7 +34,7 @@ def validate_frozen_100k_paths(
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     if (
         plan.get("schema")
-        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1"
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
         or plan.get("scene") != scene
         or plan.get("canonical_sha256") != canonical_sha256(plan)
         or plan.get("execution_authorized") is not False

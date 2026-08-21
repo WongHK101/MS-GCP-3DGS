@@ -1,0 +1,121 @@
+{
+  "canonical_sha256": "f4c3fee35945369d0485f002f72a6361e546ceb7d0e82c3802279859ef2f26b6",
+  "classification": {
+    "algorithm_failure": false,
+    "formal_retry_counted": false,
+    "rankable": false,
+    "reason_code": "PRE_CHILD_RESOURCE_PREFLIGHT_OMISSION_RLIMIT_NOFILE",
+    "retain_for_audit": true
+  },
+  "invalidated_attempt": {
+    "failure_canonical_sha256": "e63ebb517f1f6e4e9093f742c05ca302df408b38f6cf853c9cdae0e68ed567b3",
+    "failure_file_sha256": "447adb089e0ea91da3c32b6b18da46683e22003569ef36379e9f8964863bc0c1",
+    "failure_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/2dgs/evidence/training/failure.json",
+    "method_id": "2dgs",
+    "recorded_status": "FAILED_UNRANKED",
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/2dgs/seed0-v1"
+  },
+  "local_archive": {
+    "artifacts": [
+      {
+        "bytes": 1964,
+        "name": "activation_v1.json",
+        "sha256": "a6a3ba0d6bcef2c134561698ec94b49da1032d8393429e431f22c3e18aa09cff"
+      },
+      {
+        "bytes": 1179,
+        "name": "command.stderr.log",
+        "sha256": "64e51b4ab6b11bf88ae4697b8e386a1fb6920ac93470e363082d2f1c73575d5c"
+      },
+      {
+        "bytes": 108,
+        "name": "command.stdout.log",
+        "sha256": "9c9349d9dbe4f95f6818b4b665578e23e19fb87422fc7badc34f9dae3e65a5ab"
+      },
+      {
+        "bytes": 1321,
+        "name": "environment.json",
+        "sha256": "3b4eb131caebf0f032b0cb62dba2b8f181ee5dbe7d70b906f9ad4ad43cf22876"
+      },
+      {
+        "bytes": 2464,
+        "name": "failure.json",
+        "sha256": "447adb089e0ea91da3c32b6b18da46683e22003569ef36379e9f8964863bc0c1"
+      },
+      {
+        "bytes": 166,
+        "name": "m3m100k-2dgs-guard-console.log",
+        "sha256": "e007b8989c50ada4ac903b081f064cb268bbf0582f9268a0d00fec2210b3bb53"
+      }
+    ],
+    "path": "C:\\Users\\hhq\\Documents\\GCP\\outputs\\019fd6c4-3c82-7d33-9f3c-52b5d7a34d33\\100k-infrastructure-invalidated-v1"
+  },
+  "observed_root_cause": {
+    "exception": "OSError: [Errno 24] Too many open files",
+    "gpu_memory_mib": 0.0,
+    "hard_nofile": 1048576,
+    "image_count": 2196,
+    "last_valid_progress": 0.0,
+    "soft_nofile": 1024,
+    "soft_nofile_below_image_count": true
+  },
+  "remediation": {
+    "applies_to_phases": [
+      "prior",
+      "training",
+      "packet"
+    ],
+    "child_actual_inheritance_evidence_required": true,
+    "fresh_activation_namespace_required": true,
+    "fresh_attempt_namespace_required": true,
+    "hard_nofile_minimum": 65536,
+    "parent_before_after_evidence_required": true,
+    "soft_nofile_required": 65536
+  },
+  "remote_artifacts": [
+    {
+      "bytes": 1964,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/activation_v1.json",
+      "sha256": "a6a3ba0d6bcef2c134561698ec94b49da1032d8393429e431f22c3e18aa09cff"
+    },
+    {
+      "bytes": 1321,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/2dgs/evidence/training/environment.json",
+      "sha256": "3b4eb131caebf0f032b0cb62dba2b8f181ee5dbe7d70b906f9ad4ad43cf22876"
+    },
+    {
+      "bytes": 108,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/2dgs/evidence/training/command.stdout.log",
+      "sha256": "9c9349d9dbe4f95f6818b4b665578e23e19fb87422fc7badc34f9dae3e65a5ab"
+    },
+    {
+      "bytes": 1179,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/2dgs/evidence/training/command.stderr.log",
+      "sha256": "64e51b4ab6b11bf88ae4697b8e386a1fb6920ac93470e363082d2f1c73575d5c"
+    },
+    {
+      "bytes": 2464,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/gcp_100000_20260610/2dgs/evidence/training/failure.json",
+      "sha256": "447adb089e0ea91da3c32b6b18da46683e22003569ef36379e9f8964863bc0c1"
+    },
+    {
+      "bytes": 166,
+      "path": "/root/autodl-tmp/staging/m3m100k-2dgs-guard-console.log",
+      "sha256": "e007b8989c50ada4ac903b081f064cb268bbf0582f9268a0d00fec2210b3bb53"
+    }
+  ],
+  "review": {
+    "ruling": "Preserve the activation and child-started evidence, classify the event as infrastructure-invalid and non-rankable, add RLIMIT_NOFILE=65536 preflight and inheritance evidence, then restart 2DGS only under a fresh activation and attempt namespace.",
+    "task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b"
+  },
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_100k_activation_supersession_v1",
+  "status": "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE",
+  "superseded_activation": {
+    "benchmark_commit": "e44c0ee7cf994f9437df79237decb120212f3bd3",
+    "benchmark_tree": "410ad7191679e71eb85bb05a51654c98a606e61c",
+    "canonical_sha256": "f4654b57023585b6f23aaad4ba2ae568cb2926c901e2547f64bdacb6a5b46446",
+    "file_sha256": "a6a3ba0d6bcef2c134561698ec94b49da1032d8393429e431f22c3e18aa09cff",
+    "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k/activation_v1.json"
+  }
+}

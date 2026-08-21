@@ -29,6 +29,7 @@ from m3m_gcp_100k_phase_products import (
 
 SCENE = "gcp_100000_20260610"
 PLAIN_METHODS = {"3dgs_original", "2dgs", "pgsr", "rade_gs", "gsprior", "sof"}
+REQUIRED_NOFILE_SOFT = 65536
 
 
 def write_exclusive(path: Path, payload: dict[str, Any]) -> None:
@@ -86,7 +87,7 @@ def validate_frozen_attempt_paths(
     plan = json.loads(require_file(plan_path).read_text(encoding="utf-8"))
     if (
         plan.get("schema")
-        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1"
+        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2"
         or plan.get("scene") != SCENE
         or plan.get("canonical_sha256") != canonical_sha256(plan)
         or plan.get("execution_authorized") is not False
@@ -127,6 +128,8 @@ def phase_success_inventory(
         "recipe_sha256",
         "command_sha256",
         "frozen_budget",
+        "environment_manifest_path",
+        "environment_manifest_sha256",
         "completion_evidence",
         "products",
         "ended_at_utc",
@@ -134,7 +137,7 @@ def phase_success_inventory(
     }:
         raise RuntimeError(f"phase success field inventory mismatch: {path}")
     if (
-        payload.get("schema") != "m3m_gcp_100k_phase_success_v1"
+        payload.get("schema") != "m3m_gcp_100k_phase_success_v2"
         or payload.get("status") != "PASS"
         or payload.get("scene") != SCENE
         or payload.get("method_id") != method_id
@@ -145,6 +148,34 @@ def phase_success_inventory(
         or payload.get("canonical_sha256") != canonical_sha256(payload)
     ):
         raise RuntimeError(f"phase success identity mismatch: {path}")
+    environment_path = require_file(
+        Path(str(payload.get("environment_manifest_path", ""))),
+        str(payload.get("environment_manifest_sha256", "")),
+    )
+    environment = json.loads(environment_path.read_text(encoding="utf-8"))
+    limits = environment.get("resource_limits", {})
+    parent_after = limits.get("parent_after", {})
+    child = limits.get("child_actual", {})
+
+    def hard_ok(value: object) -> bool:
+        return value == "unlimited" or (
+            isinstance(value, int) and value >= REQUIRED_NOFILE_SOFT
+        )
+
+    if (
+        environment.get("schema") != "m3m_gcp_100k_execution_environment_v2"
+        or environment.get("scene") != SCENE
+        or environment.get("method_id") != method_id
+        or environment.get("phase") != phase
+        or environment.get("canonical_sha256") != canonical_sha256(environment)
+        or limits.get("required_soft") != REQUIRED_NOFILE_SOFT
+        or limits.get("hard_minimum") != REQUIRED_NOFILE_SOFT
+        or parent_after.get("soft") != REQUIRED_NOFILE_SOFT
+        or not hard_ok(parent_after.get("hard"))
+        or child.get("soft") != REQUIRED_NOFILE_SOFT
+        or not hard_ok(child.get("hard"))
+    ):
+        raise RuntimeError(f"phase success environment evidence mismatch: {path}")
     completion = payload.get("completion_evidence")
     if (
         not isinstance(completion, dict)

@@ -1,0 +1,263 @@
+{
+  "authorized_evidence_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygs_x/evidence",
+  "authorized_packet_set_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/packet-scratch/citygs_x",
+  "authorized_packet_state": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/packet-scratch/ACTIVE_PACKET_STATE.json",
+  "authorized_run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygs_x/seed0-v2",
+  "base_3k_recipe_path": "configs/m3m_gcp_native_quarter_citygs_x_3k_recipe_v1.json",
+  "base_3k_recipe_sha256": "fb6e311a6beef9316b289a0eb8c807b617b1e8384826f71e16f57a522031bdc4",
+  "benchmark_required_files_sha256": {
+    "code/gcp/export_citygs_x_depth_maps.py": "5fe3058db33c6019c7286a20bd433bc055943d53d104d1e52f09ebd067300c02",
+    "code/gcp/m3m_gcp_100k_phase_products.py": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82",
+    "code/gcp/materialize_colmap_train_track_compatibility_streaming.py": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e",
+    "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "code/gcp/prepare_citygs_x_100k_depth_prior.py": "924af7de515f56c1b7f8b5f6250fecb8034766495719246ca4c2c56efca24a9c",
+    "code/gcp/run_citygs_x_100k_training.py": "a16a5d7dcf9b226fd83485d40cafe9a0312ca311650479e5fc9adff458631878",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
+    "compat/citygs_x/pytorch3d_transforms_minimal_v1/pytorch3d/__init__.py": "577e62b471d80912f9fcbee694d467aa2e3c82b6b26d6ba25ab6f11f7465d3fa",
+    "compat/citygs_x/pytorch3d_transforms_minimal_v1/pytorch3d/transforms/__init__.py": "c22a28687fd4b14ed853ccb3e73a4183f5fe71c0e6992fb1054d896983701df2",
+    "patches/citygs_x/native_quarter_raw_moments_rasterizer_27617f2_v1.patch": "25f46975485fd201797abfcd1923f3a93ea6af7d4e8bde2937922b68e2da02d2",
+    "patches/citygs_x/native_quarter_raw_moments_renderer_27617f2_v1.patch": "37a9221aadcb705c05ae3465e07d6b76e910d71f3d26f420dd3f3528886a5aa4"
+  },
+  "budget": {
+    "type": "iterations",
+    "value": 100000
+  },
+  "canonical_sha256": "1de76e6d22e19b2c92f8291aac8eb1410caa18eb9c249f919f601b04f85e7cc6",
+  "evaluation_camera_root_binding": {
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
+    "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+    "points3d_bin_point_count": 0,
+    "purpose": "pose-only all-train evaluation camera loader; never training or prior input",
+    "root": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    },
+    "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+    "view_count": 2196
+  },
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
+  "fresh_run_root_policy": {
+    "prior_and_training_require_absent_run_root_at_guard_admission": true,
+    "prior_must_not_create_run_root": true,
+    "training_child_must_create_final_products": true,
+    "training_guard_exclusively_creates_empty_run_root_before_child": true
+  },
+  "input_class": "rgb_colmap_external_geometry_prior",
+  "input_validation_phases": [
+    "training",
+    "packet"
+  ],
+  "materializations": {},
+  "method_id": "citygs_x",
+  "phase_commands": {
+    "packet": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/eval-py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_m3m_gcp_100k_packet_export.py",
+      "--method-id",
+      "citygs_x",
+      "--benchmark-repo",
+      "{repo}",
+      "--evaluation-repo",
+      "{source_root}",
+      "--training-run-root",
+      "{run_root}",
+      "--dataset-root",
+      "{dataset_root}",
+      "--prior-root",
+      "{prior_root}",
+      "--camera-root",
+      "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+      "--train-allowlist",
+      "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
+      "--packet-set-root",
+      "{packet_set_root}"
+    ],
+    "prior": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/prepare_citygs_x_100k_depth_prior.py",
+      "--city_repo",
+      "{source_root}",
+      "--python",
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/py310-torch2.7.1-cu128-v1/bin/python",
+      "--dataset",
+      "{dataset_root}",
+      "--formal_input_manifest",
+      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+      "--da2_root",
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1",
+      "--pytorch3d_compat",
+      "{repo}/compat/citygs_x/pytorch3d_transforms_minimal_v1",
+      "--manifest_output",
+      "{prior_root}/depth_and_multiview_prior_v1.json",
+      "--expected_city_commit",
+      "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+      "--expected_camera_utils_sha256",
+      "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3",
+      "--expected_dataset_readers_sha256",
+      "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c",
+      "--expected_da2_commit",
+      "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+      "--expected_da2_run_sha256",
+      "b8beab6341314bc864cfc0283e0e303f55571af4e2e456c3d3afbc4aae67249a",
+      "--expected_da2_weight_sha256",
+      "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+      "--expected_cameras_sha256",
+      "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "--expected_images_sha256",
+      "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18dbe5",
+      "--expected_points3d_sha256",
+      "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+      "--input_size",
+      "518",
+      "--resolution",
+      "1",
+      "--pixel_thred",
+      "1",
+      "--multi_view_num",
+      "8",
+      "--multi_view_max_angle",
+      "15",
+      "--multi_view_min_dis",
+      "0.01",
+      "--multi_view_max_dis",
+      "25"
+    ],
+    "training": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_citygs_x_100k_training.py",
+      "--repo",
+      "{source_root}",
+      "--python",
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/py310-torch2.7.1-cu128-v1/bin/python",
+      "--dataset",
+      "{dataset_root}",
+      "--model_path",
+      "{run_root}/model",
+      "--prior_manifest",
+      "{prior_root}/depth_and_multiview_prior_v1.json",
+      "--pytorch3d_compat",
+      "{repo}/compat/citygs_x/pytorch3d_transforms_minimal_v1",
+      "--mode",
+      "formal",
+      "--iterations",
+      "100000"
+    ]
+  },
+  "phase_external_required_files_sha256": {
+    "packet": {
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/citygs_x/27617f2486505e3b6fe75345edf7c2b11161bc2a/qualification-v1/raw_moment_conformance.json": "0d4f31c737f16c5da354564bd11b8008e372d2b0f4c9c26c7b71d67f4bbb61b4"
+    },
+    "prior": {
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1/checkpoints/depth_anything_v2_vitl.pth": "a7ea19fa0ed99244e67b624c72b8580b7e9553043245905be58796a608eb9345",
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/depth-anything-v2/a561b849ebae10a6f5ef49e26c83cbbcd36c71bf/runtime-v1/run.py": "b8beab6341314bc864cfc0283e0e303f55571af4e2e456c3d3afbc4aae67249a"
+    }
+  },
+  "phase_roots": {
+    "packet": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all"
+    },
+    "prior": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all"
+    },
+    "training": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all"
+    }
+  },
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygs-x-prior-v1/MatrixCity-gcp_100000_20260610/train/block_all",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "city_train_records_with_full_all_image_sfm_points",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18dbe5",
+      "points3D.bin": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
+  "process_resource_limits": {
+    "applies_to_phases": [
+      "prior",
+      "training",
+      "packet"
+    ],
+    "record_child_actual_inheritance": true,
+    "record_parent_before_after": true,
+    "rlimit_nofile_hard_minimum": 65536,
+    "rlimit_nofile_soft": 65536
+  },
+  "progress_monitor": {
+    "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+    "unit": "iterations_or_stage_steps"
+  },
+  "progress_monitors": {
+    "packet": {
+      "regex": "(?i)(?:exporting[^\\r\\n]{0,200}?)([0-9]+)/2196",
+      "unit": "train_views_exported"
+    },
+    "training": {
+      "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+      "unit": "iterations_or_stage_steps"
+    }
+  },
+  "renderer_adapter_path": "configs/m3m_gcp_native_quarter_citygs_x_renderer_adapter_v1.json",
+  "renderer_adapter_sha256": "65c3a18f6f88379b2a2add0775ac1e4d00b4c67e56d2347c4a3a47c088b04d43",
+  "result_selection_from_metrics": "FORBIDDEN",
+  "retry_policy": "a guard rejection before child creation is not an attempt and may be relaunched; once the child starts every exit is final",
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v2",
+  "seed": 0,
+  "source_bindings": {
+    "packet": {
+      "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+      "required_files_sha256": {
+        "gaussian_renderer/__init__.py": "7b802445a10de10f78c49ad9d96b62ae744abdd6400c87ae5197495f1d20c10c",
+        "submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h": "c1226b64d32ba3218224b6537bf25669e507fd82a8006054976cac4ac5be0dc0",
+        "submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu": "6c67049e65df40e43828eed3a0df5ee76b94949e6d9065eee0f73e26b108297d"
+      },
+      "required_status": " M gaussian_renderer/__init__.py\n M submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/config.h\n M submodule_cityx/diff-gaussian-rasterization/cuda_rasterizer/forward.cu",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygs_x/27617f2486505e3b6fe75345edf7c2b11161bc2a/eval-adapter-v1",
+      "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab"
+    },
+    "prior": {
+      "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+      "required_files_sha256": {
+        "scene/dataset_readers.py": "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c",
+        "train.py": "ba9658bc5bcbc7b0a7620aca776cc2736a045cccd5267276f21ed4e6557d4591",
+        "utils/camera_utils.py": "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3"
+      },
+      "required_status": " M scene/dataset_readers.py\n M utils/camera_utils.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygs_x/27617f2486505e3b6fe75345edf7c2b11161bc2a/train-runtime-v1",
+      "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab"
+    },
+    "training": {
+      "commit": "27617f2486505e3b6fe75345edf7c2b11161bc2a",
+      "required_files_sha256": {
+        "scene/dataset_readers.py": "3d75bbeb16d47f7c078ba2d09a8612dbe4eb6139a865b1d15e1302aa8167a82c",
+        "train.py": "ba9658bc5bcbc7b0a7620aca776cc2736a045cccd5267276f21ed4e6557d4591",
+        "utils/camera_utils.py": "9326e6571685177543e34c903823b207b75258e96489d9398b08672637f5c9e3"
+      },
+      "required_status": " M scene/dataset_readers.py\n M utils/camera_utils.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygs_x/27617f2486505e3b6fe75345edf7c2b11161bc2a/train-runtime-v1",
+      "tree": "f8b1b5148c1f47420ab698fd069bdb78acf901ab"
+    }
+  },
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
+}

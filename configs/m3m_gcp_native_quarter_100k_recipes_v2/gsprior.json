@@ -1,0 +1,222 @@
+{
+  "authorized_evidence_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/gsprior/evidence",
+  "authorized_packet_set_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/packet-scratch/gsprior",
+  "authorized_packet_state": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/packet-scratch/ACTIVE_PACKET_STATE.json",
+  "authorized_run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/gsprior/seed0-v2",
+  "base_3k_recipe_path": "configs/m3m_gcp_native_quarter_gsprior_3k_recipe_v1.json",
+  "base_3k_recipe_sha256": "e02cfb0bb4db86b915c859c61ad16f98f9c15407f68661c56cb1c2b1642645f0",
+  "benchmark_required_files_sha256": {
+    "code/gcp/export_gaussian_depth_maps.py": "e9eb4960d67a9491e95b31d25c6cb29686e1299efa52053ad0a0e80a356914bb",
+    "code/gcp/m3m_gcp_100k_phase_products.py": "c960b52727711da30d47f0a139a98bb2226d65ea7e23d210d6d4073b358ecc82",
+    "code/gcp/materialize_gsprior_normalized_scene.py": "f09a7a033e6f2744cec6b094ca41f5329006f566ac0cb37cb011a241beef06f0",
+    "code/gcp/materialize_m3m_gcp_100k_evaluation_camera_root.py": "ec4b8e637798177860a7de8e19a7fe7de28cc5526ff1206f7470180596074c3d",
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "code/gcp/run_m3m_gcp_100k_packet_export.py": "76ee188841f3cb412a8fd995a23e9c4ccbf337350b559cdabd707ac2ebc6dc5e",
+    "patches/gsprior/native_quarter_raw_moments_renderer_dcb7c89_v1.patch": "dd633a35cb33ceb78b92f5499b30702d4a19bd4aea2a87edd372bb7d2d97c18b"
+  },
+  "budget": {
+    "type": "iterations",
+    "value": 40000
+  },
+  "canonical_sha256": "87a8a7b1603273ff145614bbadf76fc2a4c34f97df5ec1f878561a492de84621",
+  "evaluation_camera_root_binding": {
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
+    "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+    "points3d_bin_point_count": 0,
+    "purpose": "pose-only all-train evaluation camera loader; never training or prior input",
+    "root": "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    },
+    "status_required": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+    "view_count": 2196
+  },
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
+  "fresh_run_root_policy": {
+    "prior_and_training_require_absent_run_root_at_guard_admission": true,
+    "prior_must_not_create_run_root": true,
+    "training_child_must_create_final_products": true,
+    "training_guard_exclusively_creates_empty_run_root_before_child": true
+  },
+  "input_class": "rgb_colmap_only",
+  "input_validation_phases": [
+    "training",
+    "packet"
+  ],
+  "materializations": {},
+  "method_id": "gsprior",
+  "phase_commands": {
+    "packet": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_m3m_gcp_100k_packet_export.py",
+      "--method-id",
+      "gsprior",
+      "--benchmark-repo",
+      "{repo}",
+      "--evaluation-repo",
+      "{source_root}",
+      "--training-run-root",
+      "{run_root}",
+      "--dataset-root",
+      "{dataset_root}",
+      "--prior-root",
+      "{prior_root}",
+      "--camera-root",
+      "/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/gcp_100000_20260610",
+      "--train-allowlist",
+      "{repo}/configs/m3m_gcp_lidar_train_view_allowlists_v1/gcp_100000_20260610.csv",
+      "--packet-set-root",
+      "{packet_set_root}"
+    ],
+    "prior": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/materialize_gsprior_normalized_scene.py",
+      "--source_scene",
+      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "--reference_train_scene",
+      "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+      "--output_scene",
+      "{dataset_root}",
+      "--manifest",
+      "{prior_root}/normalization_manifest.json",
+      "--scene_id",
+      "gcp_100000_20260610",
+      "--role",
+      "train"
+    ],
+    "training": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{source_root}/train.py",
+      "-s",
+      "{dataset_root}",
+      "-m",
+      "{run_root}/model",
+      "--resolution",
+      "1",
+      "--iterations",
+      "40000",
+      "--test_iterations",
+      "20000",
+      "30000",
+      "40000",
+      "--save_iterations",
+      "20000",
+      "30000",
+      "40000",
+      "--checkpoint_iterations",
+      "20000",
+      "30000",
+      "40000",
+      "--quiet"
+    ]
+  },
+  "phase_external_required_files_sha256": {
+    "packet": {
+      "/root/autodl-tmp/build/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/qualification-v1/raw_moment_conformance.json": "4c6ba32b1471977d06a797f772d50ad7eccd8e7baab9236f92682d6ddce7d298"
+    },
+    "prior": {}
+  },
+  "phase_roots": {
+    "packet": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train"
+    },
+    "prior": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train"
+    },
+    "training": {
+      "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train",
+      "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train"
+    }
+  },
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "exact_formal_train_view_from_shared_all_image_sfm",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
+  "process_resource_limits": {
+    "applies_to_phases": [
+      "prior",
+      "training",
+      "packet"
+    ],
+    "record_child_actual_inheritance": true,
+    "record_parent_before_after": true,
+    "rlimit_nofile_hard_minimum": 65536,
+    "rlimit_nofile_soft": 65536
+  },
+  "progress_monitor": {
+    "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+    "unit": "iterations_or_stage_steps"
+  },
+  "progress_monitors": {
+    "packet": {
+      "regex": "(?i)(?:exporting[^\\r\\n]{0,200}?)([0-9]+)/2196",
+      "unit": "train_views_exported"
+    },
+    "training": {
+      "regex": "(?i)(?:iteration|iter|step|progress)[^0-9]{0,32}([0-9]+)",
+      "unit": "iterations_or_stage_steps"
+    }
+  },
+  "renderer_adapter_path": "configs/m3m_gcp_native_quarter_gsprior_renderer_adapter_v1.json",
+  "renderer_adapter_sha256": "f6ceac12c6c04caa0ab56d2edbb62626ea8ab8a2777526a7c7cd14e9404046ee",
+  "result_selection_from_metrics": "FORBIDDEN",
+  "retry_policy": "a guard rejection before child creation is not an attempt and may be relaunched; once the child starts every exit is final",
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v2",
+  "seed": 0,
+  "source_bindings": {
+    "packet": {
+      "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+      "required_files_sha256": {
+        "gaussian_renderer/__init__.py": "fb3dedbebd887c711639271e29ed7bf8e0796a85a36b811a56b6f98148880832",
+        "scene/dataset_readers.py": "65af79d4de7c06197aab32a2c5ef35de4a7e1c1d43d7597aaedc0df88830b7d9"
+      },
+      "required_status": " M gaussian_renderer/__init__.py\n M scene/dataset_readers.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/eval-adapter-v1",
+      "tree": "779073585e88b85217d522d0ab345365346cd17f"
+    },
+    "prior": {
+      "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+      "required_files_sha256": {
+        "scene/dataset_readers.py": "f0fadf22869091cafa7cec4cc14eb3e295f83c58bf5ad22c2557c3b3b9cee247",
+        "train.py": "44e434741b68075d7e3f92f2c71f471cab2c66e4d3bd129261e7701da03274f1"
+      },
+      "required_status": " M scene/dataset_readers.py\n M train.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/train-compat-v1",
+      "tree": "779073585e88b85217d522d0ab345365346cd17f"
+    },
+    "training": {
+      "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+      "required_files_sha256": {
+        "scene/dataset_readers.py": "f0fadf22869091cafa7cec4cc14eb3e295f83c58bf5ad22c2557c3b3b9cee247",
+        "train.py": "44e434741b68075d7e3f92f2c71f471cab2c66e4d3bd129261e7701da03274f1"
+      },
+      "required_status": " M scene/dataset_readers.py\n M train.py",
+      "root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/train-compat-v1",
+      "tree": "779073585e88b85217d522d0ab345365346cd17f"
+    }
+  },
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED"
+}

@@ -55,6 +55,7 @@ LOCKED_SCENES = [
 GIB = 1024**3
 MIN_FREE_GIB = {"prior": 300, "training": 300, "packet": 180}
 PACKET_CAP_BYTES = 100 * GIB
+REQUIRED_NOFILE_SOFT = 65536
 ACTIVATION_FIELDS = {
     "schema", "protocol_id", "protocol_review_task_id",
     "protocol_review_verdict", "protocol_reviewed_commit",
@@ -72,6 +73,95 @@ ACTIVATION_FIELDS = {
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _limit_to_json(value: int) -> int | str:
+    if resource is not None and value == resource.RLIM_INFINITY:
+        return "unlimited"
+    return int(value)
+
+
+def _limit_meets_minimum(value: int, minimum: int) -> bool:
+    return bool(
+        resource is not None
+        and (value == resource.RLIM_INFINITY or int(value) >= minimum)
+    )
+
+
+def configure_nofile_limit(required_soft: int = REQUIRED_NOFILE_SOFT) -> dict[str, Any]:
+    """Set the exact parent soft limit before any formal child or artifact exists."""
+    if resource is None:
+        raise RuntimeError("formal child launch requires POSIX RLIMIT_NOFILE support")
+    before_soft, before_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if not _limit_meets_minimum(before_hard, required_soft):
+        raise RuntimeError(
+            "RLIMIT_NOFILE hard limit is below the required pre-child minimum: "
+            f"hard={_limit_to_json(before_hard)} required={required_soft}"
+        )
+    resource.setrlimit(resource.RLIMIT_NOFILE, (required_soft, before_hard))
+    after_soft, after_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if int(after_soft) != required_soft or after_hard != before_hard:
+        raise RuntimeError(
+            "failed to establish the exact RLIMIT_NOFILE child-launch contract"
+        )
+    return {
+        "resource": "RLIMIT_NOFILE",
+        "required_soft": required_soft,
+        "hard_minimum": required_soft,
+        "parent_before": {
+            "soft": _limit_to_json(before_soft),
+            "hard": _limit_to_json(before_hard),
+        },
+        "parent_after": {
+            "soft": _limit_to_json(after_soft),
+            "hard": _limit_to_json(after_hard),
+        },
+    }
+
+
+def read_child_nofile_limit(pid: int) -> dict[str, int | str]:
+    """Read the actual inherited limit from Linux procfs after child creation."""
+    limits_path = Path(f"/proc/{pid}/limits")
+    text = limits_path.read_text(encoding="utf-8", errors="strict")
+    for line in text.splitlines():
+        if line.startswith("Max open files"):
+            parts = line.split()
+            if len(parts) < 5:
+                break
+
+            def parse(raw: str) -> int | str:
+                return "unlimited" if raw == "unlimited" else int(raw)
+
+            return {"soft": parse(parts[3]), "hard": parse(parts[4])}
+    raise RuntimeError(f"Max open files row missing from {limits_path}")
+
+
+def observe_child_nofile_limit(
+    process: subprocess.Popen[Any], *, timeout_seconds: float = 2.0
+) -> dict[str, int | str]:
+    deadline = time.monotonic() + timeout_seconds
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            return read_child_nofile_limit(process.pid)
+        except (FileNotFoundError, ProcessLookupError, RuntimeError, ValueError) as exc:
+            last_error = exc
+            if process.poll() is not None:
+                break
+            time.sleep(0.01)
+    raise RuntimeError(
+        f"could not observe child RLIMIT_NOFILE inheritance for pid {process.pid}: "
+        f"{last_error}"
+    )
+
+
+def write_environment_manifest(path: Path, payload: dict[str, Any]) -> None:
+    payload.pop("canonical_sha256", None)
+    payload["canonical_sha256"] = canonical_sha256(payload)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def git_value(repo: Path, *args: str) -> str:
@@ -171,6 +261,49 @@ def bound_path(repo: Path, value: str) -> Path:
     return path if path.is_absolute() else repo / path
 
 
+def validate_superseded_activation_receipt(
+    *, repo: Path, plan: dict[str, Any]
+) -> dict[str, Any]:
+    binding = plan.get("superseded_activation", {})
+    receipt_row = binding.get("receipt", {})
+    receipt_path = bound_path(repo, str(receipt_row.get("path", ""))).resolve()
+    if (
+        not receipt_path.is_file()
+        or receipt_path.is_symlink()
+        or sha256_file(receipt_path) != receipt_row.get("sha256")
+    ):
+        raise RuntimeError("v1 supersession receipt identity mismatch")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    classification = receipt.get("classification", {})
+    if (
+        receipt.get("schema") != "m3m_gcp_100k_activation_supersession_v1"
+        or receipt.get("status") != binding.get("status_required")
+        or receipt.get("canonical_sha256") != canonical_sha256(receipt)
+        or classification.get("algorithm_failure") is not False
+        or classification.get("formal_retry_counted") is not False
+        or classification.get("rankable") is not False
+        or binding.get("algorithm_failure") is not False
+        or binding.get("formal_retry_counted") is not False
+        or binding.get("rankable") is not False
+        or binding.get("remote_artifacts_must_remain_byte_identical") is not True
+    ):
+        raise RuntimeError("v1 supersession receipt classification mismatch")
+    artifacts = receipt.get("remote_artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 6:
+        raise RuntimeError("v1 supersession remote artifact inventory mismatch")
+    for row in artifacts:
+        path = Path(str(row.get("path", "")))
+        if (
+            not path.is_absolute()
+            or not path.is_file()
+            or path.is_symlink()
+            or path.stat().st_size != int(row.get("bytes", -1))
+            or sha256_file(path) != row.get("sha256")
+        ):
+            raise RuntimeError(f"superseded v1 evidence changed or disappeared: {path}")
+    return receipt
+
+
 def validate_activation_and_recipe(
     *,
     repo: Path,
@@ -235,14 +368,20 @@ def validate_activation_and_recipe(
         raise RuntimeError("checkout is not the exact reviewed tree")
     if git_value(repo, "status", "--porcelain"):
         raise RuntimeError("reviewed checkout is dirty")
-    if plan.get("schema") != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1":
+    if plan.get("schema") != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2":
         raise RuntimeError("execution plan schema mismatch")
+    expected_activation_path = Path(
+        str(plan.get("activation_manifest_path", ""))
+    ).resolve()
+    if activation_path.resolve() != expected_activation_path:
+        raise RuntimeError("activation path differs from the frozen v2 namespace")
     if plan.get("scene") != SCENE or plan.get("seed") != 0:
         raise RuntimeError("execution plan is not frozen 100K seed0")
     if plan.get("status") != "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED" or plan.get("execution_authorized") is not False:
         raise RuntimeError("reviewed execution-plan candidate identity changed")
     if plan.get("canonical_sha256") != canonical_sha256(plan):
         raise RuntimeError("execution plan canonical SHA mismatch")
+    validate_superseded_activation_receipt(repo=repo, plan=plan)
     if plan.get("method_order") != METHOD_ORDER:
         raise RuntimeError("execution plan method order mismatch")
     if activation.get("execution_plan_review_task_id") != plan.get("review", {}).get("task_id"):
@@ -334,6 +473,14 @@ def validate_activation_and_recipe(
         is not True
         or closure.get("phase_success_command_rehashed_against_frozen_recipe")
         is not True
+        or closure.get("rlimit_nofile_soft_required_for_child_phases")
+        != REQUIRED_NOFILE_SOFT
+        or closure.get("rlimit_nofile_hard_minimum_prechild_gate")
+        != REQUIRED_NOFILE_SOFT
+        or closure.get("rlimit_nofile_parent_before_after_evidence_required")
+        is not True
+        or closure.get("rlimit_nofile_child_actual_inheritance_evidence_required")
+        is not True
     ):
         raise RuntimeError("execution plan fresh-run-root closure mismatch")
     preparation = plan.get("preparation", {}).get("per_method_input_evidence", {})
@@ -358,7 +505,7 @@ def validate_activation_and_recipe(
         or Path(str(cleanup_payload.get("deleted_path", ""))).exists()
     ):
         raise RuntimeError("obsolete 100K attempt was not safely removed")
-    if recipe_manifest.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v1":
+    if recipe_manifest.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v2":
         raise RuntimeError("recipe manifest schema mismatch")
     if recipe_manifest.get("canonical_sha256") != canonical_sha256(recipe_manifest):
         raise RuntimeError("recipe manifest canonical SHA mismatch")
@@ -389,7 +536,7 @@ def validate_activation_and_recipe(
         raise RuntimeError("recipe SHA differs from recipe manifest")
     if recipe.get("canonical_sha256") != canonical_sha256(recipe):
         raise RuntimeError("recipe canonical SHA mismatch")
-    if recipe.get("schema") != "m3m_gcp_native_quarter_100k_execution_recipe_v1":
+    if recipe.get("schema") != "m3m_gcp_native_quarter_100k_execution_recipe_v2":
         raise RuntimeError("recipe schema mismatch")
     if recipe.get("method_id") != method_id or recipe.get("scene") != SCENE or recipe.get("seed") != 0:
         raise RuntimeError("recipe identity mismatch")
@@ -402,6 +549,14 @@ def validate_activation_and_recipe(
         "training_child_must_create_final_products": True,
     }:
         raise RuntimeError("recipe fresh-run-root policy mismatch")
+    if recipe.get("process_resource_limits") != {
+        "applies_to_phases": ["prior", "training", "packet"],
+        "rlimit_nofile_hard_minimum": REQUIRED_NOFILE_SOFT,
+        "rlimit_nofile_soft": REQUIRED_NOFILE_SOFT,
+        "record_parent_before_after": True,
+        "record_child_actual_inheritance": True,
+    }:
+        raise RuntimeError("recipe process resource-limit contract mismatch")
     for relative, expected_sha in recipe.get("benchmark_required_files_sha256", {}).items():
         path = bound_path(repo, str(relative))
         if not path.is_file() or sha256_file(path) != expected_sha:
@@ -1270,6 +1425,42 @@ def validate_phase_success_products(
         raise RuntimeError("phase success products differ from current method postconditions")
 
 
+def validate_phase_success_environment(payload: dict[str, Any]) -> Path:
+    path = Path(str(payload.get("environment_manifest_path", "")))
+    if (
+        not path.is_absolute()
+        or not path.is_file()
+        or path.is_symlink()
+        or sha256_file(path) != payload.get("environment_manifest_sha256")
+    ):
+        raise RuntimeError("phase success environment-manifest binding mismatch")
+    environment = json.loads(path.read_text(encoding="utf-8"))
+    limits = environment.get("resource_limits", {})
+    child = limits.get("child_actual", {})
+    parent_after = limits.get("parent_after", {})
+
+    def hard_ok(value: object) -> bool:
+        return value == "unlimited" or (
+            isinstance(value, int) and value >= REQUIRED_NOFILE_SOFT
+        )
+
+    if (
+        environment.get("schema") != "m3m_gcp_100k_execution_environment_v2"
+        or environment.get("scene") != payload.get("scene")
+        or environment.get("method_id") != payload.get("method_id")
+        or environment.get("phase") != payload.get("phase")
+        or environment.get("canonical_sha256") != canonical_sha256(environment)
+        or limits.get("required_soft") != REQUIRED_NOFILE_SOFT
+        or limits.get("hard_minimum") != REQUIRED_NOFILE_SOFT
+        or parent_after.get("soft") != REQUIRED_NOFILE_SOFT
+        or not hard_ok(parent_after.get("hard"))
+        or child.get("soft") != REQUIRED_NOFILE_SOFT
+        or not hard_ok(child.get("hard"))
+    ):
+        raise RuntimeError("phase success RLIMIT_NOFILE environment evidence mismatch")
+    return path
+
+
 def validate_prior_phase_success(
     *, recipe: dict[str, Any], recipe_path: Path, run_root: Path,
     dataset_root: Path, prior_root: Path, replacements: dict[str, str],
@@ -1290,7 +1481,7 @@ def validate_prior_phase_success(
         recipe, dataset_root=dataset_root, prior_root=prior_root
     )
     if (
-        payload.get("schema") != "m3m_gcp_100k_phase_success_v1"
+        payload.get("schema") != "m3m_gcp_100k_phase_success_v2"
         or payload.get("status") != "PASS"
         or payload.get("scene") != SCENE
         or payload.get("method_id") != recipe.get("method_id")
@@ -1300,6 +1491,7 @@ def validate_prior_phase_success(
         or payload.get("canonical_sha256") != canonical_sha256(payload)
     ):
         raise RuntimeError("training requires the exact successful prior phase")
+    validate_phase_success_environment(payload)
     validate_phase_success_products(
         payload,
         expected_paths=expected_products,
@@ -1407,7 +1599,7 @@ def validate_model_identity_bundle(
         template = recipe.get("phase_commands", {}).get(phase, [])
         expected_command = [str(item).format(**replacements) for item in template]
         if (
-            marker.get("schema") != "m3m_gcp_100k_phase_success_v1"
+            marker.get("schema") != "m3m_gcp_100k_phase_success_v2"
             or marker.get("status") != "PASS"
             or marker.get("scene") != SCENE
             or marker.get("method_id") != method_id
@@ -1417,6 +1609,7 @@ def validate_model_identity_bundle(
             or marker.get("canonical_sha256") != canonical_sha256(marker)
         ):
             raise RuntimeError("frozen phase success identity mismatch")
+        validate_phase_success_environment(marker)
         if phase == "training":
             expected_products = validate_training_outputs(recipe, run_root=run_root)
         elif phase == "prior":
@@ -1554,6 +1747,14 @@ def write_failure_evidence(
 
 
 def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str]) -> int:
+    limit_policy = recipe.get("process_resource_limits", {})
+    if (
+        args.phase not in limit_policy.get("applies_to_phases", [])
+        or limit_policy.get("rlimit_nofile_soft") != REQUIRED_NOFILE_SOFT
+        or limit_policy.get("rlimit_nofile_hard_minimum") != REQUIRED_NOFILE_SOFT
+    ):
+        raise RuntimeError("phase is not covered by the frozen RLIMIT_NOFILE contract")
+    nofile_evidence = configure_nofile_limit(REQUIRED_NOFILE_SOFT)
     validate_capacity(args.capacity_root, args.phase)
     evidence_dir = args.failure_evidence.parent
     stdout_path = evidence_dir / "command.stdout.log"
@@ -1600,7 +1801,7 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
     evidence_dir.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
     environment = {
-        "schema": "m3m_gcp_100k_execution_environment_v1",
+        "schema": "m3m_gcp_100k_execution_environment_v2",
         "scene": SCENE,
         "method_id": args.method_id,
         "phase": args.phase,
@@ -1608,17 +1809,42 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
         "python": sys.version,
         "platform": platform.platform(),
         "gpu_prelaunch": getattr(args, "gpu_prelaunch", {}),
+        "resource_limits": nofile_evidence,
         "started_at_utc": started_at,
     }
-    environment["canonical_sha256"] = canonical_sha256(environment)
-    environment_path.write_text(json.dumps(environment, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_environment_manifest(environment_path, environment)
     before = cgroup_memory_events()
     last_progress = 0.0
     peak_gpu = 0.0
     cap_error: str | None = None
+    inheritance_error: str | None = None
     pattern = re.compile(args.progress_regex) if args.progress_regex else None
     with stdout_path.open("w", encoding="utf-8") as stdout_handle, stderr_path.open("w", encoding="utf-8") as stderr_handle:
         process = subprocess.Popen(argv, stdout=stdout_handle, stderr=stderr_handle, text=True)
+        try:
+            child_actual = observe_child_nofile_limit(process)
+            nofile_evidence["child_actual"] = child_actual
+            if (
+                child_actual.get("soft") != REQUIRED_NOFILE_SOFT
+                or (
+                    child_actual.get("hard") != "unlimited"
+                    and int(child_actual.get("hard", -1)) < REQUIRED_NOFILE_SOFT
+                )
+            ):
+                raise RuntimeError(
+                    "child did not inherit the frozen RLIMIT_NOFILE contract: "
+                    f"{child_actual}"
+                )
+        except Exception as exc:  # noqa: BLE001 - immutable child-started failure
+            inheritance_error = f"child RLIMIT_NOFILE evidence failed: {type(exc).__name__}: {exc}"
+            nofile_evidence["child_actual_error"] = inheritance_error
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+        write_environment_manifest(environment_path, environment)
         while process.poll() is None:
             peak_gpu = max(peak_gpu, gpu_memory_for_pid(process.pid))
             if pattern:
@@ -1642,6 +1868,8 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
     after = cgroup_memory_events()
     ended_at = utc_now()
     if cap_error and exit_code == 0:
+        exit_code = 70
+    if inheritance_error:
         exit_code = 70
     postcondition_error: str | None = None
     validated_products: list[Path] = []
@@ -1687,7 +1915,9 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
             ),
             events_delta=memory_event_delta(before, after),
             extra_error="; ".join(
-                error for error in (cap_error, postcondition_error) if error
+                error
+                for error in (cap_error, inheritance_error, postcondition_error)
+                if error
             ) or None,
             failure_stage=("packet_export" if args.phase == "packet" else args.phase),
             model_checkpoint_sha256=(
@@ -1705,7 +1935,7 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
         if packet_bytes > PACKET_CAP_BYTES:
             raise RuntimeError("packet scratch exceeded 100 GiB after process exit")
     success = {
-        "schema": "m3m_gcp_100k_phase_success_v1",
+        "schema": "m3m_gcp_100k_phase_success_v2",
         "status": "PASS",
         "scene": SCENE,
         "method_id": args.method_id,
@@ -1713,6 +1943,8 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
         "recipe_sha256": sha256_file(args.recipe),
         "command_sha256": command_sha256(argv),
         "frozen_budget": recipe.get("budget", {}),
+        "environment_manifest_path": str(environment_path),
+        "environment_manifest_sha256": sha256_file(environment_path),
         "completion_evidence": {
             "progress_unit": args.progress_unit,
             "last_valid_progress": float(last_progress),

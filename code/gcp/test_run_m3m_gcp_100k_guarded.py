@@ -21,8 +21,11 @@ from run_m3m_gcp_100k_guarded import (
     GIB,
     METHOD_ORDER,
     PACKET_CAP_BYTES,
+    REQUIRED_NOFILE_SOFT,
     acquire_packet_state,
     build_phase_product_rows,
+    configure_nofile_limit,
+    observe_child_nofile_limit,
     run_phase,
     sha256_file,
     validate_activation_and_recipe,
@@ -59,8 +62,52 @@ def write_gaussian_ply(path: Path) -> None:
     path.write_bytes(gaussian_ply_bytes())
 
 
+def nofile_evidence() -> dict:
+    return {
+        "resource": "RLIMIT_NOFILE",
+        "required_soft": 65536,
+        "hard_minimum": 65536,
+        "parent_before": {"soft": 1024, "hard": 1048576},
+        "parent_after": {"soft": 65536, "hard": 1048576},
+    }
+
+
+def write_success_environment(
+    path: Path, *, method_id: str, phase: str
+) -> None:
+    payload = {
+        "schema": "m3m_gcp_100k_execution_environment_v2",
+        "scene": "gcp_100000_20260610",
+        "method_id": method_id,
+        "phase": phase,
+        "argv": ["fixture"],
+        "python": sys.version,
+        "platform": sys.platform,
+        "gpu_prelaunch": {},
+        "resource_limits": {
+            **nofile_evidence(),
+            "child_actual": {"soft": 65536, "hard": 1048576},
+        },
+        "started_at_utc": "2026-08-21T00:00:00Z",
+    }
+    payload["canonical_sha256"] = canonical_sha256(payload)
+    write_json(path, payload)
+
+
 class Guarded100KTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.configure_limit_patch = mock.patch(
+            "run_m3m_gcp_100k_guarded.configure_nofile_limit",
+            side_effect=lambda required=REQUIRED_NOFILE_SOFT: nofile_evidence(),
+        )
+        self.observe_limit_patch = mock.patch(
+            "run_m3m_gcp_100k_guarded.observe_child_nofile_limit",
+            return_value={"soft": 65536, "hard": 1048576},
+        )
+        self.configure_limit_patch.start()
+        self.observe_limit_patch.start()
+        self.addCleanup(self.configure_limit_patch.stop)
+        self.addCleanup(self.observe_limit_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name).resolve()
         self.repo = self.root / "repo"
@@ -100,7 +147,7 @@ class Guarded100KTest(unittest.TestCase):
         self.adapter = self.root / "adapter.py"
         self.adapter.write_text("adapter", encoding="utf-8")
         recipe = {
-            "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v1", "method_id": "2dgs",
+            "schema": "m3m_gcp_native_quarter_100k_execution_recipe_v2", "method_id": "2dgs",
             "scene": "gcp_100000_20260610", "seed": 0, "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
             "input_class": "rgb_colmap_only",
             "budget": {"type": "iterations", "value": 30000},
@@ -114,6 +161,13 @@ class Guarded100KTest(unittest.TestCase):
                 "prior_must_not_create_run_root": True,
                 "training_guard_exclusively_creates_empty_run_root_before_child": True,
                 "training_child_must_create_final_products": True,
+            },
+            "process_resource_limits": {
+                "applies_to_phases": ["prior", "training", "packet"],
+                "rlimit_nofile_hard_minimum": 65536,
+                "rlimit_nofile_soft": 65536,
+                "record_parent_before_after": True,
+                "record_child_actual_inheritance": True,
             },
             "phase_commands": {"training": [sys.executable, "-c", "print('ok')"],
                                "packet": [sys.executable, "-c", "import time; time.sleep(5)"]},
@@ -131,7 +185,7 @@ class Guarded100KTest(unittest.TestCase):
         write_json(self.recipe, recipe)
         recipe_order = ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior", "sof",
                         "citygaussian_v2", "citygs_x", "metrogs"]
-        recipes = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v1",
+        recipes = {"schema": "m3m_gcp_native_quarter_100k_recipe_manifest_v2",
                    "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
                    "scene": "gcp_100000_20260610", "seed": 0,
                    "method_order": recipe_order,
@@ -139,8 +193,31 @@ class Guarded100KTest(unittest.TestCase):
                                 "sha256": sha256_file(self.recipe)} for method_id in recipe_order]}
         recipes["canonical_sha256"] = canonical_sha256(recipes)
         write_json(self.recipes, recipes)
+        superseded_files = []
+        for index in range(6):
+            path = (self.root / "superseded" / f"artifact-{index}.bin").resolve()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"old-{index}".encode("ascii"))
+            superseded_files.append({
+                "path": str(path), "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            })
+        supersession_receipt = self.repo / "supersession.json"
+        supersession = {
+            "schema": "m3m_gcp_100k_activation_supersession_v1",
+            "status": "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE",
+            "classification": {
+                "algorithm_failure": False,
+                "formal_retry_counted": False,
+                "rankable": False,
+            },
+            "remote_artifacts": superseded_files,
+        }
+        supersession["canonical_sha256"] = canonical_sha256(supersession)
+        write_json(supersession_receipt, supersession)
         plan = {
-            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1",
+            "schema": "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v2",
+            "activation_manifest_path": str((self.root / "activation.json").resolve()),
             "scene": "gcp_100000_20260610", "seed": 0,
             "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED", "execution_authorized": False,
             "method_order": ["3dgs_original", "2dgs", "pgsr", "rade_gs", "qgs", "gsprior",
@@ -148,6 +225,17 @@ class Guarded100KTest(unittest.TestCase):
             "other_prepared_scenes_locked": ["gcp_5000_20260602", "gcp_20000_20260602",
                                               "gcp_10000_20260610", "gcp_50000_20260610"],
             "other_prepared_scene_training_rendering_or_formal_evaluation_authorized": False,
+            "superseded_activation": {
+                "receipt": {
+                    "path": "supersession.json",
+                    "sha256": sha256_file(supersession_receipt),
+                },
+                "status_required": "SUPERSEDED_INFRASTRUCTURE_INVALID_NOT_RANKABLE",
+                "algorithm_failure": False,
+                "formal_retry_counted": False,
+                "rankable": False,
+                "remote_artifacts_must_remain_byte_identical": True,
+            },
             "formal_lidar_protocol": {
                 "contract": {"path": "contract.json", "sha256": sha256_file(contract)},
                 "artifact_schema": {"path": "artifact-schema.json", "sha256": sha256_file(artifact_schema)},
@@ -175,6 +263,10 @@ class Guarded100KTest(unittest.TestCase):
                 "training_child_must_create_products_inside_new_run_root": True,
                 "ready_model_identity_requires_exact_phase_success_markers": True,
                 "phase_success_command_rehashed_against_frozen_recipe": True,
+                "rlimit_nofile_soft_required_for_child_phases": 65536,
+                "rlimit_nofile_hard_minimum_prechild_gate": 65536,
+                "rlimit_nofile_parent_before_after_evidence_required": True,
+                "rlimit_nofile_child_actual_inheritance_evidence_required": True,
             },
             "preparation": {"per_method_input_evidence": {
                 "path": str(preparation), "sha256": sha256_file(preparation),
@@ -244,6 +336,20 @@ class Guarded100KTest(unittest.TestCase):
         )
         self.assertEqual(recipe["method_id"], "2dgs")
 
+    def test_superseded_v1_artifact_tamper_is_rejected(self) -> None:
+        plan = json.loads(self.plan.read_text())
+        receipt_path = self.repo / plan["superseded_activation"]["receipt"]["path"]
+        receipt = json.loads(receipt_path.read_text())
+        Path(receipt["remote_artifacts"][0]["path"]).write_text(
+            "tampered", encoding="utf-8"
+        )
+        with self.assertRaisesRegex(RuntimeError, "superseded v1 evidence changed"):
+            validate_activation_and_recipe(
+                repo=self.repo, activation_path=self.activation,
+                plan_path=self.plan, recipe_manifest_path=self.recipes,
+                recipe_path=self.recipe, method_id="2dgs",
+            )
+
     def test_old_or_arbitrary_pass_verdict_rejected(self) -> None:
         payload = json.loads(self.activation.read_text())
         payload["protocol_review_verdict"] = "PASS_LIDAR_V1_AND_SIX_SCENE_PREPARATION"
@@ -262,6 +368,72 @@ class Guarded100KTest(unittest.TestCase):
             validate_capacity(self.root, "training", free_bytes=300 * GIB - 1)
         with self.assertRaisesRegex(RuntimeError, "180 GiB"):
             validate_capacity(self.root, "packet", free_bytes=180 * GIB - 1)
+
+    def test_low_nofile_hard_limit_rejects_before_artifacts_or_child(self) -> None:
+        failure = self.root / "low-hard-evidence" / "failure.json"
+        run_root = self.root / "low-hard-run"
+        args = argparse.Namespace(
+            phase="training", capacity_root=self.root, packet_set_root=None,
+            packet_state=None, method_id="2dgs", run_root=run_root,
+            dataset_root=self.root / "dataset", prior_root=self.root / "prior",
+            failure_evidence=failure, progress_regex=None,
+            progress_unit="iterations", poll_seconds=0.01, recipe=self.recipe,
+            replacements={}, scene_attempt_freeze=None,
+        )
+        recipe = json.loads(self.recipe.read_text())
+        with mock.patch(
+            "run_m3m_gcp_100k_guarded.configure_nofile_limit",
+            side_effect=RuntimeError("RLIMIT_NOFILE hard limit is below 65536"),
+        ), mock.patch("subprocess.Popen") as popen:
+            with self.assertRaisesRegex(RuntimeError, "hard limit"):
+                run_phase(args, recipe, [sys.executable, "-c", "print('never')"])
+        popen.assert_not_called()
+        self.assertFalse(run_root.exists())
+        self.assertFalse(failure.parent.exists())
+
+    def test_configure_nofile_sets_exact_soft_and_preserves_hard(self) -> None:
+        fake_resource = mock.Mock()
+        fake_resource.RLIMIT_NOFILE = 7
+        fake_resource.RLIM_INFINITY = -1
+        fake_resource.getrlimit.side_effect = [
+            (1024, 1048576),
+            (65536, 1048576),
+        ]
+        with mock.patch("run_m3m_gcp_100k_guarded.resource", fake_resource):
+            evidence = configure_nofile_limit(65536)
+        fake_resource.setrlimit.assert_called_once_with(7, (65536, 1048576))
+        self.assertEqual(evidence["parent_before"], {"soft": 1024, "hard": 1048576})
+        self.assertEqual(evidence["parent_after"], {"soft": 65536, "hard": 1048576})
+
+    def test_configure_nofile_rejects_insufficient_hard_limit(self) -> None:
+        fake_resource = mock.Mock()
+        fake_resource.RLIMIT_NOFILE = 7
+        fake_resource.RLIM_INFINITY = -1
+        fake_resource.getrlimit.return_value = (1024, 4096)
+        with mock.patch("run_m3m_gcp_100k_guarded.resource", fake_resource):
+            with self.assertRaisesRegex(RuntimeError, "hard limit is below"):
+                configure_nofile_limit(65536)
+        fake_resource.setrlimit.assert_not_called()
+
+    @unittest.skipIf(os.name == "nt", "Linux /proc inheritance proof")
+    def test_actual_child_inherits_parent_nofile_limit(self) -> None:
+        configured = configure_nofile_limit(65536)
+        self.assertEqual(configured["parent_after"]["soft"], 65536)
+        process = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(1)"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            observed = observe_child_nofile_limit(process)
+            self.assertEqual(observed["soft"], 65536)
+            self.assertTrue(
+                observed["hard"] == "unlimited"
+                or int(observed["hard"]) >= int(observed["soft"])
+            )
+        finally:
+            process.terminate()
+            process.wait(timeout=5)
 
     def test_prepared_formal_input_rehashes_shared_all_image_sfm(self) -> None:
         dataset = self.root / "prepared-dataset"
@@ -340,8 +512,12 @@ class Guarded100KTest(unittest.TestCase):
         }
         replacements = {"dataset_root": str(dataset)}
         command = ["prior-tool", str(dataset)]
+        environment_path = evidence_root / "prior" / "environment.json"
+        write_success_environment(
+            environment_path, method_id="citygaussian_v2", phase="prior"
+        )
         success = {
-            "schema": "m3m_gcp_100k_phase_success_v1",
+            "schema": "m3m_gcp_100k_phase_success_v2",
             "status": "PASS",
             "scene": "gcp_100000_20260610",
             "method_id": "citygaussian_v2",
@@ -349,6 +525,8 @@ class Guarded100KTest(unittest.TestCase):
             "recipe_sha256": sha256_file(self.recipe),
             "command_sha256": command_sha256(command),
             "frozen_budget": recipe["budget"],
+            "environment_manifest_path": str(environment_path.resolve()),
+            "environment_manifest_sha256": sha256_file(environment_path),
             "completion_evidence": {
                 "progress_unit": "prior_products",
                 "last_valid_progress": 2196.0,
@@ -536,8 +714,12 @@ class Guarded100KTest(unittest.TestCase):
                     Path(recipe_payload["authorized_evidence_root"])
                     / "training" / "phase_success.json"
                 )
+                environment_path = marker.parent / "environment.json"
+                write_success_environment(
+                    environment_path, method_id="2dgs", phase="training"
+                )
                 marker_payload = {
-                    "schema": "m3m_gcp_100k_phase_success_v1",
+                    "schema": "m3m_gcp_100k_phase_success_v2",
                     "status": "PASS",
                     "scene": "gcp_100000_20260610",
                     "method_id": "2dgs",
@@ -547,6 +729,8 @@ class Guarded100KTest(unittest.TestCase):
                         recipe_payload["phase_commands"]["training"]
                     ),
                     "frozen_budget": recipe_payload["budget"],
+                    "environment_manifest_path": str(environment_path.resolve()),
+                    "environment_manifest_sha256": sha256_file(environment_path),
                     "completion_evidence": {
                         "progress_unit": "iterations",
                         "last_valid_progress": 30000.0,
@@ -734,8 +918,12 @@ class Guarded100KTest(unittest.TestCase):
             Path(recipe["authorized_evidence_root"])
             / "training" / "phase_success.json"
         )
+        environment_path = marker.parent / "environment.json"
+        write_success_environment(
+            environment_path, method_id="2dgs", phase="training"
+        )
         marker_payload = {
-            "schema": "m3m_gcp_100k_phase_success_v1",
+            "schema": "m3m_gcp_100k_phase_success_v2",
             "status": "PASS",
             "scene": "gcp_100000_20260610",
             "method_id": "2dgs",
@@ -743,6 +931,8 @@ class Guarded100KTest(unittest.TestCase):
             "recipe_sha256": sha256_file(self.recipe),
             "command_sha256": command_sha256(["wrong-command"]),
             "frozen_budget": recipe["budget"],
+            "environment_manifest_path": str(environment_path.resolve()),
+            "environment_manifest_sha256": sha256_file(environment_path),
             "completion_evidence": {
                 "progress_unit": "iterations",
                 "last_valid_progress": 30000.0,
@@ -846,6 +1036,16 @@ class Guarded100KTest(unittest.TestCase):
         payload = json.loads(marker.read_text())
         self.assertEqual(payload["status"], "PASS")
         self.assertEqual(payload["phase"], "training")
+        self.assertEqual(payload["schema"], "m3m_gcp_100k_phase_success_v2")
+        environment = Path(payload["environment_manifest_path"])
+        self.assertEqual(sha256_file(environment), payload["environment_manifest_sha256"])
+        environment_payload = json.loads(environment.read_text())
+        self.assertEqual(
+            environment_payload["resource_limits"]["parent_after"]["soft"], 65536
+        )
+        self.assertEqual(
+            environment_payload["resource_limits"]["child_actual"]["soft"], 65536
+        )
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
             with self.assertRaisesRegex(FileExistsError, "cannot be retried"):
                 run_phase(args, recipe, command)
