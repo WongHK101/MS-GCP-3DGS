@@ -18,7 +18,7 @@
     "type": "iterations",
     "value": 30000
   },
-  "canonical_sha256": "4961602ded75dd4839748012f6fb03e73d0eadd6ef2daabba76604eafc8d2e56",
+  "canonical_sha256": "03fca8fb3bafefb2772ef0d191e3889477358259a1c600675fb3ad80bf0a617b",
   "evaluation_camera_root_binding": {
     "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/evaluation-camera-root-v1.json",
     "evidence_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
@@ -40,6 +40,12 @@
     "heldout_views": 314,
     "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
     "train_views": 2196
+  },
+  "fresh_run_root_policy": {
+    "prior_and_training_require_absent_run_root_at_guard_admission": true,
+    "prior_must_not_create_run_root": true,
+    "training_child_must_create_final_products": true,
+    "training_guard_exclusively_creates_empty_run_root_before_child": true
   },
   "input_class": "rgb_colmap_only",
   "input_validation_phases": [

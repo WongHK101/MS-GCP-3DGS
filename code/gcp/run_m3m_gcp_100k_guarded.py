@@ -325,6 +325,13 @@ def validate_activation_and_recipe(
             raise RuntimeError(f"execution plan {label} identity mismatch")
     if closure.get("exact_review_verdict_required") != REQUIRED_VERDICT:
         raise RuntimeError("execution plan exact review verdict mismatch")
+    if (
+        closure.get("prior_and_training_require_absent_run_root_at_guard_admission")
+        is not True
+        or closure.get("training_child_must_create_products_inside_new_run_root")
+        is not True
+    ):
+        raise RuntimeError("execution plan fresh-run-root closure mismatch")
     preparation = plan.get("preparation", {}).get("per_method_input_evidence", {})
     preparation_path = Path(str(preparation.get("path", "")))
     if not preparation_path.is_absolute() or not preparation_path.is_file():
@@ -384,6 +391,13 @@ def validate_activation_and_recipe(
         raise RuntimeError("recipe identity mismatch")
     if recipe.get("status") != "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED":
         raise RuntimeError("reviewed recipe candidate identity changed")
+    if recipe.get("fresh_run_root_policy") != {
+        "prior_and_training_require_absent_run_root_at_guard_admission": True,
+        "prior_must_not_create_run_root": True,
+        "training_guard_exclusively_creates_empty_run_root_before_child": True,
+        "training_child_must_create_final_products": True,
+    }:
+        raise RuntimeError("recipe fresh-run-root policy mismatch")
     for relative, expected_sha in recipe.get("benchmark_required_files_sha256", {}).items():
         path = bound_path(repo, str(relative))
         if not path.is_file() or sha256_file(path) != expected_sha:
@@ -1518,6 +1532,12 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
         raise FileExistsError(
             "phase evidence already exists; child-started attempts are immutable and cannot be retried"
         )
+    if args.phase in {"prior", "training"} and (
+        args.run_root.exists() or args.run_root.is_symlink()
+    ):
+        raise FileExistsError(
+            "prior/training requires an absent method run root at guard admission"
+        )
     frozen_method: dict[str, Any] | None = None
     freeze_sha: str | None = None
     if args.phase == "packet":
@@ -1529,10 +1549,15 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
             args=args, recipe=recipe, plan=args.execution_plan
         )
         acquire_packet_state(args.packet_state, args.method_id, args.packet_set_root)
-    args.run_root.mkdir(parents=True, exist_ok=True)
+    if args.phase == "training":
+        args.run_root.mkdir(parents=True, exist_ok=False)
     materialize_phase_files(
         recipe, phase=args.phase, run_root=args.run_root, replacements=args.replacements
     )
+    if args.phase == "prior" and (
+        args.run_root.exists() or args.run_root.is_symlink()
+    ):
+        raise RuntimeError("prior setup created the forbidden training run root")
     evidence_dir.mkdir(parents=True, exist_ok=True)
     started_at = utc_now()
     environment = {
@@ -1583,6 +1608,10 @@ def run_phase(args: argparse.Namespace, recipe: dict[str, Any], argv: list[str])
     validated_products: list[Path] = []
     if exit_code == 0:
         try:
+            if args.phase == "prior" and (
+                args.run_root.exists() or args.run_root.is_symlink()
+            ):
+                raise RuntimeError("prior child created the forbidden training run root")
             validated_products = validate_phase_postconditions(
                 recipe,
                 phase=args.phase,

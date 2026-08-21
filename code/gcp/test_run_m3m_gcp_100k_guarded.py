@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import shutil
@@ -39,7 +40,7 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
 
 
-def write_gaussian_ply(path: Path) -> None:
+def gaussian_ply_bytes() -> bytes:
     names = [
         "x", "y", "z", "f_dc_0", "f_dc_1", "f_dc_2",
         *[f"f_rest_{index}" for index in range(45)],
@@ -50,8 +51,12 @@ def write_gaussian_ply(path: Path) -> None:
         "ply", "format binary_little_endian 1.0", "element vertex 1",
         *[f"property float {name}" for name in names], "end_header", "",
     ]).encode("ascii")
+    return header + struct.pack(f"<{len(names)}f", *([0.0] * len(names)))
+
+
+def write_gaussian_ply(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(header + struct.pack(f"<{len(names)}f", *([0.0] * len(names))))
+    path.write_bytes(gaussian_ply_bytes())
 
 
 class Guarded100KTest(unittest.TestCase):
@@ -102,6 +107,12 @@ class Guarded100KTest(unittest.TestCase):
             "renderer_adapter_sha256": sha256_file(self.adapter),
             "authorized_packet_set_root": str((self.root / "packet-set").resolve()),
             "authorized_packet_state": str((self.root / "packet-state.json").resolve()),
+            "fresh_run_root_policy": {
+                "prior_and_training_require_absent_run_root_at_guard_admission": True,
+                "prior_must_not_create_run_root": True,
+                "training_guard_exclusively_creates_empty_run_root_before_child": True,
+                "training_child_must_create_final_products": True,
+            },
             "phase_commands": {"training": [sys.executable, "-c", "print('ok')"],
                                "packet": [sys.executable, "-c", "import time; time.sleep(5)"]},
         }
@@ -149,6 +160,8 @@ class Guarded100KTest(unittest.TestCase):
                 "attempt_freezer": {"path": "code/gcp/freeze_m3m_gcp_lidar_scene_attempts.py",
                                     "sha256": sha256_file(script_root / "freeze_m3m_gcp_lidar_scene_attempts.py")},
                 "exact_review_verdict_required": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+                "prior_and_training_require_absent_run_root_at_guard_admission": True,
+                "training_child_must_create_products_inside_new_run_root": True,
             },
             "preparation": {"per_method_input_evidence": {
                 "path": str(preparation), "sha256": sha256_file(preparation),
@@ -678,8 +691,16 @@ class Guarded100KTest(unittest.TestCase):
         point_cloud = (
             args.run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
         )
-        write_gaussian_ply(point_cloud)
-        command = [sys.executable, "-c", "print('valid final model already materialized')"]
+        encoded_ply = base64.b64encode(gaussian_ply_bytes()).decode("ascii")
+        command = [
+            sys.executable,
+            "-c",
+            (
+                "import base64; from pathlib import Path; "
+                f"p=Path({str(point_cloud)!r}); p.parent.mkdir(parents=True); "
+                f"p.write_bytes(base64.b64decode({encoded_ply!r}))"
+            ),
+        ]
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
             self.assertEqual(run_phase(args, recipe, command), 0)
         marker = failure.parent / "phase_success.json"
@@ -722,8 +743,37 @@ class Guarded100KTest(unittest.TestCase):
         failure = self.root / "fake-ply-evidence" / "failure.json"
         run_root = self.root / "fake-ply-run"
         point_cloud = run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
-        point_cloud.parent.mkdir(parents=True)
-        point_cloud.write_bytes(b"not-a-ply-model")
+        args = argparse.Namespace(
+            phase="training", capacity_root=self.root, packet_set_root=None,
+            packet_state=None, method_id="2dgs", run_root=run_root,
+            dataset_root=self.root / "dataset", prior_root=self.root / "prior",
+            failure_evidence=failure, progress_regex=None, progress_unit="iterations",
+            poll_seconds=0.01, recipe=self.recipe, replacements={},
+            scene_attempt_freeze=None,
+        )
+        recipe = json.loads(self.recipe.read_text())
+        recipe["budget"] = {"type": "iterations", "value": 30000}
+        command = [
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; "
+                f"p=Path({str(point_cloud)!r}); p.parent.mkdir(parents=True); "
+                "p.write_bytes(b'not-a-ply-model')"
+            ),
+        ]
+        with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
+            code = run_phase(args, recipe, command)
+        self.assertNotEqual(code, 0)
+        evidence = json.loads(failure.read_text())
+        self.assertEqual(evidence["status"], "FAILED_UNRANKED")
+        self.assertIn("Gaussian PLY", " ".join(evidence["errors"]))
+
+    def test_preexisting_training_run_root_is_rejected_before_child(self) -> None:
+        run_root = self.root / "stale-run"
+        point_cloud = run_root / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply"
+        write_gaussian_ply(point_cloud)
+        failure = self.root / "stale-evidence" / "failure.json"
         args = argparse.Namespace(
             phase="training", capacity_root=self.root, packet_set_root=None,
             packet_state=None, method_id="2dgs", run_root=run_root,
@@ -735,11 +785,10 @@ class Guarded100KTest(unittest.TestCase):
         recipe = json.loads(self.recipe.read_text())
         recipe["budget"] = {"type": "iterations", "value": 30000}
         with mock.patch("run_m3m_gcp_100k_guarded.validate_capacity"):
-            code = run_phase(args, recipe, [sys.executable, "-c", "print('zero exit')"])
-        self.assertNotEqual(code, 0)
-        evidence = json.loads(failure.read_text())
-        self.assertEqual(evidence["status"], "FAILED_UNRANKED")
-        self.assertIn("Gaussian PLY", " ".join(evidence["errors"]))
+            with self.assertRaisesRegex(FileExistsError, "absent method run root"):
+                run_phase(args, recipe, [sys.executable, "-c", "print('must not start')"])
+        self.assertFalse(failure.exists())
+        self.assertFalse((failure.parent / "command.stdout.log").exists())
 
 
 if __name__ == "__main__":

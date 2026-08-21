@@ -422,6 +422,12 @@ def main() -> int:
                 },
             },
             "retry_policy": "a guard rejection before child creation is not an attempt and may be relaunched; once the child starts every exit is final",
+            "fresh_run_root_policy": {
+                "prior_and_training_require_absent_run_root_at_guard_admission": True,
+                "prior_must_not_create_run_root": True,
+                "training_guard_exclusively_creates_empty_run_root_before_child": True,
+                "training_child_must_create_final_products": True,
+            },
             "result_selection_from_metrics": "FORBIDDEN",
         }
         if spec.get("reuse_model"):

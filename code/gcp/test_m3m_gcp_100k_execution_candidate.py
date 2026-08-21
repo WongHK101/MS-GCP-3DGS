@@ -279,6 +279,12 @@ class ExecutionCandidateTest(unittest.TestCase):
         )
         self.assertTrue(closure["zero_exit_requires_phase_product_postvalidation"])
         self.assertTrue(
+            closure["prior_and_training_require_absent_run_root_at_guard_admission"]
+        )
+        self.assertTrue(
+            closure["training_child_must_create_products_inside_new_run_root"]
+        )
+        self.assertTrue(
             closure["prior_phase_success_and_product_required_before_training"]
         )
         self.assertEqual(
@@ -301,6 +307,16 @@ class ExecutionCandidateTest(unittest.TestCase):
                 recipe["benchmark_required_files_sha256"],
             )
             self.assertIn("once the child starts every exit is final", recipe["retry_policy"])
+            fresh = recipe["fresh_run_root_policy"]
+            self.assertTrue(
+                fresh["prior_and_training_require_absent_run_root_at_guard_admission"]
+            )
+            self.assertTrue(fresh["prior_must_not_create_run_root"])
+            self.assertTrue(
+                fresh["training_guard_exclusively_creates_empty_run_root_before_child"]
+            )
+            self.assertTrue(fresh["training_child_must_create_final_products"])
+            self.assertFalse(recipe.get("materializations", {}).get("prior", []))
 
 
 if __name__ == "__main__":

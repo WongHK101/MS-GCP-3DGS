@@ -55,7 +55,7 @@
       "value": 30000
     }
   },
-  "canonical_sha256": "364f8d7fad65efdb4801015cb7f3f782680d2b477091a8e7afb212bce696396f",
+  "canonical_sha256": "21ff876f12fec245f9a5e630771f6c5018c9b8d0ef125e817c338094c041ac35",
   "execution_authorized": false,
   "execution_closure": {
     "activation_builder": {
@@ -79,7 +79,7 @@
     "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
     "guarded_runner": {
       "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
-      "sha256": "08c7c796f2fbbdf0eab0714dbb43b64d15bfcf758f77f413a9e833b306545633"
+      "sha256": "9c4852f28a42c4f0e866f7a168f63cb75e08ffd4e0c2fac084999955e9d6b01c"
     },
     "method_input_materializer": {
       "path": "code/gcp/materialize_m3m_gcp_100k_method_inputs.py",
@@ -103,9 +103,11 @@
         "sha256": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e"
       }
     ],
+    "prior_and_training_require_absent_run_root_at_guard_admission": true,
     "prior_phase_success_and_product_required_before_training": true,
     "progress_monitor_bound_by_each_recipe": true,
     "structured_failure_evidence_required": true,
+    "training_child_must_create_products_inside_new_run_root": true,
     "zero_exit_requires_phase_product_postvalidation": true
   },
   "formal_lidar_protocol": {
@@ -216,8 +218,8 @@
     }
   },
   "recipe_manifest": {
-    "canonical_sha256": "c1ad85543e371e2787d5e9b7290825797da00aeb3cd2517b3738a26a266e8b08",
-    "file_sha256": "b83e29e60e733a3bb60ae06b2e85c0234d993752cad33619ce73fdb17f23b288",
+    "canonical_sha256": "1bc00b99321cdd9651c890ee11101afd513d1010bdec55f7a7ddee0bf7172aab",
+    "file_sha256": "992d41508e20f850621fe72473726ef4f8f69e944834e0b5562be84e930795c5",
     "method_order": [
       "3dgs_original",
       "2dgs",

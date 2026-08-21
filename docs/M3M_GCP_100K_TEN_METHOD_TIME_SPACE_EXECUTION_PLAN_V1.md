@@ -65,6 +65,12 @@ attempt because recipe-changing rescue runs are forbidden.
 3. For each remaining method in the fixed order, create one fresh run root,
    generate only its authorized prior, run the frozen budget once, and retain
    the final formal checkpoint plus resource and command evidence.
+   At guard admission for either the prior or training phase, the authorized
+   run root must be completely absent (including symlinks).  The prior phase
+   never creates that root; the training guard exclusively creates a new empty
+   root immediately before launch, and the training child must create the declared final model
+   products inside it.  Therefore a pre-positioned valid checkpoint/PLY plus a
+   zero-work child cannot be accepted as a formal attempt.
    A prior child is successful only after its exact prior manifest/PASS marker
    and every declared prior product pass method-specific validation.  For
    CityGaussianV2 this rehashes all 2,196 depth arrays and the 2,196-row scale
@@ -256,7 +262,8 @@ that exits zero but fails any of these checks is recorded as immutable
   Once a child process starts, any exit—including zero reported optimizer
   progress, technical failure or OOM—is final for that method.  Phase logs,
   failure evidence and success markers are exclusive-create and never reused.
-- Formal output roots are fresh and never resumed or overwritten.
+- Formal output roots are absent at prior/training guard admission, are
+  exclusively created empty for training, and are never resumed or overwritten.
 - The other four prepared scenes remain untouched after 100K completion; their
   later authorization requires a new user instruction and review.
 

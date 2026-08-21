@@ -228,6 +228,8 @@ def main() -> int:
             "foreign_gpu_process_gate": "no compute process may exist before prior/training/packet launch",
             "progress_monitor_bound_by_each_recipe": True,
             "structured_failure_evidence_required": True,
+            "prior_and_training_require_absent_run_root_at_guard_admission": True,
+            "training_child_must_create_products_inside_new_run_root": True,
             "zero_exit_requires_phase_product_postvalidation": True,
             "prior_phase_success_and_product_required_before_training": True,
         },
