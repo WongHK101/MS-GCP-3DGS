@@ -126,6 +126,9 @@ def main() -> int:
     if formal_input.get("manifest_sha256") != candidate["formal_input_manifest"]["canonical_sha256"]:
         raise RuntimeError("formal input manifest canonical-field binding mismatch")
     _camera_path, camera = require_bound_json(candidate["rgb_camera_root_manifest"], "RGB camera root")
+    _gcp_camera_path, gcp_camera = require_bound_json(
+        candidate["gcp_camera_root_manifest"], "GCP camera root"
+    )
     registry_path, registry = require_bound_json(candidate["rgb_registry"], "RGB registry")
     legacy_path, legacy = require_bound_json(candidate["legacy_3dgs_gcp_adoption"], "legacy GCP adoption")
     if (
@@ -137,6 +140,13 @@ def main() -> int:
         or legacy.get("scene_attempt_freeze_sha256") != sha256_file(freeze_path)
         or legacy.get("methods_manifest_file_sha256") != sha256_file(methods_path)
         or camera.get("status") != "PASS_RGB_EVALUATION_CAMERA_ROOT"
+        or gcp_camera.get("status")
+        != "PASS_GCP_EVALUATION_CAMERA_ROOT_NO_RGB_PIXELS"
+        or gcp_camera.get("protocol_observations", {}).get("observation_count") != 256
+        or gcp_camera.get("protocol_observations", {}).get("unique_camera_count") != 211
+        or gcp_camera.get("protocol_observations", {}).get("formal_role_counts")
+        != {"train": 187, "test": 24}
+        or gcp_camera.get("rgb_truth_boundary", {}).get("real_rgb_pixels_present") is not False
         or base_activation.get("execution_authorized") is not True
     ):
         raise RuntimeError("candidate component semantic binding mismatch")
@@ -164,6 +174,7 @@ def main() -> int:
         "scene_attempt_freeze_sha256": candidate["scene_attempt_freeze"]["sha256"],
         "methods_manifest_sha256": candidate["methods_manifest"]["sha256"],
         "rgb_camera_root_manifest_sha256": candidate["rgb_camera_root_manifest"]["sha256"],
+        "gcp_camera_root_manifest_sha256": candidate["gcp_camera_root_manifest"]["sha256"],
         "rgb_contract_sha256": candidate["rgb_contract"]["sha256"],
         "rgb_registry_path": str(registry_path),
         "rgb_registry_sha256": sha256_file(registry_path),

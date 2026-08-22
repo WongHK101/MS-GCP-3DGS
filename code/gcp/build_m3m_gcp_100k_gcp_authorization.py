@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
+from metric_depth_packet import directory_tree_hash
+from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
+from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
 
 
 SCENE = "gcp_100000_20260610"
@@ -52,26 +55,20 @@ def bound_component(candidate: dict[str, Any], key: str) -> tuple[Path, dict[str
     return path, payload
 
 
-def packet_model_hashes(registry_method: dict[str, Any]) -> set[str]:
-    candidates: list[Any] = [
-        registry_method.get("formal_model_sha256"),
-        registry_method.get("point_cloud_sha256"),
-        registry_method.get("attempt_model_identity_sha256"),
-    ]
-    candidates.extend((registry_method.get("formal_model_aux_sha256") or {}).values())
-    return {str(value) for value in candidates if isinstance(value, str) and len(value) == 64}
-
-
-def packet_content_hashes(value: Any) -> set[str]:
-    if isinstance(value, str):
-        return {value} if len(value) == 64 else set()
-    if not isinstance(value, dict):
-        return set()
-    hashes = {
-        str(value.get("sha256", "")),
-        *[str(row.get("sha256", "")) for row in value.get("files", []) if isinstance(row, dict)],
-    }
-    return {item for item in hashes if len(item) == 64}
+def expected_packet_model_content(method: dict[str, Any]) -> Any:
+    method_id = str(method["method_id"])
+    if method_id == "citygs_x":
+        model_path = (
+            Path(str(method["model_root"])).resolve()
+            / str(method["formal_model_relative_path"])
+        ).resolve()
+        return directory_tree_hash(model_path.parent)
+    if method_id == "metrogs":
+        checkpoint = Path(str(method["formal_checkpoint"])).resolve()
+        if not checkpoint.is_file() or sha256_file(checkpoint) != method["formal_model_sha256"]:
+            raise RuntimeError("MetroGS activated checkpoint identity mismatch")
+        return method["formal_model_sha256"]
+    raise RuntimeError(f"new GCP packet authorization is unsupported for {method_id}")
 
 
 def main() -> int:
@@ -79,6 +76,9 @@ def main() -> int:
     parser.add_argument("--activation", type=Path, required=True)
     parser.add_argument("--method-id", required=True)
     parser.add_argument("--packet-manifest", type=Path, required=True)
+    parser.add_argument("--packet-state", type=Path, required=True)
+    parser.add_argument("--gcp-packet-phase-success", type=Path, required=True)
+    parser.add_argument("--gcp-camera-root-manifest", type=Path, required=True)
     parser.add_argument("--gcp-data-root", type=Path, required=True)
     parser.add_argument("--gcp-protocol-release", type=Path, required=True)
     parser.add_argument("--python", type=Path, required=True)
@@ -106,12 +106,64 @@ def main() -> int:
     if args.method_id not in method_rows or args.method_id not in registry.get("ready_method_ids", []):
         raise RuntimeError("method is not READY in the activated registry")
     method = method_rows[args.method_id]
+    if args.method_id not in {"citygs_x", "metrogs"}:
+        raise RuntimeError("3DGS GCP must use the activated legacy-adoption receipt")
+    _addendum_config_path, addendum_config = bound_component(candidate, "addendum_config")
+    addendum_repo, runtime_config = validate_addendum_runtime(
+        activation=activation,
+        candidate=candidate,
+        registry=registry,
+        executing_file=Path(__file__),
+    )
+    if runtime_config != addendum_config:
+        raise RuntimeError("GCP authorization addendum config changed")
+    gcp_config = addendum_config.get("tracks", {}).get("gcp", {})
+    base_repo = Path(str(candidate["base_checkout"]["path"])).resolve()
+    recipe_path = Path(str(method["recipe_path"])).resolve()
+    recipe = require_json(recipe_path, str(method["recipe_sha256"]))
+    identity_path = Path(str(method["attempt_model_identity_path"])).resolve()
+    bound_recipe = dict(recipe)
+    bound_recipe["_recipe_path"] = str(recipe_path)
+    identity = validate_model_identity_bundle(
+        manifest_path=identity_path,
+        method_id=args.method_id,
+        run_root=Path(str(method["run_root"])).resolve(),
+        recipe=bound_recipe,
+        repo=base_repo,
+    )
+    if (
+        sha256_file(identity_path) != method["attempt_model_identity_sha256"]
+        or identity["canonical_sha256"]
+        != method["attempt_model_identity_canonical_sha256"]
+    ):
+        raise RuntimeError("activated GCP model identity changed after scene freeze")
 
     formal_input_path = Path(str(candidate["formal_input_manifest"]["path"])).resolve()
-    formal_input = require_json(formal_input_path, str(candidate["formal_input_manifest"]["sha256"]))
-    train_names = {str(row["image_name"]) for row in formal_input["images"] if row.get("role") == "train"}
-    if len(train_names) != 2196:
-        raise RuntimeError("frozen train allowlist count mismatch")
+    require_json(formal_input_path, str(candidate["formal_input_manifest"]["sha256"]))
+    camera_manifest_path = args.gcp_camera_root_manifest.resolve()
+    camera_manifest = require_json(camera_manifest_path)
+    bound_camera = candidate["gcp_camera_root_manifest"]
+    observations = camera_manifest.get("protocol_observations", {})
+    observation_names = {
+        str(value) for value in camera_manifest.get("output", {}).get("image_names", [])
+    }
+    if (
+        camera_manifest.get("schema")
+        != "m3m_gcp_100k_gcp_evaluation_camera_root_v1"
+        or camera_manifest.get("status")
+        != "PASS_GCP_EVALUATION_CAMERA_ROOT_NO_RGB_PIXELS"
+        or camera_manifest.get("scene") != SCENE
+        or camera_manifest.get("canonical_sha256") != canonical_sha256(camera_manifest)
+        or observations.get("observation_count") != 256
+        or observations.get("unique_camera_count") != 211
+        or observations.get("formal_role_counts") != {"train": 187, "test": 24}
+        or len(observation_names) != 211
+        or camera_manifest_path != Path(str(bound_camera["path"])).resolve()
+        or sha256_file(camera_manifest_path) != bound_camera["sha256"]
+        or camera_manifest["canonical_sha256"] != bound_camera["canonical_sha256"]
+        or activation.get("gcp_camera_root_manifest_sha256") != bound_camera["sha256"]
+    ):
+        raise RuntimeError("frozen 211-camera GCP observation root mismatch")
 
     packet_path = args.packet_manifest.resolve()
     packet = require_json(packet_path)
@@ -121,21 +173,77 @@ def main() -> int:
         packet.get("schema") != "ms_gcp_metric_depth_packet_manifest_v2"
         or packet.get("protocol_id") != GCP_PROTOCOL_ID
         or packet.get("scene") != SCENE
-        or packet.get("rendered_view_count") != 2196
-        or len(depth_rows) != 2196
-        or len(packet.get("packet_index", [])) != 2196
-        or len(set(packet_names)) != 2196
-        or set(packet_names) != train_names
-        or any(row.get("split") != "train" for row in depth_rows)
+        or packet.get("rendered_view_count") != 211
+        or len(depth_rows) != 211
+        or len(packet.get("packet_index", [])) != 211
+        or len(set(packet_names)) != 211
+        or set(packet_names) != observation_names
     ):
-        raise RuntimeError("active packet manifest is not the exact 2,196-view GCP input")
-    allowed_model_hashes = packet_model_hashes(method)
-    observed_model_hashes = packet_content_hashes(packet.get("model_content_hash"))
-    if not observed_model_hashes.intersection(allowed_model_hashes):
-        raise RuntimeError(
-            "packet model-content inventory is not bound by the activated model registry: "
-            f"{sorted(observed_model_hashes)}"
-        )
+        raise RuntimeError("active GCP packet manifest is not the exact 211-camera input")
+    expected_model_content = expected_packet_model_content(method)
+    if packet.get("model_content_hash") != expected_model_content:
+        raise RuntimeError("GCP packet model-content inventory differs from the full frozen model")
+
+    phase_success_path = args.gcp_packet_phase_success.resolve()
+    phase_success = require_json(phase_success_path)
+    packet_state_path = args.packet_state.resolve()
+    packet_state = require_json(packet_state_path)
+    packet_root = packet_path.parent.resolve()
+    manifest_products = [
+        row
+        for row in phase_success.get("products", [])
+        if Path(str(row.get("path", ""))).resolve() == packet_path
+    ]
+    if (
+        phase_success.get("schema")
+        != "m3m_gcp_100k_gcp_packet_phase_success_v1"
+        or phase_success.get("status") != "PASS_GCP_PACKET_211"
+        or phase_success.get("scene") != SCENE
+        or phase_success.get("method_id") != args.method_id
+        or Path(str(phase_success.get("three_track_activation_path", ""))).resolve()
+        != activation_path
+        or phase_success.get("three_track_activation_sha256")
+        != sha256_file(activation_path)
+        or phase_success.get("scene_attempt_freeze_sha256")
+        != candidate["scene_attempt_freeze"]["sha256"]
+        or phase_success.get("methods_manifest_sha256")
+        != candidate["methods_manifest"]["sha256"]
+        or phase_success.get("attempt_model_identity_sha256")
+        != method["attempt_model_identity_sha256"]
+        or phase_success.get("gcp_camera_root_manifest_sha256")
+        != sha256_file(camera_manifest_path)
+        or Path(str(phase_success.get("packet_set_root", ""))).resolve()
+        != packet_root
+        or Path(str(phase_success.get("packet_state_path", ""))).resolve()
+        != packet_state_path
+        or phase_success.get("packet_state_sha256") != sha256_file(packet_state_path)
+        or phase_success.get("canonical_sha256") != canonical_sha256(phase_success)
+        or len(manifest_products) != 1
+        or manifest_products[0].get("sha256") != sha256_file(packet_path)
+        or manifest_products[0].get("bytes") != packet_path.stat().st_size
+        or packet_state.get("schema") != "m3m_gcp_100k_single_gcp_packet_state_v1"
+        or packet_state.get("method_id") != args.method_id
+        or Path(str(packet_state.get("packet_set_root", ""))).resolve()
+        != packet_root
+        or packet_state.get("three_track_activation_sha256")
+        != sha256_file(activation_path)
+        or packet_state.get("candidate_manifest_sha256")
+        != sha256_file(candidate_path)
+        or packet_state.get("scene_attempt_freeze_sha256")
+        != candidate["scene_attempt_freeze"]["sha256"]
+        or packet_state.get("methods_manifest_sha256")
+        != candidate["methods_manifest"]["sha256"]
+        or packet_state.get("recipe_sha256") != sha256_file(recipe_path)
+        or packet_state.get("attempt_model_identity_sha256")
+        != method["attempt_model_identity_sha256"]
+        or packet_state.get("gcp_camera_root_manifest_sha256")
+        != sha256_file(camera_manifest_path)
+        or packet_state.get("protocol_observation_count") != 256
+        or packet_state.get("packet_view_count") != 211
+        or packet_state.get("formal_role_counts") != {"train": 187, "test": 24}
+        or packet_state.get("canonical_sha256") != canonical_sha256(packet_state)
+    ):
+        raise RuntimeError("GCP packet phase-success/state/current activation binding mismatch")
 
     data_root = args.gcp_data_root.resolve()
     data_contract = data_root / "DATA_CONTRACT_DRAFT.json"
@@ -147,12 +255,17 @@ def main() -> int:
     python = args.python.resolve()
     if not python.is_file():
         raise FileNotFoundError(python)
-    addendum_repo = Path(str(registry["shared"]["benchmark_repo_template"])).resolve()
-    evaluator = addendum_repo / "code" / "gcp" / "evaluate_m3m_native_quarter_geometry.py"
-    verifier = addendum_repo / "code" / "gcp" / "verify_m3m_native_quarter_geometry_outputs.py"
-    for path in (evaluator, verifier):
-        if not path.is_file():
-            raise FileNotFoundError(path)
+    evaluator = (addendum_repo / str(gcp_config["evaluator_path"])).resolve()
+    verifier = (addendum_repo / str(gcp_config["verifier_path"])).resolve()
+    if (
+        evaluator.parent.parent.parent != addendum_repo
+        or verifier.parent.parent.parent != addendum_repo
+        or not evaluator.is_file()
+        or not verifier.is_file()
+        or sha256_file(evaluator) != gcp_config.get("evaluator_sha256")
+        or sha256_file(verifier) != gcp_config.get("verifier_sha256")
+    ):
+        raise RuntimeError("activated GCP evaluator/verifier identity mismatch")
 
     output_root = args.output_root.resolve()
     verification_output = args.verification_output.resolve()
@@ -197,11 +310,27 @@ def main() -> int:
         "methods_manifest_sha256": candidate["methods_manifest"]["sha256"],
         "attempt_model_identity_path": method["attempt_model_identity_path"],
         "attempt_model_identity_sha256": method["attempt_model_identity_sha256"],
-        "allowed_model_content_hashes": sorted(allowed_model_hashes),
-        "observed_packet_model_content_hashes": sorted(observed_model_hashes),
+        "attempt_model_identity_canonical_sha256": method[
+            "attempt_model_identity_canonical_sha256"
+        ],
+        "recipe_path": str(recipe_path),
+        "recipe_sha256": sha256_file(recipe_path),
+        "expected_model_content": expected_model_content,
+        "observed_packet_model_content": packet["model_content_hash"],
+        "gcp_camera_root_manifest_path": str(camera_manifest_path),
+        "gcp_camera_root_manifest_sha256": sha256_file(camera_manifest_path),
+        "gcp_camera_root_manifest_canonical_sha256": camera_manifest["canonical_sha256"],
+        "gcp_packet_phase_success_path": str(phase_success_path),
+        "gcp_packet_phase_success_sha256": sha256_file(phase_success_path),
+        "gcp_packet_phase_success_canonical_sha256": phase_success["canonical_sha256"],
+        "packet_state_path": str(packet_state_path),
+        "packet_state_sha256": sha256_file(packet_state_path),
+        "packet_state_canonical_sha256": packet_state["canonical_sha256"],
         "packet_manifest_path": str(packet_path),
         "packet_manifest_sha256": sha256_file(packet_path),
-        "packet_view_count": 2196,
+        "protocol_observation_count": 256,
+        "packet_view_count": 211,
+        "formal_role_counts": {"train": 187, "test": 24},
         "packet_names_canonical_sha256": packet_names_sha,
         "gcp_data_contract_path": str(data_contract),
         "gcp_data_contract_sha256": sha256_file(data_contract),

@@ -13,6 +13,7 @@ from typing import Any
 
 from build_m3m_native_quarter_rgb_quality_3k_commands import _environment, _render_argv
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
+from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 
 
 SCENE = "gcp_100000_20260610"
@@ -48,6 +49,7 @@ def write_exclusive(path: Path, payload: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--activation", type=Path, required=True)
+    parser.add_argument("--activation-preflight", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -67,9 +69,45 @@ def main() -> int:
         raise RuntimeError("activation/candidate binding mismatch")
     registry_path = Path(str(activation["rgb_registry_path"])).resolve()
     registry = require_json(registry_path, str(activation["rgb_registry_sha256"]))
+    validate_addendum_runtime(
+        activation=activation,
+        candidate=candidate,
+        registry=registry,
+        executing_file=Path(__file__),
+    )
     contract_path = Path(str(candidate["rgb_contract"]["path"])).resolve()
     if not contract_path.is_file() or sha256_file(contract_path) != activation["rgb_contract_sha256"]:
         raise RuntimeError("activation/RGB-contract binding mismatch")
+    preflight_path = args.activation_preflight.resolve()
+    preflight = require_json(preflight_path)
+    preflight_inputs = preflight.get("inputs", {})
+    if (
+        preflight.get("schema")
+        != "m3m_gcp_native_quarter_rgb_quality_100k_preflight_v1"
+        or preflight.get("status") != "PASS_READY"
+        or preflight.get("passed") is not True
+        or preflight.get("formal_launch_ready") is not True
+        or preflight.get("pending") != []
+        or preflight.get("errors") != []
+        or preflight.get("canonical_sha256") != canonical_sha256(preflight)
+        or Path(str(preflight_inputs.get("activation_path", ""))).resolve()
+        != activation_path
+        or preflight_inputs.get("activation_sha256") != sha256_file(activation_path)
+        or Path(str(preflight_inputs.get("candidate_path", ""))).resolve()
+        != candidate_path
+        or preflight_inputs.get("candidate_sha256") != sha256_file(candidate_path)
+        or Path(str(preflight_inputs.get("contract_path", ""))).resolve()
+        != contract_path
+        or preflight_inputs.get("contract_sha256") != sha256_file(contract_path)
+        or Path(str(preflight_inputs.get("registry_path", ""))).resolve()
+        != registry_path
+        or preflight_inputs.get("registry_sha256") != sha256_file(registry_path)
+        or preflight_inputs.get("benchmark_commit")
+        != activation["reviewed_addendum_commit"]
+        or preflight_inputs.get("benchmark_tree") != activation["reviewed_addendum_tree"]
+        or preflight_inputs.get("benchmark_clean") is not True
+    ):
+        raise RuntimeError("fresh PASS_READY 100K RGB preflight is absent or stale")
     if (
         registry.get("schema") != "m3m_gcp_native_quarter_rgb_quality_100k_registry_v1"
         or registry.get("status") != "ACTIVE_FROZEN"
@@ -185,6 +223,9 @@ def main() -> int:
         "registry_sha256": sha256_file(registry_path),
         "contract_path": str(contract_path),
         "contract_sha256": sha256_file(contract_path),
+        "activation_preflight_path": str(preflight_path),
+        "activation_preflight_sha256": sha256_file(preflight_path),
+        "activation_preflight_canonical_sha256": preflight["canonical_sha256"],
         "benchmark_repo": str(repo),
         "benchmark_commit": commit,
         "benchmark_tree": tree,
