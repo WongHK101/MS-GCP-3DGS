@@ -32,7 +32,10 @@ from m3m_gcp_100k_phase_products import (
     validate_npz,
     validate_torch_checkpoint,
 )
-from m3m_gcp_100k_activation_v4_continuity import validate_continuity_for_plan
+from m3m_gcp_100k_activation_v4_continuity import (
+    PRELAUNCH_FRESH,
+    validate_continuity_for_plan,
+)
 from m3m_gcp_100k_source_binding_correction import (
     validate_source_binding_correction,
 )
@@ -406,6 +409,7 @@ def validate_activation_and_recipe(
         method_id=method_id,
         phase=phase,
         require_pgsr_absent=(method_id == "pgsr" and phase == "training"),
+        mode=PRELAUNCH_FRESH,
     )
     if plan.get("method_order") != METHOD_ORDER:
         raise RuntimeError("execution plan method order mismatch")

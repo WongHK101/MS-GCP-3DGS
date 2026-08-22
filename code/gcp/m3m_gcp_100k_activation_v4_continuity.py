@@ -9,6 +9,7 @@ from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_postattempt_closure import validate_postattempt_closure
 
 
 SCENE = "gcp_100000_20260610"
@@ -44,6 +45,9 @@ REPOSITORY_ROLES = {
     "recipe_manifest_v3",
     "execution_note_v3",
 }
+PRELAUNCH_FRESH = "PRELAUNCH_FRESH"
+POSTATTEMPT_TERMINAL = "POSTATTEMPT_TERMINAL"
+CONTINUITY_MODES = {PRELAUNCH_FRESH, POSTATTEMPT_TERMINAL}
 
 
 def _bound_path(repo: Path, value: object) -> Path:
@@ -114,13 +118,32 @@ def _validate_failure(
             raise RuntimeError(f"inherited {method_id} {label} binding mismatch")
 
 
+def validate_prelaunch_fresh_state(rejection: dict[str, Any]) -> None:
+    """Require the exact still-unused MetroGS attempt authorized by activation-v4."""
+
+    run_root = Path(str(rejection.get("run_root", "")))
+    failure_path = Path(str(rejection.get("failure_path", "")))
+    phase_success_path = failure_path.parent / "phase_success.json"
+    if (
+        not run_root.is_absolute()
+        or not failure_path.is_absolute()
+        or run_root.exists()
+        or failure_path.exists()
+        or phase_success_path.exists()
+    ):
+        raise RuntimeError("MetroGS pre-child rejection did not preserve a fresh attempt")
+
+
 def validate_activation_v4_continuity(
     *, repo: Path, plan: dict[str, Any], method_id: str | None = None,
-    phase: str | None = None,
+    phase: str | None = None, mode: str,
+    postattempt_receipt: Path | None = None,
 ) -> dict[str, Any]:
-    """Rehash all v3 terminal states and authorize only the unfinished MetroGS work."""
+    """Validate the historical chain in one explicit lifecycle mode."""
 
     repo = repo.resolve()
+    if mode not in CONTINUITY_MODES:
+        raise RuntimeError("100K continuity mode must be explicit and recognized")
     binding = plan.get("activation_continuity", {})
     receipt_row = binding.get("receipt", {})
     receipt_path = _bound_path(repo, receipt_row.get("path", "")).resolve()
@@ -288,11 +311,6 @@ def validate_activation_v4_continuity(
         or "training requires the exact successful prior phase" not in console
     ):
         raise RuntimeError("MetroGS training pre-child rejection mismatch")
-    run_root = Path(str(rejection.get("run_root", "")))
-    failure_path = Path(str(rejection.get("failure_path", "")))
-    if not run_root.is_absolute() or run_root.exists() or failure_path.exists():
-        raise RuntimeError("MetroGS pre-child rejection did not preserve a fresh attempt")
-
     transition = receipt.get("transition_policy", {})
     forbidden = sorted(FAILED_OUTCOMES)
     if (
@@ -310,27 +328,51 @@ def validate_activation_v4_continuity(
     ):
         raise RuntimeError("activation-v4 transition policy mismatch")
 
-    if method_id in FAILED_OUTCOMES:
-        raise RuntimeError(f"activation-v4 forbids relaunch of terminal method: {method_id}")
-    if method_id == "3dgs_original" and phase != "packet":
-        raise RuntimeError("activation-v4 permits reused 3DGS only for packet export")
-    if method_id == "metrogs" and phase == "prior":
-        raise RuntimeError("activation-v4 forbids rerunning the inherited MetroGS prior")
-    return receipt
+    if mode == PRELAUNCH_FRESH:
+        if postattempt_receipt is not None:
+            raise RuntimeError("prelaunch continuity cannot consume a post-attempt receipt")
+        validate_prelaunch_fresh_state(rejection)
+        if method_id in FAILED_OUTCOMES:
+            raise RuntimeError(
+                f"activation-v4 forbids relaunch of terminal method: {method_id}"
+            )
+        if method_id == "3dgs_original" and phase != "packet":
+            raise RuntimeError("activation-v4 permits reused 3DGS only for packet export")
+        if method_id == "metrogs" and phase == "prior":
+            raise RuntimeError("activation-v4 forbids rerunning the inherited MetroGS prior")
+        return receipt
+
+    if method_id is not None or phase is not None:
+        raise RuntimeError("post-attempt closure cannot authorize a method phase")
+    if postattempt_receipt is None:
+        raise RuntimeError("post-attempt continuity requires the exact closure receipt")
+    return validate_postattempt_closure(
+        repo=repo,
+        plan=plan,
+        receipt_path=postattempt_receipt,
+    )
 
 
 def validate_continuity_for_plan(
     *, repo: Path, plan: dict[str, Any], method_id: str | None = None,
     phase: str | None = None, require_pgsr_absent: bool = False,
+    mode: str, postattempt_receipt: Path | None = None,
 ) -> dict[str, Any]:
     """Dispatch continuity validation without weakening either frozen generation."""
 
     schema = plan.get("schema")
     if schema == "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4":
         return validate_activation_v4_continuity(
-            repo=repo, plan=plan, method_id=method_id, phase=phase
+            repo=repo,
+            plan=plan,
+            method_id=method_id,
+            phase=phase,
+            mode=mode,
+            postattempt_receipt=postattempt_receipt,
         )
     if schema == "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3":
+        if mode != PRELAUNCH_FRESH or postattempt_receipt is not None:
+            raise RuntimeError("superseded plan-v3 has no post-attempt closure mode")
         return validate_activation_continuity(
             repo=repo,
             plan=plan,
@@ -338,4 +380,3 @@ def validate_continuity_for_plan(
             require_pgsr_absent=require_pgsr_absent,
         )
     raise RuntimeError("unsupported 100K execution-plan continuity generation")
-

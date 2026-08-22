@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import subprocess
 from pathlib import Path, PurePosixPath
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
@@ -26,6 +28,7 @@ FAILED_OUTCOMES = {
     "citygaussian_v2": "FAILED_UNRANKED",
     "citygs_x": "FAILED_UNRANKED",
 }
+ACTIVATION_V4_COMMIT = "04f453dbf0d438addaa087b1402f7b1acdfc987d"
 
 
 def load(path: Path) -> dict:
@@ -85,9 +88,11 @@ def test_v4_closure_hashes_every_changed_executable() -> None:
     }
     for label, relative in expected.items():
         row = closure[label]
-        path = ROOT / relative
         assert row["path"] == relative
-        assert row["sha256"] == sha256_file(path)
+        reviewed_bytes = subprocess.check_output(
+            ["git", "-C", str(ROOT), "show", f"{ACTIVATION_V4_COMMIT}:{relative}"]
+        )
+        assert row["sha256"] == hashlib.sha256(reviewed_bytes).hexdigest()
     assert closure["prior_phase_context_reconstructed_from_frozen_phase_bindings"] is True
 
 
@@ -168,3 +173,11 @@ def test_current_pointer_selects_only_v4_as_active_100k_plan() -> None:
     assert continuity["receipt"].endswith(
         "m3m_gcp_100k_activation_v3_to_v4_continuity.json"
     )
+    closure = lidar["one_hundred_k_postattempt_closure"]
+    assert closure["receipt"].endswith(
+        "m3m_gcp_100k_postattempt_closure_v1.json"
+    )
+    assert closure["activation_v4_remains_only_training_authority"] is True
+    assert closure["activation_v5_forbidden"] is True
+    assert closure["closure_grants_execution_authority"] is False
+    assert closure["only_ready_method_after_closure"] == "3dgs_original"

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from m3m_gcp_100k_activation_v4_continuity import (
+    PRELAUNCH_FRESH,
     validate_activation_v4_continuity,
 )
 from m3m_gcp_100k_source_binding_correction import (
@@ -129,7 +130,9 @@ def main() -> int:
         raise RuntimeError("100K successor-plan candidate identity changed")
     if output != Path(str(plan.get("activation_manifest_path", ""))).resolve():
         raise RuntimeError("activation output differs from the reviewed v4 plan")
-    validate_activation_v4_continuity(repo=repo, plan=plan)
+    validate_activation_v4_continuity(
+        repo=repo, plan=plan, mode=PRELAUNCH_FRESH
+    )
     validate_source_binding_correction(repo=repo, plan=plan, require_live_sources=True)
     if (
         recipes.get("schema") != "m3m_gcp_native_quarter_100k_recipe_manifest_v3"
@@ -177,4 +180,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

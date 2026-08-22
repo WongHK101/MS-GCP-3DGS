@@ -16,7 +16,10 @@ from m3m_gcp_lidar_artifacts import (
     sha256_file,
     validate_failure_evidence_file,
 )
-from m3m_gcp_100k_activation_v4_continuity import validate_continuity_for_plan
+from m3m_gcp_100k_activation_v4_continuity import (
+    POSTATTEMPT_TERMINAL,
+    validate_continuity_for_plan,
+)
 from m3m_gcp_100k_source_binding_correction import (
     validate_source_binding_correction,
 )
@@ -26,7 +29,8 @@ FORMAL_100K_SCENE = "gcp_100000_20260610"
 
 
 def validate_frozen_100k_paths(
-    *, execution_plan: Path | None, methods_path: Path, output: Path, scene: str
+    *, execution_plan: Path | None, methods_path: Path, output: Path, scene: str,
+    postattempt_receipt: Path | None,
 ) -> None:
     if scene != FORMAL_100K_SCENE:
         return
@@ -50,7 +54,14 @@ def validate_frozen_100k_paths(
     if plan_path.parent.name != "configs":
         raise RuntimeError("100K execution plan must be inside the repository configs directory")
     repo = plan_path.parents[1]
-    validate_continuity_for_plan(repo=repo, plan=plan)
+    if postattempt_receipt is None:
+        raise RuntimeError("100K attempt freeze requires post-attempt closure receipt")
+    validate_continuity_for_plan(
+        repo=repo,
+        plan=plan,
+        mode=POSTATTEMPT_TERMINAL,
+        postattempt_receipt=postattempt_receipt.resolve(),
+    )
     validate_source_binding_correction(repo=repo, plan=plan)
     expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
     if plan_path != expected_plan:
@@ -141,6 +152,7 @@ def main() -> int:
     parser.add_argument("--methods-manifest", type=Path, required=True)
     parser.add_argument("--execution-plan", type=Path)
     parser.add_argument("--artifact-schema", type=Path, required=True)
+    parser.add_argument("--postattempt-closure", type=Path, required=True)
     parser.add_argument("--scene", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -152,6 +164,7 @@ def main() -> int:
         methods_path=methods_path,
         output=output,
         scene=args.scene,
+        postattempt_receipt=args.postattempt_closure,
     )
     if output.exists():
         raise FileExistsError("scene attempt freeze already exists; replacement is forbidden")

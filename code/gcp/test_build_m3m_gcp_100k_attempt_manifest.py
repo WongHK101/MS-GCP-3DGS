@@ -95,6 +95,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             identity_root = repo / "formal" / "identities"
             methods = repo / "formal" / "methods.json"
             freeze_output = repo / "formal" / "freeze.json"
+            postattempt_receipt = repo / "postattempt.json"
             recipe_manifest.write_text("{}", encoding="utf-8")
             registry.write_text("{}", encoding="utf-8")
             plan = {
@@ -128,12 +129,14 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                     registry_path=registry,
                     identity_root=identity_root,
                     output=methods,
+                    postattempt_receipt=postattempt_receipt,
                 )
                 validate_frozen_100k_paths(
                     execution_plan=plan_path,
                     methods_path=methods,
                     output=freeze_output,
                     scene="gcp_100000_20260610",
+                    postattempt_receipt=postattempt_receipt,
                 )
                 with self.assertRaisesRegex(RuntimeError, "output path differs"):
                     validate_frozen_attempt_paths(
@@ -143,6 +146,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                         registry_path=registry,
                         identity_root=identity_root,
                         output=repo / "alternate-methods.json",
+                        postattempt_receipt=postattempt_receipt,
                     )
                 with self.assertRaisesRegex(RuntimeError, "freeze output path differs"):
                     validate_frozen_100k_paths(
@@ -150,6 +154,7 @@ class AttemptManifestBuilderTest(unittest.TestCase):
                         methods_path=methods,
                         output=repo / "alternate-freeze.json",
                         scene="gcp_100000_20260610",
+                        postattempt_receipt=postattempt_receipt,
                     )
 
     def test_phase_success_marker_is_exactly_bound(self) -> None:

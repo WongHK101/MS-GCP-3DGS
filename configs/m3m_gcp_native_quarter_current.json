@@ -13,7 +13,7 @@
   },
   "lidar_track": {
     "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
-    "status": "PROTOCOL_DATA_REVIEW_PASSED_EXECUTION_PLAN_PENDING",
+    "status": "100K_ATTEMPTS_TERMINAL_POSTATTEMPT_CLOSURE_REVIEW_PENDING",
     "protocol_document": "docs/M3M_GCP_LIDAR_FORMAL_PROTOCOL_V1.md",
     "contract": "configs/m3m_gcp_lidar_formal_v1.json",
     "artifact_schema": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
@@ -42,7 +42,20 @@
       ],
       "inherited_ready_method": "3dgs_original",
       "metrogs_prior_pass_inherited_without_rerun": true,
-      "metrogs_training_prechild_rejection_consumed_attempt": false
+      "metrogs_training_prechild_rejection_consumed_attempt": false,
+      "metrogs_activation_v4_training_attempt_status": "FAILED_UNRANKED",
+      "metrogs_activation_v4_training_attempt_consumed": true,
+      "metrogs_activation_v4_training_retry_allowed": false
+    },
+    "one_hundred_k_postattempt_closure": {
+      "receipt": "docs/protocol_evidence/m3m_gcp_100k_postattempt_closure_v1.json",
+      "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+      "required_review_verdict": "APPROVE_POSTATTEMPT_LIFECYCLE_CLOSURE_NO_ACTIVATION_V5",
+      "activation_v4_remains_only_training_authority": true,
+      "activation_v5_forbidden": true,
+      "closure_grants_execution_authority": false,
+      "closure_scope": "attempt_manifest_and_scene_freeze_only",
+      "only_ready_method_after_closure": "3dgs_original"
     },
     "superseded_100k_execution_instance": {
       "execution_plan": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v1.json",
@@ -53,7 +66,7 @@
     "formal_training_or_prior_authorized": false,
     "formal_lidar_evaluation_authorized": false,
     "other_four_prepared_scenes_locked": true,
-    "active_review_artifact_rule": "only the v2 common-preparation evidence, exact v4 successor plan, unchanged recipe manifest v3, the v3-to-v4 continuity receipt, the 3DGS Linux identity correction, and a new exact commit/tree review may authorize work; activation_v3 remains immutable continuity evidence and cannot authorize the successor checkout"
+    "active_review_artifact_rule": "activation_v4 and its v3-to-v4 continuity receipt remain immutable historical training authority; the tracked post-attempt closure receipt may authorize only attempt-manifest and scene-freeze creation after exact commit/tree review, never training, prior, packet export, or evaluation; only a later reviewed three-track runtime activation may authorize evaluation"
   },
   "state_ownership": {
     "protocol_semantics": "protocol_document and protocol_release_pin",

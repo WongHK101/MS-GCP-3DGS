@@ -25,7 +25,10 @@ from m3m_gcp_100k_phase_products import (
     validate_npz,
     validate_torch_checkpoint,
 )
-from m3m_gcp_100k_activation_v4_continuity import validate_continuity_for_plan
+from m3m_gcp_100k_activation_v4_continuity import (
+    POSTATTEMPT_TERMINAL,
+    validate_continuity_for_plan,
+)
 from m3m_gcp_100k_source_binding_correction import (
     validate_source_binding_correction,
 )
@@ -86,6 +89,7 @@ def read_summary(path: Path, *, method_id: str, required_status: str) -> dict[st
 def validate_frozen_attempt_paths(
     *, repo: Path, plan_path: Path, recipe_manifest_path: Path,
     registry_path: Path, identity_root: Path, output: Path,
+    postattempt_receipt: Path,
 ) -> dict[str, Any]:
     plan_path = plan_path.resolve()
     plan = json.loads(require_file(plan_path).read_text(encoding="utf-8"))
@@ -99,7 +103,12 @@ def validate_frozen_attempt_paths(
         or plan.get("execution_authorized") is not False
     ):
         raise RuntimeError("100K execution plan identity mismatch")
-    validate_continuity_for_plan(repo=repo, plan=plan)
+    validate_continuity_for_plan(
+        repo=repo,
+        plan=plan,
+        mode=POSTATTEMPT_TERMINAL,
+        postattempt_receipt=postattempt_receipt,
+    )
     validate_source_binding_correction(repo=repo, plan=plan)
     freeze = plan.get("attempt_freeze", {})
     expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
@@ -451,6 +460,7 @@ def main() -> int:
     parser.add_argument("--recipe-manifest", type=Path, required=True)
     parser.add_argument("--method-registry", type=Path, required=True)
     parser.add_argument("--model-identity-root", type=Path, required=True)
+    parser.add_argument("--postattempt-closure", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     repo = args.repo.resolve()
@@ -466,6 +476,7 @@ def main() -> int:
         registry_path=registry_path,
         identity_root=identity_root,
         output=output,
+        postattempt_receipt=args.postattempt_closure.resolve(),
     )
     if output.exists() or identity_root.exists():
         raise FileExistsError("attempt/model-identity output already exists; overwrite is forbidden")
