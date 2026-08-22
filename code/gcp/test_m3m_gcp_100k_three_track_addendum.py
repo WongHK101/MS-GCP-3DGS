@@ -4,15 +4,28 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import build_m3m_gcp_100k_three_track_candidate as candidate_builder
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from metric_depth_packet import directory_tree_hash
+from cleanup_m3m_gcp_100k_failed_packet import validate_failure_archive
+from m3m_gcp_100k_lidar_archive import (
+    expected_lidar_archive_relatives,
+    validate_exact_lidar_archive,
+)
+from m3m_gcp_100k_raw_packet_state import (
+    acquire_active_raw_packet_state,
+    validate_active_raw_packet_state,
+)
+from release_m3m_gcp_100k_gcp_packet import validate_archive as validate_gcp_archive
+from run_m3m_gcp_100k_gcp_packet_guarded import validate_frozen_packet_python
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -32,6 +45,16 @@ class ThreeTrackAddendumStaticTest(unittest.TestCase):
         self.assertFalse(gcp["real_rgb_pixels_present"])
         self.assertEqual(payload["tracks"]["lidar"]["packet_train_view_count"], 2196)
         self.assertFalse(payload["rolling_packet_lifecycle"]["gcp_and_lidar_raw_packets_may_coexist"])
+        self.assertTrue(
+            payload["rolling_packet_lifecycle"][
+                "shared_global_raw_packet_mutex_acquired_by_exclusive_create"
+            ]
+        )
+        self.assertTrue(
+            payload["failure_policy"][
+                "packet_or_postprocessing_failure_requires_immutable_no_retry_cleanup_receipt"
+            ]
+        )
 
     def test_100k_rgb_contract_changes_only_binding_derivation_and_gate(self) -> None:
         base = json.loads(
@@ -80,8 +103,314 @@ class ThreeTrackAddendumStaticTest(unittest.TestCase):
         self.assertIn('preflight.get("status") != "PASS_READY"', source)
         self.assertIn("fresh PASS_READY 100K RGB preflight is absent or stale", source)
 
+    def test_release_recovery_and_failed_cleanup_are_full_chain_bound(self) -> None:
+        gcp_release = (
+            REPO / "code" / "gcp" / "release_m3m_gcp_100k_gcp_packet.py"
+        ).read_text(encoding="utf-8")
+        lidar_release = (
+            REPO / "code" / "gcp" / "release_m3m_gcp_100k_lidar_packet.py"
+        ).read_text(encoding="utf-8")
+        failed_cleanup = (
+            REPO / "code" / "gcp" / "cleanup_m3m_gcp_100k_failed_packet.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("packet_tree_before_delete", gcp_release)
+        self.assertIn("validate_archive(", gcp_release)
+        self.assertIn("validate_active_raw_packet_state(", gcp_release)
+        self.assertIn("validate_exact_lidar_archive(", lidar_release)
+        self.assertIn("validate_active_raw_packet_state(", lidar_release)
+        self.assertIn("existing failed-packet cleanup intent mismatch", failed_cleanup)
+        self.assertIn("failed cleanup continuation packet subset mismatch", failed_cleanup)
+        self.assertIn('"retry_forbidden": True', failed_cleanup)
+
 
 class ThreeTrackAddendumNegativeTest(unittest.TestCase):
+    def test_gcp_archive_requires_exact_inventory_and_retained_bytes(self) -> None:
+        relatives = (
+            "gcp_execution_authorization.json",
+            "gcp_packet_phase_success.json",
+            "gcp_packet_state.json",
+            "active_raw_packet_state.json",
+            "depth_export_manifest.json",
+            "gcp_evaluation_execution_receipt.json",
+            "evaluation/observation_samples.csv",
+            "evaluation/point_results.csv",
+            "evaluation/evaluation_summary.json",
+            "evaluation/evaluator_manifest.json",
+            "independent_verification.json",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source_root = root / "source"
+            archive_root = root / "archive"
+            rows = []
+            for index, relative in enumerate(relatives):
+                source = source_root / relative
+                archived = archive_root / relative
+                source.parent.mkdir(parents=True, exist_ok=True)
+                archived.parent.mkdir(parents=True, exist_ok=True)
+                payload = f"frozen-{index}".encode("ascii")
+                source.write_bytes(payload)
+                archived.write_bytes(payload)
+                rows.append(
+                    {
+                        "source_path": str(source.resolve()),
+                        "archive_path": str(archived.resolve()),
+                        "bytes": len(payload),
+                        "sha256": sha256_file(archived),
+                    }
+                )
+            manifest_payload = {
+                "schema": "m3m_gcp_100k_gcp_lightweight_archive_v1",
+                "status": "PASS_GCP_LIGHTWEIGHT_ARCHIVE_BYTE_VERIFIED",
+                "archive_root": str(archive_root.resolve()),
+                "files": rows,
+                "source_and_archive_bytes_reverified": True,
+                "raw_metric_depth_packet_files_archived": False,
+            }
+            manifest_payload["canonical_sha256"] = canonical_sha256(manifest_payload)
+            manifest = archive_root / "archive_manifest.json"
+            manifest.write_text(json.dumps(manifest_payload), encoding="utf-8")
+            validate_gcp_archive(manifest, archive_root)
+            shutil.rmtree(source_root)
+            validate_gcp_archive(manifest, archive_root, require_sources=False)
+            (archive_root / relatives[0]).write_bytes(b"tampered")
+            with self.assertRaises(RuntimeError):
+                validate_gcp_archive(manifest, archive_root, require_sources=False)
+
+    def test_empty_lidar_and_failure_archives_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            lidar_root = root / "lidar"
+            lidar_root.mkdir()
+            lidar = {
+                "schema": "m3m_gcp_lidar_lightweight_archive_manifest_v1",
+                "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+                "scene": candidate_builder.SCENE,
+                "method_id": "citygs_x",
+                "scene_attempt_freeze_sha256": "a" * 64,
+                "inventory": [],
+            }
+            lidar["canonical_sha256"] = canonical_sha256(lidar)
+            lidar_manifest = lidar_root / "archive_manifest.json"
+            lidar_manifest.write_text(json.dumps(lidar), encoding="utf-8")
+            with self.assertRaises(RuntimeError):
+                validate_exact_lidar_archive(
+                    lidar_manifest,
+                    lidar_root,
+                    method_id="citygs_x",
+                    expected_scene_attempt_freeze_sha256="a" * 64,
+                    require_sources=False,
+                )
+
+            failure_root = root / "failure"
+            failure_root.mkdir()
+            failure = {
+                "schema": "m3m_gcp_100k_failed_packet_lightweight_archive_v1",
+                "status": "PASS_FAILURE_EVIDENCE_ARCHIVED",
+                "files": [],
+            }
+            failure["canonical_sha256"] = canonical_sha256(failure)
+            failure_manifest = failure_root / "archive_manifest.json"
+            failure_manifest.write_text(json.dumps(failure), encoding="utf-8")
+            with self.assertRaises(RuntimeError):
+                validate_failure_archive(failure_manifest, failure_root)
+
+    def test_exact_lidar_archive_validates_sources_then_retained_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source_root = root / "source"
+            archive_root = root / "archive"
+            method_id = "citygs_x"
+            relatives = expected_lidar_archive_relatives(method_id)
+            binding_rows = []
+            for index, relative in enumerate(sorted(relatives - {"source_bindings.json"})):
+                source = source_root / relative
+                archived = archive_root / relative
+                source.parent.mkdir(parents=True, exist_ok=True)
+                archived.parent.mkdir(parents=True, exist_ok=True)
+                content = f"lidar-{index}".encode("ascii")
+                source.write_bytes(content)
+                archived.write_bytes(content)
+                binding_rows.append(
+                    {
+                        "relative_path": relative,
+                        "source_path": str(source.resolve()),
+                        "bytes": len(content),
+                        "sha256": sha256_file(archived),
+                    }
+                )
+            bindings = {
+                "schema": "m3m_gcp_100k_lidar_lightweight_archive_source_bindings_v1",
+                "scene": candidate_builder.SCENE,
+                "method_id": method_id,
+                "files": binding_rows,
+            }
+            bindings["canonical_sha256"] = canonical_sha256(bindings)
+            bindings_path = archive_root / "source_bindings.json"
+            bindings_path.write_text(json.dumps(bindings), encoding="utf-8")
+            archive = {
+                "schema": "m3m_gcp_lidar_lightweight_archive_manifest_v1",
+                "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+                "scene": candidate_builder.SCENE,
+                "method_id": method_id,
+                "scene_attempt_freeze_sha256": "a" * 64,
+                "inventory": [
+                    {
+                        "relative_path": path.relative_to(archive_root).as_posix(),
+                        "bytes": path.stat().st_size,
+                        "sha256": sha256_file(path),
+                    }
+                    for path in sorted(archive_root.rglob("*"))
+                    if path.is_file()
+                ],
+            }
+            archive["canonical_sha256"] = canonical_sha256(archive)
+            manifest = archive_root / "archive_manifest.json"
+            manifest.write_text(json.dumps(archive), encoding="utf-8")
+            validate_exact_lidar_archive(
+                manifest,
+                archive_root,
+                method_id=method_id,
+                expected_scene_attempt_freeze_sha256="a" * 64,
+                require_sources=True,
+            )
+            shutil.rmtree(source_root)
+            validate_exact_lidar_archive(
+                manifest,
+                archive_root,
+                method_id=method_id,
+                expected_scene_attempt_freeze_sha256="a" * 64,
+                require_sources=False,
+            )
+            (archive_root / sorted(relatives - {"source_bindings.json"})[0]).write_bytes(
+                b"tampered"
+            )
+            with self.assertRaises(RuntimeError):
+                validate_exact_lidar_archive(
+                    manifest,
+                    archive_root,
+                    method_id=method_id,
+                    expected_scene_attempt_freeze_sha256="a" * 64,
+                    require_sources=False,
+                )
+
+    def test_wrong_packet_python_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            frozen = root / "frozen-python"
+            wrong = root / "wrong-python"
+            frozen.write_bytes(b"frozen")
+            wrong.write_bytes(b"wrong")
+            recipe = {"phase_commands": {"packet": [str(frozen)]}}
+            self.assertEqual(
+                validate_frozen_packet_python(recipe, current_python=frozen),
+                frozen.resolve(),
+            )
+            with self.assertRaises(RuntimeError):
+                validate_frozen_packet_python(recipe, current_python=wrong)
+
+    def test_global_raw_packet_mutex_rejects_cross_track_acquisition(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            candidate_root = root / "runtime" / "candidate"
+            candidate_root.mkdir(parents=True)
+            candidate_manifest = candidate_root / "three_track_candidate_manifest_v1.json"
+            candidate_manifest.write_text("{}\n", encoding="utf-8")
+            recipe_path = root / "recipe.json"
+            recipe = {
+                "authorized_packet_set_root": str(root / "lidar-packet"),
+                "authorized_packet_state": str(root / "lidar-state.json"),
+            }
+            recipe_path.write_text(json.dumps(recipe), encoding="utf-8")
+            activation_path = root / "activation.json"
+            activation_path.write_text("{}\n", encoding="utf-8")
+            candidate = {
+                "candidate_output_root": str(candidate_root),
+                "scene_attempt_freeze": {"sha256": "a" * 64},
+                "methods_manifest": {"sha256": "b" * 64},
+            }
+            registry = {
+                "methods": [
+                    {
+                        "method_id": "citygs_x",
+                        "recipe_path": str(recipe_path),
+                        "recipe_sha256": sha256_file(recipe_path),
+                    }
+                ]
+            }
+            packet_root = root / "runtime" / "gcp-packet-scratch" / "citygs_x"
+            track_state = (
+                root
+                / "runtime"
+                / "gcp-packet-scratch"
+                / "ACTIVE_GCP_PACKET_STATE.json"
+            )
+            state_path, state = acquire_active_raw_packet_state(
+                activation_path=activation_path,
+                candidate=candidate,
+                registry=registry,
+                method_id="citygs_x",
+                track="gcp",
+                recipe_sha256=sha256_file(recipe_path),
+                attempt_model_identity_sha256="c" * 64,
+                packet_set_root=packet_root,
+                track_packet_state_path=track_state,
+                owner_evidence_root=root / "evidence",
+            )
+            validate_active_raw_packet_state(
+                state_path,
+                activation_path=activation_path,
+                candidate=candidate,
+                method_id="citygs_x",
+                track="gcp",
+                recipe_sha256=sha256_file(recipe_path),
+                attempt_model_identity_sha256="c" * 64,
+                packet_set_root=packet_root,
+                track_packet_state_path=track_state,
+            )
+            self.assertEqual(state["track"], "gcp")
+            with self.assertRaises(FileExistsError):
+                acquire_active_raw_packet_state(
+                    activation_path=activation_path,
+                    candidate=candidate,
+                    registry=registry,
+                    method_id="citygs_x",
+                    track="lidar",
+                    recipe_sha256=sha256_file(recipe_path),
+                    attempt_model_identity_sha256="c" * 64,
+                    packet_set_root=root / "lidar-packet",
+                    track_packet_state_path=root / "lidar-state.json",
+                    owner_evidence_root=root / "lidar-evidence",
+                )
+            state_path.chmod(0o666)
+            state_path.unlink()
+
+            def race(track: str) -> str:
+                try:
+                    acquire_active_raw_packet_state(
+                        activation_path=activation_path,
+                        candidate=candidate,
+                        registry=registry,
+                        method_id="citygs_x",
+                        track=track,
+                        recipe_sha256=sha256_file(recipe_path),
+                        attempt_model_identity_sha256="c" * 64,
+                        packet_set_root=(
+                            packet_root if track == "gcp" else root / "lidar-packet"
+                        ),
+                        track_packet_state_path=(
+                            track_state if track == "gcp" else root / "lidar-state.json"
+                        ),
+                        owner_evidence_root=root / f"{track}-race-evidence",
+                    )
+                    return "ACQUIRED"
+                except FileExistsError:
+                    return "BLOCKED"
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                outcomes = list(executor.map(race, ("gcp", "lidar")))
+            self.assertEqual(sorted(outcomes), ["ACQUIRED", "BLOCKED"])
+
     def test_wrong_citygs_x_main_model_is_rejected_even_if_aux_is_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             checkpoint = Path(temporary) / "iteration_100000"

@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import run_m3m_gcp_100k_packet_export as packet_dispatch
+from m3m_gcp_100k_raw_packet_state import acquire_active_raw_packet_state
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
 from run_m3m_gcp_100k_guarded import (
@@ -67,6 +68,23 @@ def file_identity(path: Path) -> dict[str, Any]:
         "bytes": path.stat().st_size,
         "sha256": sha256_file(path),
     }
+
+
+def validate_frozen_packet_python(
+    recipe: dict[str, Any], *, current_python: Path
+) -> Path:
+    command = recipe.get("phase_commands", {}).get("packet", [])
+    if not isinstance(command, list) or not command:
+        raise RuntimeError("recipe lacks a frozen packet command")
+    frozen = Path(str(command[0])).expanduser()
+    if not frozen.is_absolute() or not frozen.is_file():
+        raise RuntimeError(f"frozen packet Python is missing or not absolute: {frozen}")
+    if current_python.resolve() != frozen.resolve():
+        raise RuntimeError(
+            f"GCP packet guard must run with recipe-frozen Python: {frozen}; "
+            f"observed {current_python.resolve()}"
+        )
+    return frozen
 
 
 def load_activation(path: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -235,6 +253,9 @@ def main() -> int:
         or Path(str(recipe.get("authorized_run_root", ""))).resolve() != run_root
     ):
         raise RuntimeError("GCP packet recipe/run-root mismatch")
+    frozen_packet_python = validate_frozen_packet_python(
+        recipe, current_python=Path(sys.executable)
+    )
     bound_recipe = dict(recipe)
     bound_recipe["_recipe_path"] = str(recipe_path)
     identity_path = Path(str(method["attempt_model_identity_path"])).resolve()
@@ -300,7 +321,22 @@ def main() -> int:
         packet_set_root=packet_root,
     )
     command = packet_dispatch.build_command(dispatch_args)
+    if Path(command[0]).resolve() != frozen_packet_python.resolve():
+        raise RuntimeError("GCP exporter command did not retain recipe-frozen Python")
+    command[0] = str(frozen_packet_python)
 
+    global_state_path, global_state = acquire_active_raw_packet_state(
+        activation_path=activation_path,
+        candidate=candidate,
+        registry=registry,
+        method_id=args.method_id,
+        track="gcp",
+        recipe_sha256=sha256_file(recipe_path),
+        attempt_model_identity_sha256=sha256_file(identity_path),
+        packet_set_root=packet_root,
+        track_packet_state_path=packet_state,
+        owner_evidence_root=evidence_root,
+    )
     evidence_root.mkdir(parents=True)
     with allowlist.open("x", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["image_name"])
@@ -330,6 +366,8 @@ def main() -> int:
         "protocol_observation_count": 256,
         "packet_view_count": 211,
         "formal_role_counts": {"train": 187, "test": 24},
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "created_at_utc": utc_now(),
     }
     state["canonical_sha256"] = canonical_sha256(state)
@@ -343,10 +381,14 @@ def main() -> int:
         "method_id": args.method_id,
         "argv": command,
         "python": sys.version,
+        "frozen_packet_python": file_identity(frozen_packet_python),
         "gpu_prelaunch": gpu_prelaunch,
         "resource_limits": nofile,
         "three_track_activation_sha256": sha256_file(activation_path),
         "scene_attempt_freeze_sha256": candidate["scene_attempt_freeze"]["sha256"],
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
+        "global_raw_packet_state_canonical_sha256": global_state["canonical_sha256"],
         "started_at_utc": started,
     }
     with stdout_path.open("x", encoding="utf-8") as stdout_handle, stderr_path.open(
@@ -406,12 +448,16 @@ def main() -> int:
             "command_sha256": command_sha256(command),
             "environment_sha256": sha256_file(environment_path),
             "packet_state_sha256": sha256_file(packet_state),
+            "global_raw_packet_state_path": str(global_state_path),
+            "global_raw_packet_state_sha256": sha256_file(global_state_path),
             "stdout_sha256": sha256_file(stdout_path),
             "stderr_sha256": sha256_file(stderr_path),
+            "logs": [file_identity(stdout_path), file_identity(stderr_path)],
             "exit_code": exit_code,
             "peak_gpu_memory_mib": peak_gpu,
             "cgroup_memory_events_delta": delta,
             "error": f"{type(exc).__name__}: {exc}",
+            "retry_forbidden_after_export_child_start": True,
             "started_at_utc": started,
             "ended_at_utc": ended,
         }
@@ -448,6 +494,8 @@ def main() -> int:
         "packet_set_root": str(packet_root),
         "packet_state_path": str(packet_state),
         "packet_state_sha256": sha256_file(packet_state),
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "allowlist_path": str(allowlist),
         "allowlist_sha256": sha256_file(allowlist),
         "command": command,

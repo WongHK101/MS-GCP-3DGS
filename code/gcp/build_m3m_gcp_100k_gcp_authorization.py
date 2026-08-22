@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
+from m3m_gcp_100k_raw_packet_state import validate_active_raw_packet_state
 from metric_depth_packet import directory_tree_hash
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
@@ -77,6 +78,7 @@ def main() -> int:
     parser.add_argument("--method-id", required=True)
     parser.add_argument("--packet-manifest", type=Path, required=True)
     parser.add_argument("--packet-state", type=Path, required=True)
+    parser.add_argument("--global-packet-state", type=Path, required=True)
     parser.add_argument("--gcp-packet-phase-success", type=Path, required=True)
     parser.add_argument("--gcp-camera-root-manifest", type=Path, required=True)
     parser.add_argument("--gcp-data-root", type=Path, required=True)
@@ -189,6 +191,18 @@ def main() -> int:
     packet_state_path = args.packet_state.resolve()
     packet_state = require_json(packet_state_path)
     packet_root = packet_path.parent.resolve()
+    global_state_path = args.global_packet_state.resolve()
+    validate_active_raw_packet_state(
+        global_state_path,
+        activation_path=activation_path,
+        candidate=candidate,
+        method_id=args.method_id,
+        track="gcp",
+        recipe_sha256=sha256_file(recipe_path),
+        attempt_model_identity_sha256=sha256_file(identity_path),
+        packet_set_root=packet_root,
+        track_packet_state_path=packet_state_path,
+    )
     manifest_products = [
         row
         for row in phase_success.get("products", [])
@@ -217,6 +231,10 @@ def main() -> int:
         or Path(str(phase_success.get("packet_state_path", ""))).resolve()
         != packet_state_path
         or phase_success.get("packet_state_sha256") != sha256_file(packet_state_path)
+        or phase_success.get("global_raw_packet_state_path")
+        != str(global_state_path)
+        or phase_success.get("global_raw_packet_state_sha256")
+        != sha256_file(global_state_path)
         or phase_success.get("canonical_sha256") != canonical_sha256(phase_success)
         or len(manifest_products) != 1
         or manifest_products[0].get("sha256") != sha256_file(packet_path)
@@ -326,6 +344,8 @@ def main() -> int:
         "packet_state_path": str(packet_state_path),
         "packet_state_sha256": sha256_file(packet_state_path),
         "packet_state_canonical_sha256": packet_state["canonical_sha256"],
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "packet_manifest_path": str(packet_path),
         "packet_manifest_sha256": sha256_file(packet_path),
         "protocol_observation_count": 256,

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
+from m3m_gcp_100k_raw_packet_state import validate_active_raw_packet_state
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
 
 
@@ -41,7 +42,9 @@ def write_exclusive(path: Path, payload: dict[str, Any]) -> None:
 
 
 def failure_payload(
-    *, method_id: str, activation_sha: str, authorization_sha: str, stage: str, exit_code: int, logs: list[Path]
+    *, method_id: str, activation_sha: str, authorization_sha: str,
+    global_state_path: Path, stage: str, exit_code: int, logs: list[Path],
+    error: str,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema": "m3m_gcp_100k_gcp_evaluation_failure_v1",
@@ -51,6 +54,7 @@ def failure_payload(
         "failure_stage": stage,
         "three_track_activation_sha256": activation_sha,
         "gcp_authorization_sha256": authorization_sha,
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "exit_code": exit_code,
         "logs": [
             {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
@@ -58,6 +62,7 @@ def failure_payload(
             if path.is_file()
         ],
         "retry_forbidden_after_child_start": True,
+        "error": error,
     }
     payload["canonical_sha256"] = canonical_sha256(payload)
     return payload
@@ -68,6 +73,7 @@ def main() -> int:
     parser.add_argument("--activation", type=Path, required=True)
     parser.add_argument("--method-id", choices=("citygs_x", "metrogs"), required=True)
     parser.add_argument("--gcp-authorization", type=Path, required=True)
+    parser.add_argument("--global-packet-state", type=Path, required=True)
     parser.add_argument("--execution-root", type=Path, required=True)
     args = parser.parse_args()
 
@@ -93,9 +99,24 @@ def main() -> int:
     )
     if args.method_id not in registry.get("ready_method_ids", []):
         raise RuntimeError("GCP evaluation method is not activated READY")
+    methods = {str(row["method_id"]): row for row in registry.get("methods", [])}
+    method = methods[args.method_id]
+    recipe_path = Path(str(method["recipe_path"])).resolve()
 
     authorization_path = args.gcp_authorization.resolve()
     authorization = require_json(authorization_path)
+    global_state_path = args.global_packet_state.resolve()
+    validate_active_raw_packet_state(
+        global_state_path,
+        activation_path=activation_path,
+        candidate=candidate,
+        method_id=args.method_id,
+        track="gcp",
+        recipe_sha256=sha256_file(recipe_path),
+        attempt_model_identity_sha256=method["attempt_model_identity_sha256"],
+        packet_set_root=Path(str(authorization["packet_manifest_path"])).resolve().parent,
+        track_packet_state_path=Path(str(authorization["packet_state_path"])).resolve(),
+    )
     execution_root = args.execution_root.resolve()
     runtime_root = Path(str(candidate["candidate_output_root"])).resolve().parent
     expected_execution = runtime_root / "gcp-execution" / args.method_id
@@ -114,6 +135,9 @@ def main() -> int:
         != candidate["scene_attempt_freeze"]["sha256"]
         or authorization.get("methods_manifest_sha256")
         != candidate["methods_manifest"]["sha256"]
+        or authorization.get("global_raw_packet_state_path") != str(global_state_path)
+        or authorization.get("global_raw_packet_state_sha256")
+        != sha256_file(global_state_path)
         or authorization.get("canonical_sha256") != canonical_sha256(authorization)
     ):
         raise RuntimeError("GCP execution authorization binding mismatch")
@@ -145,9 +169,11 @@ def main() -> int:
             method_id=args.method_id,
             activation_sha=sha256_file(activation_path),
             authorization_sha=sha256_file(authorization_path),
+            global_state_path=global_state_path,
             stage="gcp_evaluator",
             exit_code=evaluator.returncode,
             logs=[eval_stdout, eval_stderr],
+            error=f"GCP evaluator exited with code {evaluator.returncode}",
         )
         write_exclusive(failure_path, payload)
         print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
@@ -161,9 +187,11 @@ def main() -> int:
             method_id=args.method_id,
             activation_sha=sha256_file(activation_path),
             authorization_sha=sha256_file(authorization_path),
+            global_state_path=global_state_path,
             stage="gcp_independent_verifier",
             exit_code=verifier.returncode,
             logs=[eval_stdout, eval_stderr, verify_stdout, verify_stderr],
+            error=f"GCP verifier exited with code {verifier.returncode}",
         )
         write_exclusive(failure_path, payload)
         print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
@@ -171,23 +199,38 @@ def main() -> int:
 
     summary_path = output_root / "evaluation_summary.json"
     manifest_path = output_root / "evaluator_manifest.json"
-    summary = require_json(summary_path)
-    manifest = require_json(manifest_path)
-    verification = require_json(verification_path)
     packet_sha = authorization["packet_manifest_sha256"]
-    if (
-        summary.get("scene") != SCENE
-        or summary.get("method_id") != args.method_id
-        or summary.get("packet_manifest_sha256") != packet_sha
-        or summary.get("status") not in {"COMPLETE_RANKED", "INCOMPLETE_UNRANKED"}
-        or manifest.get("packet_manifest_sha256") != packet_sha
-        or verification.get("status") != "PASS"
-        or verification.get("passed") is not True
-        or verification.get("scene") != SCENE
-        or verification.get("method_id") != args.method_id
-        or verification.get("ranking_status") != summary.get("status")
-    ):
-        raise RuntimeError("GCP evaluator/verifier postcondition mismatch")
+    try:
+        summary = require_json(summary_path)
+        manifest = require_json(manifest_path)
+        verification = require_json(verification_path)
+        if (
+            summary.get("scene") != SCENE
+            or summary.get("method_id") != args.method_id
+            or summary.get("packet_manifest_sha256") != packet_sha
+            or summary.get("status") not in {"COMPLETE_RANKED", "INCOMPLETE_UNRANKED"}
+            or manifest.get("packet_manifest_sha256") != packet_sha
+            or verification.get("status") != "PASS"
+            or verification.get("passed") is not True
+            or verification.get("scene") != SCENE
+            or verification.get("method_id") != args.method_id
+            or verification.get("ranking_status") != summary.get("status")
+        ):
+            raise RuntimeError("GCP evaluator/verifier postcondition mismatch")
+    except Exception as exc:
+        payload = failure_payload(
+            method_id=args.method_id,
+            activation_sha=sha256_file(activation_path),
+            authorization_sha=sha256_file(authorization_path),
+            global_state_path=global_state_path,
+            stage="gcp_postvalidation",
+            exit_code=0,
+            logs=[eval_stdout, eval_stderr, verify_stdout, verify_stderr],
+            error=f"{type(exc).__name__}: {exc}",
+        )
+        write_exclusive(failure_path, payload)
+        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+        return 1
     receipt: dict[str, Any] = {
         "schema": "m3m_gcp_100k_gcp_evaluation_execution_receipt_v1",
         "status": "PASS_GCP_EVALUATOR_AND_INDEPENDENT_VERIFIER",
@@ -199,6 +242,7 @@ def main() -> int:
         "gcp_authorization_path": str(authorization_path),
         "gcp_authorization_sha256": sha256_file(authorization_path),
         "packet_manifest_sha256": packet_sha,
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "summary_path": str(summary_path),
         "summary_sha256": sha256_file(summary_path),
         "evaluator_manifest_path": str(manifest_path),

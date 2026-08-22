@@ -80,7 +80,8 @@
       "new_ready_methods_use_exact_211_camera_packet": true,
       "legacy_3dgs_adoption_allowed_only_with_immutable_exact_dependency_receipt": true,
       "legacy_3dgs_metrics_recomputed": false,
-      "packet_release_requires_verifier_and_byte_verified_lightweight_archive": true
+      "packet_release_requires_verifier_and_byte_verified_lightweight_archive": true,
+      "lightweight_archive_exact_inventory_and_source_byte_reverification_required": true
     },
     "lidar": {
       "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
@@ -89,10 +90,12 @@
       "artifact_schema_path": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
       "artifact_schema_sha256": "6d18ccf30c12d070c1d6a692ac8c81024799f44028a487b9fe1f8c2a8cf38c1e",
       "packet_train_view_count": 2196,
+      "environment_python": "/root/autodl-tmp/envs/m3m-gcp-lidar-eval/bin/python",
       "scientific_contract_changed": false,
       "unchanged_base_packet_export_and_release_guard_preserved": true,
       "addendum_activation_and_gcp_completion_wrapper_required": true,
-      "packet_release_requires_verifier_archive_and_addendum_deletion_receipt": true
+      "packet_release_requires_verifier_archive_and_addendum_deletion_receipt": true,
+      "lightweight_archive_exact_inventory_and_source_byte_reverification_required": true
     }
   },
   "legacy_3dgs_gcp": {
@@ -126,6 +129,10 @@
     "gcp_packet_release_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/gcp-packet-release",
     "lidar_packet_dispatch_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/lidar-packet-dispatch",
     "lidar_packet_release_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/lidar-packet-release",
+    "global_raw_packet_state_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/raw-packet-lifecycle/ACTIVE_RAW_PACKET_STATE.json",
+    "failed_packet_cleanup_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/failed-packet-cleanup",
+    "lidar_authorization_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/lidar-authorizations",
+    "lidar_execution_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/lidar-execution",
     "all_paths_fresh_no_overwrite": true,
     "candidate_activation_and_receipts_read_only": true
   },
@@ -140,16 +147,20 @@
       "gcp_evaluator_and_independent_verifier",
       "gcp_lightweight_archive_byte_reverification",
       "unique_gcp_release_dispatcher_deletes_211_packet_and_writes_receipt",
+      "on_gcp_packet_or_evaluation_failure_archive_no_retry_evidence_then_exact_failed_packet_cleanup",
       "lidar_packet_export_2196_after_gcp_receipt_or_legacy_adoption",
       "lidar_evaluator_and_independent_verifier",
       "lidar_lightweight_archive_byte_reverification",
       "unique_lidar_release_dispatcher_invokes_unchanged_base_guard_and_writes_receipt",
+      "on_lidar_packet_or_evaluation_failure_archive_no_retry_evidence_then_exact_failed_packet_cleanup",
       "rgb_formal_after_fresh_pass_ready_preflight",
       "finalizer_requires_all_track_results_and_deletion_receipts"
     ],
     "rgb_may_run_independently_after_activation": true,
     "rgb_blocks_packet_deletion": false,
     "gcp_and_lidar_raw_packets_may_coexist": false,
+    "shared_global_raw_packet_mutex_acquired_by_exclusive_create": true,
+    "global_raw_packet_mutex_released_only_by_success_or_no_retry_failure_cleanup": true,
     "simultaneous_active_raw_packet_sets_max": 1,
     "full_2510_view_packet_set_forbidden": true,
     "direct_base_lidar_release_is_not_a_formal_addendum_completion_path": true,
@@ -159,6 +170,9 @@
     "guard_rejection_before_export_child_start_may_be_corrected": true,
     "retry_after_export_or_evaluator_child_start": false,
     "oom_or_failure_is_recorded_unranked": true,
+    "packet_or_postprocessing_failure_requires_immutable_no_retry_cleanup_receipt": true,
+    "failed_raw_packet_cleanup_deletes_only_exact_packet_track_state_and_global_mutex": true,
+    "failed_method_queue_continuation_allowed_after_cleanup_receipt": true,
     "one_method_failure_does_not_change_other_method_checkpoints_or_results": true,
     "result_or_test_truth_driven_repair": false
   },
@@ -168,22 +182,28 @@
     "code/gcp/build_m3m_gcp_100k_three_track_candidate.py": "a46222e6eb705c25c486220728d0bf616868adc914c2e360c554505f88aae890",
     "code/gcp/activate_m3m_gcp_100k_three_track.py": "34b2ca9cb851476a6f9ea49ef7be6c52818dae8a3fbaf7df321718d67495ddb0",
     "code/gcp/m3m_gcp_100k_three_track_runtime.py": "ac7d3714288e26afd6f711bc625b3400268a64236be2494f6461a86b839f83ef",
-    "code/gcp/run_m3m_gcp_100k_gcp_packet_guarded.py": "90cda9d9f4b2aa9669813b9583b27180ce4e54598a2348879a3816accc2a7880",
-    "code/gcp/build_m3m_gcp_100k_gcp_authorization.py": "431eee01457ce4957bfd2d4bcd2a4b44188ea49f737a8784b605a4b3b149c90b",
-    "code/gcp/run_m3m_gcp_100k_gcp_evaluation.py": "01cd3f721af6caa87ef0b43e083b0e2110248bdbd90525524054d720ec38d021",
-    "code/gcp/archive_m3m_gcp_100k_gcp_result.py": "1c277333ffca7b3a47f40ecf7949c4f8064af3224e6457fe9e2dda924c2b9115",
-    "code/gcp/release_m3m_gcp_100k_gcp_packet.py": "dfd9ee354e48710081d5416af89bfba151198861eeedb8ec7f65acd04b6ebbd5",
-    "code/gcp/run_m3m_gcp_100k_lidar_packet_guarded.py": "548ea390547274ec3c3fcabca8aa81a8d70a19e50f106bc87df8cf25a9b7fe87",
-    "code/gcp/release_m3m_gcp_100k_lidar_packet.py": "b5c65c4ef2172b0b281743fd603075fec3068fb55841db480b69924f614bc7ae",
+    "code/gcp/run_m3m_gcp_100k_gcp_packet_guarded.py": "9778e980b34260bd147ffdb9779aeee843092acd7851f177a2cc90932f3777c9",
+    "code/gcp/build_m3m_gcp_100k_gcp_authorization.py": "fbdb9ee2a5189790b2d86458ef2e796669862b665f7c0529ccd38580a3e263af",
+    "code/gcp/run_m3m_gcp_100k_gcp_evaluation.py": "68a3dcf8d6b224e48e17cef7172b564b0b332d1104f75d21bc59590e47409f58",
+    "code/gcp/archive_m3m_gcp_100k_gcp_result.py": "7521f8a3a5b4c8330e51534daef976ee9f65f094a2384b4b312c74d4184d7218",
+    "code/gcp/release_m3m_gcp_100k_gcp_packet.py": "5ad93a8e4497afcd986057d5c26371684c87b017cd8d9386112e61acce324d55",
+    "code/gcp/run_m3m_gcp_100k_lidar_packet_guarded.py": "8703b7455e9da222b91511921adfde46ef87311fdade00cdb8cd6f99454a4355",
+    "code/gcp/release_m3m_gcp_100k_lidar_packet.py": "cf1008ddfc7c28080abc33fc2723915766668b839f26dec43cb5461857f5dea9",
     "code/gcp/build_m3m_native_quarter_rgb_quality_100k_smoke_commands.py": "47364f0a306e98f96d5cb6b569c7cbbd1003f2c5bcb7e8806335b3439f537162",
     "code/gcp/preflight_m3m_native_quarter_rgb_quality_100k.py": "970ea93d8cb608149d824af9b7b7d59cda7646c2604c33710a83475793344c4e",
     "code/gcp/build_m3m_native_quarter_rgb_quality_100k_commands.py": "e58a7758f4e7d37556853912cbd351dba610df72fd6bb38b0368fcb0e88d7e59",
-    "code/gcp/finalize_m3m_gcp_100k_three_track_results.py": "5a18ddee19057fd7383db7f035d060229381a5f8efc6359e4338f0d6cf9670f2",
-    "code/gcp/test_m3m_gcp_100k_three_track_addendum.py": "f2ad4d6eb5c29f742727fe7ddd7a6f99c5bf960cd49f1e6118e2b480364e5072",
+    "code/gcp/finalize_m3m_gcp_100k_three_track_results.py": "88355c04188ca98800e3aa91dda7d7855a0f6228b9c649c685c48aea3d947364",
+    "code/gcp/test_m3m_gcp_100k_three_track_addendum.py": "625b41bb398cae43298f2c8ebb6dde79b1660386b29bdb839ebde7182b597daf",
     "code/gcp/evaluate_m3m_native_quarter_geometry.py": "353624ab44f8be066a8fd57ba02eaf0d2e5b306973afb7aec21d9a97312d4d8f",
     "code/gcp/verify_m3m_native_quarter_geometry_outputs.py": "8ecf8bfe9b1b4ee8bcb9b18a58dcb5e64534860d3858a9006deb2e7e4a271f97",
     "code/gcp/evaluate_m3m_native_quarter_rgb_quality.py": "aa8f346d7747e7db23b8bcdd1eefe8280ba38ce3aafeae0a4f2e042f5ce71a7e",
-    "configs/m3m_gcp_native_quarter_rgb_quality_100k_v1.json": "93a812133341c669da989cc0fb52e2088da24a5565bfec0a15929fcb565a1b6f"
+    "configs/m3m_gcp_native_quarter_rgb_quality_100k_v1.json": "93a812133341c669da989cc0fb52e2088da24a5565bfec0a15929fcb565a1b6f",
+    "code/gcp/m3m_gcp_100k_raw_packet_state.py": "be127266047525c4e0d6f948b91c5efcb00116d962e8e367a731161ea3bd2c51",
+    "code/gcp/m3m_gcp_100k_lidar_archive.py": "07f17a713775c7da1a937cbd87e06c4de13a45260e0404241f92ed60a0ce4294",
+    "code/gcp/build_m3m_gcp_100k_lidar_authorization.py": "05adb0c2bb7ce88317d2a91ce86c2a9d1114cb278133d3f3a8f6e00d2a35eb29",
+    "code/gcp/run_m3m_gcp_100k_lidar_evaluation.py": "e33e2095015c714f3e534c03af2537e7259ddc70914fa3dc00582a7429760a08",
+    "code/gcp/archive_m3m_gcp_100k_lidar_result.py": "fcd157666e98d7865ca9beb612f34fa142c9f47bfa62c7c8664bb69cb943d5dd",
+    "code/gcp/cleanup_m3m_gcp_100k_failed_packet.py": "4bcd2bc6db9508ef21eff0f24211b9a09534d839811f3b5e378ed0d5e2c4ec32"
   },
-  "canonical_sha256": "0b0ec9ae0470c4f83a80826dca84ad97cf8e03c694afe97fc9e0db6f34f7a66d"
+  "canonical_sha256": "3304f9caf91e1697b6b60b0d8c86d9a870279104298c0b9ffc08a3c6005f2b80"
 }

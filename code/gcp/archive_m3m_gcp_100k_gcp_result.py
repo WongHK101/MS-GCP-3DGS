@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
+from m3m_gcp_100k_raw_packet_state import (
+    active_raw_packet_state_path,
+    validate_active_raw_packet_state,
+)
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 
 
@@ -102,6 +106,7 @@ def main() -> int:
     parser.add_argument("--gcp-packet-phase-success", type=Path, required=True)
     parser.add_argument("--gcp-execution-receipt", type=Path, required=True)
     parser.add_argument("--packet-state", type=Path, required=True)
+    parser.add_argument("--global-packet-state", type=Path, required=True)
     parser.add_argument("--packet-manifest", type=Path, required=True)
     parser.add_argument("--evaluation-root", type=Path, required=True)
     parser.add_argument("--verification", type=Path, required=True)
@@ -137,6 +142,7 @@ def main() -> int:
     phase = require_json(phase_path)
     state_path = args.packet_state.resolve()
     state = require_json(state_path)
+    global_state_path = args.global_packet_state.resolve()
     packet_path = args.packet_manifest.resolve()
     packet = require_json(packet_path)
     verification_path = args.verification.resolve()
@@ -147,6 +153,23 @@ def main() -> int:
     summary = require_json(summary_path)
     evaluator_manifest_path = evaluation_root / "evaluator_manifest.json"
     evaluator_manifest = require_json(evaluator_manifest_path)
+
+    methods = {str(row["method_id"]): row for row in registry.get("methods", [])}
+    method = methods[args.method_id]
+    recipe_path = Path(str(method["recipe_path"])).resolve()
+    validate_active_raw_packet_state(
+        global_state_path,
+        activation_path=activation_path,
+        candidate=candidate,
+        method_id=args.method_id,
+        track="gcp",
+        recipe_sha256=sha256_file(recipe_path),
+        attempt_model_identity_sha256=method["attempt_model_identity_sha256"],
+        packet_set_root=packet_path.parent,
+        track_packet_state_path=state_path,
+    )
+    if global_state_path != active_raw_packet_state_path(candidate):
+        raise RuntimeError("GCP archive global raw-packet state path mismatch")
 
     if (
         authorization.get("schema") != "m3m_gcp_100k_gcp_execution_authorization_v1"
@@ -162,6 +185,9 @@ def main() -> int:
         != candidate["methods_manifest"]["sha256"]
         or authorization.get("gcp_packet_phase_success_sha256") != sha256_file(phase_path)
         or authorization.get("packet_state_sha256") != sha256_file(state_path)
+        or authorization.get("global_raw_packet_state_path") != str(global_state_path)
+        or authorization.get("global_raw_packet_state_sha256")
+        != sha256_file(global_state_path)
         or authorization.get("packet_manifest_sha256") != sha256_file(packet_path)
         or authorization.get("authorized_output_root") != str(evaluation_root)
         or authorization.get("authorized_verification_output") != str(verification_path)
@@ -213,6 +239,8 @@ def main() -> int:
         or execution_receipt.get("gcp_authorization_sha256")
         != sha256_file(authorization_path)
         or execution_receipt.get("packet_manifest_sha256") != sha256_file(packet_path)
+        or execution_receipt.get("global_raw_packet_state_sha256")
+        != sha256_file(global_state_path)
         or execution_receipt.get("summary_sha256") != sha256_file(summary_path)
         or execution_receipt.get("verification_sha256") != sha256_file(verification_path)
         or execution_receipt.get("canonical_sha256")
@@ -228,6 +256,7 @@ def main() -> int:
         (authorization_path, "gcp_execution_authorization.json"),
         (phase_path, "gcp_packet_phase_success.json"),
         (state_path, "gcp_packet_state.json"),
+        (global_state_path, "active_raw_packet_state.json"),
         (packet_path, "depth_export_manifest.json"),
         (execution_receipt_path, "gcp_evaluation_execution_receipt.json"),
         *[(evaluation_root / name, f"evaluation/{name}") for name in EVAL_FILES],
@@ -248,6 +277,7 @@ def main() -> int:
         "gcp_authorization_sha256": sha256_file(authorization_path),
         "gcp_packet_phase_success_sha256": sha256_file(phase_path),
         "packet_state_sha256": sha256_file(state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "evaluation_summary_sha256": sha256_file(summary_path),
         "gcp_execution_receipt_sha256": sha256_file(execution_receipt_path),
         "verification_sha256": sha256_file(verification_path),

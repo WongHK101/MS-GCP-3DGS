@@ -11,10 +11,14 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
+from m3m_gcp_100k_raw_packet_state import (
+    active_raw_packet_state_path,
+    validate_active_raw_packet_state,
+)
+from m3m_gcp_100k_lidar_archive import validate_exact_lidar_archive
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 from metric_depth_packet import directory_tree_hash
 from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
-from verify_m3m_gcp_lidar_formal_v1 import validate_archive_manifest
 
 
 SCENE = "gcp_100000_20260610"
@@ -70,6 +74,7 @@ def main() -> int:
     parser.add_argument("--packet-manifest", type=Path, required=True)
     parser.add_argument("--packet-set-root", type=Path, required=True)
     parser.add_argument("--packet-state", type=Path, required=True)
+    parser.add_argument("--global-packet-state", type=Path, required=True)
     parser.add_argument("--lidar-method-result", type=Path, required=True)
     parser.add_argument("--lidar-verification", type=Path, required=True)
     parser.add_argument("--lidar-archive-manifest", type=Path, required=True)
@@ -146,6 +151,7 @@ def main() -> int:
     packet_path = args.packet_manifest.resolve()
     packet_root = args.packet_set_root.resolve()
     state_path = args.packet_state.resolve()
+    global_state_path = args.global_packet_state.resolve()
     result_path = args.lidar_method_result.resolve()
     verification_path = args.lidar_verification.resolve()
     archive_path = args.lidar_archive_manifest.resolve()
@@ -153,104 +159,29 @@ def main() -> int:
     intent_path = args.release_intent.resolve()
     receipt_path = args.deletion_receipt.resolve()
     expected_release_root = runtime_root / "lidar-packet-release" / args.method_id
+    formal_root = Path(str(candidate["formal_results_root"])).resolve()
+    expected_evaluation_root = formal_root / "lidar" / args.method_id
+    expected_result = (
+        expected_evaluation_root / "methods" / args.method_id / "metrics.json"
+    )
+    expected_verification = expected_evaluation_root / "independent_verification.json"
+    expected_archive_root = formal_root / "lidar-lightweight-archives" / args.method_id
     if (
         dispatch_path != expected_dispatch
         or packet_root != Path(str(recipe["authorized_packet_set_root"])).resolve()
         or state_path != Path(str(recipe["authorized_packet_state"])).resolve()
+        or global_state_path != active_raw_packet_state_path(candidate)
         or packet_path != packet_root / "depth_export_manifest.json"
         or intent_path != expected_release_root / "release_intent.json"
         or receipt_path != expected_release_root / "deletion_receipt.json"
+        or result_path != expected_result
+        or verification_path != expected_verification
+        or archive_root != expected_archive_root
+        or archive_path != expected_archive_root / "archive_manifest.json"
     ):
         raise RuntimeError("LiDAR release path differs from activated/frozen namespace")
     if receipt_path.exists() or receipt_path.is_symlink():
         raise FileExistsError(receipt_path)
-
-    if intent_path.is_file():
-        intent = require_json(intent_path)
-        if packet_root.exists() or packet_root.is_symlink() or state_path.exists() or state_path.is_symlink():
-            raise RuntimeError("existing LiDAR release intent has not completed both deletions")
-        if (
-            intent.get("schema") != "m3m_gcp_100k_lidar_packet_release_intent_v1"
-            or intent.get("status") != "AUTHORIZED_TO_INVOKE_BASE_PACKET_RELEASE"
-            or intent.get("method_id") != args.method_id
-            or intent.get("three_track_activation_sha256") != sha256_file(activation_path)
-            or intent.get("canonical_sha256") != canonical_sha256(intent)
-        ):
-            raise RuntimeError("existing LiDAR release intent mismatch")
-        receipt: dict[str, Any] = {
-            **intent,
-            "schema": "m3m_gcp_100k_lidar_packet_deletion_receipt_v1",
-            "status": "PASS_LIDAR_PACKET_DELETED_BY_BASE_GUARD",
-            "release_intent_path": str(intent_path),
-            "release_intent_sha256": sha256_file(intent_path),
-            "packet_set_root_absent": True,
-            "packet_state_absent": True,
-            "recovered_after_post_delete_interruption": True,
-        }
-        receipt.pop("canonical_sha256", None)
-        receipt["canonical_sha256"] = canonical_sha256(receipt)
-        write_exclusive(receipt_path, receipt)
-        print(json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True))
-        return 0
-
-    packet = require_json(packet_path)
-    state = require_json(state_path)
-    result = require_json(result_path)
-    verification = require_json(verification_path)
-    if (
-        dispatch.get("schema") != "m3m_gcp_100k_lidar_packet_dispatch_receipt_v1"
-        or dispatch.get("status") != "PASS_LIDAR_PACKET_2196_DISPATCHED"
-        or dispatch.get("method_id") != args.method_id
-        or dispatch.get("three_track_activation_sha256") != sha256_file(activation_path)
-        or dispatch.get("scene_attempt_freeze_sha256")
-        != candidate["scene_attempt_freeze"]["sha256"]
-        or dispatch.get("methods_manifest_sha256") != candidate["methods_manifest"]["sha256"]
-        or dispatch.get("attempt_model_identity_sha256") != sha256_file(identity_path)
-        or dispatch.get("packet_state_sha256") != sha256_file(state_path)
-        or dispatch.get("packet_manifest_sha256") != sha256_file(packet_path)
-        or dispatch.get("canonical_sha256") != canonical_sha256(dispatch)
-        or state.get("method_id") != args.method_id
-        or Path(str(state.get("packet_set_root", ""))).resolve() != packet_root
-        or packet.get("scene") != SCENE
-        or packet.get("rendered_view_count") != 2196
-        or len(packet.get("depth_index", [])) != 2196
-        or len(packet.get("packet_index", [])) != 2196
-        or packet.get("model_content_hash") != current_model_content(method)
-    ):
-        raise RuntimeError("LiDAR packet dispatch/current model binding mismatch")
-    if (
-        result.get("scene") != SCENE
-        or result.get("method_id") != args.method_id
-        or result.get("packet_manifest_sha256") != sha256_file(packet_path)
-        or result.get("scene_attempt_freeze_sha256")
-        != candidate["scene_attempt_freeze"]["sha256"]
-        or result.get("formal_methods_manifest_sha256")
-        != candidate["methods_manifest"]["sha256"]
-        or result.get("model_checkpoint_sha256")
-        != method["attempt_model_identity_sha256"]
-        or result.get("recipe_sha256") != sha256_file(recipe_path)
-        or verification.get("schema") != "m3m_gcp_lidar_formal_verification_v1"
-        or verification.get("status") != "PASS_VERIFIED_FORMAL_V1"
-        or verification.get("scene") != SCENE
-        or verification.get("method_id") != args.method_id
-        or verification.get("method_result_sha256") != sha256_file(result_path)
-        or verification.get("scene_attempt_freeze_sha256")
-        != candidate["scene_attempt_freeze"]["sha256"]
-        or verification.get("canonical_sha256") != canonical_sha256(verification)
-    ):
-        raise RuntimeError("LiDAR result/independent-verifier binding mismatch")
-    archive_errors = validate_archive_manifest(
-        archive_path,
-        archive_root,
-        expected_scene_attempt_freeze_sha256=candidate["scene_attempt_freeze"]["sha256"],
-    )
-    archive = require_json(archive_path)
-    if (
-        archive_errors
-        or archive.get("scene") != SCENE
-        or archive.get("method_id") != args.method_id
-    ):
-        raise RuntimeError("LiDAR lightweight archive gate mismatch: " + "; ".join(archive_errors))
 
     base_activation = Path(str(candidate["base_activation"]["path"])).resolve()
     plan = base_repo / "configs" / "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
@@ -297,6 +228,244 @@ def main() -> int:
         "--archive-manifest",
         str(archive_path),
     ]
+
+    if intent_path.is_file():
+        intent = require_json(intent_path)
+        if (
+            intent.get("schema") != "m3m_gcp_100k_lidar_packet_release_intent_v1"
+            or intent.get("status") != "AUTHORIZED_TO_INVOKE_BASE_PACKET_RELEASE"
+            or intent.get("method_id") != args.method_id
+            or intent.get("three_track_activation_sha256") != sha256_file(activation_path)
+            or intent.get("candidate_manifest_sha256") != sha256_file(candidate_path)
+            or intent.get("scene_attempt_freeze_sha256")
+            != candidate["scene_attempt_freeze"]["sha256"]
+            or intent.get("methods_manifest_sha256")
+            != candidate["methods_manifest"]["sha256"]
+            or intent.get("recipe_sha256") != sha256_file(recipe_path)
+            or intent.get("attempt_model_identity_sha256") != sha256_file(identity_path)
+            or intent.get("lidar_dispatch_receipt_path") != str(dispatch_path)
+            or intent.get("lidar_dispatch_receipt_sha256") != sha256_file(dispatch_path)
+            or intent.get("packet_set_root") != str(packet_root)
+            or intent.get("packet_state_path") != str(state_path)
+            or intent.get("global_raw_packet_state_path") != str(global_state_path)
+            or intent.get("authorized_targets_exact")
+            != [str(packet_root), str(state_path), str(global_state_path)]
+            or intent.get("lidar_method_result_path") != str(result_path)
+            or intent.get("lidar_method_result_sha256") != sha256_file(result_path)
+            or intent.get("lidar_verification_path") != str(verification_path)
+            or intent.get("lidar_verification_sha256") != sha256_file(verification_path)
+            or intent.get("lidar_archive_manifest_path") != str(archive_path)
+            or intent.get("lidar_archive_manifest_sha256") != sha256_file(archive_path)
+            or intent.get("base_release_command") != command
+            or intent.get("base_release_command_sha256") != command_sha256(command)
+            or intent.get("canonical_sha256") != canonical_sha256(intent)
+        ):
+            raise RuntimeError("existing LiDAR release intent mismatch")
+        if not global_state_path.exists() and (
+            packet_root.exists()
+            or packet_root.is_symlink()
+            or state_path.exists()
+            or state_path.is_symlink()
+        ):
+            raise RuntimeError("LiDAR release continuation lost the global mutex early")
+        if global_state_path.exists() or global_state_path.is_symlink():
+            validate_active_raw_packet_state(
+                global_state_path,
+                activation_path=activation_path,
+                candidate=candidate,
+                method_id=args.method_id,
+                track="lidar",
+                recipe_sha256=sha256_file(recipe_path),
+                attempt_model_identity_sha256=sha256_file(identity_path),
+                packet_set_root=packet_root,
+                track_packet_state_path=state_path,
+            )
+            if sha256_file(global_state_path) != intent.get(
+                "global_raw_packet_state_sha256"
+            ):
+                raise RuntimeError("LiDAR release continuation global mutex SHA mismatch")
+        validate_exact_lidar_archive(
+            archive_path,
+            archive_root,
+            method_id=args.method_id,
+            expected_scene_attempt_freeze_sha256=candidate["scene_attempt_freeze"][
+                "sha256"
+            ],
+            require_sources=False,
+        )
+        recovery_result = require_json(result_path)
+        recovery_verification = require_json(verification_path)
+        if (
+            recovery_result.get("schema") != "m3m_gcp_lidar_method_result_v1"
+            or recovery_result.get("scene") != SCENE
+            or recovery_result.get("method_id") != args.method_id
+            or recovery_result.get("train_view_count") != 2196
+            or recovery_result.get("summary_row", {}).get("status")
+            != "COMPLETE_RANKED"
+            or recovery_result.get("canonical_sha256")
+            != canonical_sha256(recovery_result)
+            or recovery_verification.get("status") != "PASS_VERIFIED_FORMAL_V1"
+            or recovery_verification.get("scene") != SCENE
+            or recovery_verification.get("method_id") != args.method_id
+            or recovery_verification.get("method_result_sha256")
+            != sha256_file(result_path)
+            or recovery_verification.get("canonical_sha256")
+            != canonical_sha256(recovery_verification)
+        ):
+            raise RuntimeError("existing LiDAR release intent result/archive gate mismatch")
+        if packet_root.exists() or packet_root.is_symlink():
+            if state_path.exists() and not state_path.is_symlink():
+                if packet_root.is_symlink() or any(
+                    path.is_symlink() for path in packet_root.rglob("*")
+                ):
+                    raise RuntimeError("LiDAR release continuation refuses packet symlinks")
+                original_rows = {
+                    str(row["path"]): row
+                    for row in intent.get("packet_tree_before_delete", {}).get(
+                        "files", []
+                    )
+                }
+                current_rows = directory_tree_hash(packet_root).get("files", [])
+                if any(
+                    str(row["path"]) not in original_rows
+                    or row.get("sha256")
+                    != original_rows[str(row["path"])].get("sha256")
+                    or row.get("bytes")
+                    != original_rows[str(row["path"])].get("bytes")
+                    for row in current_rows
+                ):
+                    raise RuntimeError("LiDAR release continuation packet subset mismatch")
+                recovery_stdout = intent_path.parent / "base_release.recovery.stdout.log"
+                recovery_stderr = intent_path.parent / "base_release.recovery.stderr.log"
+                with recovery_stdout.open("xb") as stdout_handle, recovery_stderr.open(
+                    "xb"
+                ) as stderr_handle:
+                    process = subprocess.run(
+                        command, stdout=stdout_handle, stderr=stderr_handle, check=False
+                    )
+                if process.returncode != 0:
+                    raise RuntimeError(
+                        "unchanged base packet-release guard failed during authorized continuation"
+                    )
+            else:
+                raise RuntimeError("inconsistent LiDAR release continuation targets")
+        if state_path.exists() or state_path.is_symlink():
+            if (
+                state_path.is_symlink()
+                or not state_path.is_file()
+                or sha256_file(state_path) != intent.get("packet_state_sha256")
+                or packet_root.exists()
+                or packet_root.is_symlink()
+            ):
+                raise RuntimeError("LiDAR release continuation state identity mismatch")
+            state_path.unlink()
+        if global_state_path.exists() or global_state_path.is_symlink():
+            if global_state_path.is_symlink():
+                raise RuntimeError("LiDAR release continuation refuses symlinked global mutex")
+            global_state_path.unlink()
+        if (
+            packet_root.exists()
+            or packet_root.is_symlink()
+            or state_path.exists()
+            or state_path.is_symlink()
+            or global_state_path.exists()
+            or global_state_path.is_symlink()
+        ):
+            raise RuntimeError("LiDAR release continuation deletion postcondition failed")
+        receipt: dict[str, Any] = {
+            **intent,
+            "schema": "m3m_gcp_100k_lidar_packet_deletion_receipt_v1",
+            "status": "PASS_LIDAR_PACKET_DELETED_BY_BASE_GUARD",
+            "release_intent_path": str(intent_path),
+            "release_intent_sha256": sha256_file(intent_path),
+            "packet_set_root_absent": True,
+            "packet_state_absent": True,
+            "global_raw_packet_state_absent": True,
+            "recovered_after_post_delete_interruption": True,
+        }
+        receipt.pop("canonical_sha256", None)
+        receipt["canonical_sha256"] = canonical_sha256(receipt)
+        write_exclusive(receipt_path, receipt)
+        print(json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
+    packet = require_json(packet_path)
+    state = require_json(state_path)
+    validate_active_raw_packet_state(
+        global_state_path,
+        activation_path=activation_path,
+        candidate=candidate,
+        method_id=args.method_id,
+        track="lidar",
+        recipe_sha256=sha256_file(recipe_path),
+        attempt_model_identity_sha256=sha256_file(identity_path),
+        packet_set_root=packet_root,
+        track_packet_state_path=state_path,
+    )
+    result = require_json(result_path)
+    verification = require_json(verification_path)
+    if (
+        dispatch.get("schema") != "m3m_gcp_100k_lidar_packet_dispatch_receipt_v1"
+        or dispatch.get("status") != "PASS_LIDAR_PACKET_2196_DISPATCHED"
+        or dispatch.get("method_id") != args.method_id
+        or dispatch.get("three_track_activation_sha256") != sha256_file(activation_path)
+        or dispatch.get("scene_attempt_freeze_sha256")
+        != candidate["scene_attempt_freeze"]["sha256"]
+        or dispatch.get("methods_manifest_sha256") != candidate["methods_manifest"]["sha256"]
+        or dispatch.get("attempt_model_identity_sha256") != sha256_file(identity_path)
+        or dispatch.get("packet_state_sha256") != sha256_file(state_path)
+        or dispatch.get("packet_manifest_sha256") != sha256_file(packet_path)
+        or dispatch.get("global_raw_packet_state_path") != str(global_state_path)
+        or dispatch.get("global_raw_packet_state_sha256")
+        != sha256_file(global_state_path)
+        or dispatch.get("canonical_sha256") != canonical_sha256(dispatch)
+        or state.get("method_id") != args.method_id
+        or Path(str(state.get("packet_set_root", ""))).resolve() != packet_root
+        or packet.get("scene") != SCENE
+        or packet.get("rendered_view_count") != 2196
+        or len(packet.get("depth_index", [])) != 2196
+        or len(packet.get("packet_index", [])) != 2196
+        or packet.get("model_content_hash") != current_model_content(method)
+    ):
+        raise RuntimeError("LiDAR packet dispatch/current model binding mismatch")
+    if (
+        result.get("schema") != "m3m_gcp_lidar_method_result_v1"
+        or result.get("scene") != SCENE
+        or result.get("method_id") != args.method_id
+        or result.get("train_view_count") != 2196
+        or result.get("summary_row", {}).get("status") != "COMPLETE_RANKED"
+        or result.get("canonical_sha256") != canonical_sha256(result)
+        or result.get("packet_manifest_sha256") != sha256_file(packet_path)
+        or result.get("scene_attempt_freeze_sha256")
+        != candidate["scene_attempt_freeze"]["sha256"]
+        or result.get("formal_methods_manifest_sha256")
+        != candidate["methods_manifest"]["sha256"]
+        or result.get("model_checkpoint_sha256")
+        != method["attempt_model_identity_sha256"]
+        or result.get("recipe_sha256") != sha256_file(recipe_path)
+        or verification.get("schema") != "m3m_gcp_lidar_formal_verification_v1"
+        or verification.get("status") != "PASS_VERIFIED_FORMAL_V1"
+        or verification.get("scene") != SCENE
+        or verification.get("method_id") != args.method_id
+        or verification.get("method_result_sha256") != sha256_file(result_path)
+        or verification.get("scene_attempt_freeze_sha256")
+        != candidate["scene_attempt_freeze"]["sha256"]
+        or verification.get("canonical_sha256") != canonical_sha256(verification)
+    ):
+        raise RuntimeError("LiDAR result/independent-verifier binding mismatch")
+    archive = validate_exact_lidar_archive(
+        archive_path,
+        archive_root,
+        method_id=args.method_id,
+        expected_scene_attempt_freeze_sha256=candidate["scene_attempt_freeze"]["sha256"],
+        require_sources=True,
+    )
+    if (
+        archive.get("scene") != SCENE
+        or archive.get("method_id") != args.method_id
+    ):
+        raise RuntimeError("LiDAR lightweight archive gate mismatch")
+
     intent: dict[str, Any] = {
         "schema": "m3m_gcp_100k_lidar_packet_release_intent_v1",
         "status": "AUTHORIZED_TO_INVOKE_BASE_PACKET_RELEASE",
@@ -309,10 +478,15 @@ def main() -> int:
         "methods_manifest_sha256": candidate["methods_manifest"]["sha256"],
         "recipe_sha256": sha256_file(recipe_path),
         "attempt_model_identity_sha256": sha256_file(identity_path),
+        "lidar_dispatch_receipt_path": str(dispatch_path),
         "lidar_dispatch_receipt_sha256": sha256_file(dispatch_path),
         "packet_set_root": str(packet_root),
         "packet_state_path": str(state_path),
+        "packet_state_sha256": sha256_file(state_path),
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "packet_manifest_sha256": sha256_file(packet_path),
+        "packet_tree_before_delete": directory_tree_hash(packet_root),
         "lidar_method_result_sha256": sha256_file(result_path),
         "lidar_method_result_path": str(result_path),
         "lidar_verification_sha256": sha256_file(verification_path),
@@ -321,7 +495,11 @@ def main() -> int:
         "lidar_archive_manifest_path": str(archive_path),
         "base_release_command": command,
         "base_release_command_sha256": command_sha256(command),
-        "authorized_targets_exact": [str(packet_root), str(state_path)],
+        "authorized_targets_exact": [
+            str(packet_root),
+            str(state_path),
+            str(global_state_path),
+        ],
     }
     intent["canonical_sha256"] = canonical_sha256(intent)
     write_exclusive(intent_path, intent)
@@ -334,7 +512,15 @@ def main() -> int:
             f"unchanged base packet-release guard failed with exit code {process.returncode}; "
             f"stdout={stdout_path}; stderr={stderr_path}"
         )
-    if packet_root.exists() or packet_root.is_symlink() or state_path.exists() or state_path.is_symlink():
+    global_state_path.unlink()
+    if (
+        packet_root.exists()
+        or packet_root.is_symlink()
+        or state_path.exists()
+        or state_path.is_symlink()
+        or global_state_path.exists()
+        or global_state_path.is_symlink()
+    ):
         raise RuntimeError("base packet-release deletion postcondition failed")
     receipt: dict[str, Any] = {
         **intent,
@@ -346,6 +532,7 @@ def main() -> int:
         "base_release_stderr_sha256": sha256_file(stderr_path),
         "packet_set_root_absent": True,
         "packet_state_absent": True,
+        "global_raw_packet_state_absent": True,
         "recovered_after_post_delete_interruption": False,
     }
     receipt.pop("canonical_sha256", None)

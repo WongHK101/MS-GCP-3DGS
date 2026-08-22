@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
+from m3m_gcp_100k_raw_packet_state import acquire_active_raw_packet_state
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
 from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
 
@@ -66,8 +67,51 @@ def validate_gcp_precondition(
     payload = require_json(path)
     runtime_root = Path(str(candidate["candidate_output_root"])).resolve().parent
     expected_path = runtime_root / "gcp-packet-release" / method_id / "deletion_receipt.json"
+    expected_failure_cleanup = (
+        runtime_root
+        / "failed-packet-cleanup"
+        / "gcp"
+        / method_id
+        / "cleanup_receipt.json"
+    )
     packet_root = runtime_root / "gcp-packet-scratch" / method_id
     state_path = runtime_root / "gcp-packet-scratch" / "ACTIVE_GCP_PACKET_STATE.json"
+    global_state_path = runtime_root / "raw-packet-lifecycle" / "ACTIVE_RAW_PACKET_STATE.json"
+    if path == expected_failure_cleanup:
+        archive_path = Path(str(payload.get("failure_archive_manifest_path", ""))).resolve()
+        if (
+            payload.get("schema") != "m3m_gcp_100k_failed_packet_cleanup_receipt_v1"
+            or payload.get("status")
+            != "PASS_FAILED_RAW_PACKET_DELETED_INCOMPLETE_UNRANKED"
+            or payload.get("ranking_status") != "INCOMPLETE_UNRANKED"
+            or payload.get("scene") != SCENE
+            or payload.get("method_id") != method_id
+            or payload.get("track") != "gcp"
+            or payload.get("three_track_activation_sha256")
+            != sha256_file(activation_path)
+            or payload.get("scene_attempt_freeze_sha256")
+            != candidate["scene_attempt_freeze"]["sha256"]
+            or payload.get("packet_set_root_absent") is not True
+            or payload.get("track_packet_state_absent") is not True
+            or payload.get("global_raw_packet_state_absent") is not True
+            or payload.get("retry_forbidden") is not True
+            or payload.get("failure_archive_manifest_sha256")
+            != sha256_file(archive_path)
+            or payload.get("canonical_sha256") != canonical_sha256(payload)
+            or packet_root.exists()
+            or packet_root.is_symlink()
+            or state_path.exists()
+            or state_path.is_symlink()
+            or global_state_path.exists()
+            or global_state_path.is_symlink()
+        ):
+            raise RuntimeError("GCP failed-packet cleanup precondition mismatch")
+        return {
+            "kind": "GCP_FAILED_PACKET_CLEANUP_RECEIPT",
+            "path": str(path),
+            "sha256": sha256_file(path),
+            "gcp_status": "INCOMPLETE_UNRANKED",
+        }
     if (
         path != expected_path
         or payload.get("schema") != "m3m_gcp_100k_gcp_packet_deletion_receipt_v1"
@@ -81,11 +125,14 @@ def validate_gcp_precondition(
         or payload.get("packet_state_path") != str(state_path)
         or payload.get("packet_set_root_absent") is not True
         or payload.get("packet_state_absent") is not True
+        or payload.get("global_raw_packet_state_absent") is not True
         or payload.get("canonical_sha256") != canonical_sha256(payload)
         or packet_root.exists()
         or packet_root.is_symlink()
         or state_path.exists()
         or state_path.is_symlink()
+        or global_state_path.exists()
+        or global_state_path.is_symlink()
     ):
         raise RuntimeError("GCP deletion receipt/current-state precondition mismatch")
     return {"kind": "GCP_PACKET_DELETION_RECEIPT", "path": str(path), "sha256": sha256_file(path)}
@@ -225,6 +272,18 @@ def main() -> int:
         "--scene-attempt-freeze",
         str(Path(str(candidate["scene_attempt_freeze"]["path"])).resolve()),
     ]
+    global_state_path, global_state = acquire_active_raw_packet_state(
+        activation_path=activation_path,
+        candidate=candidate,
+        registry=registry,
+        method_id=args.method_id,
+        track="lidar",
+        recipe_sha256=sha256_file(recipe_path),
+        attempt_model_identity_sha256=sha256_file(identity_path),
+        packet_set_root=packet_root,
+        track_packet_state_path=packet_state,
+        owner_evidence_root=dispatch_root,
+    )
     dispatch_root.mkdir(parents=True, exist_ok=False)
     stdout_path = dispatch_root / "base_guard.stdout.log"
     stderr_path = dispatch_root / "base_guard.stderr.log"
@@ -239,6 +298,9 @@ def main() -> int:
         "scene_attempt_freeze_sha256": candidate["scene_attempt_freeze"]["sha256"],
         "attempt_model_identity_sha256": sha256_file(identity_path),
         "gcp_precondition": gcp_gate,
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
+        "global_raw_packet_state_canonical_sha256": global_state["canonical_sha256"],
         "command": command,
         "command_sha256": command_sha256(command),
         "python": sys.version,
@@ -256,9 +318,19 @@ def main() -> int:
             "three_track_activation_sha256": sha256_file(activation_path),
             "scene_attempt_freeze_sha256": candidate["scene_attempt_freeze"]["sha256"],
             "attempt_model_identity_sha256": sha256_file(identity_path),
+            "global_raw_packet_state_path": str(global_state_path),
+            "global_raw_packet_state_sha256": sha256_file(global_state_path),
             "environment_sha256": sha256_file(environment_path),
             "stdout_sha256": sha256_file(stdout_path),
             "stderr_sha256": sha256_file(stderr_path),
+            "logs": [
+                {
+                    "path": str(path),
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                }
+                for path in (stdout_path, stderr_path)
+            ],
             "exit_code": process.returncode,
             "retry_forbidden_after_base_guard_child_start": True,
         }
@@ -268,30 +340,62 @@ def main() -> int:
         return int(process.returncode or 1)
 
     phase_path = Path(str(recipe["authorized_evidence_root"])).resolve() / "packet" / "phase_success.json"
-    phase = require_json(phase_path)
-    state = require_json(packet_state)
     packet_manifest_path = packet_root / "depth_export_manifest.json"
-    packet = require_json(packet_manifest_path)
-    depth_rows = packet.get("depth_index", [])
-    if (
-        phase.get("schema") != "m3m_gcp_100k_phase_success_v2"
-        or phase.get("status") != "PASS"
-        or phase.get("scene") != SCENE
-        or phase.get("method_id") != args.method_id
-        or phase.get("phase") != "packet"
-        or phase.get("recipe_sha256") != sha256_file(recipe_path)
-        or phase.get("canonical_sha256") != canonical_sha256(phase)
-        or state.get("schema") != "m3m_gcp_100k_single_packet_state_v1"
-        or state.get("method_id") != args.method_id
-        or Path(str(state.get("packet_set_root", ""))).resolve() != packet_root
-        or packet.get("scene") != SCENE
-        or packet.get("rendered_view_count") != 2196
-        or len(depth_rows) != 2196
-        or len(packet.get("packet_index", [])) != 2196
-        or len({str(row.get("image_name", "")) for row in depth_rows}) != 2196
-        or any(row.get("split") != "train" for row in depth_rows)
-    ):
-        raise RuntimeError("base LiDAR packet phase postvalidation mismatch")
+    try:
+        phase = require_json(phase_path)
+        state = require_json(packet_state)
+        packet = require_json(packet_manifest_path)
+        depth_rows = packet.get("depth_index", [])
+        if (
+            phase.get("schema") != "m3m_gcp_100k_phase_success_v2"
+            or phase.get("status") != "PASS"
+            or phase.get("scene") != SCENE
+            or phase.get("method_id") != args.method_id
+            or phase.get("phase") != "packet"
+            or phase.get("recipe_sha256") != sha256_file(recipe_path)
+            or phase.get("canonical_sha256") != canonical_sha256(phase)
+            or state.get("schema") != "m3m_gcp_100k_single_packet_state_v1"
+            or state.get("method_id") != args.method_id
+            or Path(str(state.get("packet_set_root", ""))).resolve() != packet_root
+            or packet.get("scene") != SCENE
+            or packet.get("rendered_view_count") != 2196
+            or len(depth_rows) != 2196
+            or len(packet.get("packet_index", [])) != 2196
+            or len({str(row.get("image_name", "")) for row in depth_rows}) != 2196
+            or any(row.get("split") != "train" for row in depth_rows)
+        ):
+            raise RuntimeError("base LiDAR packet phase postvalidation mismatch")
+    except Exception as exc:
+        failure_payload = {
+            "schema": "m3m_gcp_100k_lidar_packet_dispatch_failure_v1",
+            "status": "FAILED_UNRANKED",
+            "scene": SCENE,
+            "method_id": args.method_id,
+            "failure_stage": "lidar_packet_postvalidation",
+            "three_track_activation_sha256": sha256_file(activation_path),
+            "scene_attempt_freeze_sha256": candidate["scene_attempt_freeze"]["sha256"],
+            "attempt_model_identity_sha256": sha256_file(identity_path),
+            "global_raw_packet_state_path": str(global_state_path),
+            "global_raw_packet_state_sha256": sha256_file(global_state_path),
+            "environment_sha256": sha256_file(environment_path),
+            "stdout_sha256": sha256_file(stdout_path),
+            "stderr_sha256": sha256_file(stderr_path),
+            "logs": [
+                {
+                    "path": str(path),
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                }
+                for path in (stdout_path, stderr_path)
+            ],
+            "exit_code": 0,
+            "error": f"{type(exc).__name__}: {exc}",
+            "retry_forbidden_after_base_guard_child_start": True,
+        }
+        failure_payload["canonical_sha256"] = canonical_sha256(failure_payload)
+        write_exclusive(failure_path, failure_payload)
+        print(json.dumps(failure_payload, ensure_ascii=False, indent=2, sort_keys=True))
+        return 1
     receipt: dict[str, Any] = {
         "schema": "m3m_gcp_100k_lidar_packet_dispatch_receipt_v1",
         "status": "PASS_LIDAR_PACKET_2196_DISPATCHED",
@@ -308,6 +412,8 @@ def main() -> int:
         "attempt_model_identity_sha256": sha256_file(identity_path),
         "attempt_model_identity_canonical_sha256": identity["canonical_sha256"],
         "gcp_precondition": gcp_gate,
+        "global_raw_packet_state_path": str(global_state_path),
+        "global_raw_packet_state_sha256": sha256_file(global_state_path),
         "packet_set_root": str(packet_root),
         "packet_state_path": str(packet_state),
         "packet_state_sha256": sha256_file(packet_state),

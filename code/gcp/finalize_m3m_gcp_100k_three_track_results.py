@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
+from m3m_gcp_100k_lidar_archive import validate_exact_lidar_archive
 from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
+from cleanup_m3m_gcp_100k_failed_packet import validate_failure_archive
+from release_m3m_gcp_100k_gcp_packet import validate_archive as validate_gcp_archive
 from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
 
 
@@ -49,6 +52,46 @@ def parse_bindings(values: list[str], label: str) -> dict[str, Path]:
             raise RuntimeError(f"invalid or duplicate {label} binding: {value}")
         result[method] = Path(raw_path).resolve()
     return result
+
+
+def validate_failed_cleanup_receipt(
+    path: Path,
+    *,
+    expected_path: Path,
+    activation_path: Path,
+    candidate: dict[str, Any],
+    method: dict[str, Any],
+    track: str,
+) -> dict[str, Any]:
+    payload = require_json(path)
+    archive_path = Path(str(payload.get("failure_archive_manifest_path", ""))).resolve()
+    validate_failure_archive(archive_path, archive_path.parent)
+    if (
+        path != expected_path
+        or payload.get("schema") != "m3m_gcp_100k_failed_packet_cleanup_receipt_v1"
+        or payload.get("status")
+        != "PASS_FAILED_RAW_PACKET_DELETED_INCOMPLETE_UNRANKED"
+        or payload.get("ranking_status") != "INCOMPLETE_UNRANKED"
+        or payload.get("scene") != SCENE
+        or payload.get("method_id") != method["method_id"]
+        or payload.get("track") != track
+        or payload.get("three_track_activation_sha256")
+        != sha256_file(activation_path)
+        or payload.get("scene_attempt_freeze_sha256")
+        != candidate["scene_attempt_freeze"]["sha256"]
+        or payload.get("methods_manifest_sha256")
+        != candidate["methods_manifest"]["sha256"]
+        or payload.get("attempt_model_identity_sha256")
+        != method["attempt_model_identity_sha256"]
+        or payload.get("failure_archive_manifest_sha256") != sha256_file(archive_path)
+        or payload.get("retry_forbidden") is not True
+        or payload.get("packet_set_root_absent") is not True
+        or payload.get("track_packet_state_absent") is not True
+        or payload.get("global_raw_packet_state_absent") is not True
+        or payload.get("canonical_sha256") != canonical_sha256(payload)
+    ):
+        raise RuntimeError(f"{method['method_id']}: failed {track} cleanup receipt mismatch")
+    return payload
 
 
 def main() -> int:
@@ -209,46 +252,156 @@ def main() -> int:
         else:
             gcp_path = gcp_receipts[method_id]
             expected_gcp = runtime_root / "gcp-packet-release" / method_id / "deletion_receipt.json"
-            gcp = require_json(gcp_path)
-            if (
-                gcp_path != expected_gcp
-                or gcp.get("schema") != "m3m_gcp_100k_gcp_packet_deletion_receipt_v1"
-                or gcp.get("status") != "PASS_GCP_PACKET_DELETED"
-                or gcp.get("method_id") != method_id
-                or gcp.get("three_track_activation_sha256") != sha256_file(activation_path)
-                or gcp.get("attempt_model_identity_sha256")
-                != method["attempt_model_identity_sha256"]
-                or gcp.get("canonical_sha256") != canonical_sha256(gcp)
-                or not Path(str(gcp["gcp_evaluation_summary_path"])).is_file()
-                or sha256_file(Path(str(gcp["gcp_evaluation_summary_path"])))
-                != gcp["gcp_evaluation_summary_sha256"]
-            ):
-                raise RuntimeError(f"{method_id}: GCP deletion/final-result receipt mismatch")
-            gcp_track = {
-                "kind": "NEW_GCP_RESULT_AND_DELETION_RECEIPT",
-                "path": str(gcp_path),
-                "sha256": sha256_file(gcp_path),
-                "summary_path": gcp["gcp_evaluation_summary_path"],
-                "summary_sha256": gcp["gcp_evaluation_summary_sha256"],
-            }
+            expected_failed_gcp = (
+                runtime_root
+                / "failed-packet-cleanup"
+                / "gcp"
+                / method_id
+                / "cleanup_receipt.json"
+            )
+            if gcp_path == expected_failed_gcp:
+                failed_gcp = validate_failed_cleanup_receipt(
+                    gcp_path,
+                    expected_path=expected_failed_gcp,
+                    activation_path=activation_path,
+                    candidate=candidate,
+                    method=method,
+                    track="gcp",
+                )
+                gcp_track = {
+                    "kind": "FAILED_GCP_PACKET_CLEANUP_RECEIPT",
+                    "status": "INCOMPLETE_UNRANKED",
+                    "path": str(gcp_path),
+                    "sha256": sha256_file(gcp_path),
+                    "failure_evidence_path": failed_gcp["failure_evidence_path"],
+                    "failure_evidence_sha256": failed_gcp["failure_evidence_sha256"],
+                }
+            else:
+                gcp = require_json(gcp_path)
+                gcp_summary_path = Path(str(gcp.get("gcp_evaluation_summary_path", ""))).resolve()
+                gcp_verification_path = Path(str(gcp.get("gcp_verification_path", ""))).resolve()
+                gcp_archive_path = Path(str(gcp.get("gcp_archive_manifest_path", ""))).resolve()
+                gcp_summary = require_json(gcp_summary_path)
+                gcp_verification = require_json(gcp_verification_path)
+                gcp_archive = validate_gcp_archive(
+                    gcp_archive_path,
+                    Path(str(candidate["formal_results_root"])).resolve()
+                    / "gcp-lightweight-archives"
+                    / method_id,
+                    require_sources=False,
+                )
+                if (
+                    gcp_path != expected_gcp
+                    or gcp.get("schema") != "m3m_gcp_100k_gcp_packet_deletion_receipt_v1"
+                    or gcp.get("status") != "PASS_GCP_PACKET_DELETED"
+                    or gcp.get("method_id") != method_id
+                    or gcp.get("three_track_activation_sha256") != sha256_file(activation_path)
+                    or gcp.get("attempt_model_identity_sha256")
+                    != method["attempt_model_identity_sha256"]
+                    or gcp.get("global_raw_packet_state_absent") is not True
+                    or gcp.get("canonical_sha256") != canonical_sha256(gcp)
+                    or sha256_file(gcp_summary_path)
+                    != gcp["gcp_evaluation_summary_sha256"]
+                    or gcp_summary.get("scene") != SCENE
+                    or gcp_summary.get("method_id") != method_id
+                    or gcp_summary.get("status")
+                    not in {"COMPLETE_RANKED", "INCOMPLETE_UNRANKED"}
+                    or sha256_file(gcp_verification_path) != gcp["gcp_verification_sha256"]
+                    or gcp_verification.get("status") != "PASS"
+                    or gcp_verification.get("passed") is not True
+                    or gcp_verification.get("scene") != SCENE
+                    or gcp_verification.get("method_id") != method_id
+                    or gcp_verification.get("ranking_status") != gcp_summary.get("status")
+                    or sha256_file(gcp_archive_path) != gcp["gcp_archive_manifest_sha256"]
+                    or gcp_archive.get("schema")
+                    != "m3m_gcp_100k_gcp_lightweight_archive_v1"
+                    or gcp_archive.get("status")
+                    != "PASS_GCP_LIGHTWEIGHT_ARCHIVE_BYTE_VERIFIED"
+                    or gcp_archive.get("method_id") != method_id
+                    or gcp_archive.get("three_track_activation_sha256")
+                    != sha256_file(activation_path)
+                    or gcp_archive.get("canonical_sha256") != canonical_sha256(gcp_archive)
+                ):
+                    raise RuntimeError(f"{method_id}: GCP deletion/final-result receipt mismatch")
+                gcp_track = {
+                    "kind": "NEW_GCP_RESULT_AND_DELETION_RECEIPT",
+                    "status": gcp_summary["status"],
+                    "path": str(gcp_path),
+                    "sha256": sha256_file(gcp_path),
+                    "summary_path": str(gcp_summary_path),
+                    "summary_sha256": gcp["gcp_evaluation_summary_sha256"],
+                }
 
         lidar_path = lidar_receipts[method_id]
         expected_lidar = runtime_root / "lidar-packet-release" / method_id / "deletion_receipt.json"
-        lidar = require_json(lidar_path)
-        result_path = Path(str(lidar.get("lidar_method_result_path", ""))).resolve()
-        if (
-            lidar_path != expected_lidar
-            or lidar.get("schema") != "m3m_gcp_100k_lidar_packet_deletion_receipt_v1"
-            or lidar.get("status") != "PASS_LIDAR_PACKET_DELETED_BY_BASE_GUARD"
-            or lidar.get("method_id") != method_id
-            or lidar.get("three_track_activation_sha256") != sha256_file(activation_path)
-            or lidar.get("attempt_model_identity_sha256")
-            != method["attempt_model_identity_sha256"]
-            or lidar.get("canonical_sha256") != canonical_sha256(lidar)
-            or not result_path.is_file()
-            or sha256_file(result_path) != lidar.get("lidar_method_result_sha256")
-        ):
-            raise RuntimeError(f"{method_id}: LiDAR deletion/final-result receipt mismatch")
+        expected_failed_lidar = (
+            runtime_root
+            / "failed-packet-cleanup"
+            / "lidar"
+            / method_id
+            / "cleanup_receipt.json"
+        )
+        if lidar_path == expected_failed_lidar:
+            failed_lidar = validate_failed_cleanup_receipt(
+                lidar_path,
+                expected_path=expected_failed_lidar,
+                activation_path=activation_path,
+                candidate=candidate,
+                method=method,
+                track="lidar",
+            )
+            lidar_track = {
+                "status": "INCOMPLETE_UNRANKED",
+                "kind": "FAILED_LIDAR_PACKET_CLEANUP_RECEIPT",
+                "cleanup_receipt_path": str(lidar_path),
+                "cleanup_receipt_sha256": sha256_file(lidar_path),
+                "failure_evidence_path": failed_lidar["failure_evidence_path"],
+                "failure_evidence_sha256": failed_lidar["failure_evidence_sha256"],
+            }
+        else:
+            lidar = require_json(lidar_path)
+            result_path = Path(str(lidar.get("lidar_method_result_path", ""))).resolve()
+            lidar_verification_path = Path(str(lidar.get("lidar_verification_path", ""))).resolve()
+            lidar_archive_path = Path(str(lidar.get("lidar_archive_manifest_path", ""))).resolve()
+            lidar_verification = require_json(lidar_verification_path)
+            lidar_archive = validate_exact_lidar_archive(
+                lidar_archive_path,
+                lidar_archive_path.parent,
+                method_id=method_id,
+                expected_scene_attempt_freeze_sha256=candidate["scene_attempt_freeze"]["sha256"],
+                require_sources=False,
+            )
+            if (
+                lidar_path != expected_lidar
+                or lidar.get("schema") != "m3m_gcp_100k_lidar_packet_deletion_receipt_v1"
+                or lidar.get("status") != "PASS_LIDAR_PACKET_DELETED_BY_BASE_GUARD"
+                or lidar.get("method_id") != method_id
+                or lidar.get("three_track_activation_sha256") != sha256_file(activation_path)
+                or lidar.get("attempt_model_identity_sha256")
+                != method["attempt_model_identity_sha256"]
+                or lidar.get("global_raw_packet_state_absent") is not True
+                or lidar.get("canonical_sha256") != canonical_sha256(lidar)
+                or not result_path.is_file()
+                or sha256_file(result_path) != lidar.get("lidar_method_result_sha256")
+                or sha256_file(lidar_verification_path)
+                != lidar.get("lidar_verification_sha256")
+                or lidar_verification.get("status") != "PASS_VERIFIED_FORMAL_V1"
+                or lidar_verification.get("method_id") != method_id
+                or lidar_verification.get("method_result_sha256") != sha256_file(result_path)
+                or lidar_verification.get("canonical_sha256")
+                != canonical_sha256(lidar_verification)
+                or sha256_file(lidar_archive_path) != lidar.get("lidar_archive_manifest_sha256")
+                or lidar_archive.get("method_id") != method_id
+            ):
+                raise RuntimeError(f"{method_id}: LiDAR deletion/final-result receipt mismatch")
+            lidar_track = {
+                "status": "COMPLETE_RANKED",
+                "kind": "VERIFIED_LIDAR_RESULT_AND_DELETION_RECEIPT",
+                "deletion_receipt_path": str(lidar_path),
+                "deletion_receipt_sha256": sha256_file(lidar_path),
+                "result_path": str(result_path),
+                "result_sha256": sha256_file(result_path),
+            }
         rows.append(
             {
                 "method_id": method_id,
@@ -261,13 +414,7 @@ def main() -> int:
                     "evaluator_manifest_sha256": sha256_file(manifest_path),
                 },
                 "gcp": gcp_track,
-                "lidar": {
-                    "status": "PASS_VERIFIED_FORMAL_V1",
-                    "deletion_receipt_path": str(lidar_path),
-                    "deletion_receipt_sha256": sha256_file(lidar_path),
-                    "result_path": str(result_path),
-                    "result_sha256": sha256_file(result_path),
-                },
+                "lidar": lidar_track,
             }
         )
 
@@ -275,6 +422,9 @@ def main() -> int:
         runtime_root / "gcp-packet-scratch" / method_id for method_id in ready if method_id != "3dgs_original"
     ]
     active_paths.append(runtime_root / "gcp-packet-scratch" / "ACTIVE_GCP_PACKET_STATE.json")
+    active_paths.append(
+        runtime_root / "raw-packet-lifecycle" / "ACTIVE_RAW_PACKET_STATE.json"
+    )
     for method_id in ready:
         recipe = require_json(
             Path(str(methods[method_id]["recipe_path"])),
@@ -295,9 +445,18 @@ def main() -> int:
         raise RuntimeError("final result manifest path differs from activated namespace")
     if output.exists() or output.is_symlink():
         raise FileExistsError(output)
+    incomplete_track_count = sum(
+        track.get("status") == "INCOMPLETE_UNRANKED"
+        for row in rows
+        for track in (row["gcp"], row["lidar"])
+    )
     payload: dict[str, Any] = {
         "schema": "m3m_gcp_100k_three_track_final_manifest_v1",
-        "status": "PASS_ALL_READY_METHODS_THREE_TRACKS_FROZEN",
+        "status": (
+            "PASS_ALL_READY_METHODS_THREE_TRACKS_FROZEN"
+            if incomplete_track_count == 0
+            else "COMPLETE_WITH_RECORDED_UNRANKED_TRACK_FAILURES"
+        ),
         "scene": SCENE,
         "three_track_activation_path": str(activation_path),
         "three_track_activation_sha256": sha256_file(activation_path),
@@ -308,9 +467,10 @@ def main() -> int:
         "rgb_execution_plan_sha256": sha256_file(rgb_plan_path),
         "ready_method_ids": ready,
         "method_count": len(rows),
+        "incomplete_track_count": incomplete_track_count,
         "methods": rows,
-        "all_new_gcp_packet_deletion_receipts_present": True,
-        "all_lidar_packet_deletion_receipts_present": True,
+        "all_new_gcp_packet_lifecycle_receipts_present": True,
+        "all_lidar_packet_lifecycle_receipts_present": True,
         "all_active_raw_packet_sets_absent": True,
     }
     payload["canonical_sha256"] = canonical_sha256(payload)
