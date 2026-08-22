@@ -10,9 +10,18 @@ from pathlib import Path
 from typing import Any
 
 from build_m3m_gcp_100k_execution_recipes import (
+    CITY_IMAGES_SHA,
     ENV,
+    FORMAL,
+    FORMAL_CAMERAS_SHA,
+    FORMAL_IMAGES_SHA,
     FORMAL_MANIFEST,
+    FULL_POINTS_SHA,
+    INITIAL_PLY_SHA,
+    METHOD_INPUT_EVIDENCE,
+    METHOD_INPUT_EVIDENCE_SHA,
     METHODS,
+    METRO_POINTS_SHA,
     REUSE_3DGS,
 )
 
@@ -34,6 +43,14 @@ CITYGAUSSIAN_RESUME = (
 REUSED_3DGS = (
     "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/"
     f"{SCENE}/seed0-30k-20260810T175634Z"
+)
+GNU_TIME = (
+    "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/"
+    "ubuntu-jammy-time-1.9-v1/root/usr/bin/time"
+)
+CITYGAUSSIAN_RESUME_MANIFEST = (
+    "{repo}/configs/m3m_gcp_native_quarter_"
+    "citygaussian_v2_100k_resume_v1.json"
 )
 
 COMMON_ENV = {
@@ -107,6 +124,8 @@ def corrected_command(method: str, spec: dict[str, Any]) -> list[str]:
                 "--sequential_blocks",
                 "--resume_from",
                 CITYGAUSSIAN_RESUME,
+                "--resume_manifest",
+                CITYGAUSSIAN_RESUME_MANIFEST,
             ]
         )
     elif method == "citygs_x":
@@ -135,6 +154,57 @@ def source_root(method: str, spec: dict[str, Any]) -> str:
         "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/"
         f"{method}/{spec['commit']}/{spec['sub']}"
     )
+
+
+def prepared_input_binding(
+    method: str, spec: dict[str, Any], dataset: str
+) -> dict[str, Any]:
+    if method in {"citygaussian_v2", "citygs_x"}:
+        profile = "city_train_records_with_full_all_image_sfm_points"
+        sparse = {
+            "cameras.bin": FORMAL_CAMERAS_SHA,
+            "images.bin": CITY_IMAGES_SHA,
+            "points3D.bin": FULL_POINTS_SHA,
+            "points3D.ply": INITIAL_PLY_SHA,
+        }
+    elif method == "metrogs":
+        profile = "metrogs_reciprocal_train_track_closure_after_all_image_sfm"
+        sparse = {
+            "cameras.bin": FORMAL_CAMERAS_SHA,
+            "images.bin": CITY_IMAGES_SHA,
+            "points3D.bin": METRO_POINTS_SHA,
+            "points3D.ply": INITIAL_PLY_SHA,
+        }
+    else:
+        profile = "exact_formal_train_view_from_shared_all_image_sfm"
+        sparse = {
+            "cameras.bin": FORMAL_CAMERAS_SHA,
+            "images.bin": FORMAL_IMAGES_SHA,
+            "points3D.ply": INITIAL_PLY_SHA,
+        }
+    return {
+        "evidence_path": METHOD_INPUT_EVIDENCE,
+        "evidence_sha256": METHOD_INPUT_EVIDENCE_SHA,
+        "dataset_root": FORMAL if method == "gsprior" else dataset,
+        "input_profile": profile,
+        "sparse_sha256": sparse,
+        "all_image_sfm_precedes_train_test_split": True,
+    }
+
+
+def input_validation_dependencies(method: str) -> dict[str, str]:
+    paths = ["code/gcp/materialize_m3m_gcp_100k_method_inputs.py"]
+    if method in {"citygaussian_v2", "citygs_x"}:
+        paths.append(
+            "code/gcp/materialize_colmap_train_track_compatibility_streaming.py"
+        )
+    elif method == "metrogs":
+        paths.append("code/gcp/filter_colmap_model_to_frozen_train_streaming.py")
+    if method == "citygaussian_v2":
+        paths.append(
+            "configs/m3m_gcp_native_quarter_citygaussian_v2_100k_resume_v1.json"
+        )
+    return {path: sha256(ROOT / path) for path in paths}
 
 
 def build_recipe(method: str) -> dict[str, Any]:
@@ -201,7 +271,7 @@ def build_recipe(method: str) -> dict[str, Any]:
                     "script": "{repo}/code/gcp/run_with_resource_probe_v2.py",
                     "contract": "{repo}/configs/gs_gcp_resource_probe_contract_v2.json",
                     "gpu_indices": "0",
-                    "time_binary": "/usr/bin/time",
+                    "time_binary": GNU_TIME,
                     "enforce_contract_gates": False,
                 },
                 "materializations": (
@@ -234,6 +304,22 @@ def build_recipe(method: str) -> dict[str, Any]:
         "result_driven_tuning": "FORBIDDEN",
         "evaluation_after_saved_model": True,
     }
+    input_spec = REUSE_3DGS if method == "3dgs_original" else METHODS[method]
+    input_dataset = input_spec.get("dataset", FORMAL)
+    payload["formal_input_manifest"] = dict(
+        payload["scientific_contract"]["formal_input_manifest"]
+    )
+    payload["prepared_method_input_binding"] = prepared_input_binding(
+        method, input_spec, input_dataset
+    )
+    payload["benchmark_required_files_sha256"] = input_validation_dependencies(
+        method
+    )
+    payload["phase_commands"] = (
+        {"prior": copy.deepcopy(METHODS[method]["prior_command"])}
+        if method == "gsprior"
+        else {}
+    )
     payload["retry_policy"] = {
         "engineering_failure": "correct_and_use_new_attempt_id_without_per_method_audit",
         "deterministic_oom_with_telemetry": "terminal_on_current_hardware_and_config",

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from run_citygaussian_v2_100k_pipeline import (
     cleanup_transient_checkpoints,
+    load_frozen_resume_binding,
     materialize_resume_checkpoints,
     sha256,
 )
@@ -31,12 +32,62 @@ class CityGaussianV2100KPipelineTest(unittest.TestCase):
             partial = old / "fine/blocks/block_1/checkpoints/step=29999.ckpt"
             partial.parent.mkdir(parents=True)
             partial.write_bytes(b"partial")
+            dataset = base / "dataset"
+            partition = (
+                dataset
+                / "partition/partitions-dim_4_4_visibility_0.05/partitions.pt"
+            )
+            partition.parent.mkdir(parents=True)
+            partition.write_bytes(b"partition")
+            manifest = base / "resume.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "schema": "m3m_gcp_citygaussian_v2_100k_resume_binding_v1",
+                        "status": "FROZEN_REUSE_SOURCE",
+                        "scene": "gcp_100000_20260610",
+                        "source_root": str(old),
+                        "coarse": {
+                            "relative_path": coarse.relative_to(old).as_posix(),
+                            "step": 30_000,
+                            "bytes": coarse.stat().st_size,
+                            "sha256": sha256(coarse),
+                        },
+                        "allowed_completed_blocks": [
+                            {
+                                "block_id": 0,
+                                "relative_path": completed.relative_to(old).as_posix(),
+                                "step": 60_000,
+                                "bytes": completed.stat().st_size,
+                                "sha256": sha256(completed),
+                            }
+                        ],
+                        "allowed_completed_block_ids": [0],
+                        "reject_unlisted_completed_blocks": True,
+                        "partition": {
+                            "path": str(partition),
+                            "bytes": partition.stat().st_size,
+                            "sha256": sha256(partition),
+                        },
+                        "metric_based_selection": "FORBIDDEN",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            binding = load_frozen_resume_binding(
+                manifest_path=manifest,
+                resume_root=old,
+                dataset=dataset,
+                coarse_steps=30_000,
+                fine_steps=60_000,
+            )
 
             linked_coarse, reused, records = materialize_resume_checkpoints(
                 resume_root=old,
                 output_root=new,
                 coarse_steps=30_000,
                 fine_steps=60_000,
+                resume_binding=binding,
             )
 
             self.assertTrue(linked_coarse.is_file())
@@ -46,6 +97,70 @@ class CityGaussianV2100KPipelineTest(unittest.TestCase):
             self.assertTrue(reused[0].samefile(completed))
             self.assertFalse((new / "fine/blocks/block_1").exists())
             self.assertEqual([row.get("block_id") for row in records[1:]], [0])
+
+    def test_resume_rejects_an_unlisted_completed_block(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            old = base / "old"
+            coarse = old / "coarse/checkpoints/step=30000.ckpt"
+            coarse.parent.mkdir(parents=True)
+            coarse.write_bytes(b"coarse")
+            block0 = old / "fine/blocks/block_0/checkpoints/step=60000.ckpt"
+            block0.parent.mkdir(parents=True)
+            block0.write_bytes(b"block-0")
+            block1 = old / "fine/blocks/block_1/checkpoints/step=60000.ckpt"
+            block1.parent.mkdir(parents=True)
+            block1.write_bytes(b"block-1")
+            dataset = base / "dataset"
+            partition = (
+                dataset
+                / "partition/partitions-dim_4_4_visibility_0.05/partitions.pt"
+            )
+            partition.parent.mkdir(parents=True)
+            partition.write_bytes(b"partition")
+            manifest = base / "resume.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "schema": "m3m_gcp_citygaussian_v2_100k_resume_binding_v1",
+                        "status": "FROZEN_REUSE_SOURCE",
+                        "scene": "gcp_100000_20260610",
+                        "source_root": str(old),
+                        "coarse": {
+                            "relative_path": coarse.relative_to(old).as_posix(),
+                            "step": 30_000,
+                            "bytes": coarse.stat().st_size,
+                            "sha256": sha256(coarse),
+                        },
+                        "allowed_completed_blocks": [
+                            {
+                                "block_id": 0,
+                                "relative_path": block0.relative_to(old).as_posix(),
+                                "step": 60_000,
+                                "bytes": block0.stat().st_size,
+                                "sha256": sha256(block0),
+                            }
+                        ],
+                        "allowed_completed_block_ids": [0],
+                        "reject_unlisted_completed_blocks": True,
+                        "partition": {
+                            "path": str(partition),
+                            "bytes": partition.stat().st_size,
+                            "sha256": sha256(partition),
+                        },
+                        "metric_based_selection": "FORBIDDEN",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "differs from frozen"):
+                load_frozen_resume_binding(
+                    manifest_path=manifest,
+                    resume_root=old,
+                    dataset=dataset,
+                    coarse_steps=30_000,
+                    fine_steps=60_000,
+                )
 
     def test_only_inventoried_coarse_and_block_checkpoints_are_removed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

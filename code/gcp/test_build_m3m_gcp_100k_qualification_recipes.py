@@ -7,6 +7,8 @@ import unittest
 
 from build_m3m_gcp_100k_execution_recipes import METHODS
 from build_m3m_gcp_100k_qualification_recipes import (
+    GNU_TIME,
+    METHOD_INPUT_EVIDENCE_SHA,
     build_recipe,
     corrected_command,
     training_environment,
@@ -49,9 +51,38 @@ class QualificationRecipeTest(unittest.TestCase):
         city = build_recipe("citygaussian_v2")["training"]["command"]
         self.assertIn("--sequential_blocks", city)
         self.assertIn("--resume_from", city)
+        self.assertIn("--resume_manifest", city)
         self.assertIn(
             "--formal_input_manifest",
             build_recipe("metrogs")["training"]["command"],
+        )
+
+    def test_frozen_runtime_tool_and_method_input_lineage_are_bound(self) -> None:
+        expected_profiles = {
+            "citygaussian_v2": "city_train_records_with_full_all_image_sfm_points",
+            "citygs_x": "city_train_records_with_full_all_image_sfm_points",
+            "metrogs": "metrogs_reciprocal_train_track_closure_after_all_image_sfm",
+        }
+        for method in METHODS:
+            recipe = build_recipe(method)
+            self.assertEqual(
+                recipe["training"]["resource_probe"]["time_binary"], GNU_TIME
+            )
+            self.assertEqual(
+                recipe["prepared_method_input_binding"]["evidence_sha256"],
+                METHOD_INPUT_EVIDENCE_SHA,
+            )
+            self.assertTrue(recipe["benchmark_required_files_sha256"])
+        for method, profile in expected_profiles.items():
+            self.assertEqual(
+                build_recipe(method)["prepared_method_input_binding"]["input_profile"],
+                profile,
+            )
+        gsprior = build_recipe("gsprior")
+        self.assertIn("prior", gsprior["phase_commands"])
+        self.assertEqual(
+            gsprior["prepared_method_input_binding"]["input_profile"],
+            "exact_formal_train_view_from_shared_all_image_sfm",
         )
 
 

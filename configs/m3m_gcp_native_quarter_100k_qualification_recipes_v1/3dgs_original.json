@@ -1,12 +1,22 @@
 {
+  "benchmark_required_files_sha256": {
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34"
+  },
   "budget": {
     "type": "reuse_frozen_30k_model_no_retrain",
     "value": 30000
   },
-  "canonical_sha256": "d515914e8e7a838410703d2d8470348e5ffd6ccd6b9bad89b22707cc81566a01",
+  "canonical_sha256": "5ca54abb3719a2497a5f1ea8ddfa12062cfa05df8964487716840cdf7bcd7471",
   "corrections": [
     "reuse_validated_model_no_retrain"
   ],
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
   "historical_attempts": {
     "delete": false,
     "rank": true,
@@ -14,7 +24,20 @@
   },
   "input_class": "rgb_colmap_only",
   "method_id": "3dgs_original",
+  "phase_commands": {},
   "plan_id": "m3m_gcp_100k_qualification_flex_v1",
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "exact_formal_train_view_from_shared_all_image_sfm",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
   "promotion_policy": {
     "eligible_after_post_batch_review": true,
     "metric_based_promotion": "FORBIDDEN",

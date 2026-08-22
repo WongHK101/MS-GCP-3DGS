@@ -118,6 +118,7 @@
   "current_batch_execution_components": [
     "docs/M3M_GCP_100K_QUALIFICATION_FLEX_V1.md",
     "configs/m3m_gcp_native_quarter_100k_qualification_v1.json",
+    "configs/m3m_gcp_native_quarter_citygaussian_v2_100k_resume_v1.json",
     "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/3dgs_original.json",
     "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/2dgs.json",
     "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/pgsr.json",

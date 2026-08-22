@@ -9,6 +9,8 @@ from typing import Any
 
 from build_m3m_gcp_100k_qualification_recipes import (
     COMMON_ENV,
+    GNU_TIME,
+    METHOD_INPUT_EVIDENCE_SHA,
     METHOD_ORDER,
     ROOT,
     canonical,
@@ -85,6 +87,19 @@ def main() -> int:
                 raise RuntimeError(f"{method}: missing common environment {key}")
         if training["resource_probe"]["enforce_contract_gates"] is not False:
             raise RuntimeError(f"{method}: warning telemetry became a rigid resource gate")
+        if training["resource_probe"]["time_binary"] != GNU_TIME:
+            raise RuntimeError(f"{method}: frozen GNU time path mismatch")
+        binding = recipe.get("prepared_method_input_binding", {})
+        if binding.get("evidence_sha256") != METHOD_INPUT_EVIDENCE_SHA:
+            raise RuntimeError(f"{method}: per-method input evidence binding missing")
+        if binding.get("all_image_sfm_precedes_train_test_split") is not True:
+            raise RuntimeError(f"{method}: all-image SfM lineage is not bound")
+        for relative, expected in recipe.get(
+            "benchmark_required_files_sha256", {}
+        ).items():
+            path = ROOT / relative
+            if not path.is_file() or sha256(path) != expected:
+                raise RuntimeError(f"{method}: input-validator dependency mismatch")
 
     if recipes["pgsr"]["training"]["environment"]["PYTHONPATH"] != (
         "{repo}/compat/pgsr/pytorch3d_transforms_minimal_v1"
@@ -101,7 +116,11 @@ def main() -> int:
         if option_values(command, "--save_iterations") != ["7000", "30000"]:
             raise RuntimeError(f"{method}: save schedule changed")
     city = recipes["citygaussian_v2"]["training"]["command"]
-    if "--sequential_blocks" not in city or "--resume_from" not in city:
+    if (
+        "--sequential_blocks" not in city
+        or "--resume_from" not in city
+        or "--resume_manifest" not in city
+    ):
         raise RuntimeError("CityGaussianV2 sequential resume route missing")
     if "--defer_evaluation" not in recipes["citygs_x"]["training"]["command"]:
         raise RuntimeError("CityGS-X save-before-evaluate route missing")
@@ -110,6 +129,20 @@ def main() -> int:
         raise RuntimeError("MetroGS authoritative manifest binding missing")
     if not recipes["qgs"]["training"]["materializations"]:
         raise RuntimeError("QGS resolved training configuration is not materialized")
+    expected_profiles = {
+        "citygaussian_v2": "city_train_records_with_full_all_image_sfm_points",
+        "citygs_x": "city_train_records_with_full_all_image_sfm_points",
+        "metrogs": "metrogs_reciprocal_train_track_closure_after_all_image_sfm",
+    }
+    for method, expected in expected_profiles.items():
+        if recipes[method]["prepared_method_input_binding"]["input_profile"] != expected:
+            raise RuntimeError(f"{method}: prepared input profile mismatch")
+    if recipes["gsprior"]["prepared_method_input_binding"]["input_profile"] != (
+        "exact_formal_train_view_from_shared_all_image_sfm"
+    ):
+        raise RuntimeError("GSPrior normalization source profile mismatch")
+    if "prior" not in recipes["gsprior"]["phase_commands"]:
+        raise RuntimeError("GSPrior normalization lineage command missing")
 
     result = {
         "status": "PASS",

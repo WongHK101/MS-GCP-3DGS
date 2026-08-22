@@ -1,14 +1,26 @@
 {
+  "benchmark_required_files_sha256": {
+    "code/gcp/materialize_colmap_train_track_compatibility_streaming.py": "7d4f07070852c3946c11a9cdb21b55d3e1c748770a0ed7c7ff283f59d698f82e",
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "configs/m3m_gcp_native_quarter_citygaussian_v2_100k_resume_v1.json": "9445ffa8cc64c048ab3ae88d99affed4458959436d776f90dd3f210986948955"
+  },
   "budget": {
     "coarse_steps": 30000,
     "fine_steps": 60000,
     "type": "official_matrixcity_aerial_4x4"
   },
-  "canonical_sha256": "f41cd81977b5f6a06aac7f2c839e198800ce96b74100e018a8c3cab3590c317a",
+  "canonical_sha256": "c92799923ae3b7f7cef7f413dc09aec7debca6b611922a30b11801fc9a993a5a",
   "corrections": [
     "replace_broken_free_gpu_polling_with_official_sequential_block_commands",
     "hardlink_completed_coarse_and_blocks_into_fresh_attempt"
   ],
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
   "historical_attempts": {
     "delete": false,
     "rank": false,
@@ -16,7 +28,21 @@
   },
   "input_class": "rgb_colmap_external_geometry_prior",
   "method_id": "citygaussian_v2",
+  "phase_commands": {},
   "plan_id": "m3m_gcp_100k_qualification_flex_v1",
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "city_train_records_with_full_all_image_sfm_points",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18dbe5",
+      "points3D.bin": "09fc811f32558a11a47bada7393bf7bce2585cbe68eb4872ffce72025b0fc9aa",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
   "promotion_policy": {
     "eligible_after_post_batch_review": true,
     "metric_based_promotion": "FORBIDDEN",
@@ -74,7 +100,9 @@
       "60000",
       "--sequential_blocks",
       "--resume_from",
-      "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygaussian_v2/seed0-v2/pipeline"
+      "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygaussian_v2/seed0-v2/pipeline",
+      "--resume_manifest",
+      "{repo}/configs/m3m_gcp_native_quarter_citygaussian_v2_100k_resume_v1.json"
     ],
     "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610",
     "environment": {
@@ -93,7 +121,7 @@
       "enforce_contract_gates": false,
       "gpu_indices": "0",
       "script": "{repo}/code/gcp/run_with_resource_probe_v2.py",
-      "time_binary": "/usr/bin/time"
+      "time_binary": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time"
     },
     "source_binding": {
       "commit": "e84c7c8774dd11d3f4189be3488e1220afa20a86",

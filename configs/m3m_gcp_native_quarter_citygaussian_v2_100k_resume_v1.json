@@ -1,0 +1,30 @@
+{
+  "schema": "m3m_gcp_citygaussian_v2_100k_resume_binding_v1",
+  "status": "FROZEN_REUSE_SOURCE",
+  "scene": "gcp_100000_20260610",
+  "source_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygaussian_v2/seed0-v2/pipeline",
+  "coarse": {
+    "relative_path": "coarse/checkpoints/epoch=14-step=30000.ckpt",
+    "step": 30000,
+    "bytes": 3353977999,
+    "sha256": "fbe8776fe1e87a7935e6ceb2b3ba247481ba624d36527d1ccd95ea6b8d836f13"
+  },
+  "allowed_completed_blocks": [
+    {
+      "block_id": 0,
+      "relative_path": "fine/blocks/block_0/checkpoints/epoch=187-step=60000.ckpt",
+      "step": 60000,
+      "bytes": 2526153999,
+      "sha256": "4646b0a93202f49c6ffb9291dc791c8fdaa1fcddf2f72b6e412c668208851d19"
+    }
+  ],
+  "allowed_completed_block_ids": [0],
+  "reject_unlisted_completed_blocks": true,
+  "partition": {
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-citygaussian-v2-prior-v4/gcp_100000_20260610/partition/partitions-dim_4_4_visibility_0.05/partitions.pt",
+    "bytes": 75381,
+    "sha256": "86d405ec22d455114c368a9eaa5c87609afb24835a0dbc66ac0617b39fa03a80"
+  },
+  "reuse_mode": "same_filesystem_hardlink_into_fresh_attempt",
+  "metric_based_selection": "FORBIDDEN"
+}

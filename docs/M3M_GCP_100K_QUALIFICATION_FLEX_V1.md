@@ -40,6 +40,12 @@ ranking until the post-batch review. Any change to data, split, camera domain,
 truth access, evaluator, metric, optimization budget, losses or algorithm semantics
 is a scientific red line and stops before execution.
 
+Every launch still performs the necessary live scientific input check: it binds the
+reviewed `per-method-inputs-v2.json`, verifies the exact 2,196 training image names,
+sizes and hashes, checks the method-specific sparse-model hashes and input profile,
+and validates the GSPrior normalized-root lineage. These are data-fairness checks,
+not separate human approval stages.
+
 ## Corrected routes
 
 | Method | Qualification action |
@@ -51,13 +57,20 @@ is a scientific red line and stops before execution.
 | QGS | Use the unchanged formal configuration with the common expandable allocator. If it still OOMs on the assigned 96 GB GPU, record OOM; do not tune densification or resolution. |
 | GSPrior | Restore the 3K compatibility and benchmark helper paths explicitly. Keep its declared 20K/30K/40K schedule. |
 | SoF | Run one clean attempt with telemetry. If host-memory initialization still fails and no author-supported lazy/large-scene route exists, record host OOM. |
-| CityGaussianV2 | Reuse byte-identical coarse 30K and any completed fine 60K blocks by same-filesystem hardlinks into a fresh root. Train only missing 4x4 blocks sequentially with the official per-block command, merge, verify, then remove only hash-inventoried transient links/checkpoints. |
+| CityGaussianV2 | Reuse only the predeclared coarse 30K and block 0 fine 60K checkpoints by same-filesystem hardlinks into a fresh root. Reject any unlisted completed block, train blocks 1–15 sequentially with the official per-block command, merge, verify, then remove only hash-inventoried transient links/checkpoints. |
 | CityGS-X | Defer in-training evaluation to 100001 so the 100K model is saved before the common offline evaluator runs. |
 | MetroGS | Read the authoritative formal manifest from the formal-input root rather than requiring a duplicate inside the derived prior root. Keep the 150K effective-image budget. |
 
 All new attempts inherit `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` as an
 algorithm-neutral allocator setting. This does not authorize method-specific model
 changes.
+
+The CityGaussianV2 reuse binding fixes coarse 30K to 3,353,977,999 bytes / SHA-256
+`fbe8776f...36f13`, block 0 at 60K to 2,526,153,999 bytes / SHA-256
+`4646b0a9...1d19`, and the 75,381-byte partition to SHA-256
+`86d405ec...3a80`. No block other than block 0 may be imported from the diagnostic
+root. Resource telemetry uses the frozen bundled GNU time binary rather than an
+assumed system `/usr/bin/time`.
 
 ## Attempt and failure policy
 

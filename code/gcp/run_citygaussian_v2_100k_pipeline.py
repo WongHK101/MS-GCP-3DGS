@@ -110,7 +110,13 @@ def find_optional_step_checkpoint(
     return matched[0].resolve() if matched else None
 
 
-def hardlink_checkpoint(source: Path, destination: Path) -> dict[str, Any]:
+def hardlink_checkpoint(
+    source: Path,
+    destination: Path,
+    *,
+    expected_bytes: int | None = None,
+    expected_sha256: str | None = None,
+) -> dict[str, Any]:
     """Reuse a verified checkpoint without duplicating multi-gigabyte payloads."""
     if source.is_symlink():
         raise RuntimeError(f"symlinked resume checkpoint is forbidden: {source}")
@@ -125,17 +131,112 @@ def hardlink_checkpoint(source: Path, destination: Path) -> dict[str, Any]:
         raise RuntimeError(
             "resume checkpoints must be on the same filesystem; copying is forbidden"
         )
+    size = source.stat().st_size
+    if expected_bytes is not None and size != expected_bytes:
+        raise RuntimeError(f"resume checkpoint byte count mismatch: {source}")
     digest = sha256(source)
+    if expected_sha256 is not None and digest != expected_sha256:
+        raise RuntimeError(f"resume checkpoint SHA-256 mismatch: {source}")
     os.link(source, destination)
     if not destination.is_file() or not os.path.samefile(source, destination):
         raise RuntimeError("checkpoint hardlink verification failed")
     return {
         "source": str(source),
         "destination": str(destination),
-        "bytes": source.stat().st_size,
+        "bytes": size,
         "sha256": digest,
         "reuse_mode": "same_filesystem_hardlink",
     }
+
+
+def _bound_resume_path(root: Path, relative: str) -> Path:
+    raw = Path(relative)
+    if raw.is_absolute() or ".." in raw.parts:
+        raise RuntimeError(f"unsafe resume checkpoint path: {relative}")
+    path = (root / raw).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise RuntimeError(f"resume checkpoint escaped source root: {relative}") from exc
+    return path
+
+
+def load_frozen_resume_binding(
+    *,
+    manifest_path: Path,
+    resume_root: Path,
+    dataset: Path,
+    coarse_steps: int,
+    fine_steps: int,
+    block_count: int = 16,
+) -> dict[str, Any]:
+    """Validate the exact pre-reviewed checkpoint and partition reuse whitelist."""
+    manifest_path = manifest_path.resolve()
+    resume_root = resume_root.resolve()
+    dataset = dataset.resolve()
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        payload.get("schema") != "m3m_gcp_citygaussian_v2_100k_resume_binding_v1"
+        or payload.get("status") != "FROZEN_REUSE_SOURCE"
+        or payload.get("scene") != "gcp_100000_20260610"
+        or Path(str(payload.get("source_root", ""))).resolve() != resume_root
+        or payload.get("metric_based_selection") != "FORBIDDEN"
+        or payload.get("reject_unlisted_completed_blocks") is not True
+    ):
+        raise RuntimeError("CityGaussianV2 frozen resume manifest identity mismatch")
+
+    coarse = payload.get("coarse", {})
+    coarse_path = _bound_resume_path(resume_root, str(coarse.get("relative_path", "")))
+    if int(coarse.get("step", -1)) != coarse_steps:
+        raise RuntimeError("CityGaussianV2 frozen coarse step mismatch")
+    if find_step_checkpoint(coarse_path.parent, coarse_steps) != coarse_path:
+        raise RuntimeError("CityGaussianV2 frozen coarse checkpoint path mismatch")
+
+    rows = payload.get("allowed_completed_blocks", [])
+    allowed_ids = payload.get("allowed_completed_block_ids")
+    row_ids = [int(row.get("block_id", -1)) for row in rows]
+    if allowed_ids != [0] or row_ids != [0]:
+        raise RuntimeError("CityGaussianV2 resume whitelist must contain only block 0")
+    expected_by_id: dict[int, Path] = {}
+    for row in rows:
+        block_id = int(row["block_id"])
+        if int(row.get("step", -1)) != fine_steps:
+            raise RuntimeError("CityGaussianV2 frozen block step mismatch")
+        path = _bound_resume_path(resume_root, str(row.get("relative_path", "")))
+        expected_parent = (
+            resume_root / "fine" / "blocks" / f"block_{block_id}" / "checkpoints"
+        ).resolve()
+        if path.parent != expected_parent:
+            raise RuntimeError("CityGaussianV2 frozen block checkpoint path mismatch")
+        expected_by_id[block_id] = path
+
+    observed: dict[int, Path] = {}
+    for block_id in range(block_count):
+        path = find_optional_step_checkpoint(
+            resume_root
+            / "fine"
+            / "blocks"
+            / f"block_{block_id}"
+            / "checkpoints",
+            fine_steps,
+        )
+        if path is not None:
+            observed[block_id] = path
+    if observed != expected_by_id:
+        raise RuntimeError(
+            "CityGaussianV2 completed-block inventory differs from frozen [0] whitelist"
+        )
+
+    partition = payload.get("partition", {})
+    partition_path = Path(str(partition.get("path", ""))).resolve()
+    expected_partition = (dataset / PARTITION_RELATIVE).resolve()
+    if partition_path != expected_partition or not partition_path.is_file():
+        raise RuntimeError("CityGaussianV2 frozen partition path mismatch")
+    if partition_path.stat().st_size != int(partition.get("bytes", -1)):
+        raise RuntimeError("CityGaussianV2 frozen partition byte count mismatch")
+    if sha256(partition_path) != partition.get("sha256"):
+        raise RuntimeError("CityGaussianV2 frozen partition SHA-256 mismatch")
+    return payload
 
 
 def materialize_resume_checkpoints(
@@ -144,6 +245,7 @@ def materialize_resume_checkpoints(
     output_root: Path,
     coarse_steps: int,
     fine_steps: int,
+    resume_binding: dict[str, Any],
     block_count: int = 16,
 ) -> tuple[Path, dict[int, Path], list[dict[str, Any]]]:
     """Hardlink completed stages from an older diagnostic attempt into a fresh one."""
@@ -154,25 +256,32 @@ def materialize_resume_checkpoints(
     if resume_root == output_root:
         raise ValueError("resume source and fresh output root must differ")
 
-    coarse_source = find_step_checkpoint(
-        resume_root / "coarse" / "checkpoints", coarse_steps
+    coarse_row = resume_binding["coarse"]
+    coarse_source = _bound_resume_path(
+        resume_root, str(coarse_row["relative_path"])
     )
+    if int(coarse_row["step"]) != coarse_steps:
+        raise RuntimeError("frozen coarse checkpoint step changed")
     coarse_destination = (
         output_root / "coarse" / "checkpoints" / coarse_source.name
     )
-    records = [hardlink_checkpoint(coarse_source, coarse_destination)]
-    reused_blocks: dict[int, Path] = {}
-    for block_id in range(block_count):
-        source = find_optional_step_checkpoint(
-            resume_root
-            / "fine"
-            / "blocks"
-            / f"block_{block_id}"
-            / "checkpoints",
-            fine_steps,
+    records = [
+        hardlink_checkpoint(
+            coarse_source,
+            coarse_destination,
+            expected_bytes=int(coarse_row["bytes"]),
+            expected_sha256=str(coarse_row["sha256"]),
         )
-        if source is None:
-            continue
+    ]
+    reused_blocks: dict[int, Path] = {}
+    rows = resume_binding["allowed_completed_blocks"]
+    if [int(row["block_id"]) for row in rows] != [0] or block_count != 16:
+        raise RuntimeError("frozen CityGaussianV2 block whitelist changed")
+    for row in rows:
+        block_id = int(row["block_id"])
+        if int(row["step"]) != fine_steps:
+            raise RuntimeError("frozen block checkpoint step changed")
+        source = _bound_resume_path(resume_root, str(row["relative_path"]))
         destination = (
             output_root
             / "fine"
@@ -181,7 +290,12 @@ def materialize_resume_checkpoints(
             / "checkpoints"
             / source.name
         )
-        record = hardlink_checkpoint(source, destination)
+        record = hardlink_checkpoint(
+            source,
+            destination,
+            expected_bytes=int(row["bytes"]),
+            expected_sha256=str(row["sha256"]),
+        )
         record["block_id"] = block_id
         records.append(record)
         reused_blocks[block_id] = destination
@@ -289,6 +403,11 @@ def main() -> int:
             "same-filesystem hardlinks; the output root must still be fresh."
         ),
     )
+    parser.add_argument(
+        "--resume_manifest",
+        type=Path,
+        help="Tracked whitelist and SHA binding for --resume_from checkpoints.",
+    )
     args = parser.parse_args()
 
     repo = args.repo.resolve()
@@ -297,12 +416,18 @@ def main() -> int:
     python = Path(os.path.abspath(os.fspath(args.python)))
     dataset = args.dataset.resolve()
     output_root = args.output_root.resolve()
+    resume_root = args.resume_from.resolve() if args.resume_from is not None else None
+    resume_manifest_path = (
+        args.resume_manifest.resolve() if args.resume_manifest is not None else None
+    )
     if args.coarse_steps <= 0 or args.fine_steps <= 0:
         raise ValueError("training step counts must be positive")
     if args.mode == "formal" and (args.coarse_steps, args.fine_steps) != (30_000, 60_000):
         raise ValueError("formal CityGaussianV2 route is frozen to coarse 30K and fine 60K")
     if args.resume_from is not None and not args.sequential_blocks:
         raise ValueError("--resume_from requires --sequential_blocks")
+    if (resume_root is None) != (resume_manifest_path is None):
+        raise ValueError("--resume_from and --resume_manifest must be supplied together")
     if output_root.exists():
         raise FileExistsError(f"output root already exists: {output_root}")
     for required in (
@@ -322,6 +447,18 @@ def main() -> int:
     ):
         if not required.exists():
             raise FileNotFoundError(required)
+
+    resume_binding: dict[str, Any] | None = None
+    if resume_root is not None and resume_manifest_path is not None:
+        if not resume_manifest_path.is_file():
+            raise FileNotFoundError(resume_manifest_path)
+        resume_binding = load_frozen_resume_binding(
+            manifest_path=resume_manifest_path,
+            resume_root=resume_root,
+            dataset=dataset,
+            coarse_steps=args.coarse_steps,
+            fine_steps=args.fine_steps,
+        )
 
     output_root.mkdir(parents=True)
     runtime = output_root / "runtime"
@@ -367,7 +504,6 @@ def main() -> int:
         f"--model.metric.init_args.depth_loss_weight.max_steps={args.coarse_steps}",
         f"--save_iterations={coarse_save}",
     ]
-    resume_root = args.resume_from.resolve() if args.resume_from is not None else None
     reused_blocks: dict[int, Path] = {}
     reuse_records: list[dict[str, Any]] = []
     if resume_root is None:
@@ -390,6 +526,7 @@ def main() -> int:
                 output_root=output_root,
                 coarse_steps=args.coarse_steps,
                 fine_steps=args.fine_steps,
+                resume_binding=resume_binding,
             )
         )
         coarse_execution = "reused_by_hardlink"
@@ -592,6 +729,17 @@ def main() -> int:
         "execution_lifecycle": {
             "sequential_blocks": args.sequential_blocks,
             "resume_source": str(resume_root) if resume_root is not None else None,
+            "resume_manifest": (
+                {
+                    "path": str(resume_manifest_path),
+                    "sha256": sha256(resume_manifest_path),
+                    "allowed_completed_block_ids": resume_binding[
+                        "allowed_completed_block_ids"
+                    ],
+                }
+                if resume_manifest_path is not None and resume_binding is not None
+                else None
+            ),
             "coarse": coarse_execution,
             "partition": partition_execution,
             "partition_path": str(partition_path),

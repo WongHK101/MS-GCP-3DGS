@@ -1,13 +1,24 @@
 {
+  "benchmark_required_files_sha256": {
+    "code/gcp/filter_colmap_model_to_frozen_train_streaming.py": "4650448f759adc4fa49e1743549dc578d06abc5cc3c2a833a96066c631b67516",
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34"
+  },
   "budget": {
     "optimizer_steps": 37500,
     "type": "effective_image_iterations",
     "value": 150000
   },
-  "canonical_sha256": "1f6850942d349a20df8e346c98a0399fb6d3c0674b9b269f39906c674fb87dc3",
+  "canonical_sha256": "2277cafb8f2b292f71af86eb82aed8f56dc3dc5dded3c9f7866a8a387efa2921",
   "corrections": [
     "bind_authoritative_formal_manifest_outside_derived_prior_root"
   ],
+  "formal_input_manifest": {
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "heldout_views": 314,
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "train_views": 2196
+  },
   "historical_attempts": {
     "delete": false,
     "rank": false,
@@ -15,7 +26,21 @@
   },
   "input_class": "rgb_colmap_external_geometry_prior",
   "method_id": "metrogs",
+  "phase_commands": {},
   "plan_id": "m3m_gcp_100k_qualification_flex_v1",
+  "prepared_method_input_binding": {
+    "all_image_sfm_precedes_train_test_split": true,
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_100000_20260610",
+    "evidence_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/preparation/gcp_100000_20260610/per-method-inputs-v2.json",
+    "evidence_sha256": "080a1ef97ab5caadca70420d6e34b57681d793f874b2a43511480fbc09b30ab1",
+    "input_profile": "metrogs_reciprocal_train_track_closure_after_all_image_sfm",
+    "sparse_sha256": {
+      "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+      "images.bin": "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18dbe5",
+      "points3D.bin": "fcbb06d2b52770281b2b2c88f6d1a9deb5b2435e4578e63ca77bb8f197c37e7f",
+      "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e"
+    }
+  },
   "promotion_policy": {
     "eligible_after_post_batch_review": true,
     "metric_based_promotion": "FORBIDDEN",
@@ -95,7 +120,7 @@
       "enforce_contract_gates": false,
       "gpu_indices": "0",
       "script": "{repo}/code/gcp/run_with_resource_probe_v2.py",
-      "time_binary": "/usr/bin/time"
+      "time_binary": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time"
     },
     "source_binding": {
       "commit": "8cf9ac13c0c34b65c1a935d181c4634909e60f3f",

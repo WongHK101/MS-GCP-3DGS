@@ -14,6 +14,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from run_m3m_gcp_100k_guarded import (
+    validate_frozen_training_images,
+    validate_prepared_method_input,
+)
+
 
 ATTEMPT_PATTERN = re.compile(r"^[0-9]{8}T[0-9]{6}Z(?:-[a-z0-9-]+)?$")
 
@@ -44,6 +49,14 @@ def render(value: str, bindings: dict[str, str]) -> str:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def validate_bound_training_input(
+    recipe: dict[str, Any], dataset_root: Path
+) -> None:
+    """Reuse only the old guard's pure data checks, not its lifecycle state machine."""
+    validate_frozen_training_images(recipe, dataset_root)
+    validate_prepared_method_input(recipe, dataset_root)
 
 
 def verify_plan_binding(
@@ -128,6 +141,8 @@ def verify_scientific_inputs(
         path = source_root / relative
         if not path.is_file() or sha256(path) != expected:
             raise RuntimeError(f"method source-file identity mismatch: {relative}")
+
+    validate_bound_training_input(recipe, dataset_root)
 
     bindings = {
         "repo": str(benchmark_repo),
