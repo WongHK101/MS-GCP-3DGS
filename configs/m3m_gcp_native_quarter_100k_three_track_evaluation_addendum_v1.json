@@ -1,0 +1,121 @@
+{
+  "schema": "m3m_gcp_native_quarter_100k_three_track_evaluation_addendum_v1",
+  "addendum_id": "m3m-gcp-100k-rgb-gcp-lidar-post-attempt-v1",
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "execution_authorized": false,
+  "scene": "gcp_100000_20260610",
+  "review": {
+    "task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "required_verdict": "PASS_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1",
+    "candidate_manifest_must_be_reviewed_after_scene_attempt_freeze": true,
+    "activation_required_before_first_packet_rgb_gcp_or_lidar_child": true
+  },
+  "scientific_scope": {
+    "training_attempts_changed": false,
+    "method_pool_changed": false,
+    "seed_or_budget_changed": false,
+    "checkpoint_selection_changed": false,
+    "rgb_split_or_metric_changed": false,
+    "gcp_protocol_or_common_sim3_changed": false,
+    "lidar_contract_or_metric_changed": false,
+    "result_driven_retry_allowed": false,
+    "added_scope": "post-attempt three-track authorization, binding, ordering and packet-release gate only"
+  },
+  "base_experiment": {
+    "benchmark_commit": "e33368db9333f826a3e808ff00c437c1a6c63b82",
+    "benchmark_tree": "4620a434bd081af9274fdfc37dbb0d673636edfc",
+    "activation_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
+    "activation_file_sha256": "2645864d7680833809a712c7e80967193cad1bbe3f4398e3d3fe5dbffefe72b2",
+    "activation_canonical_sha256": "4ee6c89d26adcb19ea7571ddcead1f7355f3c43e9c5e8875c5980f6c4b25cb9d",
+    "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
+    "execution_plan_sha256": "11930b292b3212485377af59aa822b6b3ddb30d332f6148b937c0f8ac809de09",
+    "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
+    "recipe_manifest_sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2",
+    "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v3.json",
+    "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v3.json",
+    "freeze_must_preexist_candidate": true,
+    "base_checkout_must_remain_clean_and_unmodified": true
+  },
+  "formal_input": {
+    "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+    "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+    "full_view_count": 2510,
+    "train_view_count": 2196,
+    "test_view_count": 314,
+    "width": 1414,
+    "height": 1024
+  },
+  "tracks": {
+    "rgb": {
+      "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
+      "contract_path": "configs/m3m_gcp_native_quarter_rgb_quality_100k_v1.json",
+      "contract_sha256": "93a812133341c669da989cc0fb52e2088da24a5565bfec0a15929fcb565a1b6f",
+      "metrics": ["PSNR", "SSIM", "LPIPS_VGG"],
+      "required_test_view_count": 314,
+      "depends_on_metric_depth_packets": false,
+      "candidate_registry_binds_only_ready_methods": true
+    },
+    "gcp": {
+      "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+      "evaluator_path": "code/gcp/evaluate_m3m_native_quarter_geometry.py",
+      "evaluator_sha256": "353624ab44f8be066a8fd57ba02eaf0d2e5b306973afb7aec21d9a97312d4d8f",
+      "verifier_path": "code/gcp/verify_m3m_native_quarter_geometry_outputs.py",
+      "verifier_sha256": "8ecf8bfe9b1b4ee8bcb9b18a58dcb5e64534860d3858a9006deb2e7e4a271f97",
+      "new_ready_methods_use_active_2196_view_packet_manifest": true,
+      "legacy_3dgs_adoption_allowed_only_with_immutable_receipt": true,
+      "legacy_3dgs_metrics_recomputed": false
+    },
+    "lidar": {
+      "protocol_id": "m3m_gcp_lidar_rendered_surface_v1",
+      "contract_path": "configs/m3m_gcp_lidar_formal_v1.json",
+      "contract_sha256": "e049be7722a976e619c8d13c2902ab2f1ed3b46124d35f095ed6384d4323d0ce",
+      "artifact_schema_path": "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json",
+      "artifact_schema_sha256": "6d18ccf30c12d070c1d6a692ac8c81024799f44028a487b9fe1f8c2a8cf38c1e",
+      "scientific_contract_changed": false,
+      "base_launch_gate_and_verifier_unchanged": true
+    }
+  },
+  "legacy_3dgs_gcp": {
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z/formal_evaluation",
+    "formal_model_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "packet_manifest_sha256": "4af7514eade66b1d1cd716ab68ba8a02693c361d187edf39aa5cc6974e90301b",
+    "packet_view_count": 211,
+    "required_subset_proof": "211 unique packet image names are a subset of the frozen 2196 train-role allowlist",
+    "evaluator_status_required": "COMPLETE_RANKED",
+    "independent_verifier_status_required": "PASS"
+  },
+  "runtime_artifacts": {
+    "root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1",
+    "candidate_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/candidate",
+    "activation_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/activation_v1.json",
+    "formal_results_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/evaluation-addendum-v1/formal-results",
+    "all_paths_fresh_no_overwrite": true,
+    "candidate_and_activation_read_only": true
+  },
+  "rolling_packet_lifecycle": {
+    "ready_methods_only": true,
+    "order": [
+      "packet_export_2196_train_views",
+      "new_gcp_verifier_pass_or_legacy_3dgs_gcp_adoption_pass",
+      "lidar_evaluator_and_independent_verifier_pass",
+      "lidar_lightweight_archive_byte_reverification_pass",
+      "three_track_packet_release_authorization",
+      "unchanged_base_packet_release_guard"
+    ],
+    "rgb_may_run_independently": true,
+    "rgb_blocks_packet_deletion": false,
+    "simultaneous_raw_packet_sets_max": 1,
+    "failed_or_oom_methods_get_no_packet_or_metric_output": true
+  },
+  "bound_addendum_files": {
+    "code/gcp/materialize_m3m_gcp_100k_rgb_camera_root.py": "d6a54e6036d16f945911dd8b74e95a40c4464ab94efe65db38d232de779d0831",
+    "code/gcp/build_m3m_gcp_100k_three_track_candidate.py": "a51915d608825302f614cd7242019c6def10ad4e5bd0f99a8e08d6c491ccfcb6",
+    "code/gcp/activate_m3m_gcp_100k_three_track.py": "8c271a9e677fc8ad0d99ed01c7b62eee3ff3edec01723f980f95b48280290dbb",
+    "code/gcp/build_m3m_gcp_100k_gcp_authorization.py": "2327312b0bb9c831b7df316997864b725ceba8a5c52551c6995f97b2fd496dc5",
+    "code/gcp/authorize_m3m_gcp_100k_three_track_packet_release.py": "9e01f63c3c4e997e9fd4f2b4ea8b383552e0115f5f6c290eabfaf1a7bb8362a1",
+    "code/gcp/build_m3m_native_quarter_rgb_quality_100k_commands.py": "fd13e0b192499c8f41dea2ce5397178ae51af3e721805fc490c03d1e47c2f4ae",
+    "configs/m3m_gcp_native_quarter_rgb_quality_100k_v1.json": "93a812133341c669da989cc0fb52e2088da24a5565bfec0a15929fcb565a1b6f"
+  },
+  "canonical_sha256": "b89ba61595e6a730043331b481778426c27c1d32889e36425c1f94804a607532"
+}
