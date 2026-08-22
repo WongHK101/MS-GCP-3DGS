@@ -62,25 +62,39 @@ not the later all-2,196-view LiDAR packet set. The candidate builder creates an
 immutable adoption receipt that binds the same model SHA, base attempt identity,
 formal input, GCP protocol, common Sim(3), old packet manifest, unchanged result
 bytes, independent verifier, and proof that all 211 names belong to the frozen
-2,196-view train allowlist. Metrics are not recomputed or rewritten.
+formal split with the exact role counts 187 train and 24 test. Metrics are not
+recomputed or rewritten.
 
-Every other READY method uses its current all-2,196-view packet set for the GCP
-evaluator and verifier before LiDAR evaluation. A per-method GCP authorization
-must bind the packet-manifest SHA, model identity, scene-attempt freeze, fresh
-output root and three-track activation.
+Every other READY method first exports a dedicated exact-211-camera GCP packet:
+187 frozen train-role cameras plus 24 frozen test-role cameras. Test-role use is
+strictly post-freeze geometry evaluation: only frozen poses/intrinsics,
+placeholder carrier images, and external GCP observations are present. No test
+RGB pixel can reach a prior, training, tuning, checkpoint, seed, or retry
+decision. A per-method GCP authorization binds the packet-manifest SHA, model
+identity, scene-attempt freeze, fresh output root, frozen GCP evaluator Python
+environment, and three-track activation.
 
 ## Rolling lifecycle and deletion gate
 
 For each READY method:
 
-1. export exactly 2,196 train-view metric-depth packets under the base plan's
-   exclusive packet mutex;
-2. satisfy `NEW_GCP_VERIFIER_PASS`, or for 3DGS only the activated
-   `LEGACY_GCP_ADOPTION_PASS`;
-3. run the unchanged LiDAR launch gate, evaluator and independent verifier;
-4. build and byte-reverify the unchanged LiDAR lightweight archive;
-5. delete the exact raw packet root only after both the GCP gate and the LiDAR
-   verifier/archive gates pass.
+1. except for legacy 3DGS adoption, acquire the addendum-wide atomic raw-packet
+   mutex and export the dedicated exact-211-camera GCP packet;
+2. run the GCP evaluator and independent verifier, build the exact lightweight
+   GCP archive, byte-reverify it, then delete the GCP packet, its track state,
+   and finally the global mutex; a no-retry failure uses the separately verified
+   immutable failure-cleanup receipt instead;
+3. only after the GCP lifecycle has released the global mutex, acquire that same
+   mutex for a separate exact-2,196-train-view LiDAR packet; the GCP and LiDAR
+   raw packets may never coexist;
+4. run the unchanged LiDAR launch gate, evaluator and independent verifier,
+   build and byte-reverify the exact LiDAR lightweight archive, then delete the
+   LiDAR packet, its track state, and finally the global mutex; a no-retry failure
+   follows the same fail-closed cleanup contract.
+
+The 2,510-view all-image SfM remains the upstream camera solution, but no
+2,510-view raw metric-depth packet is authorized. GCP and LiDAR have separate
+packet and archive lifecycles and are released independently.
 
 RGB may run before or after this lifecycle, but its model, 314-view coverage and
 output root are frozen in the candidate registry. No RGB, GCP or LiDAR result may

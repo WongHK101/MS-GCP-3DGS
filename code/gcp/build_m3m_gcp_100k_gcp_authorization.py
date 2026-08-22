@@ -13,7 +13,11 @@ from typing import Any
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
 from m3m_gcp_100k_raw_packet_state import validate_active_raw_packet_state
 from metric_depth_packet import directory_tree_hash
-from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
+from m3m_gcp_100k_three_track_runtime import (
+    absolute_without_symlink_resolution,
+    validate_addendum_runtime,
+    validate_frozen_gcp_evaluation_runtime,
+)
 from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
 
 
@@ -270,9 +274,13 @@ def main() -> int:
     protocol_release = args.gcp_protocol_release.resolve()
     if not protocol_release.is_file() or sha256_file(protocol_release) != EXPECTED_PROTOCOL_RELEASE_SHA:
         raise RuntimeError("GCP protocol-release identity mismatch")
-    python = args.python.resolve()
-    if not python.is_file():
-        raise FileNotFoundError(python)
+    python = absolute_without_symlink_resolution(args.python)
+    evaluation_runtime_identity, evaluation_environment = (
+        validate_frozen_gcp_evaluation_runtime(
+            gcp_config,
+            requested_python=python,
+        )
+    )
     evaluator = (addendum_repo / str(gcp_config["evaluator_path"])).resolve()
     verifier = (addendum_repo / str(gcp_config["verifier_path"])).resolve()
     if (
@@ -360,6 +368,12 @@ def main() -> int:
         "evaluator_sha256": sha256_file(evaluator),
         "verifier_path": str(verifier),
         "verifier_sha256": sha256_file(verifier),
+        "gcp_evaluation_python_path": str(python),
+        "gcp_evaluation_runtime_identity": evaluation_runtime_identity,
+        "gcp_evaluation_runtime_identity_canonical_sha256": canonical_sha256(
+            evaluation_runtime_identity
+        ),
+        "gcp_evaluation_subprocess_environment": evaluation_environment,
         "authorized_output_root": str(output_root),
         "authorized_verification_output": str(verification_output),
         "evaluator_command": evaluator_command,

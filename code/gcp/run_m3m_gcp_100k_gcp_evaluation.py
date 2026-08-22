@@ -10,7 +10,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
+from m3m_gcp_100k_three_track_runtime import (
+    validate_addendum_runtime,
+    validate_frozen_gcp_evaluation_runtime,
+)
 from m3m_gcp_100k_raw_packet_state import validate_active_raw_packet_state
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
 
@@ -91,7 +94,7 @@ def main() -> int:
     candidate = require_json(candidate_path, str(activation["candidate_manifest_sha256"]))
     registry_row = candidate["rgb_registry"]
     registry = require_json(Path(str(registry_row["path"])), str(registry_row["sha256"]))
-    validate_addendum_runtime(
+    _addendum_repo, addendum_config = validate_addendum_runtime(
         activation=activation,
         candidate=candidate,
         registry=registry,
@@ -143,11 +146,25 @@ def main() -> int:
         raise RuntimeError("GCP execution authorization binding mismatch")
     evaluator_command = [str(value) for value in authorization.get("evaluator_command", [])]
     verifier_command = [str(value) for value in authorization.get("verifier_command", [])]
+    configured_python = Path(str(authorization.get("gcp_evaluation_python_path", "")))
+    runtime_identity, evaluation_environment = validate_frozen_gcp_evaluation_runtime(
+        addendum_config.get("tracks", {}).get("gcp", {}),
+        requested_python=configured_python,
+    )
     if (
         command_sha256(evaluator_command) != authorization.get("evaluator_command_sha256")
         or command_sha256(verifier_command) != authorization.get("verifier_command_sha256")
+        or not evaluator_command
+        or not verifier_command
+        or evaluator_command[0] != str(configured_python)
+        or verifier_command[0] != str(configured_python)
+        or authorization.get("gcp_evaluation_runtime_identity") != runtime_identity
+        or authorization.get("gcp_evaluation_runtime_identity_canonical_sha256")
+        != canonical_sha256(runtime_identity)
+        or authorization.get("gcp_evaluation_subprocess_environment")
+        != evaluation_environment
     ):
-        raise RuntimeError("GCP evaluator/verifier command hash mismatch")
+        raise RuntimeError("GCP evaluator/verifier command or frozen environment mismatch")
     output_root = Path(str(authorization["authorized_output_root"])).resolve()
     verification_path = Path(str(authorization["authorized_verification_output"])).resolve()
     if output_root.exists() or output_root.is_symlink() or verification_path.exists() or verification_path.is_symlink():
@@ -162,7 +179,11 @@ def main() -> int:
     receipt_path = execution_root / "execution_receipt.json"
     with eval_stdout.open("xb") as stdout_handle, eval_stderr.open("xb") as stderr_handle:
         evaluator = subprocess.run(
-            evaluator_command, stdout=stdout_handle, stderr=stderr_handle, check=False
+            evaluator_command,
+            stdout=stdout_handle,
+            stderr=stderr_handle,
+            env=evaluation_environment,
+            check=False,
         )
     if evaluator.returncode != 0:
         payload = failure_payload(
@@ -180,7 +201,11 @@ def main() -> int:
         return int(evaluator.returncode or 1)
     with verify_stdout.open("xb") as stdout_handle, verify_stderr.open("xb") as stderr_handle:
         verifier = subprocess.run(
-            verifier_command, stdout=stdout_handle, stderr=stderr_handle, check=False
+            verifier_command,
+            stdout=stdout_handle,
+            stderr=stderr_handle,
+            env=evaluation_environment,
+            check=False,
         )
     if verifier.returncode != 0:
         payload = failure_payload(
@@ -249,6 +274,9 @@ def main() -> int:
         "evaluator_manifest_sha256": sha256_file(manifest_path),
         "verification_path": str(verification_path),
         "verification_sha256": sha256_file(verification_path),
+        "gcp_evaluation_runtime_identity_canonical_sha256": canonical_sha256(
+            runtime_identity
+        ),
         "evaluator_stdout_sha256": sha256_file(eval_stdout),
         "evaluator_stderr_sha256": sha256_file(eval_stderr),
         "verifier_stdout_sha256": sha256_file(verify_stdout),

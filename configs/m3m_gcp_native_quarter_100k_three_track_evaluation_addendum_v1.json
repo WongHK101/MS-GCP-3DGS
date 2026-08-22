@@ -77,6 +77,35 @@
       "evaluator_sha256": "353624ab44f8be066a8fd57ba02eaf0d2e5b306973afb7aec21d9a97312d4d8f",
       "verifier_path": "code/gcp/verify_m3m_native_quarter_geometry_outputs.py",
       "verifier_sha256": "8ecf8bfe9b1b4ee8bcb9b18a58dcb5e64534860d3858a9006deb2e7e4a271f97",
+      "evaluation_runtime": {
+        "python_path": "/root/autodl-tmp/envs/m3m-gcp-lidar-eval/bin/python",
+        "subprocess_environment": {
+          "LANG": "C.UTF-8",
+          "LC_ALL": "C.UTF-8",
+          "MKL_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "PATH": "/usr/bin:/bin",
+          "PYTHONHASHSEED": "0",
+          "PYTHONNOUSERSITE": "1"
+        },
+        "identity": {
+          "python_path": "/root/autodl-tmp/envs/m3m-gcp-lidar-eval/bin/python",
+          "python_resolved_path": "/root/miniconda3/bin/python3.12",
+          "python_binary_sha256": "0c05a22b0b180580a76437114a95cf138f67c8f46245acad26017c803b42b8c1",
+          "numpy_core_path": "/root/miniconda3/lib/python3.12/site-packages/numpy/_core/_multiarray_umath.cpython-312-x86_64-linux-gnu.so",
+          "numpy_core_sha256": "9eaf23b26475492426823138e824b6e2cdd4cc1387cc22f7cc14562372f3311e",
+          "numpy_init_path": "/root/miniconda3/lib/python3.12/site-packages/numpy/__init__.py",
+          "numpy_init_sha256": "8236a753805db34c29ef9cd03694e0af883b6325eb4fd246cc83d2be0b847e89",
+          "numpy_version": "2.3.2",
+          "python_implementation": "CPython",
+          "python_version": "3.12.3",
+          "sys_base_prefix": "/root/miniconda3",
+          "sys_executable": "/root/autodl-tmp/envs/m3m-gcp-lidar-eval/bin/python",
+          "sys_prefix": "/root/autodl-tmp/envs/m3m-gcp-lidar-eval"
+        }
+      },
       "new_ready_methods_use_exact_211_camera_packet": true,
       "legacy_3dgs_adoption_allowed_only_with_immutable_exact_dependency_receipt": true,
       "legacy_3dgs_metrics_recomputed": false,
@@ -177,14 +206,15 @@
     "result_or_test_truth_driven_repair": false
   },
   "bound_addendum_files": {
+    "docs/M3M_GCP_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1.md": "042d5254b1bee92316f5ea02a08726c428e930d64dab739fdc4b22e8687d41c4",
     "code/gcp/materialize_m3m_gcp_100k_rgb_camera_root.py": "d6a54e6036d16f945911dd8b74e95a40c4464ab94efe65db38d232de779d0831",
     "code/gcp/materialize_m3m_gcp_100k_gcp_camera_root.py": "79b320af5471e91c410d6fa2b4a9240a0c058dd5940bc2cd16f525b4fca6d6b2",
     "code/gcp/build_m3m_gcp_100k_three_track_candidate.py": "a46222e6eb705c25c486220728d0bf616868adc914c2e360c554505f88aae890",
     "code/gcp/activate_m3m_gcp_100k_three_track.py": "34b2ca9cb851476a6f9ea49ef7be6c52818dae8a3fbaf7df321718d67495ddb0",
-    "code/gcp/m3m_gcp_100k_three_track_runtime.py": "ac7d3714288e26afd6f711bc625b3400268a64236be2494f6461a86b839f83ef",
+    "code/gcp/m3m_gcp_100k_three_track_runtime.py": "39752570f2897ad4b23b8b2813243159705d1344d4a1a98468b0020cd8b12103",
     "code/gcp/run_m3m_gcp_100k_gcp_packet_guarded.py": "9778e980b34260bd147ffdb9779aeee843092acd7851f177a2cc90932f3777c9",
-    "code/gcp/build_m3m_gcp_100k_gcp_authorization.py": "fbdb9ee2a5189790b2d86458ef2e796669862b665f7c0529ccd38580a3e263af",
-    "code/gcp/run_m3m_gcp_100k_gcp_evaluation.py": "68a3dcf8d6b224e48e17cef7172b564b0b332d1104f75d21bc59590e47409f58",
+    "code/gcp/build_m3m_gcp_100k_gcp_authorization.py": "04b6c3c01fe4559db5b415bc3f500807f95d13e3273cb4f8d6c399c56b6debbb",
+    "code/gcp/run_m3m_gcp_100k_gcp_evaluation.py": "c81329c3b1c90937bda815ae7503e20ba921f7631cdb2f2e423bdb76048bd8dc",
     "code/gcp/archive_m3m_gcp_100k_gcp_result.py": "7521f8a3a5b4c8330e51534daef976ee9f65f094a2384b4b312c74d4184d7218",
     "code/gcp/release_m3m_gcp_100k_gcp_packet.py": "5ad93a8e4497afcd986057d5c26371684c87b017cd8d9386112e61acce324d55",
     "code/gcp/run_m3m_gcp_100k_lidar_packet_guarded.py": "8703b7455e9da222b91511921adfde46ef87311fdade00cdb8cd6f99454a4355",
@@ -192,8 +222,8 @@
     "code/gcp/build_m3m_native_quarter_rgb_quality_100k_smoke_commands.py": "47364f0a306e98f96d5cb6b569c7cbbd1003f2c5bcb7e8806335b3439f537162",
     "code/gcp/preflight_m3m_native_quarter_rgb_quality_100k.py": "970ea93d8cb608149d824af9b7b7d59cda7646c2604c33710a83475793344c4e",
     "code/gcp/build_m3m_native_quarter_rgb_quality_100k_commands.py": "e58a7758f4e7d37556853912cbd351dba610df72fd6bb38b0368fcb0e88d7e59",
-    "code/gcp/finalize_m3m_gcp_100k_three_track_results.py": "88355c04188ca98800e3aa91dda7d7855a0f6228b9c649c685c48aea3d947364",
-    "code/gcp/test_m3m_gcp_100k_three_track_addendum.py": "625b41bb398cae43298f2c8ebb6dde79b1660386b29bdb839ebde7182b597daf",
+    "code/gcp/finalize_m3m_gcp_100k_three_track_results.py": "a3fb555d6cc1504dec14de107b477764512ebad43acd836df8c76749ae73c0e8",
+    "code/gcp/test_m3m_gcp_100k_three_track_addendum.py": "d84d7640ec42b86c5793acfac187b1624b0edea255a34a8485138162deb9f14f",
     "code/gcp/evaluate_m3m_native_quarter_geometry.py": "353624ab44f8be066a8fd57ba02eaf0d2e5b306973afb7aec21d9a97312d4d8f",
     "code/gcp/verify_m3m_native_quarter_geometry_outputs.py": "8ecf8bfe9b1b4ee8bcb9b18a58dcb5e64534860d3858a9006deb2e7e4a271f97",
     "code/gcp/evaluate_m3m_native_quarter_rgb_quality.py": "aa8f346d7747e7db23b8bcdd1eefe8280ba38ce3aafeae0a4f2e042f5ce71a7e",
@@ -203,7 +233,7 @@
     "code/gcp/build_m3m_gcp_100k_lidar_authorization.py": "05adb0c2bb7ce88317d2a91ce86c2a9d1114cb278133d3f3a8f6e00d2a35eb29",
     "code/gcp/run_m3m_gcp_100k_lidar_evaluation.py": "e33e2095015c714f3e534c03af2537e7259ddc70914fa3dc00582a7429760a08",
     "code/gcp/archive_m3m_gcp_100k_lidar_result.py": "fcd157666e98d7865ca9beb612f34fa142c9f47bfa62c7c8664bb69cb943d5dd",
-    "code/gcp/cleanup_m3m_gcp_100k_failed_packet.py": "4bcd2bc6db9508ef21eff0f24211b9a09534d839811f3b5e378ed0d5e2c4ec32"
+    "code/gcp/cleanup_m3m_gcp_100k_failed_packet.py": "e9c3d2e1964adbc571438fc4ba93a6c0a234ff81de721614e4dad0dbe1c38524"
   },
-  "canonical_sha256": "3304f9caf91e1697b6b60b0d8c86d9a870279104298c0b9ffc08a3c6005f2b80"
+  "canonical_sha256": "5b68b4776513a644865d66971b175ba90e054f33dba06ecd75e318c4f5b4af06"
 }

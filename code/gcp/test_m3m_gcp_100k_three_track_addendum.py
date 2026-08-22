@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import build_m3m_gcp_100k_three_track_candidate as candidate_builder
-from m3m_gcp_100k_three_track_runtime import validate_addendum_runtime
+from m3m_gcp_100k_three_track_runtime import (
+    probe_gcp_evaluation_runtime,
+    validate_addendum_runtime,
+    validate_frozen_gcp_evaluation_runtime,
+)
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from metric_depth_packet import directory_tree_hash
 from cleanup_m3m_gcp_100k_failed_packet import validate_failure_archive
@@ -213,7 +219,139 @@ class ThreeTrackAddendumNegativeTest(unittest.TestCase):
             failure_manifest = failure_root / "archive_manifest.json"
             failure_manifest.write_text(json.dumps(failure), encoding="utf-8")
             with self.assertRaises(RuntimeError):
-                validate_failure_archive(failure_manifest, failure_root)
+                validate_failure_archive(
+                    failure_manifest,
+                    failure_root,
+                    expected_scene=candidate_builder.SCENE,
+                    expected_method_id="citygs_x",
+                    expected_track="gcp",
+                    expected_activation_sha256="a" * 64,
+                    expected_failure_evidence_sha256="b" * 64,
+                    expected_global_state_sha256="c" * 64,
+                )
+
+    def test_failure_archive_binds_semantics_primary_shas_and_every_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive_root = root / "archive"
+            log_path = archive_root / "logs" / "00_eval.stderr.log"
+            log_path.parent.mkdir(parents=True)
+            log_path.write_bytes(b"frozen stderr\n")
+            activation_sha = "a" * 64
+            global_state = {
+                "schema": "m3m_gcp_100k_active_raw_packet_state_v1",
+                "status": "ACTIVE_EXCLUSIVE_RAW_PACKET",
+                "scene": candidate_builder.SCENE,
+                "method_id": "citygs_x",
+                "track": "gcp",
+                "three_track_activation_sha256": activation_sha,
+            }
+            global_state["canonical_sha256"] = canonical_sha256(global_state)
+            global_path = archive_root / "active_raw_packet_state.json"
+            global_path.write_text(json.dumps(global_state), encoding="utf-8")
+            failure = {
+                "schema": "m3m_gcp_100k_gcp_evaluation_failure_v1",
+                "status": "INCOMPLETE_UNRANKED",
+                "scene": candidate_builder.SCENE,
+                "method_id": "citygs_x",
+                "three_track_activation_sha256": activation_sha,
+                "global_raw_packet_state_sha256": sha256_file(global_path),
+                "logs": [
+                    {
+                        "path": str((root / "source" / "eval.stderr.log").resolve()),
+                        "bytes": log_path.stat().st_size,
+                        "sha256": sha256_file(log_path),
+                    }
+                ],
+                "retry_forbidden_after_child_start": True,
+            }
+            failure["canonical_sha256"] = canonical_sha256(failure)
+            failure_path = archive_root / "failure_evidence.json"
+            failure_path.write_text(json.dumps(failure), encoding="utf-8")
+            failure_sha = sha256_file(failure_path)
+            global_sha = sha256_file(global_path)
+            declared_map = [
+                {
+                    "source_path": failure["logs"][0]["path"],
+                    "relative_path": "logs/00_eval.stderr.log",
+                    "bytes": log_path.stat().st_size,
+                    "sha256": sha256_file(log_path),
+                }
+            ]
+            manifest_payload = {
+                "schema": "m3m_gcp_100k_failed_packet_lightweight_archive_v1",
+                "status": "PASS_FAILURE_EVIDENCE_ARCHIVED",
+                "scene": candidate_builder.SCENE,
+                "method_id": "citygs_x",
+                "track": "gcp",
+                "three_track_activation_sha256": activation_sha,
+                "failure_evidence_sha256": failure_sha,
+                "global_raw_packet_state_sha256": global_sha,
+                "declared_log_count": 1,
+                "declared_log_archive_map": declared_map,
+                "files": [
+                    {
+                        "relative_path": path.relative_to(archive_root).as_posix(),
+                        "bytes": path.stat().st_size,
+                        "sha256": sha256_file(path),
+                    }
+                    for path in sorted(archive_root.rglob("*"))
+                    if path.is_file()
+                ],
+            }
+            manifest_payload["canonical_sha256"] = canonical_sha256(manifest_payload)
+            manifest = archive_root / "archive_manifest.json"
+
+            def write_manifest(payload: dict) -> None:
+                payload["canonical_sha256"] = canonical_sha256(payload)
+                manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+            write_manifest(manifest_payload)
+            validate_failure_archive(
+                manifest,
+                archive_root,
+                expected_scene=candidate_builder.SCENE,
+                expected_method_id="citygs_x",
+                expected_track="gcp",
+                expected_activation_sha256=activation_sha,
+                expected_failure_evidence_sha256=failure_sha,
+                expected_global_state_sha256=global_sha,
+            )
+            for key, wrong in (
+                ("scene", "wrong_scene"),
+                ("method_id", "metrogs"),
+                ("track", "lidar"),
+                ("three_track_activation_sha256", "0" * 64),
+                ("failure_evidence_sha256", "1" * 64),
+                ("global_raw_packet_state_sha256", "2" * 64),
+            ):
+                tampered = copy.deepcopy(manifest_payload)
+                tampered[key] = wrong
+                write_manifest(tampered)
+                with self.assertRaises(RuntimeError):
+                    validate_failure_archive(
+                        manifest,
+                        archive_root,
+                        expected_scene=candidate_builder.SCENE,
+                        expected_method_id="citygs_x",
+                        expected_track="gcp",
+                        expected_activation_sha256=activation_sha,
+                        expected_failure_evidence_sha256=failure_sha,
+                        expected_global_state_sha256=global_sha,
+                    )
+            write_manifest(manifest_payload)
+            log_path.unlink()
+            with self.assertRaises(RuntimeError):
+                validate_failure_archive(
+                    manifest,
+                    archive_root,
+                    expected_scene=candidate_builder.SCENE,
+                    expected_method_id="citygs_x",
+                    expected_track="gcp",
+                    expected_activation_sha256=activation_sha,
+                    expected_failure_evidence_sha256=failure_sha,
+                    expected_global_state_sha256=global_sha,
+                )
 
     def test_exact_lidar_archive_validates_sources_then_retained_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -308,6 +446,42 @@ class ThreeTrackAddendumNegativeTest(unittest.TestCase):
             )
             with self.assertRaises(RuntimeError):
                 validate_frozen_packet_python(recipe, current_python=wrong)
+
+    def test_gcp_evaluation_runtime_rejects_wrong_python_or_environment(self) -> None:
+        python = Path(os.path.abspath(sys.executable))
+        environment = {str(key): str(value) for key, value in os.environ.items()}
+        observed = probe_gcp_evaluation_runtime(
+            python,
+            subprocess_environment=environment,
+        )
+        gcp_config = {
+            "evaluation_runtime": {
+                "python_path": str(python),
+                "subprocess_environment": environment,
+                "identity": observed,
+            }
+        }
+        actual, actual_environment = validate_frozen_gcp_evaluation_runtime(
+            gcp_config,
+            requested_python=python,
+        )
+        self.assertEqual(actual, observed)
+        self.assertEqual(actual_environment, environment)
+        with tempfile.TemporaryDirectory() as temporary:
+            wrong = Path(temporary) / "wrong-python"
+            wrong.write_bytes(b"not the frozen interpreter")
+            with self.assertRaises(RuntimeError):
+                validate_frozen_gcp_evaluation_runtime(
+                    gcp_config,
+                    requested_python=wrong,
+                )
+        changed = copy.deepcopy(gcp_config)
+        changed["evaluation_runtime"]["identity"]["numpy_core_sha256"] = "0" * 64
+        with self.assertRaises(RuntimeError):
+            validate_frozen_gcp_evaluation_runtime(
+                changed,
+                requested_python=python,
+            )
 
     def test_global_raw_packet_mutex_rejects_cross_track_acquisition(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

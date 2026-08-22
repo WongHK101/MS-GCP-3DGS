@@ -65,7 +65,6 @@ def validate_failed_cleanup_receipt(
 ) -> dict[str, Any]:
     payload = require_json(path)
     archive_path = Path(str(payload.get("failure_archive_manifest_path", ""))).resolve()
-    validate_failure_archive(archive_path, archive_path.parent)
     if (
         path != expected_path
         or payload.get("schema") != "m3m_gcp_100k_failed_packet_cleanup_receipt_v1"
@@ -91,6 +90,18 @@ def validate_failed_cleanup_receipt(
         or payload.get("canonical_sha256") != canonical_sha256(payload)
     ):
         raise RuntimeError(f"{method['method_id']}: failed {track} cleanup receipt mismatch")
+    validate_failure_archive(
+        archive_path,
+        archive_path.parent,
+        expected_scene=SCENE,
+        expected_method_id=str(method["method_id"]),
+        expected_track=track,
+        expected_activation_sha256=sha256_file(activation_path),
+        expected_failure_evidence_sha256=str(payload.get("failure_evidence_sha256", "")),
+        expected_global_state_sha256=str(
+            payload.get("global_raw_packet_state_sha256", "")
+        ),
+    )
     return payload
 
 
