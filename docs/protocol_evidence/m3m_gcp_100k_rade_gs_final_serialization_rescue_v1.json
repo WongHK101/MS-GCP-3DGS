@@ -1,0 +1,87 @@
+{
+  "schema": "m3m_gcp_100k_rade_gs_final_serialization_rescue_v1",
+  "status": "APPROVED_BOUNDED_ENGINEERING_RESCUE",
+  "method_id": "rade_gs",
+  "scene": "gcp_100000_20260610",
+  "seed": 0,
+  "failed_attempt": {
+    "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qualification-100k-v1/gcp_100000_20260610/rade_gs/attempt-20260822T182604Z-flex1",
+    "classification": "HOST_MEMORY_CAP_SIGKILL_DURING_FINAL_SERIALIZATION",
+    "rank": false,
+    "facts": {
+      "training_iterations_reached": 30000,
+      "returncode": 137,
+      "signal": 9,
+      "cgroup_memory_limit_bytes": 118111600640,
+      "cgroup_observed_peak_bytes": 118111600640,
+      "process_maximum_rss_kib": 112998804,
+      "peak_gpu_memory_mib": 67375,
+      "memory_events_delta": {
+        "max": 84328,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "final_ply_exists": false,
+      "checkpoint_15000_exists": true
+    },
+    "evidence_sha256": {
+      "qualification_launch_receipt.json": "ae8f62bfdfbba5b6103b6468aca3e3ba8124c8588a31b692febd1ba4bfbeff65",
+      "qualification_terminal_receipt.json": "8bcaa7e6b9c990096944b6ba45d7076cb64f81ce32bb6f943002860e26f76d25",
+      "telemetry/command.json": "c20b80934c2b46076eb3b24fa8b6b4c5a87cf564eaca18293046e19cd667797f",
+      "telemetry/resource_summary.json": "e5650e810b3d9fe835628503d8c986f3fa9697f5f215a079dc56ad19e36ea28b",
+      "telemetry/gnu_time.txt": "db84bf891a0af3480c456a7699290929f74f4abf1f745a2e1ba8875b0e52433c",
+      "telemetry/stdout.log": "00d1e2398853bd98d234e5cdc6cddb72040ebeb3e59911cb4a9a17a4044298ef",
+      "telemetry/stderr.log": "598a7d7c801e7ce6e54f072bea7c63efc8425be21754e17a79e85a3d702b63dc"
+    }
+  },
+  "review_decisions": [
+    "APPROVE_ONE_BOUNDED_ENGINEERING_RESCUE",
+    "APPROVE_RADE_GS_FILTER_3D_SIDECAR_SERIALIZATION_RESCUE"
+  ],
+  "cpu_equivalence_smoke": {
+    "status": "PASS",
+    "gaussian_count": 17,
+    "direct_and_recovered_ply_byte_identical": true,
+    "direct_ply_sha256": "52382301bb530ea7fe5e5bdb9918a64dcdb0e88088a01eacab86ff50be20a9dd",
+    "recovered_ply_sha256": "52382301bb530ea7fe5e5bdb9918a64dcdb0e88088a01eacab86ff50be20a9dd",
+    "result_sha256": "5cc7737f37a3126b09d88a5ceec46e0e2399929f6a0051e71698838460368d10",
+    "result_path": "/root/autodl-tmp/build/m3m-gcp-native-quarter/rade_gs/serialization-rescue-smoke-v1/out/smoke_result.json",
+    "device": "cpu"
+  },
+  "official_source_patch_smoke": {
+    "status": "PASS",
+    "official_train_sha256": "10dd1be2b912091db9f7d15afcf3ee088d9e550d6149cc536d7292a595da5328",
+    "checkpoint_first_wrapper_sha256": "a1dbcf51e94b8c138786a8c36e169d227b6b974f24e96f0d1173c927ac79847f",
+    "materialized_patched_train_sha256": "497e6a1edfde06b040cbde2af0e2cbfc3e5519d2ff8bcaa6021ac0a638841fba",
+    "compiled": true,
+    "checkpoint_call_precedes_scene_save": true
+  },
+  "rescue_contract": {
+    "full_seed0_retrain": true,
+    "resume_from_15000": false,
+    "unchanged": [
+      "formal RGB/COLMAP input",
+      "seed",
+      "resolution",
+      "30000-iteration budget",
+      "losses",
+      "densification",
+      "optimizer",
+      "algorithm parameters"
+    ],
+    "only_change": "save native 30K checkpoint and exact filter_3D sidecar before the original final PLY serialization",
+    "independent_materialization": {
+      "allowed_only_after_same_process_final_ply_failure": true,
+      "requires_complete_checkpoint_and_sidecar": true,
+      "optimizer_steps": 0,
+      "reads_training_rgb": false,
+      "recomputes_filter_3D": false,
+      "uses_official_GaussianModel_save_ply": true
+    },
+    "attempt_limit": 1,
+    "failure_after_rescue": "UNRANKED_CURRENT_HARDWARE_NO_FURTHER_PATCHING",
+    "metric_based_attempt_selection": "FORBIDDEN"
+  },
+  "benchmark_commit_binding": "recorded by qualification_launch_receipt.json",
+  "reviewed_date": "2026-08-23"
+}

@@ -32,6 +32,14 @@ class QualificationRecipeTest(unittest.TestCase):
             self.assertEqual(
                 option_values(command, "--save_iterations"), ["7000", "30000"]
             )
+        rade = corrected_command("rade_gs", METHODS["rade_gs"])
+        self.assertEqual(
+            option_values(rade, "--checkpoint_iterations"), ["15000", "30000"]
+        )
+        self.assertEqual(
+            rade[2], "{repo}/code/gcp/run_rade_gs_checkpoint_first_rescue.py"
+        )
+        self.assertIn("--source-root", rade)
 
     def test_import_compatibility_is_explicit(self) -> None:
         self.assertIn("compat/pgsr", training_environment("pgsr")["PYTHONPATH"])

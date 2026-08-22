@@ -4,7 +4,7 @@
     "one_post_100k_outcome_batch_review",
     "one_final_six_scene_protocol_freeze"
   ],
-  "canonical_sha256": "f8c2f973f3d9e37af29cf75c39543b1aaf3b310217619c32671e500fa9bfc59d",
+  "canonical_sha256": "19bb634cacb75e8a7781286d52d05f9647cc051e6506d4d3676ba83566df58b4",
   "method_order": [
     "3dgs_original",
     "2dgs",
@@ -42,8 +42,8 @@
       "path": "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/pgsr.json"
     },
     {
-      "canonical_sha256": "87c1113d490237595a4f657ef487d40faf3a9de5e2fb4e6e63196333dd5557f1",
-      "file_sha256": "5240e4923bb21b69226bb6c80f4b901540dc4b61ef5acce4cc3f0ad0e76ef1cd",
+      "canonical_sha256": "46ec7783b2ce57f35303e72accf48dcd03118444ecefb5f08dceea7e97e3f98b",
+      "file_sha256": "cc115bb36bac24d99d4b999459d58eac34b2bf74bc909e4a88ee1c89949b9076",
       "method_id": "rade_gs",
       "path": "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/rade_gs.json"
     },

@@ -79,7 +79,10 @@ CORRECTIONS = {
     "3dgs_original": ["reuse_validated_model_no_retrain"],
     "2dgs": ["defer_in_training_test_until_after_final_save"],
     "pgsr": ["restore_minimal_pytorch3d_transforms_pythonpath"],
-    "rade_gs": ["defer_in_training_test_until_after_final_save"],
+    "rade_gs": [
+        "defer_in_training_test_until_after_final_save",
+        "checkpoint_and_exact_filter_sidecar_before_final_ply_serialization",
+    ],
     "qgs": ["common_expandable_cuda_allocator"],
     "gsprior": ["restore_minimal_pytorch3d_and_benchmark_helper_pythonpath"],
     "sof": ["clean_attempt_with_complete_resource_telemetry"],
@@ -118,6 +121,21 @@ def corrected_command(method: str, spec: dict[str, Any]) -> list[str]:
     command = copy.deepcopy(spec["command"])
     if method in {"2dgs", "rade_gs"}:
         set_option_values(command, "--test_iterations", ["30001"])
+        if method == "rade_gs":
+            set_option_values(
+                command, "--checkpoint_iterations", ["15000", "30000"]
+            )
+            command = [
+                command[0],
+                "-B",
+                "{repo}/code/gcp/run_rade_gs_checkpoint_first_rescue.py",
+                "--source-root",
+                "{source_root}",
+                "--expected-train-sha256",
+                spec["files"]["train.py"],
+                "--",
+                *command[3:],
+            ]
     elif method == "citygaussian_v2":
         command.extend(
             [
@@ -194,6 +212,15 @@ def prepared_input_binding(
 
 def input_validation_dependencies(method: str) -> dict[str, str]:
     paths = ["code/gcp/materialize_m3m_gcp_100k_method_inputs.py"]
+    if method == "rade_gs":
+        paths.extend(
+            [
+                "code/gcp/run_rade_gs_checkpoint_first_rescue.py",
+                "code/gcp/materialize_rade_gs_ply_from_checkpoint.py",
+                "code/gcp/smoke_rade_gs_serialization_rescue.py",
+                "docs/protocol_evidence/m3m_gcp_100k_rade_gs_final_serialization_rescue_v1.json",
+            ]
+        )
     if method in {"citygaussian_v2", "citygs_x"}:
         paths.append(
             "code/gcp/materialize_colmap_train_track_compatibility_streaming.py"

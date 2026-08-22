@@ -1,14 +1,19 @@
 {
   "benchmark_required_files_sha256": {
-    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34"
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "code/gcp/materialize_rade_gs_ply_from_checkpoint.py": "446e37a29ca16213dc10293a6cec13ea99442cc62911df9ad2d6656b2f9570b9",
+    "code/gcp/run_rade_gs_checkpoint_first_rescue.py": "a1dbcf51e94b8c138786a8c36e169d227b6b974f24e96f0d1173c927ac79847f",
+    "code/gcp/smoke_rade_gs_serialization_rescue.py": "b0913b32bbf779c952fcbf8dcf327c104cafb0a04ab978b0d0b0ae768f35e27f",
+    "docs/protocol_evidence/m3m_gcp_100k_rade_gs_final_serialization_rescue_v1.json": "2287e2c06006fe5805b54f4606cc48d259bd24b81f4ac381590b9f5a70ef81d0"
   },
   "budget": {
     "type": "iterations",
     "value": 30000
   },
-  "canonical_sha256": "87c1113d490237595a4f657ef487d40faf3a9de5e2fb4e6e63196333dd5557f1",
+  "canonical_sha256": "46ec7783b2ce57f35303e72accf48dcd03118444ecefb5f08dceea7e97e3f98b",
   "corrections": [
-    "defer_in_training_test_until_after_final_save"
+    "defer_in_training_test_until_after_final_save",
+    "checkpoint_and_exact_filter_sidecar_before_final_ply_serialization"
   ],
   "formal_input_manifest": {
     "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
@@ -78,7 +83,12 @@
     "command": [
       "/root/autodl-tmp/envs/m3m-gcp-native-quarter/rade_gs/py310-torch2.7.1-cu128-v1/bin/python",
       "-B",
-      "{source_root}/train.py",
+      "{repo}/code/gcp/run_rade_gs_checkpoint_first_rescue.py",
+      "--source-root",
+      "{source_root}",
+      "--expected-train-sha256",
+      "10dd1be2b912091db9f7d15afcf3ee088d9e550d6149cc536d7292a595da5328",
+      "--",
       "-s",
       "{dataset_root}",
       "-m",
@@ -94,6 +104,7 @@
       "30000",
       "--checkpoint_iterations",
       "15000",
+      "30000",
       "--use_decoupled_appearance",
       "3",
       "--multi_view_max_dis",
