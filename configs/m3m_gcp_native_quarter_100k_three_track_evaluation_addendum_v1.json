@@ -8,8 +8,11 @@
     "task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
     "required_verdict": "PASS_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1",
     "candidate_manifest_must_be_reviewed_after_scene_attempt_freeze": true,
+    "single_consolidated_readiness_review_required": true,
+    "separate_candidate_smoke_pass_ready_activation_or_per_track_reviews_required": false,
     "activation_required_before_first_formal_rgb_gcp_or_lidar_child": true,
-    "technical_rgb_adapter_smoke_required_before_final_review_pass": true
+    "activation_is_a_mechanical_runtime_compatibility_receipt_after_the_single_pass": true,
+    "technical_rgb_gcp_and_lidar_smokes_required_before_the_single_review_pass": true
   },
   "scientific_scope": {
     "training_attempts_changed": false,
@@ -24,17 +27,17 @@
   },
   "base_experiment": {
     "benchmark_checkout_path": "/root/autodl-tmp/code/GS-GCP-Benchmark",
-    "benchmark_commit": "e33368db9333f826a3e808ff00c437c1a6c63b82",
-    "benchmark_tree": "4620a434bd081af9274fdfc37dbb0d673636edfc",
-    "activation_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
-    "activation_file_sha256": "2645864d7680833809a712c7e80967193cad1bbe3f4398e3d3fe5dbffefe72b2",
-    "activation_canonical_sha256": "4ee6c89d26adcb19ea7571ddcead1f7355f3c43e9c5e8875c5980f6c4b25cb9d",
-    "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
-    "execution_plan_sha256": "11930b292b3212485377af59aa822b6b3ddb30d332f6148b937c0f8ac809de09",
+    "benchmark_commit": "04f453dbf0d438addaa087b1402f7b1acdfc987d",
+    "benchmark_tree": "f84727f89620e8679049863d1bdbf6d8aaf2c491",
+    "activation_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v4.json",
+    "activation_file_sha256": "72e2715011f6b4e170bed2e7a40d4f5507bebb6f5c0a68894aecfd42a83c3d0e",
+    "activation_canonical_sha256": "8c03e0131c2ef6ee4dba17906ad4d38232711e93222a574321c485e2228ac140",
+    "execution_plan_path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4.json",
+    "execution_plan_sha256": "c8b15b9ec12e798dcae11fb8636d5944b1a5fda99c43ef73ad9d3e2454b72ba1",
     "recipe_manifest_path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
     "recipe_manifest_sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2",
-    "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v3.json",
-    "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v3.json",
+    "attempt_manifest_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempts_v4.json",
+    "scene_attempt_freeze_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/scene_attempt_freeze_v4.json",
     "freeze_must_preexist_candidate": true,
     "base_checkout_must_remain_clean_and_unmodified": true
   },
@@ -171,7 +174,7 @@
       "scene_attempt_freeze",
       "materialize_exact_211_camera_no_real_rgb_gcp_root",
       "build_candidate_and_run_unranked_real_rgb_adapter_smoke",
-      "independent_review_then_activation",
+      "single_consolidated_review_then_mechanical_runtime_compatibility_activation",
       "new_method_gcp_packet_export_211",
       "gcp_evaluator_and_independent_verifier",
       "gcp_lightweight_archive_byte_reverification",
@@ -206,10 +209,10 @@
     "result_or_test_truth_driven_repair": false
   },
   "bound_addendum_files": {
-    "docs/M3M_GCP_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1.md": "042d5254b1bee92316f5ea02a08726c428e930d64dab739fdc4b22e8687d41c4",
+    "docs/M3M_GCP_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1.md": "079fdcd68383ab6bbdba3deecb53a00e3c645264aa1ed6a2d3837682040e0218",
     "code/gcp/materialize_m3m_gcp_100k_rgb_camera_root.py": "d6a54e6036d16f945911dd8b74e95a40c4464ab94efe65db38d232de779d0831",
     "code/gcp/materialize_m3m_gcp_100k_gcp_camera_root.py": "79b320af5471e91c410d6fa2b4a9240a0c058dd5940bc2cd16f525b4fca6d6b2",
-    "code/gcp/build_m3m_gcp_100k_three_track_candidate.py": "a46222e6eb705c25c486220728d0bf616868adc914c2e360c554505f88aae890",
+    "code/gcp/build_m3m_gcp_100k_three_track_candidate.py": "59fd3eb9358e4fe948321cf8848898a76124d9ad8ea52b84a6e956e0f3b051e3",
     "code/gcp/activate_m3m_gcp_100k_three_track.py": "34b2ca9cb851476a6f9ea49ef7be6c52818dae8a3fbaf7df321718d67495ddb0",
     "code/gcp/m3m_gcp_100k_three_track_runtime.py": "39752570f2897ad4b23b8b2813243159705d1344d4a1a98468b0020cd8b12103",
     "code/gcp/run_m3m_gcp_100k_gcp_packet_guarded.py": "9778e980b34260bd147ffdb9779aeee843092acd7851f177a2cc90932f3777c9",
@@ -235,5 +238,5 @@
     "code/gcp/archive_m3m_gcp_100k_lidar_result.py": "fcd157666e98d7865ca9beb612f34fa142c9f47bfa62c7c8664bb69cb943d5dd",
     "code/gcp/cleanup_m3m_gcp_100k_failed_packet.py": "e9c3d2e1964adbc571438fc4ba93a6c0a234ff81de721614e4dad0dbe1c38524"
   },
-  "canonical_sha256": "5b68b4776513a644865d66971b175ba90e054f33dba06ecd75e318c4f5b4af06"
+  "canonical_sha256": "8036d1f3b78b642f0d1c6ff2cfe4084200fc1690bbfc1c3f73adccf2e6e01c72"
 }

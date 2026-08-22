@@ -22,12 +22,12 @@ from run_m3m_gcp_100k_guarded import validate_model_identity_bundle
 
 
 SCENE = "gcp_100000_20260610"
-BASE_COMMIT = "e33368db9333f826a3e808ff00c437c1a6c63b82"
-BASE_TREE = "4620a434bd081af9274fdfc37dbb0d673636edfc"
-BASE_ACTIVATION_SHA = "2645864d7680833809a712c7e80967193cad1bbe3f4398e3d3fe5dbffefe72b2"
-BASE_ACTIVATION_CANONICAL_SHA = "4ee6c89d26adcb19ea7571ddcead1f7355f3c43e9c5e8875c5980f6c4b25cb9d"
-BASE_PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json"
-BASE_PLAN_SHA = "11930b292b3212485377af59aa822b6b3ddb30d332f6148b937c0f8ac809de09"
+BASE_COMMIT = "04f453dbf0d438addaa087b1402f7b1acdfc987d"
+BASE_TREE = "f84727f89620e8679049863d1bdbf6d8aaf2c491"
+BASE_ACTIVATION_SHA = "72e2715011f6b4e170bed2e7a40d4f5507bebb6f5c0a68894aecfd42a83c3d0e"
+BASE_ACTIVATION_CANONICAL_SHA = "8c03e0131c2ef6ee4dba17906ad4d38232711e93222a574321c485e2228ac140"
+BASE_PLAN = "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4.json"
+BASE_PLAN_SHA = "c8b15b9ec12e798dcae11fb8636d5944b1a5fda99c43ef73ad9d3e2454b72ba1"
 BASE_RECIPE_MANIFEST = "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json"
 BASE_RECIPE_MANIFEST_SHA = "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2"
 ADDENDUM_CONFIG = "configs/m3m_gcp_native_quarter_100k_three_track_evaluation_addendum_v1.json"

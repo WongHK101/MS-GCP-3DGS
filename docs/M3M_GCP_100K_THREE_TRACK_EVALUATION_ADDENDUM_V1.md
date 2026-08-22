@@ -1,9 +1,10 @@
 # M3M-GCP 100K RGB/GCP/LiDAR evaluation addendum v1
 
-Status: review candidate. It is not executable until task
+Status: consolidated readiness candidate. It is not executable until task
 `019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b` returns the exact verdict
-`PASS_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1` for the clean addendum
-commit/tree and the post-attempt candidate manifest is activated.
+`PASS_100K_THREE_TRACK_EVALUATION_ADDENDUM_V1` for one package containing the
+clean addendum commit/tree, the post-attempt freeze, and all three technical
+smokes. No per-track or per-stage review follows that verdict.
 
 ## Scope
 
@@ -31,9 +32,11 @@ manifest, scene-attempt freeze, model identities, exact 100K formal input,
 heldout camera root, 100K RGB registry, and legacy 3DGS GCP adoption receipt.
 
 Formal packet export, GCP evaluation, RGB rendering or LiDAR evaluation is
-forbidden until the exact candidate receives the required verdict and an
-exclusive read-only activation manifest is created. All formal output roots must
-be absent at activation.
+forbidden until the exact consolidated package receives the required verdict.
+The existing exclusive read-only activation manifest is then created
+mechanically as a compatibility receipt for the stable runtime scripts; it is
+not a second review or a separate scientific gate. All formal output roots must
+be absent when that receipt is created.
 
 ## RGB extension
 
