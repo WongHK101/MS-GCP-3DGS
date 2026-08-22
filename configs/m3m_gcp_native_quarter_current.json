@@ -49,6 +49,8 @@
     },
     "one_hundred_k_postattempt_closure": {
       "receipt": "docs/protocol_evidence/m3m_gcp_100k_postattempt_closure_v1.json",
+      "receipt_file_sha256": "9c008e8210c256e028c8a57df4765152f5e9bd0dc2853c3137e10a974f8077cb",
+      "receipt_canonical_sha256": "02328396ce1262ca4b30b10eb98b1b2b7c2d87fbfde4c6af345d98c9768098e2",
       "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
       "required_review_verdict": "APPROVE_POSTATTEMPT_LIFECYCLE_CLOSURE_NO_ACTIVATION_V5",
       "activation_v4_remains_only_training_authority": true,

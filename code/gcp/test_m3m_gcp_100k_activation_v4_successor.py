@@ -177,6 +177,10 @@ def test_current_pointer_selects_only_v4_as_active_100k_plan() -> None:
     assert closure["receipt"].endswith(
         "m3m_gcp_100k_postattempt_closure_v1.json"
     )
+    closure_receipt = ROOT / closure["receipt"]
+    closure_payload = load(closure_receipt)
+    assert closure["receipt_file_sha256"] == sha256_file(closure_receipt)
+    assert closure["receipt_canonical_sha256"] == canonical_sha256(closure_payload)
     assert closure["activation_v4_remains_only_training_authority"] is True
     assert closure["activation_v5_forbidden"] is True
     assert closure["closure_grants_execution_authority"] is False

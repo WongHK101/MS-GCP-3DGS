@@ -1,0 +1,185 @@
+{
+  "canonical_sha256": "02328396ce1262ca4b30b10eb98b1b2b7c2d87fbfde4c6af345d98c9768098e2",
+  "closure_policy": {
+    "3dgs_ready_identity_unchanged": true,
+    "activation_v4_immutable": true,
+    "activation_v5_forbidden": true,
+    "activation_v5_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v5.json",
+    "attempt_manifest_and_scene_freeze_only": true,
+    "closure_grants_packet_authority": false,
+    "closure_grants_prior_authority": false,
+    "closure_grants_training_authority": false,
+    "other_terminal_methods_unchanged": true
+  },
+  "metrogs_prior": {
+    "all_products_rehashed_required": true,
+    "depth_product_count": 2196,
+    "phase_success_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/prior/phase_success.json",
+    "phase_success_sha256": "ab37a25e3d9ef26e4744bb1c18cfb9dd6403caf19455037eff927af0228891ba",
+    "product_count": 2205,
+    "rerun_allowed": false,
+    "status": "PASS"
+  },
+  "metrogs_terminal": {
+    "algorithm_correctness_not_evaluated": true,
+    "authorized_run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/seed0-v2",
+    "child_started": true,
+    "classification": "FROZEN_PREPARED_INPUT_MANIFEST_MISSING_PRE_GPU",
+    "evaluation_eligible": false,
+    "failure_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/failure.json",
+    "failure_sha256": "182bb289b75db2dcea16a20b88635620fd25784f90f62131efabb62fd5b4d9a0",
+    "failure_stage": "training",
+    "final_model_absent": true,
+    "formal_attempt_consumed": true,
+    "formal_status": "FAILED_UNRANKED",
+    "method_id": "metrogs",
+    "missing_required_path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+    "retry_allowed": false,
+    "training_phase_success_absent": true
+  },
+  "remote_artifacts": [
+    {
+      "bytes": 1964,
+      "canonical_sha256": "8c03e0131c2ef6ee4dba17906ad4d38232711e93222a574321c485e2228ac140",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v4.json",
+      "role": "activation_v4",
+      "sha256": "72e2715011f6b4e170bed2e7a40d4f5507bebb6f5c0a68894aecfd42a83c3d0e"
+    },
+    {
+      "bytes": 2945,
+      "canonical_sha256": "9208f1c9b4b69dfd7dc90b5920532f3324f7659540a380db1f88550f860579f0",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/failure.json",
+      "role": "metrogs_training_failure",
+      "sha256": "182bb289b75db2dcea16a20b88635620fd25784f90f62131efabb62fd5b4d9a0"
+    },
+    {
+      "bytes": 2075,
+      "canonical_sha256": "1b3699d673c1f0438196b2ecda22d62fd0ba7d5461f51550e74f367e762bff9e",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/environment.json",
+      "role": "metrogs_training_environment",
+      "sha256": "ab7bfb68561b7b353999ef92ef8e9571d6be4187ef078e846eb08a8e6a2b7623"
+    },
+    {
+      "bytes": 0,
+      "canonical_sha256": null,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/command.stdout.log",
+      "role": "metrogs_training_stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 590,
+      "canonical_sha256": null,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/command.stderr.log",
+      "role": "metrogs_training_stderr",
+      "sha256": "0b6b78128161132111dbdafc84d2a53716315a3b336741f31771e6d520c248bb"
+    },
+    {
+      "bytes": 172,
+      "canonical_sha256": null,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/guard-console-v4.log",
+      "role": "metrogs_training_guard_console_v4",
+      "sha256": "2034ee43a9946798c352032331914db8b8d0d82bda5ea88a4b5dd57617bbdf9f"
+    },
+    {
+      "bytes": 624757,
+      "canonical_sha256": "63f2a91beb9c249048510eb63be370ea9ee03e467be3493f92bead7a655d44d1",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/prior/phase_success.json",
+      "role": "metrogs_prior_phase_success",
+      "sha256": "ab37a25e3d9ef26e4744bb1c18cfb9dd6403caf19455037eff927af0228891ba"
+    },
+    {
+      "bytes": 3701,
+      "canonical_sha256": "a350aff8000fa7fc67c08a9d1bd99b1780a76fc5bb9d666408a59679fbd97949",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/prior/environment.json",
+      "role": "metrogs_prior_environment",
+      "sha256": "daafb5590b6bd2c1ca5eca7bde41d2686ea104979c07c6e7080a193d03b0c90b"
+    }
+  ],
+  "repository_artifacts": [
+    {
+      "bytes": 17564,
+      "canonical_sha256": "31e9261277245623c4455fe343f504351fbc887204cc3a184a126463a8005088",
+      "path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4.json",
+      "role": "execution_plan_v4",
+      "sha256": "c8b15b9ec12e798dcae11fb8636d5944b1a5fda99c43ef73ad9d3e2454b72ba1"
+    },
+    {
+      "bytes": 3966,
+      "canonical_sha256": "02ac6c54b37cc2630286d9066701bfe5dbd4f574f2321467d58350751e7993ee",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
+      "role": "recipe_manifest_v3",
+      "sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2"
+    },
+    {
+      "bytes": 13266,
+      "canonical_sha256": "d7317929d9731ad4104ea563ea34b91b64251f75d1bc7382cbb4cdf93e9779f1",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipes_v2/metrogs.json",
+      "role": "metrogs_recipe_v2",
+      "sha256": "1fc3d94c67d86a94798de631df274a921f82ff6afda09e56f68d5f0b08f0457d"
+    },
+    {
+      "bytes": 11543,
+      "canonical_sha256": "41e049c311ff0c2624265d543b8911dd1711e02c09451e13abdb66ae8a98c8af",
+      "path": "docs/protocol_evidence/m3m_gcp_100k_activation_v3_to_v4_continuity.json",
+      "role": "activation_v3_to_v4_continuity",
+      "sha256": "5afc431405787bc89297b6821b829651f621f191decdf386ba8609e87bd2843d"
+    },
+    {
+      "bytes": 29230,
+      "canonical_sha256": null,
+      "path": "code/gcp/m3m_gcp_100k_postattempt_closure.py",
+      "role": "postattempt_closure_validator",
+      "sha256": "fd10f431b37ebc139eed5253f17a6cad173d47fdcdfb9bae5999f64abbaeee69"
+    },
+    {
+      "bytes": 1958,
+      "canonical_sha256": null,
+      "path": "code/gcp/build_m3m_gcp_100k_postattempt_closure.py",
+      "role": "postattempt_closure_builder",
+      "sha256": "8959f7e8d5b185324a9f97ef03d1862379de1f7f2aff656df5a04200c341639d"
+    },
+    {
+      "bytes": 16886,
+      "canonical_sha256": null,
+      "path": "code/gcp/m3m_gcp_100k_activation_v4_continuity.py",
+      "role": "activation_v4_continuity_validator",
+      "sha256": "df4756b357af6b3d3c3b955abfa8232cbf5ba310032aa9307132377c476fe221"
+    },
+    {
+      "bytes": 26987,
+      "canonical_sha256": null,
+      "path": "code/gcp/build_m3m_gcp_100k_attempt_manifest.py",
+      "role": "attempt_manifest_builder",
+      "sha256": "98a774da240be71d7f46dd2bccacd236c5a64c62e37b2487107131951a4f8575"
+    },
+    {
+      "bytes": 8397,
+      "canonical_sha256": null,
+      "path": "code/gcp/freeze_m3m_gcp_lidar_scene_attempts.py",
+      "role": "attempt_freezer",
+      "sha256": "3eb322365109a433d397dd007873260c77f72f109306ab6f7523b9204151550c"
+    },
+    {
+      "bytes": 106735,
+      "canonical_sha256": null,
+      "path": "code/gcp/run_m3m_gcp_100k_guarded.py",
+      "role": "guarded_runner",
+      "sha256": "52cf8fdc9b35b8a80b4b0a317513563ab684a6095b369fdc6e7bf64fb5ffb3cd"
+    },
+    {
+      "bytes": 7978,
+      "canonical_sha256": null,
+      "path": "code/gcp/build_m3m_gcp_lidar_100k_activation_v4.py",
+      "role": "activation_v4_builder",
+      "sha256": "7faeba2c3d0c93402cfb370ec42b2753e5d3be06c7b97135bf46174edf092298"
+    }
+  ],
+  "review": {
+    "activation_v4_remains_only_training_authority": true,
+    "task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "verdict": "APPROVE_POSTATTEMPT_LIFECYCLE_CLOSURE_NO_ACTIVATION_V5"
+  },
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_100k_postattempt_closure_v1",
+  "status": "SEALED_METROGS_FAILED_UNRANKED_NO_RETRY"
+}
