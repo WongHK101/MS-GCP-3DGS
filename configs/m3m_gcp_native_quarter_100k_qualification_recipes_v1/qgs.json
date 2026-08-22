@@ -1,0 +1,102 @@
+{
+  "budget": {
+    "type": "iterations",
+    "value": 30000
+  },
+  "canonical_sha256": "59873c9041933b359068022d2f97d5c3e2e8bdef8710ac96cc915211b096d090",
+  "corrections": [
+    "common_expandable_cuda_allocator"
+  ],
+  "historical_attempts": {
+    "delete": false,
+    "rank": false,
+    "status": "DIAGNOSTIC_SUPERSEDED_FOR_EXECUTION"
+  },
+  "input_class": "rgb_colmap_only",
+  "method_id": "qgs",
+  "plan_id": "m3m_gcp_100k_qualification_flex_v1",
+  "promotion_policy": {
+    "eligible_after_post_batch_review": true,
+    "metric_based_promotion": "FORBIDDEN",
+    "requires_retraining": false,
+    "requires_scientific_contract_unchanged": true
+  },
+  "retry_policy": {
+    "ambiguous_sigkill_without_telemetry": "one_diagnostic_repeat_with_telemetry",
+    "deterministic_oom_with_telemetry": "terminal_on_current_hardware_and_config",
+    "engineering_failure": "correct_and_use_new_attempt_id_without_per_method_audit",
+    "evaluation_only_failure": "repair_adapter_and_reuse_saved_model",
+    "metric_based_attempt_selection": "FORBIDDEN",
+    "scientific_contract_change": "stop_before_execution_and_batch_review"
+  },
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_100k_qualification_recipe_v1",
+  "scientific_contract": {
+    "evaluation_after_saved_model": true,
+    "formal_input_manifest": {
+      "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+      "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+      "heldout_views": 314,
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+      "train_views": 2196
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "result_driven_tuning": "FORBIDDEN",
+    "truth_access": {
+      "gcp_training": false,
+      "lidar_training": false
+    }
+  },
+  "seed": 0,
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "training": {
+    "attempt_root_template": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qualification-100k-v1/gcp_100000_20260610/qgs/attempt-{attempt_id}",
+    "benchmark_repo": "/root/autodl-tmp/code/GS-GCP-Benchmark",
+    "command": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/qgs/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{repo}/code/gcp/run_qgs_training.py",
+      "--qgs_repo",
+      "{source_root}",
+      "--conf_path",
+      "{run_root}/formal_training_config.yaml",
+      "--save_iterations",
+      "30000",
+      "--quiet"
+    ],
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-qgs-formal-train-view-v1/gcp_100000_20260610",
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "WANDB_MODE": "offline"
+    },
+    "interpreter": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/qgs/py310-torch2.7.1-cu128-v1/bin/python",
+    "materializations": [
+      {
+        "content": "case_name: gcp_100000_20260610\nroot_dir: {dataset_root}\nmodel_path: {run_root}/model\npipeline:\n  depth_ratio: 0.1\n  reciprocal_z: false\n  occlusion_awared_denom: false\ndataset:\n  use_alpha: false\n  eval: false\n  downsample: 1.0\n  ncc_scale: 1.0\n  type: all\n  kernel_size: -1\n  undistortion: true\n  white_background: false\n  multi_view_max_dis: 1000000000.0\n  multi_view_min_dis: 0.01\n  multi_view_max_angle: 30\ngs_model:\n  sigma: 3.0\n  sh_degree: 3\n  multi_view_num: 8\n  use_app: false\noptimizer:\n  iterations: 30000\n  position_lr_max_steps: 30000\n  percent_dense: 0.0005\n  densify_grad_threshold: 0.3\n  densification_interval: 100\n  opacity_reset_interval: 3000\n  densify_from_iter: 500\n  densify_until_iter: 15000\n  normal_from_iter: 7000\n  multi_view_weight_from_iter: 7000\n  multi_view_weight_until_iter: 30000\n  dist_from_iter: 3000\n  multi_view_ncc_weight: 0.5\n  multi_view_geo_weight: 0.03\n  curvature_clamp_threshold: -5.0\n  lambda_dist: 1000.0\n  lambda_normal: 0.05\n",
+        "relative_path": "formal_training_config.yaml"
+      }
+    ],
+    "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-qgs-formal-train-view-v1/gcp_100000_20260610",
+    "resource_probe": {
+      "contract": "{repo}/configs/gs_gcp_resource_probe_contract_v2.json",
+      "enforce_contract_gates": false,
+      "gpu_indices": "0",
+      "script": "{repo}/code/gcp/run_with_resource_probe_v2.py",
+      "time_binary": "/usr/bin/time"
+    },
+    "source_binding": {
+      "commit": "74d05c945e99fcaef7afe5a8831903be71ad9b55",
+      "required_files_sha256": {
+        "train.py": "dabf257d7b37a3671731d804794d21b6a833f0f9f23101ae518d91d1ea00aeed"
+      },
+      "required_status": "",
+      "tree": "c20af6da770b9ecc9c4e1730b40671ea63ec1419"
+    },
+    "source_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/qgs/74d05c945e99fcaef7afe5a8831903be71ad9b55/official-train",
+    "working_directory": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/qgs/74d05c945e99fcaef7afe5a8831903be71ad9b55/official-train"
+  }
+}

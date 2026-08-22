@@ -1,0 +1,62 @@
+{
+  "budget": {
+    "type": "reuse_frozen_30k_model_no_retrain",
+    "value": 30000
+  },
+  "canonical_sha256": "d515914e8e7a838410703d2d8470348e5ffd6ccd6b9bad89b22707cc81566a01",
+  "corrections": [
+    "reuse_validated_model_no_retrain"
+  ],
+  "historical_attempts": {
+    "delete": false,
+    "rank": true,
+    "status": "VALIDATED_MODEL_REUSE_SOURCE"
+  },
+  "input_class": "rgb_colmap_only",
+  "method_id": "3dgs_original",
+  "plan_id": "m3m_gcp_100k_qualification_flex_v1",
+  "promotion_policy": {
+    "eligible_after_post_batch_review": true,
+    "metric_based_promotion": "FORBIDDEN",
+    "requires_retraining": false,
+    "requires_scientific_contract_unchanged": true
+  },
+  "retry_policy": {
+    "ambiguous_sigkill_without_telemetry": "one_diagnostic_repeat_with_telemetry",
+    "deterministic_oom_with_telemetry": "terminal_on_current_hardware_and_config",
+    "engineering_failure": "correct_and_use_new_attempt_id_without_per_method_audit",
+    "evaluation_only_failure": "repair_adapter_and_reuse_saved_model",
+    "metric_based_attempt_selection": "FORBIDDEN",
+    "scientific_contract_change": "stop_before_execution_and_batch_review"
+  },
+  "reuse_model": {
+    "bytes": 2340432588,
+    "point_cloud_relative_path": "model/point_cloud/iteration_30000/point_cloud.ply",
+    "retrain_allowed": false,
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z",
+    "sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "source_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "source_tree": "5eee127dfc0942bf83d9fdd72328e03ec0cbf6c4"
+  },
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_100k_qualification_recipe_v1",
+  "scientific_contract": {
+    "evaluation_after_saved_model": true,
+    "formal_input_manifest": {
+      "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+      "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+      "heldout_views": 314,
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+      "train_views": 2196
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "result_driven_tuning": "FORBIDDEN",
+    "truth_access": {
+      "gcp_training": false,
+      "lidar_training": false
+    }
+  },
+  "seed": 0,
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "training": null
+}

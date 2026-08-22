@@ -40,6 +40,7 @@ def build_command(
     model_path: Path,
     mode: str,
     iterations: int,
+    defer_evaluation: bool = False,
 ) -> list[str]:
     if mode not in {"qualification", "formal"}:
         raise ValueError(f"unsupported mode: {mode}")
@@ -89,7 +90,7 @@ def build_command(
         "--multi_view_patch_size",
         "3",
         "--test_iterations",
-        str(iterations),
+        str(iterations + 1 if defer_evaluation else iterations),
         "--save_iterations",
         str(iterations),
         "--quiet",
@@ -205,6 +206,11 @@ def main() -> int:
     parser.add_argument("--pytorch3d_compat", type=Path, required=True)
     parser.add_argument("--mode", choices=("qualification", "formal"), required=True)
     parser.add_argument("--iterations", type=int, required=True)
+    parser.add_argument(
+        "--defer_evaluation",
+        action="store_true",
+        help="Save the final model first and run benchmark evaluation separately.",
+    )
     args = parser.parse_args()
 
     verified = verify_inputs(args)
@@ -220,6 +226,7 @@ def main() -> int:
         model_path=model_path,
         mode=args.mode,
         iterations=args.iterations,
+        defer_evaluation=args.defer_evaluation,
     )
     env = dict(os.environ)
     env["PATH"] = str(python.parent) + os.pathsep + env.get("PATH", "")
@@ -319,6 +326,11 @@ def main() -> int:
             "depth_l1_weight_final": 0.01,
             "default_voxel_size": 0.001,
             "multi_view_patch_size": 3,
+            "in_training_evaluation_deferred": args.defer_evaluation,
+            "test_iteration": (
+                args.iterations + 1 if args.defer_evaluation else args.iterations
+            ),
+            "save_iteration": args.iterations,
         },
     }
     (model_path / "training_wrapper_summary.json").write_text(

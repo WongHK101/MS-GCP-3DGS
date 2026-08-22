@@ -16,6 +16,9 @@ from typing import Any
 
 COARSE_CONFIG = "configs/citygsv2_mc_aerial_coarse_sh2.yaml"
 FINE_CONFIG = "configs/citygsv2_mc_aerial_sh2_trim.yaml"
+PARTITION_RELATIVE = Path(
+    "partition/partitions-dim_4_4_visibility_0.05/partitions.pt"
+)
 
 
 def sha256(path: Path) -> str:
@@ -88,6 +91,101 @@ def find_step_checkpoint(directory: Path, expected_step: int) -> Path:
             f"expected exactly one step={expected_step} checkpoint in {directory}, got {matched}"
         )
     return matched[0].resolve()
+
+
+def find_optional_step_checkpoint(
+    directory: Path, expected_step: int
+) -> Path | None:
+    """Return one exact final checkpoint, allowing a genuinely missing block."""
+    candidates = sorted(directory.glob("*.ckpt"))
+    matched = []
+    for path in candidates:
+        match = re.search(r"step=(\d+)", path.name)
+        if match and int(match.group(1)) == expected_step:
+            matched.append(path)
+    if len(matched) > 1:
+        raise RuntimeError(
+            f"multiple step={expected_step} checkpoints in {directory}: {matched}"
+        )
+    return matched[0].resolve() if matched else None
+
+
+def hardlink_checkpoint(source: Path, destination: Path) -> dict[str, Any]:
+    """Reuse a verified checkpoint without duplicating multi-gigabyte payloads."""
+    if source.is_symlink():
+        raise RuntimeError(f"symlinked resume checkpoint is forbidden: {source}")
+    source = source.resolve()
+    if not source.is_file():
+        raise FileNotFoundError(source)
+    destination = destination.resolve()
+    if destination.exists():
+        raise FileExistsError(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.stat().st_dev != destination.parent.stat().st_dev:
+        raise RuntimeError(
+            "resume checkpoints must be on the same filesystem; copying is forbidden"
+        )
+    digest = sha256(source)
+    os.link(source, destination)
+    if not destination.is_file() or not os.path.samefile(source, destination):
+        raise RuntimeError("checkpoint hardlink verification failed")
+    return {
+        "source": str(source),
+        "destination": str(destination),
+        "bytes": source.stat().st_size,
+        "sha256": digest,
+        "reuse_mode": "same_filesystem_hardlink",
+    }
+
+
+def materialize_resume_checkpoints(
+    *,
+    resume_root: Path,
+    output_root: Path,
+    coarse_steps: int,
+    fine_steps: int,
+    block_count: int = 16,
+) -> tuple[Path, dict[int, Path], list[dict[str, Any]]]:
+    """Hardlink completed stages from an older diagnostic attempt into a fresh one."""
+    resume_root = resume_root.resolve()
+    output_root = output_root.resolve()
+    if not resume_root.is_dir():
+        raise FileNotFoundError(resume_root)
+    if resume_root == output_root:
+        raise ValueError("resume source and fresh output root must differ")
+
+    coarse_source = find_step_checkpoint(
+        resume_root / "coarse" / "checkpoints", coarse_steps
+    )
+    coarse_destination = (
+        output_root / "coarse" / "checkpoints" / coarse_source.name
+    )
+    records = [hardlink_checkpoint(coarse_source, coarse_destination)]
+    reused_blocks: dict[int, Path] = {}
+    for block_id in range(block_count):
+        source = find_optional_step_checkpoint(
+            resume_root
+            / "fine"
+            / "blocks"
+            / f"block_{block_id}"
+            / "checkpoints",
+            fine_steps,
+        )
+        if source is None:
+            continue
+        destination = (
+            output_root
+            / "fine"
+            / "blocks"
+            / f"block_{block_id}"
+            / "checkpoints"
+            / source.name
+        )
+        record = hardlink_checkpoint(source, destination)
+        record["block_id"] = block_id
+        records.append(record)
+        reused_blocks[block_id] = destination
+    return coarse_destination, reused_blocks, records
 
 
 def cleanup_transient_checkpoints(
@@ -178,6 +276,19 @@ def main() -> int:
     parser.add_argument("--mode", choices=("qualification", "formal"), required=True)
     parser.add_argument("--coarse_steps", type=int, required=True)
     parser.add_argument("--fine_steps", type=int, required=True)
+    parser.add_argument(
+        "--sequential_blocks",
+        action="store_true",
+        help="Train missing 4x4 blocks sequentially on the one assigned GPU.",
+    )
+    parser.add_argument(
+        "--resume_from",
+        type=Path,
+        help=(
+            "Reuse completed coarse/block checkpoints from an older attempt via "
+            "same-filesystem hardlinks; the output root must still be fresh."
+        ),
+    )
     args = parser.parse_args()
 
     repo = args.repo.resolve()
@@ -190,6 +301,8 @@ def main() -> int:
         raise ValueError("training step counts must be positive")
     if args.mode == "formal" and (args.coarse_steps, args.fine_steps) != (30_000, 60_000):
         raise ValueError("formal CityGaussianV2 route is frozen to coarse 30K and fine 60K")
+    if args.resume_from is not None and not args.sequential_blocks:
+        raise ValueError("--resume_from requires --sequential_blocks")
     if output_root.exists():
         raise FileExistsError(f"output root already exists: {output_root}")
     for required in (
@@ -221,6 +334,10 @@ def main() -> int:
     env["WANDB_MODE"] = "offline"
     env["WANDB_SILENT"] = "true"
     env["PYTHONUNBUFFERED"] = "1"
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONHASHSEED"] = "0"
+    env["CUDA_VISIBLE_DEVICES"] = "0"
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     # The frozen upstream utilities load full Lightning checkpoints produced
     # by this same trusted pipeline. PyTorch 2.6 changed torch.load's default
     # to weights_only=True, which rejects those checkpoints before the fine
@@ -250,16 +367,32 @@ def main() -> int:
         f"--model.metric.init_args.depth_loss_weight.max_steps={args.coarse_steps}",
         f"--save_iterations={coarse_save}",
     ]
-    state_path.write_text("COARSE_RUNNING\n", encoding="utf-8")
-    run_checked(
-        coarse_command,
-        cwd=repo,
-        env=env,
-        log_path=runtime / "coarse_command.json",
-    )
-    coarse_checkpoint = find_step_checkpoint(
-        output_root / coarse_name / "checkpoints", args.coarse_steps
-    )
+    resume_root = args.resume_from.resolve() if args.resume_from is not None else None
+    reused_blocks: dict[int, Path] = {}
+    reuse_records: list[dict[str, Any]] = []
+    if resume_root is None:
+        state_path.write_text("COARSE_RUNNING\n", encoding="utf-8")
+        run_checked(
+            coarse_command,
+            cwd=repo,
+            env=env,
+            log_path=runtime / "coarse_command.json",
+        )
+        coarse_checkpoint = find_step_checkpoint(
+            output_root / coarse_name / "checkpoints", args.coarse_steps
+        )
+        coarse_execution = "trained_in_this_attempt"
+    else:
+        state_path.write_text("RESUME_MATERIALIZING\n", encoding="utf-8")
+        coarse_checkpoint, reused_blocks, reuse_records = (
+            materialize_resume_checkpoints(
+                resume_root=resume_root,
+                output_root=output_root,
+                coarse_steps=args.coarse_steps,
+                fine_steps=args.fine_steps,
+            )
+        )
+        coarse_execution = "reused_by_hardlink"
     state_path.write_text("COARSE_PASS\n", encoding="utf-8")
 
     fine_print_command = [
@@ -303,12 +436,21 @@ def main() -> int:
         str(fine_config),
         "--force",
     ]
-    run_checked(
-        partition_command,
-        cwd=repo,
-        env=env,
-        log_path=runtime / "partition_command.json",
-    )
+    partition_path = dataset / PARTITION_RELATIVE
+    if resume_root is None:
+        run_checked(
+            partition_command,
+            cwd=repo,
+            env=env,
+            log_path=runtime / "partition_command.json",
+        )
+        partition_execution = "generated_in_this_attempt"
+    else:
+        if not partition_path.is_file():
+            raise FileNotFoundError(
+                f"resume source requires the existing deterministic partition: {partition_path}"
+            )
+        partition_execution = "reused_from_shared_dataset"
     state_path.write_text("PARTITION_PASS\n", encoding="utf-8")
 
     state_path.write_text("FINE_RUNNING\n", encoding="utf-8")
@@ -322,19 +464,76 @@ def main() -> int:
         "--project_name",
         "m3m-gcp-native-quarter",
     ]
-    run_checked(
-        fine_command,
-        cwd=repo,
-        env=env,
-        log_path=runtime / "fine_command.json",
-    )
-    block_checkpoints = [
-        find_step_checkpoint(
-            output_root / fine_name / "blocks" / f"block_{block_id}" / "checkpoints",
-            args.fine_steps,
+    sequential_commands: dict[int, list[str]] = {}
+    if args.sequential_blocks:
+        block_checkpoint_by_id = dict(reused_blocks)
+        for block_id in range(16):
+            if block_id in block_checkpoint_by_id:
+                continue
+            state_path.write_text(
+                f"FINE_BLOCK_{block_id:02d}_RUNNING\n", encoding="utf-8"
+            )
+            block_command = [
+                str(python),
+                "main.py",
+                "fit",
+                "--config",
+                str(fine_config),
+                "--data.parser.block_id",
+                str(block_id),
+                f"-n={fine_name}",
+                "--project",
+                "m3m-gcp-native-quarter",
+                "--logger",
+                "wandb",
+            ]
+            sequential_commands[block_id] = block_command
+            run_checked(
+                block_command,
+                cwd=repo,
+                env=env,
+                log_path=runtime / f"fine_block_{block_id:02d}_command.json",
+            )
+            block_checkpoint_by_id[block_id] = find_step_checkpoint(
+                output_root
+                / fine_name
+                / "blocks"
+                / f"block_{block_id}"
+                / "checkpoints",
+                args.fine_steps,
+            )
+        block_checkpoints = [block_checkpoint_by_id[block_id] for block_id in range(16)]
+        fine_execution: Any = {
+            "mode": "sequential_missing_blocks",
+            "reused_block_ids": sorted(reused_blocks),
+            "trained_block_ids": sorted(sequential_commands),
+            "commands": {
+                str(block_id): command_record(command)
+                for block_id, command in sequential_commands.items()
+            },
+        }
+    else:
+        run_checked(
+            fine_command,
+            cwd=repo,
+            env=env,
+            log_path=runtime / "fine_command.json",
         )
-        for block_id in range(16)
-    ]
+        block_checkpoints = [
+            find_step_checkpoint(
+                output_root
+                / fine_name
+                / "blocks"
+                / f"block_{block_id}"
+                / "checkpoints",
+                args.fine_steps,
+            )
+            for block_id in range(16)
+        ]
+        fine_execution = {
+            "mode": "legacy_upstream_partition_scheduler",
+            "command": command_record(fine_command),
+        }
     state_path.write_text("FINE_PASS\n", encoding="utf-8")
 
     state_path.write_text("MERGE_RUNNING\n", encoding="utf-8")
@@ -377,7 +576,7 @@ def main() -> int:
         }
 
     summary: dict[str, Any] = {
-        "schema": "m3m_gcp_native_quarter_citygaussian_v2_pipeline_run_v1",
+        "schema": "m3m_gcp_native_quarter_citygaussian_v2_pipeline_run_v2",
         "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
         "method_id": "citygaussian_v2",
         "scene": "gcp_100000_20260610",
@@ -390,6 +589,17 @@ def main() -> int:
         "content_threshold": 0.05,
         "coarse_steps": args.coarse_steps,
         "fine_steps": args.fine_steps,
+        "execution_lifecycle": {
+            "sequential_blocks": args.sequential_blocks,
+            "resume_source": str(resume_root) if resume_root is not None else None,
+            "coarse": coarse_execution,
+            "partition": partition_execution,
+            "partition_path": str(partition_path),
+            "partition_sha256": sha256(partition_path),
+            "reused_block_ids": sorted(reused_blocks),
+            "trained_block_ids": sorted(sequential_commands),
+            "resume_hardlinks": reuse_records,
+        },
         "coarse_checkpoint": removed_checkpoint_record(coarse_checkpoint),
         "block_checkpoints": [
             {
@@ -409,10 +619,14 @@ def main() -> int:
         },
         "transient_checkpoint_cleanup": cleanup,
         "commands": {
-            "coarse": command_record(coarse_command),
+            "coarse": (
+                command_record(coarse_command) if resume_root is None else None
+            ),
             "fine_config": command_record(fine_print_command),
-            "partition": command_record(partition_command),
-            "fine": command_record(fine_command),
+            "partition": (
+                command_record(partition_command) if resume_root is None else None
+            ),
+            "fine": fine_execution,
             "merge": command_record(merge_command),
         },
     }

@@ -30,7 +30,7 @@ stopping, or hyperparameter selection.
 The sole active entry point is
 [`configs/m3m_gcp_native_quarter_current.json`](configs/m3m_gcp_native_quarter_current.json).
 It currently selects protocol `m3m_gcp_native_quarter_geometry_v2`, the frozen
-COLMAP-native-quarter data release, the v2 protocol release pin, and the v2
+COLMAP-native-quarter data release, the v2 protocol release pin, and the v3
 method registry.
 
 Every method must use the exact same COLMAP 4.0.4 undistorter images, PINHOLE
@@ -42,13 +42,15 @@ contract is
 
 Training authorization and completed-result state are owned only by
 [`configs/m3m_gcp_native_quarter_method_registry_v3.json`](configs/m3m_gcp_native_quarter_method_registry_v3.json).
-At this revision, original 3DGS and 2DGS retain completed and re-locked 3K
-formal runs; eight additional methods are in one gated seed-0 3K batch, GOF is
-historical-complete-retired, and the six-scene matrix remains locked. PGSR has passed
-its technical qualification and is the sole method on the current one-use 3K/30K
-training allowlist; the other seven batch methods remain locked. Older clean-R4 and
-native-quarter-v1 execution assets are provenance only and cannot authorize or supply
-a new result.
+The seed-0 3K route has completed for the ten-method active pool (3DGS, 2DGS,
+PGSR, RaDe-GS, QGS, GSPrior, SoF, CityGaussianV2, CityGS-X and MetroGS). GOF is
+historical-complete-retired. A corrected 100K qualification batch is currently
+under one prelaunch review; its sole pointer is
+[`configs/m3m_gcp_native_quarter_100k_qualification_v1.json`](configs/m3m_gcp_native_quarter_100k_qualification_v1.json).
+It preserves the scientific protocol while allowing documented path, import,
+save/evaluate and scheduler corrections under fresh attempt IDs. Earlier 100K
+execution plans and attempts are immutable diagnostic evidence, not current
+execution recipes and not ranked results. The six-scene matrix remains locked.
 
 ## Repository Layout
 

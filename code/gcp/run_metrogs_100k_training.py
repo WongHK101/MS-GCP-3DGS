@@ -276,6 +276,12 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     prior_path = args.prior_manifest.resolve()
     pass_marker = args.prior_pass_marker.resolve()
     additional_ply = args.additional_ply.resolve()
+    formal_manifest_override = getattr(args, "formal_input_manifest", None)
+    formal_path = (
+        formal_manifest_override.resolve()
+        if formal_manifest_override is not None
+        else dataset / "NATIVE_QUARTER_INPUT_MANIFEST.json"
+    )
     official_config = repo / OFFICIAL_CONFIG_RELATIVE
 
     if model_path.exists():
@@ -293,7 +299,7 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         dataset / "estimated_mask_depths",
         dataset / "estimated_mask_depth_scales.json",
         dataset / "multi_view.json",
-        dataset / "NATIVE_QUARTER_INPUT_MANIFEST.json",
+        formal_path,
         additional_ply,
         prior_path,
         pass_marker,
@@ -326,7 +332,6 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
             f"MetroGS frozen source-file identity mismatch: {source_hashes}"
         )
 
-    formal_path = dataset / "NATIVE_QUARTER_INPUT_MANIFEST.json"
     if sha256(formal_path) != FORMAL_MANIFEST_FILE_SHA256:
         raise RuntimeError("formal input manifest file identity mismatch")
     formal = json.loads(formal_path.read_text(encoding="utf-8"))
@@ -465,6 +470,14 @@ def main() -> int:
     parser.add_argument("--prior_manifest", type=Path, required=True)
     parser.add_argument("--prior_pass_marker", type=Path, required=True)
     parser.add_argument("--additional_ply", type=Path, required=True)
+    parser.add_argument(
+        "--formal_input_manifest",
+        type=Path,
+        help=(
+            "Authoritative native-quarter manifest. Defaults to the legacy "
+            "dataset-local path for backward compatibility."
+        ),
+    )
     parser.add_argument("--mode", choices=("qualification", "formal"), required=True)
     parser.add_argument("--iterations", type=int, required=True)
     args = parser.parse_args()

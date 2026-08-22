@@ -7,6 +7,16 @@
   "method_registry": "configs/m3m_gcp_native_quarter_method_registry_v3.json",
   "batch_execution_plan": "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
   "method_registry_validation": "docs/protocol_evidence/m3m_native_quarter_method_registry_validation_v3.json",
+  "one_hundred_k_qualification": {
+    "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+    "current_candidate_pointer": "configs/m3m_gcp_native_quarter_100k_qualification_v1.json",
+    "plan_document": "docs/M3M_GCP_100K_QUALIFICATION_FLEX_V1.md",
+    "execution_namespace": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qualification-100k-v1/gcp_100000_20260610",
+    "old_100k_recipe_classification": "HISTORICAL_DIAGNOSTIC_NOT_CURRENT_EXECUTION_POINTER",
+    "old_attempt_deletion_authorized": false,
+    "per_method_audit_required": false,
+    "scientific_red_line_review_required": true
+  },
   "source_data_release": {
     "directory_name": "M3M-GCP-colmap-native-quarter-v1",
     "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75"
@@ -106,6 +116,24 @@
     "docs/GCP_V1_3_COMPLETE_EXPERIMENT_PLAN.md"
   ],
   "current_batch_execution_components": [
+    "docs/M3M_GCP_100K_QUALIFICATION_FLEX_V1.md",
+    "configs/m3m_gcp_native_quarter_100k_qualification_v1.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/3dgs_original.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/2dgs.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/pgsr.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/rade_gs.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/qgs.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/gsprior.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/sof.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/citygaussian_v2.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/citygs_x.json",
+    "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/metrogs.json",
+    "code/gcp/build_m3m_gcp_100k_qualification_recipes.py",
+    "code/gcp/run_m3m_gcp_100k_qualification.py",
+    "code/gcp/validate_m3m_gcp_100k_qualification_v1.py",
+    "code/gcp/run_citygaussian_v2_100k_pipeline.py",
+    "code/gcp/run_citygs_x_100k_training.py",
+    "code/gcp/run_metrogs_100k_training.py",
     "docs/M3M_GCP_8_METHOD_3K_BATCH_EXECUTION_PLAN_V2.md",
     "configs/m3m_gcp_native_quarter_method_registry_v3.json",
     "docs/protocol_evidence/m3m_native_quarter_method_registry_validation_v3.json",

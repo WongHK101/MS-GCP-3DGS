@@ -10,11 +10,43 @@ from pathlib import Path
 
 from run_citygaussian_v2_100k_pipeline import (
     cleanup_transient_checkpoints,
+    materialize_resume_checkpoints,
     sha256,
 )
 
 
 class CityGaussianV2100KPipelineTest(unittest.TestCase):
+    def test_resume_hardlinks_only_completed_stages_into_fresh_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            old = base / "old"
+            new = base / "new"
+            new.mkdir()
+            coarse = old / "coarse/checkpoints/epoch=14-step=30000.ckpt"
+            coarse.parent.mkdir(parents=True)
+            coarse.write_bytes(b"coarse")
+            completed = old / "fine/blocks/block_0/checkpoints/step=60000.ckpt"
+            completed.parent.mkdir(parents=True)
+            completed.write_bytes(b"block-0")
+            partial = old / "fine/blocks/block_1/checkpoints/step=29999.ckpt"
+            partial.parent.mkdir(parents=True)
+            partial.write_bytes(b"partial")
+
+            linked_coarse, reused, records = materialize_resume_checkpoints(
+                resume_root=old,
+                output_root=new,
+                coarse_steps=30_000,
+                fine_steps=60_000,
+            )
+
+            self.assertTrue(linked_coarse.is_file())
+            self.assertTrue(Path(records[0]["destination"]).is_file())
+            self.assertTrue(linked_coarse.samefile(coarse))
+            self.assertEqual(sorted(reused), [0])
+            self.assertTrue(reused[0].samefile(completed))
+            self.assertFalse((new / "fine/blocks/block_1").exists())
+            self.assertEqual([row.get("block_id") for row in records[1:]], [0])
+
     def test_only_inventoried_coarse_and_block_checkpoints_are_removed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

@@ -1,0 +1,113 @@
+{
+  "budget": {
+    "type": "iterations",
+    "value": 40000
+  },
+  "canonical_sha256": "37d0d748e3a828e2b46f48b0870f3bc9f27f89b9033db70a9f903546084c388c",
+  "corrections": [
+    "restore_minimal_pytorch3d_and_benchmark_helper_pythonpath"
+  ],
+  "historical_attempts": {
+    "delete": false,
+    "rank": false,
+    "status": "DIAGNOSTIC_SUPERSEDED_FOR_EXECUTION"
+  },
+  "input_class": "rgb_colmap_only",
+  "method_id": "gsprior",
+  "plan_id": "m3m_gcp_100k_qualification_flex_v1",
+  "promotion_policy": {
+    "eligible_after_post_batch_review": true,
+    "metric_based_promotion": "FORBIDDEN",
+    "requires_retraining": false,
+    "requires_scientific_contract_unchanged": true
+  },
+  "retry_policy": {
+    "ambiguous_sigkill_without_telemetry": "one_diagnostic_repeat_with_telemetry",
+    "deterministic_oom_with_telemetry": "terminal_on_current_hardware_and_config",
+    "engineering_failure": "correct_and_use_new_attempt_id_without_per_method_audit",
+    "evaluation_only_failure": "repair_adapter_and_reuse_saved_model",
+    "metric_based_attempt_selection": "FORBIDDEN",
+    "scientific_contract_change": "stop_before_execution_and_batch_review"
+  },
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_100k_qualification_recipe_v1",
+  "scientific_contract": {
+    "evaluation_after_saved_model": true,
+    "formal_input_manifest": {
+      "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
+      "file_sha256": "c2cf9e951d95fee12a28d942e95c5c420df55bc364738b3f8737fed1c78bef3d",
+      "heldout_views": 314,
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/NATIVE_QUARTER_INPUT_MANIFEST.json",
+      "train_views": 2196
+    },
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "result_driven_tuning": "FORBIDDEN",
+    "truth_access": {
+      "gcp_training": false,
+      "lidar_training": false
+    }
+  },
+  "seed": 0,
+  "status": "REVIEW_CANDIDATE_NOT_EXECUTION_AUTHORIZED",
+  "training": {
+    "attempt_root_template": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qualification-100k-v1/gcp_100000_20260610/gsprior/attempt-{attempt_id}",
+    "benchmark_repo": "/root/autodl-tmp/code/GS-GCP-Benchmark",
+    "command": [
+      "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python",
+      "-B",
+      "{source_root}/train.py",
+      "-s",
+      "{dataset_root}",
+      "-m",
+      "{run_root}/model",
+      "--resolution",
+      "1",
+      "--iterations",
+      "40000",
+      "--test_iterations",
+      "20000",
+      "30000",
+      "40000",
+      "--save_iterations",
+      "20000",
+      "30000",
+      "40000",
+      "--checkpoint_iterations",
+      "20000",
+      "30000",
+      "40000",
+      "--quiet"
+    ],
+    "dataset_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train",
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "{repo}/compat/gsprior/pytorch3d_transforms_minimal_v1:{repo}/code/gcp",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "WANDB_MODE": "offline"
+    },
+    "interpreter": "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python",
+    "materializations": [],
+    "prior_root": "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/gcp_100000_20260610/train",
+    "resource_probe": {
+      "contract": "{repo}/configs/gs_gcp_resource_probe_contract_v2.json",
+      "enforce_contract_gates": false,
+      "gpu_indices": "0",
+      "script": "{repo}/code/gcp/run_with_resource_probe_v2.py",
+      "time_binary": "/usr/bin/time"
+    },
+    "source_binding": {
+      "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
+      "required_files_sha256": {
+        "scene/dataset_readers.py": "f0fadf22869091cafa7cec4cc14eb3e295f83c58bf5ad22c2557c3b3b9cee247",
+        "train.py": "44e434741b68075d7e3f92f2c71f471cab2c66e4d3bd129261e7701da03274f1"
+      },
+      "required_status": " M scene/dataset_readers.py\n M train.py",
+      "tree": "779073585e88b85217d522d0ab345365346cd17f"
+    },
+    "source_root": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/train-compat-v1",
+    "working_directory": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/dcb7c89fb6b60f068b440de45d064ecc7fbcba55/train-compat-v1"
+  }
+}
