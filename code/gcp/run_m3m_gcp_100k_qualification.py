@@ -256,9 +256,12 @@ def main() -> int:
         probe["time_binary"],
         "--failure_stage",
         "training",
-        "--",
-        *command,
     ]
+    if probe.get("timeout_seconds") is not None:
+        probe_command.extend(
+            ["--timeout_seconds", str(probe["timeout_seconds"])]
+        )
+    probe_command.extend(["--", *command])
     completed = subprocess.run(probe_command, env=env, check=False)
     terminal = {
         "schema": "m3m_gcp_100k_qualification_terminal_v1",

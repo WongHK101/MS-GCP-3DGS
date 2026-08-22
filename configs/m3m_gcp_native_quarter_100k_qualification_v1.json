@@ -4,7 +4,7 @@
     "one_post_100k_outcome_batch_review",
     "one_final_six_scene_protocol_freeze"
   ],
-  "canonical_sha256": "19bb634cacb75e8a7781286d52d05f9647cc051e6506d4d3676ba83566df58b4",
+  "canonical_sha256": "77ac8458879952f2f2124aa572cdb75a15994f92a2adf536b80b0c381661b99a",
   "method_order": [
     "3dgs_original",
     "2dgs",
@@ -54,8 +54,8 @@
       "path": "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/qgs.json"
     },
     {
-      "canonical_sha256": "ffe8472a124b52af797a94259ca44dd55e03d5f099ce8a47186c3843325f9c45",
-      "file_sha256": "15265d74d1914f1a9a703e13bee568b82f2eb27adf0c8871aadfb05e324143e6",
+      "canonical_sha256": "62ac388791afc9743c9cf689fdc1e120874cd45735f0cb57240337a576a1d68e",
+      "file_sha256": "5b731f8c8cd6c635b4097a2c5d688371e3ee73dbb22d5567465d4d8367b6d1f6",
       "method_id": "gsprior",
       "path": "configs/m3m_gcp_native_quarter_100k_qualification_recipes_v1/gsprior.json"
     },

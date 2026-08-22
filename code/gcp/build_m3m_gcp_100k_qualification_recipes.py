@@ -84,7 +84,11 @@ CORRECTIONS = {
         "checkpoint_and_exact_filter_sidecar_before_final_ply_serialization",
     ],
     "qgs": ["common_expandable_cuda_allocator"],
-    "gsprior": ["restore_minimal_pytorch3d_and_benchmark_helper_pythonpath"],
+    "gsprior": [
+        "restore_minimal_pytorch3d_and_benchmark_helper_pythonpath",
+        "lazy_rgb_residency_to_avoid_duplicate_tsdf_scene_preload",
+        "bounded_total_wall_clock_12h",
+    ],
     "sof": ["clean_attempt_with_complete_resource_telemetry"],
     "citygaussian_v2": [
         "replace_broken_free_gpu_polling_with_official_sequential_block_commands",
@@ -150,6 +154,18 @@ def corrected_command(method: str, spec: dict[str, Any]) -> list[str]:
         command.append("--defer_evaluation")
     elif method == "metrogs":
         command.extend(["--formal_input_manifest", FORMAL_MANIFEST])
+    elif method == "gsprior":
+        command = [
+            command[0],
+            "-B",
+            "{repo}/code/gcp/run_gsprior_lazy_preload_rescue.py",
+            "--source-root",
+            "{source_root}",
+            "--expected-train-sha256",
+            spec["files"]["train.py"],
+            "--",
+            *command[3:],
+        ]
     return command
 
 
@@ -219,6 +235,15 @@ def input_validation_dependencies(method: str) -> dict[str, str]:
                 "code/gcp/materialize_rade_gs_ply_from_checkpoint.py",
                 "code/gcp/smoke_rade_gs_serialization_rescue.py",
                 "docs/protocol_evidence/m3m_gcp_100k_rade_gs_final_serialization_rescue_v1.json",
+            ]
+        )
+    elif method == "gsprior":
+        paths.extend(
+            [
+                "code/gcp/run_gsprior_lazy_preload_rescue.py",
+                "code/gcp/smoke_gsprior_lazy_preload_equivalence.py",
+                "docs/protocol_evidence/m3m_gcp_100k_gsprior_lazy_preload_rescue_v1.json",
+                "docs/protocol_evidence/m3m_gcp_100k_gsprior_lazy_preload_smoke_v1.json",
             ]
         )
     if method in {"citygaussian_v2", "citygs_x"}:
@@ -300,6 +325,7 @@ def build_recipe(method: str) -> dict[str, Any]:
                     "gpu_indices": "0",
                     "time_binary": GNU_TIME,
                     "enforce_contract_gates": False,
+                    **({"timeout_seconds": 43_200} if method == "gsprior" else {}),
                 },
                 "materializations": (
                     [

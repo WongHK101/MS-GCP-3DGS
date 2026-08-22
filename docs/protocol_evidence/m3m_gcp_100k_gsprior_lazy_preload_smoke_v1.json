@@ -1,0 +1,73 @@
+{
+  "conclusion": "preload and lazy paths produce exact formal RGB/gray tensors",
+  "device": "cpu_with_tensor_cuda_identity_for_camera_metadata",
+  "formal_image_root": "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/gcp_100000_20260610/train/images",
+  "image_count": 3,
+  "rows": [
+    {
+      "checks": {
+        "formal_mask_none_both_paths": true,
+        "gray_direct_exact": true,
+        "gray_dtype_equal": true,
+        "gray_exact": true,
+        "gray_shape_equal": true,
+        "rgb_direct_exact": true,
+        "rgb_dtype_equal": true,
+        "rgb_exact": true,
+        "rgb_shape_equal": true
+      },
+      "gray_dtype": "torch.float32",
+      "gray_shape": [1, 1024, 1414],
+      "image": "DJI_20260610090923_0001_D.JPG",
+      "image_sha256": "5e1e062f5e1630294704baa4a366985d34423acf1e112c8b3264f91a9777a1d4",
+      "mode": "RGB",
+      "resolution": [1414, 1024],
+      "rgb_dtype": "torch.float32",
+      "rgb_shape": [3, 1024, 1414]
+    },
+    {
+      "checks": {
+        "formal_mask_none_both_paths": true,
+        "gray_direct_exact": true,
+        "gray_dtype_equal": true,
+        "gray_exact": true,
+        "gray_shape_equal": true,
+        "rgb_direct_exact": true,
+        "rgb_dtype_equal": true,
+        "rgb_exact": true,
+        "rgb_shape_equal": true
+      },
+      "gray_dtype": "torch.float32",
+      "gray_shape": [1, 1024, 1414],
+      "image": "DJI_20260610090926_0002_D.JPG",
+      "image_sha256": "b61b3d16113dfca8572b1361b808cbcddab0e5c1d093a90a40d679703f42ad08",
+      "mode": "RGB",
+      "resolution": [1414, 1024],
+      "rgb_dtype": "torch.float32",
+      "rgb_shape": [3, 1024, 1414]
+    },
+    {
+      "checks": {
+        "formal_mask_none_both_paths": true,
+        "gray_direct_exact": true,
+        "gray_dtype_equal": true,
+        "gray_exact": true,
+        "gray_shape_equal": true,
+        "rgb_direct_exact": true,
+        "rgb_dtype_equal": true,
+        "rgb_exact": true,
+        "rgb_shape_equal": true
+      },
+      "gray_dtype": "torch.float32",
+      "gray_shape": [1, 1024, 1414],
+      "image": "DJI_20260610090928_0003_D.JPG",
+      "image_sha256": "df8624d37a0b98a10b0fbc2cee811fa64902562e5421863c71d8b584e72065f3",
+      "mode": "RGB",
+      "resolution": [1414, 1024],
+      "rgb_dtype": "torch.float32",
+      "rgb_shape": [3, 1024, 1414]
+    }
+  ],
+  "schema": "m3m_gcp_gsprior_lazy_preload_equivalence_smoke_v1",
+  "status": "PASS"
+}

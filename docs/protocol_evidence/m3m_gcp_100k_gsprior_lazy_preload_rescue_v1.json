@@ -1,0 +1,55 @@
+{
+  "schema": "m3m_gcp_100k_gsprior_lazy_preload_rescue_v1",
+  "status": "APPROVED_BOUNDED_RETRY_PENDING_EXECUTION",
+  "scene": "gcp_100000_20260610",
+  "method_id": "gsprior",
+  "failed_attempt": {
+    "attempt_id": "20260822T191548Z-flex1",
+    "classification": "GPU_OOM_TSDF_SECOND_SCENE_DUPLICATE_RGB_PRELOAD",
+    "ranking_status": "UNRANKED_DIAGNOSTIC",
+    "returncode": 1,
+    "wall_seconds": 2104.667901009321,
+    "peak_gpu_memory_mib": 97181.0,
+    "gpu_memory_total_mib": 97887.0,
+    "cgroup_observed_peak_bytes": 83882315776,
+    "process_maximum_rss_kib": 75968644,
+    "host_oom_kill_delta": 0,
+    "artifacts": {
+      "qualification_launch_receipt.json": "e321217a1e797411e77d091bcec48a59f779794ff3dbe378072f564d373d7934",
+      "qualification_terminal_receipt.json": "36e769ab4e8d721779ab7470aaa6b055576013334305a9e63f4bed34a7ca5b62",
+      "telemetry/command.json": "e9a0c4f7050035c80bc14b4347777a76dd96a2b08e821a856f69af20c576115b",
+      "telemetry/resource_summary.json": "e905568e6b9faa681d5310b3d1a1214abaa7ffe3a917e5374c73fd5ea3721267",
+      "telemetry/gnu_time.txt": "7d9770d71e3384d9b8b134a2cb47d324e093f8a86f1a1852b4b2255d66acca7a",
+      "telemetry/stdout.log": "e6ac0f79160e88c31adfff88aa1c4e9f565b57e579644fc02850a4fa76453e85",
+      "telemetry/stderr.log": "4cee9cbaa881bab32a55d06737d48871f140528f2b129b998245398d6d1db0b5"
+    }
+  },
+  "root_cause": "run_tsdf_fusion constructs a second Scene while both Scenes preload all 2196 RGB images onto CUDA",
+  "review_decision": "APPROVE_GSPRIOR_LAZY_PRELOAD_RESCUE_V1",
+  "authorized_change": {
+    "preload_img": false,
+    "scope": "data_residency_only",
+    "unchanged": [
+      "formal dataset and view order",
+      "resolution",
+      "40000 iterations",
+      "seed",
+      "losses and densification",
+      "TSDF iterations and parameters",
+      "GCP LiDAR and held-out RGB remain inaccessible during training"
+    ]
+  },
+  "validation": {
+    "requirement": "exact preload/lazy RGB gray mask shape and dtype equivalence on formal images",
+    "status": "PASS",
+    "formal_image_count": 3,
+    "result_sha256": "b63f1b824fc3583ed367d53260100c71ca9a3473f3ab7c18cf6025dc5e31cd47"
+  },
+  "retry_limit": 1,
+  "wall_clock_limit_seconds": 43200,
+  "terminal_rules": {
+    "timeout": "NR_TIME_LIMIT_UNRANKED",
+    "repeat_oom": "NR_RESOURCE_UNRANKED",
+    "further_method_changes": "FORBIDDEN_WITHOUT_NEW_USER_DECISION"
+  }
+}

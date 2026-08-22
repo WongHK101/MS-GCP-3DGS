@@ -47,6 +47,22 @@ class QualificationRecipeTest(unittest.TestCase):
         self.assertIn("compat/gsprior", gsprior)
         self.assertIn("code/gcp", gsprior)
 
+    def test_gsprior_rescue_changes_only_residency_and_adds_12h_cap(self) -> None:
+        recipe = build_recipe("gsprior")
+        command = recipe["training"]["command"]
+        self.assertEqual(
+            command[2], "{repo}/code/gcp/run_gsprior_lazy_preload_rescue.py"
+        )
+        self.assertEqual(option_values(command, "--iterations"), ["40000"])
+        self.assertEqual(option_values(command, "--resolution"), ["1"])
+        self.assertEqual(
+            option_values(command, "--checkpoint_iterations"),
+            ["20000", "30000", "40000"],
+        )
+        self.assertEqual(
+            recipe["training"]["resource_probe"]["timeout_seconds"], 43_200
+        )
+
     def test_3dgs_is_reused_without_training(self) -> None:
         recipe = build_recipe("3dgs_original")
         self.assertIsNone(recipe["training"])

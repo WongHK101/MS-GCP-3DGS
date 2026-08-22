@@ -1,14 +1,20 @@
 {
   "benchmark_required_files_sha256": {
-    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34"
+    "code/gcp/materialize_m3m_gcp_100k_method_inputs.py": "44cd14f6f9bc0dc6c0996ed6fde966295d65c06a2bc6ef1b2bdeafb4ee664f34",
+    "code/gcp/run_gsprior_lazy_preload_rescue.py": "df275b2d7d63637d94f03e476abaa60dd2eb8b0c37a87ca999b1a340b05b658f",
+    "code/gcp/smoke_gsprior_lazy_preload_equivalence.py": "fa41b002192025688917082f544b377966e80e3807137a35c128cf4c8303ff4f",
+    "docs/protocol_evidence/m3m_gcp_100k_gsprior_lazy_preload_rescue_v1.json": "968a92f85f2a159fcc1f52acfbe91cafc7a6bb0132c86575a672247847ace82e",
+    "docs/protocol_evidence/m3m_gcp_100k_gsprior_lazy_preload_smoke_v1.json": "a38c4ec37635208be2bace5c786d2f27895e4805ddb9c537a557ac091b741cba"
   },
   "budget": {
     "type": "iterations",
     "value": 40000
   },
-  "canonical_sha256": "ffe8472a124b52af797a94259ca44dd55e03d5f099ce8a47186c3843325f9c45",
+  "canonical_sha256": "62ac388791afc9743c9cf689fdc1e120874cd45735f0cb57240337a576a1d68e",
   "corrections": [
-    "restore_minimal_pytorch3d_and_benchmark_helper_pythonpath"
+    "restore_minimal_pytorch3d_and_benchmark_helper_pythonpath",
+    "lazy_rgb_residency_to_avoid_duplicate_tsdf_scene_preload",
+    "bounded_total_wall_clock_12h"
   ],
   "formal_input_manifest": {
     "canonical_sha256": "5b4fe34743310bd2225feb2dd236200606be933002fec19d2c9ecb9f3ba6769d",
@@ -96,7 +102,12 @@
     "command": [
       "/root/autodl-tmp/envs/m3m-gcp-native-quarter/gsprior/py310-torch2.7.1-cu128-v1/bin/python",
       "-B",
-      "{source_root}/train.py",
+      "{repo}/code/gcp/run_gsprior_lazy_preload_rescue.py",
+      "--source-root",
+      "{source_root}",
+      "--expected-train-sha256",
+      "44e434741b68075d7e3f92f2c71f471cab2c66e4d3bd129261e7701da03274f1",
+      "--",
       "-s",
       "{dataset_root}",
       "-m",
@@ -137,7 +148,8 @@
       "enforce_contract_gates": false,
       "gpu_indices": "0",
       "script": "{repo}/code/gcp/run_with_resource_probe_v2.py",
-      "time_binary": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time"
+      "time_binary": "/root/autodl-tmp/tools/gs-gcp-v13/gnu-time/ubuntu-jammy-time-1.9-v1/root/usr/bin/time",
+      "timeout_seconds": 43200
     },
     "source_binding": {
       "commit": "dcb7c89fb6b60f068b440de45d064ecc7fbcba55",
