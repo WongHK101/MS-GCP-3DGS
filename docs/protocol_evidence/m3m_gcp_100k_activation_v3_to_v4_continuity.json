@@ -1,0 +1,255 @@
+{
+  "canonical_sha256": "41e049c311ff0c2624265d543b8911dd1711e02c09451e13abdb66ae8a98c8af",
+  "inherited_ready_model": {
+    "formal_status": "READY_FOR_EVALUATION",
+    "method_id": "3dgs_original",
+    "model_bytes": 2340432588,
+    "model_sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5",
+    "retrain_allowed": false
+  },
+  "inherited_terminal_outcomes": [
+    {
+      "failure_sha256": "95c71f2c4099ffffa8fee5e3deaa69587d9d31e8ef50ab9d7499e1e46317e4bb",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "2dgs",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "d4263804b5abbe2b87ce92bbd1ad7ec063fbd000e42d310902de3a7392c1b1d8",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "pgsr",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "bb38657ab3b12c03c6825e7b0298f5b1b5236a7399e8cfe64c27e48ee6917c14",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "rade_gs",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "cb03f36db0bc993d0073036f02e67f908750ca765783e6143cfe071c8d65a9c7",
+      "formal_attempt_consumed": true,
+      "formal_status": "OOM_UNRANKED",
+      "method_id": "qgs",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "1ac01b94f83e472e17c28136af3434b62a21fdb7fa300f555e7b276b5a97cef0",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "gsprior",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "eae8691fde72ef32f6fdce95951444721a633be41684ce692606a060dc64e87b",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "sof",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "6bb1700552a7561e060dc11661834127eee1005a789348a9d258f8920184b951",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "citygaussian_v2",
+      "retry_allowed": false
+    },
+    {
+      "failure_sha256": "db1b339ee8c9adcea4ed41bcd2fae95e7bf23a0c92be0dfc1372e6028d8aad13",
+      "formal_attempt_consumed": true,
+      "formal_status": "FAILED_UNRANKED",
+      "method_id": "citygs_x",
+      "retry_allowed": false
+    }
+  ],
+  "metrogs_prior": {
+    "merged_ply_sha256": "4e2d4507469befa042240b8e8c69d1a4676973431710c703480b1a4af991c3fd",
+    "pass_marker_sha256": "179be7f4cef00dcd6161c029c470d98f950ea662106670049f23380be9a060ae",
+    "phase_success_sha256": "ab37a25e3d9ef26e4744bb1c18cfb9dd6403caf19455037eff927af0228891ba",
+    "rerun_allowed": false,
+    "status": "PASS",
+    "training_priors_sha256": "d07ab62ed15d8850f2a5878b466c2ab4321aa8b4b19c3547d9dbbde738f991f9"
+  },
+  "metrogs_training_prechild_rejection": {
+    "cause": "TRAINING_CONTEXT_REUSED_TRAINING_SOURCE_ROOT_WHILE_REHASHING_PRIOR_COMMAND",
+    "child_started": false,
+    "console_sha256": "266e1880207bcc687246b50b74f4b5d9f93a617febf5fe9389e93870e3a4c88b",
+    "failure_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/failure.json",
+    "formal_attempt_consumed": false,
+    "retry_allowed_only_after_guard_fix_and_successor_review": true,
+    "run_root": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/seed0-v2",
+    "run_root_created": false
+  },
+  "previous_reviewed_checkout": {
+    "commit": "e33368db9333f826a3e808ff00c437c1a6c63b82",
+    "review_task_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b",
+    "review_verdict": "PASS_100K_TIME_SPACE_EXECUTION_PLAN_V1",
+    "tree": "4620a434bd081af9274fdfc37dbb0d673636edfc"
+  },
+  "remote_artifacts": [
+    {
+      "bytes": 1964,
+      "canonical_sha256": "4ee6c89d26adcb19ea7571ddcead1f7355f3c43e9c5e8875c5980f6c4b25cb9d",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v3.json",
+      "role": "activation_v3",
+      "sha256": "2645864d7680833809a712c7e80967193cad1bbe3f4398e3d3fe5dbffefe72b2"
+    },
+    {
+      "bytes": 2340432588,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/3dgs-original/gcp_100000_20260610/seed0-30k-20260810T175634Z/model/point_cloud/iteration_30000/point_cloud.ply",
+      "role": "3dgs_reused_model",
+      "sha256": "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5"
+    },
+    {
+      "bytes": 2492,
+      "canonical_sha256": "14e343178bcb058f931bf444b1f208009f660c0d446f2b717ee5e7f5e9b0f0ac",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/2dgs/evidence/training/failure.json",
+      "role": "2dgs_failure",
+      "sha256": "95c71f2c4099ffffa8fee5e3deaa69587d9d31e8ef50ab9d7499e1e46317e4bb"
+    },
+    {
+      "bytes": 2570,
+      "canonical_sha256": "e0da4fc511455f5f36bf12d965b00f8de683e4a31dc67178112a4f23a6a75f01",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/pgsr/evidence/training/failure.json",
+      "role": "pgsr_failure",
+      "sha256": "d4263804b5abbe2b87ce92bbd1ad7ec063fbd000e42d310902de3a7392c1b1d8"
+    },
+    {
+      "bytes": 2605,
+      "canonical_sha256": "9498f195a44a7a1c8c8e56fc3153a3473abe5871be8318729b608f6dde880985",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/rade_gs/evidence/training/failure.json",
+      "role": "rade_gs_failure",
+      "sha256": "bb38657ab3b12c03c6825e7b0298f5b1b5236a7399e8cfe64c27e48ee6917c14"
+    },
+    {
+      "bytes": 2376,
+      "canonical_sha256": "991ae62ad8adcc8a111f2bf21b26bc8e0ccf7dd608a545af07e80efd03d50b9a",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/qgs/evidence/training/failure.json",
+      "role": "qgs_failure",
+      "sha256": "cb03f36db0bc993d0073036f02e67f908750ca765783e6143cfe071c8d65a9c7"
+    },
+    {
+      "bytes": 2539,
+      "canonical_sha256": "2e0b82b876bacb292271277219bc39d60571f22df1a1385ad892ad07212abde3",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/gsprior/evidence/training/failure.json",
+      "role": "gsprior_failure",
+      "sha256": "1ac01b94f83e472e17c28136af3434b62a21fdb7fa300f555e7b276b5a97cef0"
+    },
+    {
+      "bytes": 2706,
+      "canonical_sha256": "017e8fda6dd9855ac0e3c8a2887c0a5ff3e8e80e9c4e81663b65b696111566f5",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/sof/evidence/training/failure.json",
+      "role": "sof_failure",
+      "sha256": "eae8691fde72ef32f6fdce95951444721a633be41684ce692606a060dc64e87b"
+    },
+    {
+      "bytes": 2712,
+      "canonical_sha256": "15fdc0b232e84f1fd1017858ba7aa2b2ea8869fa2912ca5ea4469e1dd84d5208",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygaussian_v2/evidence/training/failure.json",
+      "role": "citygaussian_v2_failure",
+      "sha256": "6bb1700552a7561e060dc11661834127eee1005a789348a9d258f8920184b951"
+    },
+    {
+      "bytes": 2906,
+      "canonical_sha256": "a0fc28032150cf7b243341c105edc200798d50ca6e66707dc25c7f637720dfc9",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/citygs_x/evidence/training/failure.json",
+      "role": "citygs_x_failure",
+      "sha256": "db1b339ee8c9adcea4ed41bcd2fae95e7bf23a0c92be0dfc1372e6028d8aad13"
+    },
+    {
+      "bytes": 624757,
+      "canonical_sha256": "63f2a91beb9c249048510eb63be370ea9ee03e467be3493f92bead7a655d44d1",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/prior/phase_success.json",
+      "role": "metrogs_prior_phase_success",
+      "sha256": "ab37a25e3d9ef26e4744bb1c18cfb9dd6403caf19455037eff927af0228891ba"
+    },
+    {
+      "bytes": 3701,
+      "canonical_sha256": "a350aff8000fa7fc67c08a9d1bd99b1780a76fc5bb9d666408a59679fbd97949",
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/prior/environment.json",
+      "role": "metrogs_prior_environment",
+      "sha256": "daafb5590b6bd2c1ca5eca7bde41d2686ea104979c07c6e7080a193d03b0c90b"
+    },
+    {
+      "bytes": 1262400,
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_100000_20260610/training_priors.json",
+      "role": "metrogs_training_priors",
+      "sha256": "d07ab62ed15d8850f2a5878b466c2ab4321aa8b4b19c3547d9dbbde738f991f9"
+    },
+    {
+      "bytes": 348,
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_100000_20260610/TRAINING_PRIORS_PASS",
+      "role": "metrogs_prior_pass_marker",
+      "sha256": "179be7f4cef00dcd6161c029c470d98f950ea662106670049f23380be9a060ae"
+    },
+    {
+      "bytes": 70521316,
+      "path": "/root/autodl-tmp/datasets/M3M-GCP-metrogs-prior-v2/gcp_100000_20260610/additional_points/metrogs_pi3_merged.ply",
+      "role": "metrogs_prior_merged_ply",
+      "sha256": "4e2d4507469befa042240b8e8c69d1a4676973431710c703480b1a4af991c3fd"
+    },
+    {
+      "bytes": 583,
+      "path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/gcp_100000_20260610/metrogs/evidence/training/guard-console.log",
+      "role": "metrogs_training_prechild_guard_console",
+      "sha256": "266e1880207bcc687246b50b74f4b5d9f93a617febf5fe9389e93870e3a4c88b"
+    }
+  ],
+  "repository_artifacts": [
+    {
+      "bytes": 16195,
+      "canonical_sha256": "ef969eb6112980bdcbfb51a8d4dfd04ad3996e132ac43ec748b3dfe21f72c2af",
+      "path": "configs/m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3.json",
+      "role": "execution_plan_v3",
+      "sha256": "11930b292b3212485377af59aa822b6b3ddb30d332f6148b937c0f8ac809de09"
+    },
+    {
+      "bytes": 3966,
+      "canonical_sha256": "02ac6c54b37cc2630286d9066701bfe5dbd4f574f2321467d58350751e7993ee",
+      "path": "configs/m3m_gcp_native_quarter_100k_recipe_manifest_v3.json",
+      "role": "recipe_manifest_v3",
+      "sha256": "0789f8d8f5a145ab8c531c0a5b34d211bc7e7c2c5018552c48ff5687c37dc4d2"
+    },
+    {
+      "bytes": 4213,
+      "path": "docs/M3M_GCP_100K_TEN_METHOD_TIME_SPACE_EXECUTION_PLAN_V3.md",
+      "role": "execution_note_v3",
+      "sha256": "e79ee2f2606427d6299c98e2a3cfc2eb18ebd0400f1e7dba081f1a2b50a6eda1"
+    }
+  ],
+  "reviewer_ruling": {
+    "exact_commit_tree_review_required": true,
+    "full_guard_100k_lidar_three_track_regression_required": true,
+    "new_activation_required": "activation_v4",
+    "prechild_attempt_consumed": false,
+    "thread_id": "019ff12c-cb29-7cb2-8fb6-1d82c5f8c54b"
+  },
+  "scene": "gcp_100000_20260610",
+  "schema": "m3m_gcp_100k_activation_continuity_v2",
+  "sealed_at_utc": "2026-08-22T10:43:58.461279Z",
+  "status": "SEALED_V3_TO_V4_GUARD_CONTINUITY",
+  "transition_policy": {
+    "3dgs_retraining_forbidden": true,
+    "activation_v3_immutable": true,
+    "activation_v4_path": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2/activation_v4.json",
+    "continued_run_namespace": "/root/autodl-tmp/runs/m3m-gcp-native-quarter/formal-100k-v2",
+    "final_attempt_freeze_authorization": "activation_v4_only",
+    "inherited_failed_methods_forbidden_to_launch": [
+      "2dgs",
+      "citygaussian_v2",
+      "citygs_x",
+      "gsprior",
+      "pgsr",
+      "qgs",
+      "rade_gs",
+      "sof"
+    ],
+    "manual_guard_bypass_forbidden": true,
+    "metrogs_prior_rerun_forbidden": true,
+    "metrogs_training_is_only_unfinished_attempt": true,
+    "remote_artifacts_must_remain_byte_identical": true
+  }
+}

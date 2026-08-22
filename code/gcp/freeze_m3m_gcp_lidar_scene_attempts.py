@@ -16,7 +16,7 @@ from m3m_gcp_lidar_artifacts import (
     sha256_file,
     validate_failure_evidence_file,
 )
-from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_activation_v4_continuity import validate_continuity_for_plan
 from m3m_gcp_100k_source_binding_correction import (
     validate_source_binding_correction,
 )
@@ -37,8 +37,10 @@ def validate_frozen_100k_paths(
         raise FileNotFoundError(plan_path)
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     if (
-        plan.get("schema")
-        != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3"
+        plan.get("schema") not in {
+            "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
+            "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4",
+        }
         or plan.get("scene") != scene
         or plan.get("canonical_sha256") != canonical_sha256(plan)
         or plan.get("execution_authorized") is not False
@@ -48,7 +50,7 @@ def validate_frozen_100k_paths(
     if plan_path.parent.name != "configs":
         raise RuntimeError("100K execution plan must be inside the repository configs directory")
     repo = plan_path.parents[1]
-    validate_activation_continuity(repo=repo, plan=plan)
+    validate_continuity_for_plan(repo=repo, plan=plan)
     validate_source_binding_correction(repo=repo, plan=plan)
     expected_plan = (repo / str(freeze.get("execution_plan_path", ""))).resolve()
     if plan_path != expected_plan:

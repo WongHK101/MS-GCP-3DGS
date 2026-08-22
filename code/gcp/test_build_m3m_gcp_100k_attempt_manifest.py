@@ -113,9 +113,9 @@ class AttemptManifestBuilderTest(unittest.TestCase):
             plan["canonical_sha256"] = canonical_sha256(plan)
             plan_path.write_text(json.dumps(plan), encoding="utf-8")
             with mock.patch(
-                "build_m3m_gcp_100k_attempt_manifest.validate_activation_continuity"
+                "build_m3m_gcp_100k_attempt_manifest.validate_continuity_for_plan"
             ), mock.patch(
-                "freeze_m3m_gcp_lidar_scene_attempts.validate_activation_continuity"
+                "freeze_m3m_gcp_lidar_scene_attempts.validate_continuity_for_plan"
             ), mock.patch(
                 "build_m3m_gcp_100k_attempt_manifest.validate_source_binding_correction"
             ), mock.patch(

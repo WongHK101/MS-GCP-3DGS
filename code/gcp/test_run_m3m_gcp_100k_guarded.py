@@ -810,14 +810,60 @@ class Guarded100KTest(unittest.TestCase):
         evidence_root = self.root / "city-prior-evidence"
         dataset = self.root / "city-dataset"
         dataset.mkdir()
+        prior_source = self.root / "city-prior-source"
+        subprocess.run(["git", "init", "-q", str(prior_source)], check=True)
+        (prior_source / "prior_tool.py").write_text("# frozen prior tool\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(prior_source), "add", "."], check=True)
+        subprocess.run(
+            [
+                "git", "-C", str(prior_source), "-c", "user.name=Test", "-c",
+                "user.email=test@example.invalid", "commit", "-qm", "prior source",
+            ],
+            check=True,
+        )
+        prior_commit = subprocess.check_output(
+            ["git", "-C", str(prior_source), "rev-parse", "HEAD"], text=True
+        ).strip()
+        prior_tree = subprocess.check_output(
+            ["git", "-C", str(prior_source), "rev-parse", "HEAD^{tree}"], text=True
+        ).strip()
+        training_source = self.root / "different-training-source"
         recipe = {
             "method_id": "citygaussian_v2",
             "budget": {"type": "official_matrixcity_aerial_4x4"},
             "authorized_evidence_root": str(evidence_root),
-            "phase_commands": {"prior": ["prior-tool", "{dataset_root}"]},
+            "phase_commands": {"prior": [
+                "prior-tool", "{source_root}", "{dataset_root}", "{prior_root}"
+            ]},
+            "phase_roots": {
+                "prior": {
+                    "dataset_root": str(dataset),
+                    "prior_root": str(dataset),
+                },
+                "training": {
+                    "dataset_root": str(dataset),
+                    "prior_root": str(dataset),
+                },
+            },
+            "source_bindings": {"prior": {
+                "root": str(prior_source),
+                "commit": prior_commit,
+                "tree": prior_tree,
+                "required_status": "",
+                "required_files_sha256": {
+                    "prior_tool.py": sha256_file(prior_source / "prior_tool.py")
+                },
+            }},
         }
-        replacements = {"dataset_root": str(dataset)}
-        command = ["prior-tool", str(dataset)]
+        replacements = {
+            "repo": str(self.repo),
+            "source_root": str(training_source),
+            "dataset_root": str(dataset),
+            "prior_root": str(dataset),
+            "run_root": str(self.root / "run"),
+            "packet_set_root": "",
+        }
+        command = ["prior-tool", str(prior_source), str(dataset), str(dataset)]
         environment_path = evidence_root / "prior" / "environment.json"
         write_success_environment(
             environment_path, method_id="citygaussian_v2", phase="prior"
@@ -909,6 +955,50 @@ class Guarded100KTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "artifact changed"):
                 validate_prior_phase_success(
                     recipe=recipe,
+                    recipe_path=self.recipe,
+                    run_root=self.root / "run",
+                    dataset_root=dataset,
+                    prior_root=dataset,
+                    replacements=replacements,
+                )
+            (dataset / depth_rows[0]["relative_path"]).write_bytes(b"depth-0")
+
+            invalid_command = dict(success)
+            invalid_command["command_sha256"] = "0" * 64
+            invalid_command["canonical_sha256"] = canonical_sha256(invalid_command)
+            write_json(evidence_root / "prior" / "phase_success.json", invalid_command)
+            with self.assertRaisesRegex(RuntimeError, "exact successful prior phase"):
+                validate_prior_phase_success(
+                    recipe=recipe,
+                    recipe_path=self.recipe,
+                    run_root=self.root / "run",
+                    dataset_root=dataset,
+                    prior_root=dataset,
+                    replacements=replacements,
+                )
+
+            write_json(evidence_root / "prior" / "phase_success.json", success)
+            invalid_root_recipe = json.loads(json.dumps(recipe))
+            invalid_root = self.root / "wrong-prior-root"
+            invalid_root.mkdir()
+            invalid_root_recipe["phase_roots"]["prior"]["prior_root"] = str(invalid_root)
+            with self.assertRaisesRegex(RuntimeError, "prior manifest"):
+                validate_prior_phase_success(
+                    recipe=invalid_root_recipe,
+                    recipe_path=self.recipe,
+                    run_root=self.root / "run",
+                    dataset_root=dataset,
+                    prior_root=dataset,
+                    replacements=replacements,
+                )
+
+            invalid_status_recipe = json.loads(json.dumps(recipe))
+            invalid_status_recipe["source_bindings"]["prior"]["required_status"] = (
+                " M prior_tool.py"
+            )
+            with self.assertRaisesRegex(RuntimeError, "source runtime status"):
+                validate_prior_phase_success(
+                    recipe=invalid_status_recipe,
                     recipe_path=self.recipe,
                     run_root=self.root / "run",
                     dataset_root=dataset,

@@ -32,7 +32,7 @@ from m3m_gcp_100k_phase_products import (
     validate_npz,
     validate_torch_checkpoint,
 )
-from m3m_gcp_100k_continuity import validate_activation_continuity
+from m3m_gcp_100k_activation_v4_continuity import validate_continuity_for_plan
 from m3m_gcp_100k_source_binding_correction import (
     validate_source_binding_correction,
 )
@@ -382,7 +382,11 @@ def validate_activation_and_recipe(
         raise RuntimeError("checkout is not the exact reviewed tree")
     if git_value(repo, "status", "--porcelain"):
         raise RuntimeError("reviewed checkout is dirty")
-    if plan.get("schema") != "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3":
+    plan_schema = plan.get("schema")
+    if plan_schema not in {
+        "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v3",
+        "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4",
+    }:
         raise RuntimeError("execution plan schema mismatch")
     expected_activation_path = Path(
         str(plan.get("activation_manifest_path", ""))
@@ -396,10 +400,11 @@ def validate_activation_and_recipe(
     if plan.get("canonical_sha256") != canonical_sha256(plan):
         raise RuntimeError("execution plan canonical SHA mismatch")
     validate_superseded_activation_receipt(repo=repo, plan=plan)
-    validate_activation_continuity(
+    validate_continuity_for_plan(
         repo=repo,
         plan=plan,
         method_id=method_id,
+        phase=phase,
         require_pgsr_absent=(method_id == "pgsr" and phase == "training"),
     )
     if plan.get("method_order") != METHOD_ORDER:
@@ -463,10 +468,20 @@ def validate_activation_and_recipe(
     ):
         raise RuntimeError("execution plan capacity gates mismatch")
     closure = plan.get("execution_closure", {})
+    if plan_schema == "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4":
+        activation_builder_path = (
+            repo / "code/gcp/build_m3m_gcp_lidar_100k_activation_v4.py"
+        )
+        continuity_validator_path = (
+            repo / "code/gcp/m3m_gcp_100k_activation_v4_continuity.py"
+        )
+    else:
+        activation_builder_path = repo / "code/gcp/build_m3m_gcp_lidar_100k_activation.py"
+        continuity_validator_path = repo / "code/gcp/m3m_gcp_100k_continuity.py"
     for label, expected_path in (
         (
             "activation_builder",
-            repo / "code/gcp/build_m3m_gcp_lidar_100k_activation.py",
+            activation_builder_path,
         ),
         (
             "attempt_manifest_builder",
@@ -474,7 +489,7 @@ def validate_activation_and_recipe(
         ),
         (
             "activation_continuity_validator",
-            repo / "code/gcp/m3m_gcp_100k_continuity.py",
+            continuity_validator_path,
         ),
         (
             "source_binding_correction_validator",
@@ -494,6 +509,25 @@ def validate_activation_and_recipe(
         path = bound_path(repo, str(row.get("path", ""))).resolve()
         if path != expected_path or not path.is_file() or sha256_file(path) != row.get("sha256"):
             raise RuntimeError(f"execution plan {label} identity mismatch")
+    if plan_schema == "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4":
+        for label, expected_path in (
+            (
+                "activation_continuity_builder",
+                repo / "code/gcp/build_m3m_gcp_100k_activation_v4_continuity.py",
+            ),
+            (
+                "execution_plan_v4_builder",
+                repo / "code/gcp/build_m3m_gcp_100k_execution_plan_v4.py",
+            ),
+        ):
+            row = closure.get(label, {})
+            path = bound_path(repo, str(row.get("path", ""))).resolve()
+            if (
+                path != expected_path
+                or not path.is_file()
+                or sha256_file(path) != row.get("sha256")
+            ):
+                raise RuntimeError(f"execution plan {label} identity mismatch")
     if closure.get("exact_review_verdict_required") != REQUIRED_VERDICT:
         raise RuntimeError("execution plan exact review verdict mismatch")
     if (
@@ -515,6 +549,14 @@ def validate_activation_and_recipe(
         is not True
     ):
         raise RuntimeError("execution plan fresh-run-root closure mismatch")
+    if (
+        plan_schema == "m3m_gcp_native_quarter_100k_ten_method_execution_plan_v4"
+        and closure.get(
+            "prior_phase_context_reconstructed_from_frozen_phase_bindings"
+        )
+        is not True
+    ):
+        raise RuntimeError("execution plan prior-phase reconstruction closure mismatch")
     preparation = plan.get("preparation", {}).get("per_method_input_evidence", {})
     preparation_path = Path(str(preparation.get("path", "")))
     if not preparation_path.is_absolute() or not preparation_path.is_file():
@@ -1509,6 +1551,33 @@ def validate_prior_phase_success(
 ) -> None:
     if "prior" not in recipe.get("phase_commands", {}):
         return
+    validate_phase_roots(
+        recipe,
+        phase="training",
+        dataset_root=dataset_root,
+        prior_root=prior_root,
+    )
+    prior_binding = recipe.get("source_bindings", {}).get("prior")
+    prior_roots = recipe.get("phase_roots", {}).get("prior")
+    if not isinstance(prior_binding, dict) or not isinstance(prior_roots, dict):
+        raise RuntimeError("training requires frozen prior phase roots and source binding")
+    prior_source_root = Path(str(prior_binding.get("root", "")))
+    prior_dataset_root = Path(str(prior_roots.get("dataset_root", "")))
+    prior_prior_root = Path(str(prior_roots.get("prior_root", "")))
+    if not all(
+        path.is_absolute()
+        for path in (prior_source_root, prior_dataset_root, prior_prior_root)
+    ):
+        raise RuntimeError("training requires absolute frozen prior phase roots")
+    validate_source_binding(recipe, prior_source_root, "prior")
+    prior_replacements = dict(replacements)
+    prior_replacements.update(
+        {
+            "source_root": str(prior_source_root.resolve()),
+            "dataset_root": str(prior_dataset_root.resolve()),
+            "prior_root": str(prior_prior_root.resolve()),
+        }
+    )
     path = (
         Path(str(recipe.get("authorized_evidence_root", "")))
         / "prior"
@@ -1516,11 +1585,11 @@ def validate_prior_phase_success(
     )
     payload = read_bound_json(path, label="prior phase success")
     expected_command = [
-        item.format(**replacements)
+        item.format(**prior_replacements)
         for item in recipe.get("phase_commands", {}).get("prior", [])
     ]
     expected_products = validate_prior_outputs(
-        recipe, dataset_root=dataset_root, prior_root=prior_root
+        recipe, dataset_root=prior_dataset_root, prior_root=prior_prior_root
     )
     if (
         payload.get("schema") != "m3m_gcp_100k_phase_success_v2"
