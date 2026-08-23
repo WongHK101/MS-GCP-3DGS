@@ -28,9 +28,9 @@ FORMAL_MANIFEST_CANONICAL_SHA256 = "5b4fe34743310bd2225feb2dd236200606be933002fe
 MOGE_WEIGHT_SHA256 = "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01"
 PI3_WEIGHT_SHA256 = "33580e4702ac671558aedeab1148fd08118f7ce45bdbeb99f3e3cf340062875d"
 SPARSE_SHA256 = {
-    "cameras.bin": "a627e4ecd29ea1afe44937b56719d0cb5f3f4d20b8b368542db64a395306567f",
-    "images.bin": "c0ce229da0adbe69f4796d749ed071e1cb5a87d50774c81d22dc1c369590199d",
-    "points3D.bin": "e0f7bb4d9e39ad433fb9778c1bd86bc76bb0fc303b5389791a448f743f1cb955",
+    "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
+    "images.bin": "825fb831886d96bb50d7d25f110909d6938a4a80afb29d3f047873d03d18dbe5",
+    "points3D.bin": "fcbb06d2b52770281b2b2c88f6d1a9deb5b2435e4578e63ca77bb8f197c37e7f",
 }
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
@@ -41,6 +41,12 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(4 * 1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def require_sparse_identity(actual: dict[str, str], *, source: str) -> None:
+    """Reject any MetroGS sparse model other than the formal prepared input."""
+    if actual != SPARSE_SHA256:
+        raise RuntimeError(f"MetroGS {source} sparse identity mismatch")
 
 
 def git_output(repo: Path, *args: str) -> str:
@@ -379,8 +385,9 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("MetroGS prior heldout-view count mismatch")
     if not str(prior_input.get("image_transform", "")).startswith("none;"):
         raise RuntimeError("MetroGS prior did not preserve native-quarter pixels")
-    if prior_input.get("sparse_hashes") != SPARSE_SHA256:
-        raise RuntimeError("MetroGS track-closed sparse identity mismatch")
+    require_sparse_identity(
+        prior_input.get("sparse_hashes", {}), source="track-closed"
+    )
     if prior.get("moge", {}).get("weight_sha256") != MOGE_WEIGHT_SHA256:
         raise RuntimeError("MetroGS MoGe weight identity mismatch")
     moge = prior.get("moge", {})
@@ -431,8 +438,7 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     actual_sparse = {
         name: sha256(dataset / "sparse" / "0" / name) for name in SPARSE_SHA256
     }
-    if actual_sparse != SPARSE_SHA256:
-        raise RuntimeError("MetroGS sparse files changed after prior qualification")
+    require_sparse_identity(actual_sparse, source="on-disk")
 
     official = yaml.safe_load(official_config.read_text(encoding="utf-8"))
     require_official_semantics(official)

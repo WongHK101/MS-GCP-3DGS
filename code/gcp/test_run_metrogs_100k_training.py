@@ -8,10 +8,26 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from run_metrogs_100k_training import cleanup_rank_checkpoint, sha256
+from run_metrogs_100k_training import (
+    SPARSE_SHA256,
+    cleanup_rank_checkpoint,
+    require_sparse_identity,
+    sha256,
+)
 
 
 class MetroGS100KTrainingTest(unittest.TestCase):
+    def test_formal_sparse_identity_is_accepted(self) -> None:
+        require_sparse_identity(dict(SPARSE_SHA256), source="test")
+
+    def test_tampered_sparse_identity_is_rejected(self) -> None:
+        tampered = dict(SPARSE_SHA256)
+        tampered["images.bin"] = "0" * 64
+        with self.assertRaisesRegex(
+            RuntimeError, "MetroGS test sparse identity mismatch"
+        ):
+            require_sparse_identity(tampered, source="test")
+
     def test_rank_checkpoint_is_inventoried_and_merged_is_retained(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             model = Path(directory).resolve() / "model"
