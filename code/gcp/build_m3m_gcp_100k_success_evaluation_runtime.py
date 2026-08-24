@@ -167,7 +167,7 @@ METHODS: dict[str, dict[str, Any]] = {
         "camera_root": "shared.default_camera_root",
         "input_class": "rgb_colmap_external_geometry_prior",
         "environment_variables": {"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"},
-        "appearance_training_camera_root": str(FORMAL_ROOT / "train"),
+        "appearance_training_camera_root": str(LIDAR_CAMERA_ROOT),
     },
     "gsprior": {
         "display_name": "GSPrior",
