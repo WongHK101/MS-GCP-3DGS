@@ -14,9 +14,12 @@ from build_m3m_gcp_100k_success_geometry_plan import (
 )
 from m3m_gcp_100k_geometry_paths import (
     LIDAR_FULL_TRAIN_PACKET_ROOT_NAME,
+    LIDAR_HELDOUT_CANDIDATE_PACKET_ROOT_NAME,
     formal_input_manifest_canonical_sha256,
     lidar_full_train_packet_manifest,
     lidar_full_train_packet_root,
+    lidar_heldout_candidate_packet_manifest,
+    lidar_heldout_candidate_packet_root,
 )
 
 
@@ -45,6 +48,18 @@ class GeometryRuntimeBindingTests(unittest.TestCase):
         self.assertEqual(packet_root.name, LIDAR_FULL_TRAIN_PACKET_ROOT_NAME)
         self.assertEqual(
             lidar_full_train_packet_manifest(run_root),
+            packet_root / "depth_export_manifest.json",
+        )
+
+    def test_heldout_candidate_uses_a_separate_fixed_namespace(self) -> None:
+        run_root = Path("/tmp/promoted-run")
+        packet_root = lidar_heldout_candidate_packet_root(run_root)
+        self.assertEqual(
+            packet_root.name, LIDAR_HELDOUT_CANDIDATE_PACKET_ROOT_NAME
+        )
+        self.assertNotEqual(packet_root, lidar_full_train_packet_root(run_root))
+        self.assertEqual(
+            lidar_heldout_candidate_packet_manifest(run_root),
             packet_root / "depth_export_manifest.json",
         )
 

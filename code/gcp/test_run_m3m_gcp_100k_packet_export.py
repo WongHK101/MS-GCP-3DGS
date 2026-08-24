@@ -27,6 +27,14 @@ class PacketExport100KTest(unittest.TestCase):
     def test_geometry_camera_only_is_lidar_only_and_method_scoped(self) -> None:
         self.assertTrue(uses_geometry_camera_only("3dgs_original", "lidar"))
         self.assertTrue(uses_geometry_camera_only("rade_gs", "lidar"))
+        self.assertTrue(
+            uses_geometry_camera_only(
+                "3dgs_original", "lidar_heldout_candidate"
+            )
+        )
+        self.assertTrue(
+            uses_geometry_camera_only("rade_gs", "lidar_heldout_candidate")
+        )
         self.assertFalse(uses_geometry_camera_only("3dgs_original", "gcp"))
         self.assertFalse(uses_geometry_camera_only("pgsr", "lidar"))
         self.assertFalse(uses_geometry_camera_only("citygs_x", "lidar"))

@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import sys
+import tempfile
 import types
 import unittest
+from pathlib import Path
 
 
 if "laspy" not in sys.modules and importlib.util.find_spec("laspy") is None:
@@ -26,6 +29,7 @@ if "shapely" not in sys.modules and importlib.util.find_spec("shapely") is None:
 
 from evaluate_m3m_gcp_lidar_success_v1 import (
     canonical_sha256,
+    expected_packet_names,
     reference_cache_binding_mode,
 )
 
@@ -89,6 +93,35 @@ class ReferenceCacheBindingTest(unittest.TestCase):
         expected = copy.deepcopy(self.binding)
         expected["contract"]["sha256"] = "new"
         self.assertIsNone(reference_cache_binding_mode(self.binding, expected))
+
+    def test_surface_tracks_bind_exact_train_and_heldout_names(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            split_path = Path(directory) / "split.json"
+            split_path.write_text(
+                json.dumps(
+                    {
+                        "scenes": [
+                            {
+                                "scene": "gcp_100000_20260610",
+                                "train_image_names": [
+                                    f"train_{index:04d}.JPG"
+                                    for index in range(2196)
+                                ],
+                                "test_image_names": [
+                                    f"test_{index:04d}.JPG"
+                                    for index in range(314)
+                                ],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            train = expected_packet_names(split_path, "full_train")
+            heldout = expected_packet_names(split_path, "heldout_candidate")
+            self.assertEqual(len(train), 2196)
+            self.assertEqual(len(heldout), 314)
+            self.assertTrue(all(name.startswith("test_") for name in heldout))
 
 
 if __name__ == "__main__":

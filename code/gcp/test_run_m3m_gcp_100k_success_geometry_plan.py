@@ -77,6 +77,20 @@ class GeometrySuccessRunnerTest(unittest.TestCase):
             self.assertFalse(packet.exists())
             self.assertEqual(receipt["removed_file_count"], 1)
 
+    def test_cleanup_accepts_heldout_candidate_namespace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run_root = Path(directory) / "run"
+            packet_root = (
+                run_root
+                / "formal_evaluation/lidar_packets_100k_heldout_candidate_v1"
+            )
+            packet_root.mkdir(parents=True)
+            packet = packet_root / "view.npz"
+            packet.write_bytes(b"packet")
+            receipt = cleanup_packet_arrays(packet_root, run_root, "unit_test")
+            self.assertFalse(packet.exists())
+            self.assertEqual(receipt["removed_file_count"], 1)
+
     @unittest.skipUnless(os.name == "posix", "RLIMIT_NOFILE is POSIX-only")
     def test_run_phase_applies_requested_nofile_soft_limit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

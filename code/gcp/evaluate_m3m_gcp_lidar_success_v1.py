@@ -23,6 +23,7 @@ import evaluate_m3m_gcp_lidar_formal_v1 as core
 from m3m_gcp_100k_geometry_paths import (
     formal_input_manifest_canonical_sha256,
     lidar_full_train_packet_manifest,
+    lidar_heldout_candidate_packet_manifest,
 )
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from rgb_quality_contract import validate_benchmark_checkout
@@ -35,6 +36,37 @@ RUNTIME_REGISTRY_SCHEMA = (
 )
 PROTOCOL_ID = core.PROTOCOL_ID
 SOURCE_PROTOCOL_ID = core.SOURCE_PROTOCOL_ID
+HELDOUT_CANDIDATE_PROTOCOL_ID = (
+    "m3m_gcp_lidar_heldout_visible_surface_candidate_v1"
+)
+SURFACE_SAMPLING_TRACKS = {
+    "full_train": {
+        "split_role": "train",
+        "expected_views": 2196,
+        "protocol_id": PROTOCOL_ID,
+        "protocol_status": (
+            "SCIENTIFIC_CONTRACT_UNCHANGED_LIFECYCLE_GATE_REPLACED"
+        ),
+        "packet_view_split": "exactly all 2196 frozen train views",
+        "result_schema": "m3m_gcp_lidar_100k_success_method_result_v1",
+        "protocol_schema": "m3m_gcp_lidar_100k_success_method_protocol_v1",
+    },
+    "heldout_candidate": {
+        "split_role": "test",
+        "expected_views": 314,
+        "protocol_id": HELDOUT_CANDIDATE_PROTOCOL_ID,
+        "protocol_status": (
+            "HELDOUT_VISIBLE_SURFACE_CANDIDATE_VALIDATION_NOT_FORMAL"
+        ),
+        "packet_view_split": "exactly all 314 frozen held-out camera poses",
+        "result_schema": (
+            "m3m_gcp_lidar_100k_heldout_candidate_method_result_v1"
+        ),
+        "protocol_schema": (
+            "m3m_gcp_lidar_100k_heldout_candidate_method_protocol_v1"
+        ),
+    },
+}
 
 
 def now() -> str:
@@ -119,7 +151,11 @@ def validate_contract(contract: dict[str, Any], args: argparse.Namespace) -> Non
     if changed:
         raise ValueError(f"runtime values differ from LiDAR-v1 contract: {changed}")
     scene = next((row for row in contract["scenes"] if row["scene"] == SCENE), None)
-    if scene is None or int(scene["train_views"]) != 2196:
+    if (
+        scene is None
+        or int(scene["train_views"]) != 2196
+        or int(scene["test_views"]) != 314
+    ):
         raise ValueError("LiDAR-v1 contract has no exact 100K scene binding")
 
 
@@ -183,6 +219,7 @@ def validate_runtime(
     registry_path: Path,
     method_id: str,
     packet_manifest: Path,
+    surface_sampling_track: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     registry = read_json(registry_path)
     if (
@@ -197,18 +234,32 @@ def validate_runtime(
         raise ValueError("method is not a unique promoted success")
     method = methods[0]
     run_root = Path(str(method["run_root"])).resolve()
-    expected_packet = lidar_full_train_packet_manifest(run_root)
+    expected_packet = (
+        lidar_full_train_packet_manifest(run_root)
+        if surface_sampling_track == "full_train"
+        else lidar_heldout_candidate_packet_manifest(run_root)
+    )
     if packet_manifest.resolve() != expected_packet:
         raise ValueError("LiDAR packet is outside the promoted run's fixed packet root")
     return registry, method
 
 
-def expected_train_names(split_path: Path) -> tuple[str, ...]:
+def expected_packet_names(
+    split_path: Path, surface_sampling_track: str
+) -> tuple[str, ...]:
     split = read_json(split_path)
     scene = next(row for row in split["scenes"] if row["scene"] == SCENE)
-    names = tuple(sorted(str(name) for name in scene["train_image_names"]))
-    if len(names) != 2196 or len(set(names)) != 2196:
-        raise ValueError("split does not contain exactly 2196 unique 100K train views")
+    track = SURFACE_SAMPLING_TRACKS[surface_sampling_track]
+    split_role = str(track["split_role"])
+    expected_views = int(track["expected_views"])
+    names = tuple(
+        sorted(str(name) for name in scene[f"{split_role}_image_names"])
+    )
+    if len(names) != expected_views or len(set(names)) != expected_views:
+        raise ValueError(
+            f"split does not contain exactly {expected_views} unique 100K "
+            f"{split_role} views"
+        )
     return names
 
 
@@ -333,6 +384,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reference-cache-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--method-id", required=True)
+    parser.add_argument(
+        "--surface-sampling-track",
+        choices=tuple(SURFACE_SAMPLING_TRACKS),
+        default="full_train",
+    )
     parser.add_argument("--roi-buffer-m", type=float, default=8.0)
     parser.add_argument(
         "--normal-minus-ellipsoid-m", type=float, default=23.980600991639484
@@ -384,10 +440,14 @@ def main() -> int:
     )
     validate_contract(contract, args)
     laz_files = validate_source_bindings(contract, args)
+    track = SURFACE_SAMPLING_TRACKS[args.surface_sampling_track]
     registry, method = validate_runtime(
-        args.registry, args.method_id, args.packet_manifest
+        args.registry,
+        args.method_id,
+        args.packet_manifest,
+        args.surface_sampling_track,
     )
-    names = expected_train_names(args.split)
+    names = expected_packet_names(args.split, args.surface_sampling_track)
     packet = read_json(args.packet_manifest)
     core.validate_packet_manifest(packet, scene=SCENE, expected_image_names=names)
     sim3 = read_json(args.sim3_json)
@@ -476,6 +536,8 @@ def main() -> int:
         "method_id": args.method_id,
         "method": method["display_name"],
         "input_class": method["input_class"],
+        "surface_sampling_track": args.surface_sampling_track,
+        "packet_view_count": len(names),
         "status": "COMPLETE_RANKED",
         **formal_metrics,
         "total_seconds": time.monotonic() - started,
@@ -484,10 +546,11 @@ def main() -> int:
         "oom": 0,
     }
     protocol = {
-        "schema": "m3m_gcp_lidar_100k_success_method_protocol_v1",
-        "protocol_id": PROTOCOL_ID,
+        "schema": track["protocol_schema"],
+        "protocol_id": track["protocol_id"],
+        "source_lidar_numeric_protocol_id": PROTOCOL_ID,
         "source_geometry_protocol_id": SOURCE_PROTOCOL_ID,
-        "status": "SCIENTIFIC_CONTRACT_UNCHANGED_LIFECYCLE_GATE_REPLACED",
+        "status": track["protocol_status"],
         "created_at": now(),
         "scene": SCENE,
         "method_id": args.method_id,
@@ -495,7 +558,11 @@ def main() -> int:
         "method_specific_registration": "forbidden",
         "icp": "forbidden",
         "lidar_training_access": "forbidden; evaluation only",
-        "packet_view_split": "exactly all 2196 frozen train views",
+        "surface_sampling_track": args.surface_sampling_track,
+        "packet_view_split": track["packet_view_split"],
+        "packet_view_count": len(names),
+        "evaluator_heldout_rgb_pixels_read": False,
+        "packet_renderer_heldout_rgb_pixels_used": False,
         "alpha_min": args.alpha_min,
         "pixel_stride": args.pixel_stride,
         "reconstruction_voxel_m": args.reconstruction_voxel_m,
@@ -533,11 +600,14 @@ def main() -> int:
     protocol_path = args.output_root / "protocol_manifest.json"
     write_json(protocol_path, protocol)
     result = {
-        "schema": "m3m_gcp_lidar_100k_success_method_result_v1",
-        "protocol_id": PROTOCOL_ID,
+        "schema": track["result_schema"],
+        "protocol_id": track["protocol_id"],
+        "source_lidar_numeric_protocol_id": PROTOCOL_ID,
         "status": "COMPLETE_RANKED",
         "scene": SCENE,
         "method_id": args.method_id,
+        "surface_sampling_track": args.surface_sampling_track,
+        "packet_view_count": len(names),
         "model_checkpoint_sha256": method["formal_model_sha256"],
         "packet_manifest_sha256": sha256_file(args.packet_manifest),
         "protocol_manifest": identity(protocol_path),

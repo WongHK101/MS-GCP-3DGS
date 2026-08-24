@@ -12,7 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
-from m3m_gcp_100k_geometry_paths import LIDAR_FULL_TRAIN_PACKET_ROOT_NAME
+from m3m_gcp_100k_geometry_paths import (
+    LIDAR_FULL_TRAIN_PACKET_ROOT_NAME,
+    LIDAR_HELDOUT_CANDIDATE_PACKET_ROOT_NAME,
+)
 
 
 def now() -> str:
@@ -122,6 +125,7 @@ def cleanup_packet_arrays(packet_root: Path, run_root: Path, reason: str) -> dic
         "lidar_packets_100k_success_v1",
         "lidar_packets_100k_success_v2",
         LIDAR_FULL_TRAIN_PACKET_ROOT_NAME,
+        LIDAR_HELDOUT_CANDIDATE_PACKET_ROOT_NAME,
     }:
         raise ValueError(f"refusing packet cleanup outside exact formal roots: {packet_root}")
     if packet_root.is_symlink():

@@ -27,10 +27,12 @@ SOURCE_RELEASE_SHA256 = (
 )
 IMAGE_DOMAIN = "colmap_4_0_4_image_undistorter_pinhole_max_1414"
 PIXEL_CONVENTION = "zero_based_pixel_centers"
-FORMAL_TRAIN_ROOT = Path(
+FORMAL_SCENE_ROOT = Path(
     "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/"
-    f"{SCENE}/train"
+    f"{SCENE}"
 )
+FORMAL_TRAIN_ROOT = FORMAL_SCENE_ROOT / "train"
+FORMAL_TEST_ROOT = FORMAL_SCENE_ROOT / "test"
 COMMON_CAMERA_SPARSE_SHA256 = {
     "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
     "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
@@ -52,6 +54,24 @@ CAMERA_PROFILES: dict[str, dict[str, Any]] = {
         "sparse_sha256": {
             **COMMON_CAMERA_SPARSE_SHA256,
             "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+        },
+    },
+    "lidar_heldout_candidate": {
+        "root": Path(
+            f"/root/autodl-tmp/datasets/"
+            f"M3M-GCP-100K-rgb-evaluation-camera-root-v1/{SCENE}"
+        ),
+        "manifest_name": "RGB_EVALUATION_CAMERA_ROOT_MANIFEST.json",
+        "manifest_sha256": "c7251f634fe596648631c3be1346e9a98242c22685a993504381203001eb681b",
+        "schema": "m3m_gcp_100k_rgb_evaluation_camera_root_v1",
+        "status": "PASS_RGB_EVALUATION_CAMERA_ROOT",
+        "view_count": 314,
+        "view_count_field": "view_count",
+        "files_field": "files",
+        "images_policy": "formal_test_symlink",
+        "sparse_sha256": {
+            **COMMON_CAMERA_SPARSE_SHA256,
+            "images.bin": "8a2b67af4d1b0eecb9f5f204dc168f3fc8e7331c77bf2fc2ea53bbcb581b9031",
         },
     },
     "gcp": {
@@ -267,6 +287,22 @@ def verify_camera_root(path: Path, profile: dict[str, Any]) -> dict[str, Any]:
             or manifest.get("truth_boundary", {}).get("gcp_or_lidar_used") is not False
         ):
             raise RuntimeError("evaluation camera-root RGB boundary mismatch")
+    elif profile["images_policy"] == "formal_test_symlink":
+        if (
+            not image_root.is_symlink()
+            or image_root.resolve() != (FORMAL_TEST_ROOT / "images").resolve()
+            or len(image_files) != expected_count
+            or output.get("points3d_bin_point_count") != 0
+            or manifest.get("truth_boundary", {}).get(
+                "heldout_rgb_must_not_select_fit_or_optimize_any_parameter"
+            )
+            is not True
+            or manifest.get("truth_boundary", {}).get(
+                "training_or_prior_use_forbidden"
+            )
+            is not True
+        ):
+            raise RuntimeError("held-out camera-root truth boundary mismatch")
     else:
         placeholder_row = output.get("placeholder", {})
         placeholder = require_file(
@@ -391,10 +427,10 @@ def common_tail(args: argparse.Namespace, report: Path, report_sha: str) -> list
 
 
 def uses_geometry_camera_only(method_id: str, camera_profile: str) -> bool:
-    """Return whether the full-view LiDAR export needs the RGB-free loader."""
+    """Return whether a LiDAR export needs the RGB-free camera loader."""
 
     return (
-        camera_profile == "lidar"
+        camera_profile in {"lidar", "lidar_heldout_candidate"}
         and method_id in GEOMETRY_CAMERA_ONLY_METHODS
     )
 
