@@ -25,6 +25,7 @@ if "shapely" not in sys.modules and importlib.util.find_spec("shapely") is None:
 
 from run_m3m_gcp_3k_heldout_candidate_validation import (
     CANDIDATE_CAMERA_SETS,
+    candidate_summary_row,
     candidate_export_command,
     materialize_core_compatible_candidate_manifest,
     rank_positions,
@@ -33,6 +34,15 @@ import evaluate_m3m_gcp_lidar_formal_v1 as evaluator
 
 
 class CandidateExportCommandTests(unittest.TestCase):
+    def test_reused_legacy_candidate_row_derives_surface_voxel_count(self) -> None:
+        payload = {
+            "summary_row": {"method_id": "3dgs_original", "fscore_10cm": 0.5},
+            "surface_audit": {"voxelized_points": 1234},
+        }
+        row = candidate_summary_row(payload)
+        self.assertEqual(row["reconstruction_points"], 1234)
+        self.assertNotIn("reconstruction_points", payload["summary_row"])
+
     def test_candidate_camera_set_alias_is_explicit_and_formal_default_stays_strict(self) -> None:
         image_name = "heldout.JPG"
         manifest = {

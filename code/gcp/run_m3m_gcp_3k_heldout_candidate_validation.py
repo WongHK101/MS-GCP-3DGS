@@ -244,6 +244,18 @@ def validate_complete_candidate_result(
     return payload
 
 
+def candidate_summary_row(payload: dict[str, Any]) -> dict[str, Any]:
+    row = dict(payload["summary_row"])
+    reconstruction_points = int(payload["surface_audit"]["voxelized_points"])
+    if (
+        "reconstruction_points" in row
+        and int(row["reconstruction_points"]) != reconstruction_points
+    ):
+        raise ValueError("candidate summary/surface voxel count mismatch")
+    row["reconstruction_points"] = reconstruction_points
+    return row
+
+
 def validate_completed_packet_cleanup(packet_root: Path, *, expected_count: int) -> None:
     cleanup_path = packet_root / "packet_cleanup_receipt.json"
     cleanup = read_json(cleanup_path)
@@ -665,7 +677,7 @@ def main() -> int:
                 model_checkpoint_sha256=metadata[method_id]["model_checkpoint_sha256"],
             )
             validate_completed_packet_cleanup(packet_root, expected_count=len(names))
-            row = result["summary_row"]
+            row = candidate_summary_row(result)
             rows.append(row)
             receipt = {
                 "method_id": method_id,
@@ -810,6 +822,7 @@ def main() -> int:
                 "input_class": metadata[method_id]["input_class"],
                 "status": "COMPLETE_CANDIDATE_EVIDENCE",
                 **formal_metrics,
+                "reconstruction_points": len(reconstruction),
                 "total_seconds": time.monotonic() - evaluation_started,
                 "nearest_neighbor_seconds": metrics["nearest_neighbor_seconds"],
                 "peak_rss_gib": core.peak_rss_gib(),
