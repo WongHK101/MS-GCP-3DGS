@@ -296,6 +296,20 @@ def accumulate_voxels(
     return np.union1d(current_ids, new_ids)
 
 
+def merge_voxel_id_batches(
+    current_ids: np.ndarray, pending_batches: list[np.ndarray]
+) -> np.ndarray:
+    """Return the exact sorted union while amortizing repeated full-array sorts."""
+    arrays = [batch for batch in pending_batches if batch.size]
+    if current_ids.size:
+        arrays.insert(0, current_ids)
+    if not arrays:
+        return np.empty(0, dtype=np.uint64)
+    if len(arrays) == 1:
+        return arrays[0]
+    return np.unique(np.concatenate(arrays))
+
+
 def run_numeric_self_tests(voxel_m: float) -> dict[str, Any]:
     """Fail hard if centimetre distances or deterministic voxelization regress."""
     absolute_origin = np.asarray([221000.0, 2566000.0, 20.0], dtype=np.float64)
@@ -337,6 +351,15 @@ def run_numeric_self_tests(voxel_m: float) -> dict[str, Any]:
     )
     if not np.array_equal(ids_forward, ids_reverse):
         raise AssertionError("voxel IDs depend on point or chunk order")
+    batch_ids = merge_voxel_id_batches(
+        np.empty(0, dtype=np.uint64),
+        [
+            voxel_batch_ids(samples[:2], voxel_m, grid_origin),
+            voxel_batch_ids(samples[2:], voxel_m, grid_origin),
+        ],
+    )
+    if not np.array_equal(ids_forward, batch_ids):
+        raise AssertionError("batched voxel union differs from sequential exact union")
     centers = voxel_centers_local(ids_forward, voxel_m)
     if centers.dtype != np.float64 or len(np.unique(centers, axis=0)) != len(centers):
         raise AssertionError("voxel centres are not unique float64 local coordinates")
@@ -345,6 +368,7 @@ def run_numeric_self_tests(voxel_m: float) -> dict[str, Any]:
         "centimetre_axis_max_abs_error_m": axes,
         "required_max_abs_error_m": 1e-4,
         "order_invariance": "PASS",
+        "batched_union_equivalence": "PASS",
         "unique_voxel_centres": "PASS",
         "coordinate_dtype": "float64",
         "voxel_representative": "deterministic_voxel_center",
@@ -511,12 +535,14 @@ def build_reconstruction(
     translation = np.asarray(transform["translation"], dtype=np.float64)
     transformer = Transformer.from_crs(4545, 32649, always_xy=True)
     voxel_ids = np.empty(0, dtype=np.uint64)
+    pending_voxel_ids: list[np.ndarray] = []
+    voxel_union_batch_views = 64
     sampled_pixels = 0
     supported_pixels = 0
     roi_samples = 0
     view_rows: list[dict[str, Any]] = []
 
-    for entry in entries:
+    for view_index, entry in enumerate(entries, start=1):
         image_name = str(entry["image_name"])
         if image_name not in images:
             raise ValueError(f"packet image absent from frozen COLMAP model: {image_name}")
@@ -548,6 +574,14 @@ def build_reconstruction(
             view_rows.append(
                 {"image_name": image_name, "supported_samples": 0, "roi_samples": 0}
             )
+            if view_index % voxel_union_batch_views == 0:
+                voxel_ids = merge_voxel_id_batches(voxel_ids, pending_voxel_ids)
+                pending_voxel_ids.clear()
+                print(
+                    f"reconstruction views {view_index:,}/{len(entries):,}: "
+                    f"{len(voxel_ids):,} unique voxels",
+                    flush=True,
+                )
             continue
 
         fx, fy, cx, cy = camera.params[:4]
@@ -561,7 +595,9 @@ def build_reconstruction(
         inside = contains_xy(roi, e, n)
         if np.any(inside):
             xyz = np.column_stack((e[inside], n[inside], target[inside, 2]))
-            voxel_ids = accumulate_voxels(voxel_ids, xyz, voxel_m, origin)
+            new_ids = voxel_batch_ids(xyz, voxel_m, origin)
+            if new_ids.size:
+                pending_voxel_ids.append(new_ids)
         count_inside = int(inside.sum())
         roi_samples += count_inside
         view_rows.append(
@@ -570,6 +606,21 @@ def build_reconstruction(
                 "supported_samples": int(mask.sum()),
                 "roi_samples": count_inside,
             }
+        )
+        if view_index % voxel_union_batch_views == 0:
+            voxel_ids = merge_voxel_id_batches(voxel_ids, pending_voxel_ids)
+            pending_voxel_ids.clear()
+            print(
+                f"reconstruction views {view_index:,}/{len(entries):,}: "
+                f"{len(voxel_ids):,} unique voxels",
+                flush=True,
+            )
+    voxel_ids = merge_voxel_id_batches(voxel_ids, pending_voxel_ids)
+    if len(entries) % voxel_union_batch_views:
+        print(
+            f"reconstruction views {len(entries):,}/{len(entries):,}: "
+            f"{len(voxel_ids):,} unique voxels",
+            flush=True,
         )
     points = voxel_centers_local(voxel_ids, voxel_m)
     if len(points) < 1000:
@@ -587,6 +638,8 @@ def build_reconstruction(
         "alpha_min": alpha_min,
         "pixel_stride": pixel_stride,
         "voxel_m": voxel_m,
+        "voxel_union_batch_views": voxel_union_batch_views,
+        "voxel_union_semantics": "exact_sorted_set_union",
         "voxel_representative": "deterministic_voxel_center",
         "point_coordinate_frame": "frozen_local_metric_frame",
         "local_origin_utm49n_normal_height_m": origin.tolist(),

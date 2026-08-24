@@ -48,6 +48,23 @@ def main() -> None:
     reverse = points[::-1]
     backward = accumulate([reverse[:777], reverse[777:15000], reverse[15000:]])
     assert np.array_equal(forward, backward)
+
+    batches = [
+        evaluator.voxel_batch_ids(points[:1234], voxel_m, origin),
+        evaluator.voxel_batch_ids(points[1234:8765], voxel_m, origin),
+        evaluator.voxel_batch_ids(points[8765:], voxel_m, origin),
+    ]
+    batched = evaluator.merge_voxel_id_batches(
+        np.empty(0, dtype=np.uint64), batches
+    )
+    staged = evaluator.merge_voxel_id_batches(
+        evaluator.merge_voxel_id_batches(
+            np.empty(0, dtype=np.uint64), batches[:2]
+        ),
+        batches[2:],
+    )
+    assert np.array_equal(forward, batched)
+    assert np.array_equal(forward, staged)
     centres = evaluator.voxel_centers_local(forward, voxel_m)
     assert centres.dtype == np.float64
     assert len(centres) == len(np.unique(centres, axis=0))
