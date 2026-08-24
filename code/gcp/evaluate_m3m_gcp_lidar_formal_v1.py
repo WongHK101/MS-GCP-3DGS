@@ -487,9 +487,14 @@ def build_reconstruction(
     origin: np.ndarray,
     scene: str,
     expected_image_names: tuple[str, ...],
+    packet_manifest_path: Path | None = None,
 ) -> tuple[np.ndarray, dict[str, Any]]:
-    packets_dir = run_root / "formal_evaluation" / "packets"
-    manifest_path = packets_dir / "depth_export_manifest.json"
+    manifest_path = (
+        run_root / "formal_evaluation/packets/depth_export_manifest.json"
+        if packet_manifest_path is None
+        else packet_manifest_path.resolve()
+    )
+    packets_dir = manifest_path.parent
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     validate_packet_manifest(
         payload, scene=scene, expected_image_names=expected_image_names
