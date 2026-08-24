@@ -69,6 +69,29 @@ def main() -> None:
     assert centres.dtype == np.float64
     assert len(centres) == len(np.unique(centres, axis=0))
     assert np.max(np.abs(centres)) < 1e5
+
+    metric_probe = np.asarray(
+        [[0.0, 0.0, 0.0], [0.05, 0.0, 0.0], [0.20, 0.0, 0.0]],
+        dtype=np.float64,
+    )
+    metrics, _, _ = evaluator.summarize_distances(
+        metric_probe,
+        metric_probe,
+        thresholds_m=[0.05, 0.10, 0.20],
+        query_chunk=2,
+        threshold_epsilon_m=1e-12,
+    )
+    threshold_metric_keys = {
+        key
+        for key in metrics
+        if key.startswith(("precision_", "recall_", "fscore_"))
+    }
+    assert threshold_metric_keys == {
+        f"{metric}_{threshold}cm"
+        for metric in ("precision", "recall", "fscore")
+        for threshold in (5, 10, 20)
+    }
+    assert "precision_05cm" not in metrics
     print("PASS_FORMAL_V1_NUMERIC")
 
 

@@ -691,7 +691,7 @@ def summarize_distances(
         ),
     }
     for threshold in thresholds_m:
-        label = f"{int(round(threshold * 100)):02d}cm"
+        label = f"{int(round(threshold * 100))}cm"
         comparison_threshold = threshold + threshold_epsilon_m
         precision = float(np.mean(recon_to_ref <= comparison_threshold))
         recall = float(np.mean(ref_to_recon <= comparison_threshold))
