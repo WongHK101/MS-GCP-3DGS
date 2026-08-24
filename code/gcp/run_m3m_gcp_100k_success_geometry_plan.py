@@ -114,6 +114,7 @@ def cleanup_packet_arrays(packet_root: Path, run_root: Path, reason: str) -> dic
         "gcp_packets_100k_success_v3",
         "lidar_packets_100k_success_v1",
         "lidar_packets_100k_success_v2",
+        "lidar_packets_100k_success_v3",
     }:
         raise ValueError(f"refusing packet cleanup outside exact formal roots: {packet_root}")
     if packet_root.is_symlink():

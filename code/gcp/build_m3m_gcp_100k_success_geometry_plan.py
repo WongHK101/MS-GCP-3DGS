@@ -310,15 +310,15 @@ def main() -> int:
         gcp_packet_root = (
             run_root / "formal_evaluation/gcp_packets_100k_success_v3"
         )
-        # v1 was consumed by the inherited 1024-NOFILE preflight failure.
-        # Preserve that receipt and use a fresh namespace with an explicit
-        # child-process file-descriptor limit for the 2196-view profile.
+        # v1 was consumed by the inherited 1024-NOFILE failure and v2 by the
+        # classic loader's 110-GiB RGB-decode ceiling.  Preserve both receipts;
+        # v3 uses the parity-proven geometry-camera-only loader.
         lidar_packet_root = (
-            run_root / "formal_evaluation/lidar_packets_100k_success_v2"
+            run_root / "formal_evaluation/lidar_packets_100k_success_v3"
         )
         gcp_output = run_root / "formal_evaluation/gcp_geometry_100k_success_v1"
         lidar_output = run_root / "formal_evaluation/lidar_geometry_100k_success_v1"
-        log_root = runtime / "geometry_logs_fdlimit_v1" / method_id
+        log_root = runtime / "geometry_logs_camera_only_v1" / method_id
         gcp_packet_argv = packet_command(
             repo=repo,
             method=method,
@@ -455,6 +455,8 @@ def main() -> int:
             "metric_based_retry_or_selection": False,
             "legacy_activation_v4_used": False,
             "lidar_numeric_core": "evaluate_m3m_gcp_lidar_formal_v1.py unchanged functions",
+            "geometry_camera_only_loader_scope": ["3dgs_original", "rade_gs"],
+            "geometry_camera_only_parity_required": True,
         },
         "jobs": jobs,
     }
