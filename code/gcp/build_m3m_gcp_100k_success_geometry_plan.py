@@ -43,6 +43,38 @@ PROTOCOL_ROOT = Path(
 )
 LIDAR_ROOT = Path("/root/autodl-tmp/datasets/M3M-GCP-LiDAR-reference-v1")
 LIDAR_ENV = Path("/root/autodl-tmp/envs/m3m-gcp-lidar-eval")
+GEOMETRY_EVALUATION_ROOTS = {
+    "3dgs_original": Path(
+        "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/"
+        "2eee0e26d2d5fd00ec462df47752223952f6bf4e/eval-adapter-v1"
+    ),
+    "pgsr": Path(
+        "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/pgsr/"
+        "de24f1a38b350387e8d8fe381b2cd70c1ae946e7/eval-adapter-v1"
+    ),
+    "rade_gs": Path(
+        "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/rade_gs/"
+        "d72f20792005ae1d6555a82aa2d15345f247604e/eval-adapter-v1"
+    ),
+    "citygs_x": Path(
+        "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/citygs_x/"
+        "27617f2486505e3b6fe75345edf7c2b11161bc2a/eval-adapter-v1"
+    ),
+    "metrogs": Path(
+        "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/metrogs/"
+        "8cf9ac13c0c34b65c1a935d181c4634909e60f3f/eval-adapter-v1"
+    ),
+    "gsprior": Path(
+        "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/gsprior/"
+        "dcb7c89fb6b60f068b440de45d064ecc7fbcba55/eval-adapter-v1"
+    ),
+}
+GEOMETRY_PACKET_PYTHONS = {
+    "citygs_x": Path(
+        "/root/autodl-tmp/envs/m3m-gcp-native-quarter/citygs_x/"
+        "eval-py310-torch2.7.1-cu128-v1/bin/python"
+    )
+}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -109,6 +141,8 @@ def packet_command(
     camera_root: Path,
     allowlist: Path,
     packet_root: Path,
+    evaluation_root: Path,
+    packet_python: Path,
 ) -> list[str]:
     method_id = str(method["method_id"])
     normalized_role = "gcp_evaluation" if profile == "gcp" else "lidar_evaluation"
@@ -116,7 +150,7 @@ def packet_command(
         GSPRIOR_ROOT / normalized_role if method_id == "gsprior" else TRAIN_ROOT
     )
     return [
-        f"{method['environment']}/bin/python",
+        str(packet_python),
         "-B",
         str(repo / "code/gcp/run_m3m_gcp_100k_packet_export.py"),
         "--method-id",
@@ -126,7 +160,7 @@ def packet_command(
         "--benchmark-repo",
         str(repo),
         "--evaluation-repo",
-        str(method["source_root"]),
+        str(evaluation_root),
         "--training-run-root",
         str(method["run_root"]),
         "--dataset-root",
@@ -219,9 +253,17 @@ def main() -> int:
     for method in registry["methods"]:
         method_id = str(method["method_id"])
         run_root = Path(str(method["run_root"])).resolve()
+        evaluation_root = GEOMETRY_EVALUATION_ROOTS[method_id].resolve()
+        packet_python = GEOMETRY_PACKET_PYTHONS.get(
+            method_id, Path(str(method["environment"])) / "bin/python"
+        ).resolve()
+        if not (evaluation_root / ".git").exists() or not packet_python.is_file():
+            raise FileNotFoundError(
+                f"geometry evaluation runtime missing: {method_id}"
+            )
         method_env = environment(method)
         gcp_packet_root = (
-            run_root / "formal_evaluation/gcp_packets_100k_success_v1"
+            run_root / "formal_evaluation/gcp_packets_100k_success_v2"
         )
         lidar_packet_root = (
             run_root / "formal_evaluation/lidar_packets_100k_success_v1"
@@ -236,6 +278,8 @@ def main() -> int:
             camera_root=GCP_CAMERA_ROOT,
             allowlist=gcp_allowlist,
             packet_root=gcp_packet_root,
+            evaluation_root=evaluation_root,
+            packet_python=packet_python,
         )
         lidar_packet_argv = packet_command(
             repo=repo,
@@ -244,6 +288,8 @@ def main() -> int:
             camera_root=LIDAR_CAMERA_ROOT,
             allowlist=lidar_allowlist,
             packet_root=lidar_packet_root,
+            evaluation_root=evaluation_root,
+            packet_python=packet_python,
         )
         gcp_eval_argv = [
             f"{LIDAR_ENV}/bin/python",
@@ -312,7 +358,7 @@ def main() -> int:
                     "output_root": str(gcp_output),
                     "packet": phase(
                         gcp_packet_argv,
-                        working_directory=Path(str(method["source_root"])),
+                        working_directory=evaluation_root,
                         env=method_env,
                         log_root=log_root / "gcp_packet",
                     ),
@@ -328,7 +374,7 @@ def main() -> int:
                     "output_root": str(lidar_output),
                     "packet": phase(
                         lidar_packet_argv,
-                        working_directory=Path(str(method["source_root"])),
+                        working_directory=evaluation_root,
                         env=method_env,
                         log_root=log_root / "lidar_packet",
                     ),

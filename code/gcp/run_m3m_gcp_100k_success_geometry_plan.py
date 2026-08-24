@@ -82,6 +82,7 @@ def cleanup_packet_arrays(packet_root: Path, run_root: Path, reason: str) -> dic
     formal_root = run_root / "formal_evaluation"
     if packet_root.parent != formal_root or packet_root.name not in {
         "gcp_packets_100k_success_v1",
+        "gcp_packets_100k_success_v2",
         "lidar_packets_100k_success_v1",
     }:
         raise ValueError(f"refusing packet cleanup outside exact formal roots: {packet_root}")
