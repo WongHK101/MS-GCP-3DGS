@@ -76,6 +76,36 @@ GEOMETRY_PACKET_PYTHONS = {
     )
 }
 
+# Some geometry adapters deliberately keep their patched CUDA extension outside
+# the training environment.  Bind those conformance-tested packages explicitly
+# so packet export cannot silently fall back to the method's unpatched training
+# rasterizer.
+GEOMETRY_ADAPTER_PYTHONPATHS = {
+    "3dgs_original": [
+        GEOMETRY_EVALUATION_ROOTS["3dgs_original"]
+        / "submodules/diff-gaussian-rasterization"
+    ],
+    "pgsr": [
+        Path(
+            "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/"
+            "de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/eval-site"
+        )
+    ],
+    "rade_gs": [
+        Path(
+            "/root/autodl-tmp/build/m3m-gcp-native-quarter/rade_gs/"
+            "d72f20792005ae1d6555a82aa2d15345f247604e/qualification-v1/eval-site"
+        )
+    ],
+    "metrogs": [
+        Path(
+            "/root/autodl-tmp/build/m3m-gcp-native-quarter/metrogs/"
+            "8cf9ac13c0c34b65c1a935d181c4634909e60f3f/"
+            "eval-extension-v1/python"
+        )
+    ],
+}
+
 
 def read_json(path: Path) -> dict[str, Any]:
     path = path.expanduser().resolve()
@@ -114,8 +144,12 @@ def environment(method: dict[str, Any]) -> dict[str, str]:
             for key, value in method.get("environment_variables", {}).items()
         }
     )
-    if method.get("pythonpath"):
-        output["PYTHONPATH"] = ":".join(str(path) for path in method["pythonpath"])
+    pythonpath = [
+        *GEOMETRY_ADAPTER_PYTHONPATHS.get(str(method["method_id"]), []),
+        *method.get("pythonpath", []),
+    ]
+    if pythonpath:
+        output["PYTHONPATH"] = ":".join(str(path) for path in pythonpath)
     return output
 
 
