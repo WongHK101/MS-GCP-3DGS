@@ -92,7 +92,11 @@ def replace_unique_option(argv: list[str], option: str, value: Path) -> None:
 
 
 def candidate_export_command(
-    original: dict[str, Any], *, allowlist: Path, packet_root: Path
+    original: dict[str, Any],
+    *,
+    allowlist: Path,
+    packet_root: Path,
+    environment_override: dict[str, str] | None = None,
 ) -> tuple[list[str], Path, dict[str, str]]:
     argv = [str(token) for token in original.get("argv", [])]
     if not argv:
@@ -114,6 +118,9 @@ def candidate_export_command(
             environment.pop(str(key), None)
         else:
             environment[str(key)] = str(value)
+    environment.update(
+        {str(key): str(value) for key, value in (environment_override or {}).items()}
+    )
     return argv, working_directory, environment
 
 
@@ -163,6 +170,26 @@ def runtime_methods(path: Path) -> list[dict[str, Any]]:
         if not run_root.is_dir():
             raise FileNotFoundError(run_root)
     return rows
+
+
+def runtime_environment_overrides(path: Path) -> dict[str, dict[str, str]]:
+    payload = read_json(path)
+    if (
+        payload.get("schema")
+        != "m3m_gcp_3k_heldout_candidate_environment_overrides_901_v1"
+        or payload.get("status") != "ACTIVE_REUSE_PROVEN_EVALUATION_ENVIRONMENTS"
+        or payload.get("scene") != SCENE
+    ):
+        raise ValueError("unexpected 3K candidate environment-override registry")
+    environments = payload.get("environments", {})
+    if set(environments) != set(EXPECTED_METHOD_IDS):
+        raise ValueError("environment overrides do not bind all ten methods")
+    output: dict[str, dict[str, str]] = {}
+    for method_id, values in environments.items():
+        if not isinstance(values, dict):
+            raise TypeError(f"{method_id}: environment override must be an object")
+        output[str(method_id)] = {str(key): str(value) for key, value in values.items()}
+    return output
 
 
 def load_reference(
@@ -293,6 +320,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--benchmark-commit", required=True)
     parser.add_argument("--benchmark-tree", required=True)
     parser.add_argument("--runtime-methods", type=Path, required=True)
+    parser.add_argument("--environment-overrides", type=Path, required=True)
     parser.add_argument("--method-registry", type=Path, required=True)
     parser.add_argument("--split", type=Path, required=True)
     parser.add_argument("--colmap-model", type=Path, required=True)
@@ -317,6 +345,7 @@ def main() -> int:
     for name in (
         "repo",
         "runtime_methods",
+        "environment_overrides",
         "method_registry",
         "split",
         "colmap_model",
@@ -338,6 +367,7 @@ def main() -> int:
     names = expected_heldout_names(args.split)
     metadata = method_metadata(args.method_registry)
     methods = runtime_methods(args.runtime_methods)
+    environment_overrides = runtime_environment_overrides(args.environment_overrides)
     pilot_batch = read_json(args.pilot_batch_result)
     sim3 = read_json(args.sim3_json)
     if (
@@ -385,6 +415,7 @@ def main() -> int:
         "allowlist": identity(allowlist),
         "inputs": {
             "runtime_methods": identity(args.runtime_methods),
+            "environment_overrides": identity(args.environment_overrides),
             "method_registry": identity(args.method_registry),
             "split": identity(args.split),
             "colmap_cameras": identity(args.colmap_model / "cameras.bin"),
@@ -421,7 +452,10 @@ def main() -> int:
             original = read_json(original_path)
             packet_root.mkdir(parents=True)
             argv, cwd, env = candidate_export_command(
-                original, allowlist=allowlist, packet_root=packet_root
+                original,
+                allowlist=allowlist,
+                packet_root=packet_root,
+                environment_override=environment_overrides[method_id],
             )
             command_record = {
                 "schema": "m3m_gcp_3k_heldout_candidate_export_command_v1",
@@ -435,6 +469,7 @@ def main() -> int:
                 "argv": argv,
                 "working_directory": str(cwd),
                 "runtime_environment": original.get("runtime_environment", {}),
+                "candidate_environment_override": environment_overrides[method_id],
             }
             command_record["canonical_sha256"] = canonical_sha256(command_record)
             write_json(packet_root / "candidate_command.json", command_record)

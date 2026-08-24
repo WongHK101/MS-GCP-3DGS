@@ -56,7 +56,10 @@ class CandidateExportCommandTests(unittest.TestCase):
             allowlist = root / "allowlist.csv"
             packet_root = root / "candidate"
             argv, actual_cwd, _ = candidate_export_command(
-                original, allowlist=allowlist, packet_root=packet_root
+                original,
+                allowlist=allowlist,
+                packet_root=packet_root,
+                environment_override={"PYTHONPATH": "/proven/eval-site"},
             )
             self.assertEqual(actual_cwd, cwd.resolve())
             self.assertEqual(argv[argv.index("--camera_sets") + 1], "train")
@@ -70,6 +73,36 @@ class CandidateExportCommandTests(unittest.TestCase):
                 argv[argv.index("--mapping_csv") + 1],
                 str((packet_root / "depth_map_index.csv").resolve()),
             )
+
+    def test_environment_override_is_applied(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            cwd = root / "cwd"
+            cwd.mkdir()
+            original = {
+                "argv": [
+                    "/env/python",
+                    "export.py",
+                    "--image_list_csv",
+                    "/old/list.csv",
+                    "--depth_output_dir",
+                    "/old/packets",
+                    "--manifest_path",
+                    "/old/manifest.json",
+                    "--mapping_csv",
+                    "/old/map.csv",
+                ],
+                "working_directory": str(cwd),
+                "runtime_environment": {"OLD": "kept"},
+            }
+            _, _, environment = candidate_export_command(
+                original,
+                allowlist=root / "list.csv",
+                packet_root=root / "packets",
+                environment_override={"PYTHONPATH": "/proven/eval-site"},
+            )
+            self.assertEqual(environment["OLD"], "kept")
+            self.assertEqual(environment["PYTHONPATH"], "/proven/eval-site")
 
     def test_rank_uses_fscore_then_chamfer_then_precision(self) -> None:
         rows = [

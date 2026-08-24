@@ -1,0 +1,86 @@
+{
+  "schema": "m3m_gcp_3k_heldout_candidate_environment_overrides_901_v1",
+  "status": "ACTIVE_REUSE_PROVEN_EVALUATION_ENVIRONMENTS",
+  "scene": "gcp_3000_20260602",
+  "purpose": "Restore the method-specific import paths used by the already successful packet exporters; this changes no model, renderer, rasterizer, camera, or metric setting.",
+  "environments": {
+    "3dgs_original": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/3dgs-original/2eee0e26d2d5fd00ec462df47752223952f6bf4e/eval-adapter-v1/submodules/diff-gaussian-rasterization",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "2dgs": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/build/m3m-gcp-native-quarter/2dgs/335ad612f2e783a4e57b9cbc4d1e167bd599fc98/qualification-v1/eval-site",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "pgsr": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/build/m3m-gcp-native-quarter/pgsr/de24f1a38b350387e8d8fe381b2cd70c1ae946e7/qualification-v1/eval-site:/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/cfafbaa6a18ccf8f7faad39ed2d3e9ff289bb675/repo/compat/pgsr/pytorch3d_transforms_minimal_v1",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "rade_gs": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/build/m3m-gcp-native-quarter/rade_gs/d72f20792005ae1d6555a82aa2d15345f247604e/qualification-v1/eval-site",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "qgs": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "gsprior": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/cfafbaa6a18ccf8f7faad39ed2d3e9ff289bb675/repo/compat/gsprior/pytorch3d_transforms_minimal_v1",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "sof": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "citygaussian_v2": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "citygs_x": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/worktrees/m3m-gcp-native-quarter/benchmark/cfafbaa6a18ccf8f7faad39ed2d3e9ff289bb675/repo/compat/citygs_x/pytorch3d_transforms_minimal_v1",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+    },
+    "metrogs": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONPATH": "/root/autodl-tmp/build/m3m-gcp-native-quarter/metrogs/8cf9ac13c0c34b65c1a935d181c4634909e60f3f/eval-extension-v1/python",
+      "PYTHONUNBUFFERED": "1",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"
+    }
+  }
+}
