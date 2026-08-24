@@ -80,6 +80,72 @@ def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def validate_query_workers(workers: int) -> int:
+    workers = int(workers)
+    if workers != -1 and workers < 1:
+        raise ValueError("nearest-neighbour query workers must be -1 or positive")
+    return workers
+
+
+def exact_query_distances(
+    tree: Any,
+    points: np.ndarray,
+    chunk: int,
+    workers: int,
+) -> np.ndarray:
+    """Run the same exact cKDTree k=1 query with configurable parallelism."""
+
+    if points.dtype != np.float64:
+        raise TypeError("nearest-neighbour queries require float64 local coordinates")
+    workers = validate_query_workers(workers)
+    output = np.empty(len(points), dtype=np.float64)
+    for start in range(0, len(points), chunk):
+        stop = min(start + chunk, len(points))
+        distance, _ = tree.query(points[start:stop], k=1, workers=workers)
+        output[start:stop] = distance
+    return output
+
+
+def summarize_distances_exact(
+    reconstruction: np.ndarray,
+    reference: np.ndarray,
+    thresholds_m: list[float],
+    query_chunk: int,
+    threshold_epsilon_m: float,
+    query_workers: int = 1,
+) -> tuple[dict[str, Any], np.ndarray, np.ndarray]:
+    """Reuse the frozen metric core while varying only exact-query workers."""
+
+    query_workers = validate_query_workers(query_workers)
+    frozen_query = core.query_distances
+    if query_workers == 1:
+        result = core.summarize_distances(
+            reconstruction,
+            reference,
+            thresholds_m,
+            query_chunk,
+            threshold_epsilon_m,
+        )
+    else:
+        def parallel_query(tree: Any, points: np.ndarray, chunk: int) -> np.ndarray:
+            return exact_query_distances(tree, points, chunk, query_workers)
+
+        core.query_distances = parallel_query
+        try:
+            result = core.summarize_distances(
+                reconstruction,
+                reference,
+                thresholds_m,
+                query_chunk,
+                threshold_epsilon_m,
+            )
+        finally:
+            core.query_distances = frozen_query
+    metrics, recon_to_ref, ref_to_recon = result
+    metrics["nearest_neighbor_query_workers"] = query_workers
+    return metrics, recon_to_ref, ref_to_recon
+
+
 def identity(path: Path) -> dict[str, Any]:
     path = path.expanduser().resolve()
     if not path.is_file():
@@ -474,6 +540,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reference-voxel-m", type=float, default=0.05)
     parser.add_argument("--laz-chunk-points", type=int, default=1_000_000)
     parser.add_argument("--query-chunk-points", type=int, default=250_000)
+    parser.add_argument("--query-workers", type=int, default=1)
     parser.add_argument(
         "--thresholds-m", type=float, nargs="+", default=[0.05, 0.10, 0.20]
     )
@@ -600,12 +667,13 @@ def main() -> int:
         points_local_m=reconstruction,
         local_origin_utm49n_normal_height_m=origin,
     )
-    metrics, recon_to_ref, ref_to_recon = core.summarize_distances(
+    metrics, recon_to_ref, ref_to_recon = summarize_distances_exact(
         reconstruction,
         reference,
         list(args.thresholds_m),
         args.query_chunk_points,
         args.threshold_epsilon_m,
+        args.query_workers,
     )
     distance_path = args.output_root / "nearest_neighbor_distances.npz"
     np.savez_compressed(
@@ -624,6 +692,9 @@ def main() -> int:
         **formal_metrics,
         "total_seconds": time.monotonic() - started,
         "nearest_neighbor_seconds": metrics["nearest_neighbor_seconds"],
+        "nearest_neighbor_query_workers": metrics[
+            "nearest_neighbor_query_workers"
+        ],
         "peak_rss_gib": core.peak_rss_gib(),
         "oom": 0,
     }
@@ -651,6 +722,7 @@ def main() -> int:
         "reference_voxel_m": args.reference_voxel_m,
         "thresholds_m": list(args.thresholds_m),
         "threshold_comparison_epsilon_m": args.threshold_epsilon_m,
+        "nearest_neighbor_query_workers": args.query_workers,
         "roi_buffer_m": args.roi_buffer_m,
         "roi_area_m2": float(roi.area),
         "roi_bounds_utm49n": list(map(float, roi.bounds)),

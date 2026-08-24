@@ -12,6 +12,9 @@ import types
 import unittest
 from pathlib import Path
 
+import numpy as np
+from scipy.spatial import cKDTree
+
 
 if "laspy" not in sys.modules and importlib.util.find_spec("laspy") is None:
     sys.modules["laspy"] = types.ModuleType("laspy")
@@ -29,6 +32,7 @@ if "shapely" not in sys.modules and importlib.util.find_spec("shapely") is None:
 
 from evaluate_m3m_gcp_lidar_success_v1 import (
     canonical_sha256,
+    exact_query_distances,
     expected_packet_names,
     materialize_heldout_candidate_manifest_alias,
     reference_cache_binding_mode,
@@ -170,6 +174,22 @@ class ReferenceCacheBindingTest(unittest.TestCase):
                 scene="gcp_100000_20260610",
                 expected_image_names=(name,),
             )
+
+    def test_parallel_exact_nearest_neighbor_matches_single_worker(self) -> None:
+        rng = np.random.default_rng(20260824)
+        reference = rng.normal(size=(4000, 3)).astype(np.float64)
+        queries = np.concatenate(
+            [
+                rng.normal(size=(2000, 3)),
+                rng.normal(size=(500, 3)) + np.asarray([0.0, 0.0, -100.0]),
+            ]
+        ).astype(np.float64)
+        tree = cKDTree(reference)
+        single = exact_query_distances(tree, queries, chunk=137, workers=1)
+        parallel = exact_query_distances(tree, queries, chunk=137, workers=-1)
+        self.assertTrue(np.array_equal(single, parallel))
+        with self.assertRaisesRegex(ValueError, "workers"):
+            exact_query_distances(tree, queries, chunk=137, workers=0)
 
 
 if __name__ == "__main__":

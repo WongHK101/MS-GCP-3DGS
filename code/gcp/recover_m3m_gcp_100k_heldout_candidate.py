@@ -57,6 +57,7 @@ def recovery_evaluate_phase(
     benchmark_commit: str,
     benchmark_tree: str,
     log_root: Path,
+    query_workers: int = 1,
 ) -> dict[str, Any]:
     phase = copy.deepcopy(source)
     argv = [str(value) for value in phase["argv"]]
@@ -69,6 +70,11 @@ def recovery_evaluate_phase(
     replace_unique_value(argv, "--repo", str(repo.resolve()))
     replace_unique_value(argv, "--benchmark-commit", benchmark_commit)
     replace_unique_value(argv, "--benchmark-tree", benchmark_tree)
+    if query_workers != 1:
+        if "--query-workers" in argv:
+            replace_unique_value(argv, "--query-workers", str(query_workers))
+        else:
+            argv.extend(["--query-workers", str(query_workers)])
     phase["argv"] = argv
     phase["argv_sha256"] = command_sha256(argv)
     phase["working_directory"] = str(repo.resolve())
@@ -106,6 +112,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--methods", nargs="+", required=True)
+    parser.add_argument("--query-workers", type=int, default=1)
     return parser.parse_args()
 
 
@@ -114,6 +121,8 @@ def main() -> int:
     args.repo = args.repo.expanduser().resolve()
     args.plan = args.plan.expanduser().resolve()
     args.receipt = args.receipt.expanduser().resolve()
+    if args.query_workers != -1 and args.query_workers < 1:
+        raise ValueError("--query-workers must be -1 or a positive integer")
     if args.receipt.exists() or args.receipt.is_symlink():
         raise FileExistsError(args.receipt)
     benchmark = validate_benchmark_checkout(
@@ -148,6 +157,7 @@ def main() -> int:
             "existing_complete_packets_required": True,
             "cleanup_only_after_returncode_zero_and_complete_ranked": True,
             "models_changed": False,
+            "nearest_neighbor_query_workers": args.query_workers,
         },
         "selected_methods": list(args.methods),
         "jobs": [],
@@ -189,6 +199,7 @@ def main() -> int:
                     log_root=args.receipt.parent
                     / "geometry_logs_heldout_candidate_recovery_v1"
                     / method_id,
+                    query_workers=args.query_workers,
                 )
                 row["evaluate_command"] = {
                     "argv": phase["argv"],

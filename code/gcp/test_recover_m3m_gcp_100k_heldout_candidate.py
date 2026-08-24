@@ -76,6 +76,42 @@ class HeldoutCandidateRecoveryTest(unittest.TestCase):
             self.assertEqual(source["argv"][3], "--repo")
             self.assertEqual(source["argv"][4], "/old/repo")
 
+    def test_recovery_can_append_exact_parallel_query_workers(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "repo"
+            (repo / "code/gcp").mkdir(parents=True)
+            source = {
+                "argv": [
+                    "/env/python",
+                    "-B",
+                    "/old/repo/code/gcp/evaluate_m3m_gcp_lidar_success_v1.py",
+                    "--repo",
+                    "/old/repo",
+                    "--benchmark-commit",
+                    "old-commit",
+                    "--benchmark-tree",
+                    "old-tree",
+                ],
+                "working_directory": "/old/repo",
+                "environment": {},
+                "stdout": "/old/stdout.log",
+                "stderr": "/old/stderr.log",
+            }
+            recovered = recovery_evaluate_phase(
+                source,
+                repo=repo,
+                benchmark_commit="new-commit",
+                benchmark_tree="new-tree",
+                log_root=root / "logs",
+                query_workers=-1,
+            )
+            argv = recovered["argv"]
+            self.assertEqual(argv.count("--query-workers"), 1)
+            self.assertEqual(argv[argv.index("--query-workers") + 1], "-1")
+            self.assertNotIn("--query-workers", source["argv"])
+            self.assertEqual(recovered["argv_sha256"], command_sha256(argv))
+
 
 if __name__ == "__main__":
     unittest.main()
