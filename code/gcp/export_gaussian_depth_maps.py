@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import inspect
 import json
 import os
@@ -385,6 +386,47 @@ def install_geometry_camera_only_loader(
     return evidence, restore
 
 
+def camera_state_trace(view: Any, image_name: str) -> Dict[str, Any]:
+    """Capture render-relevant camera state without serializing RGB tensors."""
+
+    def scalar(name: str) -> str | None:
+        value = getattr(view, name, None)
+        return float(value).hex() if value is not None else None
+
+    def array(name: str) -> Dict[str, Any] | None:
+        value = getattr(view, name, None)
+        if value is None:
+            return None
+        if hasattr(value, "detach"):
+            value = value.detach()
+        if hasattr(value, "cpu"):
+            value = value.cpu()
+        payload = np.ascontiguousarray(np.asarray(value))
+        return {
+            "shape": list(payload.shape),
+            "dtype": str(payload.dtype),
+            "bytes_sha256": hashlib.sha256(payload.tobytes(order="C")).hexdigest(),
+        }
+
+    return {
+        "image_name": image_name,
+        "image_width": int(view.image_width),
+        "image_height": int(view.image_height),
+        "FoVx_hex": scalar("FoVx"),
+        "FoVy_hex": scalar("FoVy"),
+        "Fx_hex": scalar("Fx"),
+        "Fy_hex": scalar("Fy"),
+        "Cx_hex": scalar("Cx"),
+        "Cy_hex": scalar("Cy"),
+        "R": array("R"),
+        "T": array("T"),
+        "world_view_transform": array("world_view_transform"),
+        "projection_matrix": array("projection_matrix"),
+        "full_proj_transform": array("full_proj_transform"),
+        "camera_center": array("camera_center"),
+    }
+
+
 def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime: Dict[str, Any]) -> Dict[str, Any]:
     out_dir = Path(args.depth_output_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -439,6 +481,14 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
             rows: List[Dict[str, Any]] = []
             allowlist = read_allowlist(args)
             views = collect_views(scene, args.camera_sets, allowlist=allowlist)
+            camera_trace = (
+                [
+                    camera_state_trace(view, image_name)
+                    for _split, view, image_name in views
+                ]
+                if args.record_camera_trace
+                else []
+            )
             for index, (split, view, image_name) in enumerate(tqdm(views, desc="Exporting Gaussian depth")):
                 render_kwargs: Dict[str, Any] = {}
                 if adapter_api == "raw_metric_depth_accumulators_v1":
@@ -715,6 +765,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "raw_accumulator_tensor_names": list(RAW_ACCUMULATOR_TENSOR_NAMES),
         "derived_packet_computed_on_cpu": adapter_api == "raw_metric_depth_accumulators_v1",
         "geometry_camera_loader": camera_loader,
+        "camera_state_trace": camera_trace,
         "adapter_patch_files": [
             {
                 "path": str(Path(path).expanduser().resolve()),
@@ -794,6 +845,11 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
             "Construct classic 3DGS-style cameras without decoding source RGB; "
             "formal depth rendering preserves the frozen dimensions and matrices."
         ),
+    )
+    parser.add_argument(
+        "--record_camera_trace",
+        action="store_true",
+        help="Record hashes of render-relevant per-view camera state for parity evidence.",
     )
     parser.add_argument(
         "--rasterizer_repo",

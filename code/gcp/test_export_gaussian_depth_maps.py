@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 
 from export_gaussian_depth_maps import (
+    camera_state_trace,
     camera_render_resolution,
     collect_views,
     convert_raw_camera_z_units,
@@ -191,6 +192,31 @@ def test_geometry_camera_only_loader_preserves_render_dimensions_and_intrinsics(
     assert module.loadCam is load_cam
 
 
+def test_camera_state_trace_is_rgb_free_and_byte_bound() -> None:
+    view = SimpleNamespace(
+        image_width=1414,
+        image_height=1024,
+        FoVx=1.0,
+        FoVy=0.8,
+        Fx=1000.0,
+        Fy=999.0,
+        Cx=706.5,
+        Cy=511.5,
+        R=np.eye(3, dtype=np.float32),
+        T=np.zeros(3, dtype=np.float32),
+        world_view_transform=np.eye(4, dtype=np.float32),
+        projection_matrix=np.eye(4, dtype=np.float32),
+        full_proj_transform=np.eye(4, dtype=np.float32),
+        camera_center=np.zeros(3, dtype=np.float32),
+        original_image=np.ones((3, 1024, 1414), dtype=np.float32),
+    )
+    trace = camera_state_trace(view, "view.JPG")
+    assert trace["image_width"] == 1414
+    assert trace["FoVx_hex"] == float(1.0).hex()
+    assert trace["R"]["dtype"] == "float32"
+    assert "original_image" not in trace
+
+
 def main() -> int:
     tests = [
         test_extensionless_runtime_names_resolve_to_release_names,
@@ -202,6 +228,7 @@ def main() -> int:
         test_rasterizer_repository_infers_3dgs_or_2dgs_layout,
         test_rasterizer_repository_cannot_escape_train_repo,
         test_geometry_camera_only_loader_preserves_render_dimensions_and_intrinsics,
+        test_camera_state_trace_is_rgb_free_and_byte_bound,
     ]
     for test in tests:
         test()

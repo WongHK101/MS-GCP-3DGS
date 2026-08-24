@@ -82,12 +82,20 @@ def compare(baseline: Path, candidate: Path) -> dict[str, Any]:
         errors.append("rendered view count differs")
     if candidate_manifest.get("geometry_camera_loader", {}).get("applied") is not True:
         errors.append("candidate geometry camera-only loader was not applied")
+    baseline_trace = baseline_manifest.get("camera_state_trace", [])
+    candidate_trace = candidate_manifest.get("camera_state_trace", [])
+    if not baseline_trace or baseline_trace != candidate_trace:
+        errors.append("render-relevant camera state trace differs or is missing")
     return {
         "schema": "m3m_gcp_geometry_camera_only_parity_v1",
         "status": "PASS" if not errors else "FAIL",
         "baseline": str(baseline.resolve()),
         "candidate": str(candidate.resolve()),
         "packet_count": len(rows),
+        "camera_trace_count": len(baseline_trace),
+        "camera_state_bitwise_equal": bool(
+            baseline_trace and baseline_trace == candidate_trace
+        ),
         "tensor_value_contract": "shape, dtype, and C-order bytes must match exactly",
         "rows": rows,
         "errors": errors,
