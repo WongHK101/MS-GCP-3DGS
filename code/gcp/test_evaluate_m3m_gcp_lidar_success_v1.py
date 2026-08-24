@@ -24,7 +24,10 @@ if "shapely" not in sys.modules and importlib.util.find_spec("shapely") is None:
     sys.modules["shapely"] = shapely
     sys.modules["shapely.geometry"] = geometry
 
-from evaluate_m3m_gcp_lidar_success_v1 import reference_cache_binding_mode
+from evaluate_m3m_gcp_lidar_success_v1 import (
+    canonical_sha256,
+    reference_cache_binding_mode,
+)
 
 
 class ReferenceCacheBindingTest(unittest.TestCase):
@@ -43,6 +46,7 @@ class ReferenceCacheBindingTest(unittest.TestCase):
             "local_origin_utm49n_normal_height_m": [1.0, 2.0, 0.0],
             "laz_files": {"cloud0.laz": {"bytes": 1, "sha256": "cloud"}},
         }
+        self.binding["canonical_sha256"] = canonical_sha256(self.binding)
 
     def test_exact_binding(self) -> None:
         self.assertEqual(
@@ -57,6 +61,7 @@ class ReferenceCacheBindingTest(unittest.TestCase):
             "bytes": 11,
             "sha256": "new",
         }
+        expected["canonical_sha256"] = canonical_sha256(expected)
         self.assertEqual(
             reference_cache_binding_mode(self.binding, expected),
             "SCIENTIFIC_BINDING_EQUAL_CONTRACT_FILE_IDENTITY_CHANGED",
@@ -71,11 +76,18 @@ class ReferenceCacheBindingTest(unittest.TestCase):
             with self.subTest(key=key):
                 expected = copy.deepcopy(self.binding)
                 expected[key] = value
+                expected["canonical_sha256"] = canonical_sha256(expected)
                 self.assertIsNone(reference_cache_binding_mode(self.binding, expected))
 
     def test_missing_contract_identity_is_rejected(self) -> None:
         expected = copy.deepcopy(self.binding)
         expected["contract"] = None
+        expected["canonical_sha256"] = canonical_sha256(expected)
+        self.assertIsNone(reference_cache_binding_mode(self.binding, expected))
+
+    def test_invalid_binding_self_hash_is_rejected(self) -> None:
+        expected = copy.deepcopy(self.binding)
+        expected["contract"]["sha256"] = "new"
         self.assertIsNone(reference_cache_binding_mode(self.binding, expected))
 
 

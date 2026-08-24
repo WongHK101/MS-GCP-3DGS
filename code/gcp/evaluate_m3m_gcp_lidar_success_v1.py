@@ -287,13 +287,22 @@ def reference_cache_binding_mode(
     keeps the cached point bytes reusable across evaluator-only revisions while
     still rejecting any source, ROI, vertical-frame, voxel, or origin change.
     """
+    if not isinstance(cached, dict):
+        return None
+    if cached.get("canonical_sha256") != canonical_sha256(cached) or expected.get(
+        "canonical_sha256"
+    ) != canonical_sha256(expected):
+        return None
     if cached == expected:
         return "EXACT_BINDING"
-    if not isinstance(cached, dict) or set(cached) != set(expected):
+    if set(cached) != set(expected):
         return None
-    cached_scientific = {key: value for key, value in cached.items() if key != "contract"}
+    lifecycle_keys = {"contract", "canonical_sha256"}
+    cached_scientific = {
+        key: value for key, value in cached.items() if key not in lifecycle_keys
+    }
     expected_scientific = {
-        key: value for key, value in expected.items() if key != "contract"
+        key: value for key, value in expected.items() if key not in lifecycle_keys
     }
     if cached_scientific != expected_scientific:
         return None
