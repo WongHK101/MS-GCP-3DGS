@@ -296,15 +296,18 @@ def main() -> int:
                 f"geometry evaluation runtime missing: {method_id}"
             )
         method_env = environment(method)
+        # v1 used the retired training-camera binding and v2 was consumed by
+        # the failed adapter-runtime preflight.  Preserve both receipts and use
+        # a fresh packet namespace for the corrected formal execution.
         gcp_packet_root = (
-            run_root / "formal_evaluation/gcp_packets_100k_success_v2"
+            run_root / "formal_evaluation/gcp_packets_100k_success_v3"
         )
         lidar_packet_root = (
             run_root / "formal_evaluation/lidar_packets_100k_success_v1"
         )
         gcp_output = run_root / "formal_evaluation/gcp_geometry_100k_success_v1"
         lidar_output = run_root / "formal_evaluation/lidar_geometry_100k_success_v1"
-        log_root = runtime / "geometry_logs" / method_id
+        log_root = runtime / "geometry_logs_adapter_runtime_v1" / method_id
         gcp_packet_argv = packet_command(
             repo=repo,
             method=method,

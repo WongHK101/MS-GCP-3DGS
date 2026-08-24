@@ -13,7 +13,7 @@ class GeometrySuccessRunnerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             run_root = Path(directory) / "run"
             packet_root = (
-                run_root / "formal_evaluation/gcp_packets_100k_success_v1"
+                run_root / "formal_evaluation/gcp_packets_100k_success_v3"
             )
             packet_root.mkdir(parents=True)
             packet = packet_root / "view.npz"
