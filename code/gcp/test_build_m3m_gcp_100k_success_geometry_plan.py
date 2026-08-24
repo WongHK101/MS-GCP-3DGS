@@ -14,12 +14,24 @@ from build_m3m_gcp_100k_success_geometry_plan import (
 )
 from m3m_gcp_100k_geometry_paths import (
     LIDAR_FULL_TRAIN_PACKET_ROOT_NAME,
+    formal_input_manifest_canonical_sha256,
     lidar_full_train_packet_manifest,
     lidar_full_train_packet_root,
 )
 
 
 class GeometryRuntimeBindingTests(unittest.TestCase):
+    def test_formal_manifest_uses_declared_manifest_sha256_field(self) -> None:
+        digest = "a" * 64
+        self.assertEqual(
+            formal_input_manifest_canonical_sha256(
+                {"manifest_sha256": digest, "canonical_sha256": "b" * 64}
+            ),
+            digest,
+        )
+        with self.assertRaisesRegex(ValueError, "manifest_sha256"):
+            formal_input_manifest_canonical_sha256({})
+
     def test_lidar_inventory_is_the_frozen_sha256_evidence_file(self) -> None:
         self.assertEqual(
             LIDAR_PAYLOAD_SHA256_INVENTORY.as_posix(),

@@ -20,7 +20,10 @@ from typing import Any
 import numpy as np
 
 import evaluate_m3m_gcp_lidar_formal_v1 as core
-from m3m_gcp_100k_geometry_paths import lidar_full_train_packet_manifest
+from m3m_gcp_100k_geometry_paths import (
+    formal_input_manifest_canonical_sha256,
+    lidar_full_train_packet_manifest,
+)
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from rgb_quality_contract import validate_benchmark_checkout
 from verify_m3m_gcp_lidar_formal_v1 import METRIC_FIELDS
@@ -153,7 +156,10 @@ def validate_source_bindings(
         if not path.is_file() or sha256_file(path) != expected_sha:
             raise ValueError(f"{label} identity mismatch: {path}")
     formal_payload = read_json(formal_manifest)
-    if formal_payload.get("canonical_sha256") != formal_expected["canonical_sha256"]:
+    if (
+        formal_input_manifest_canonical_sha256(formal_payload)
+        != formal_expected["canonical_sha256"]
+    ):
         raise ValueError("formal input manifest canonical identity mismatch")
 
     verify_full_hashes = not args.reference_cache_root.exists()
