@@ -78,6 +78,7 @@ EXPECTED_3DGS_PLY_SHA256 = (
 CITYGS_X_PYTORCH3D_COMPAT_RELATIVE = Path(
     "compat/citygs_x/pytorch3d_transforms_minimal_v1"
 )
+GEOMETRY_CAMERA_ONLY_METHODS = frozenset({"3dgs_original", "rade_gs"})
 
 
 ADAPTERS: dict[str, dict[str, Any]] = {
@@ -389,6 +390,15 @@ def common_tail(args: argparse.Namespace, report: Path, report_sha: str) -> list
     ]
 
 
+def uses_geometry_camera_only(method_id: str, camera_profile: str) -> bool:
+    """Return whether the full-view LiDAR export needs the RGB-free loader."""
+
+    return (
+        camera_profile == "lidar"
+        and method_id in GEOMETRY_CAMERA_ONLY_METHODS
+    )
+
+
 def build_command(args: argparse.Namespace) -> list[str]:
     spec = ADAPTERS[args.method_id]
     benchmark_repo = args.benchmark_repo
@@ -433,6 +443,8 @@ def build_command(args: argparse.Namespace) -> list[str]:
         command.extend(["--renderer_adapter_patch", str(patches[0])])
         if len(patches) > 1:
             command.extend(["--rasterizer_adapter_patch", str(patches[1])])
+        if uses_geometry_camera_only(args.method_id, args.camera_profile):
+            command.append("--geometry_camera_only")
         command.append("--quiet")
         return command
 

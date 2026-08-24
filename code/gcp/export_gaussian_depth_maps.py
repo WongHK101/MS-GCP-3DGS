@@ -258,6 +258,133 @@ def collect_views(
     return unique
 
 
+def camera_render_resolution(
+    loader_args: Any,
+    cam_info: Any,
+    resolution_scale: float,
+) -> tuple[int, int]:
+    """Reproduce the upstream camera loader's output resolution exactly."""
+
+    image = getattr(cam_info, "image", None)
+    if image is not None and hasattr(image, "size"):
+        orig_w, orig_h = image.size
+    else:
+        orig_w, orig_h = int(cam_info.width), int(cam_info.height)
+    if loader_args.resolution in {1, 2, 4, 8}:
+        return (
+            round(orig_w / (resolution_scale * loader_args.resolution)),
+            round(orig_h / (resolution_scale * loader_args.resolution)),
+        )
+    if loader_args.resolution == -1:
+        global_down = orig_w / 1600 if orig_w > 1600 else 1.0
+    else:
+        global_down = orig_w / loader_args.resolution
+    scale = float(global_down) * float(resolution_scale)
+    return int(orig_w / scale), int(orig_h / scale)
+
+
+def install_geometry_camera_only_loader(
+    runtime: Dict[str, Any],
+    camera_utils_module: Any | None = None,
+) -> tuple[Dict[str, Any], Any]:
+    """Avoid decoding RGB tensors that formal geometry rendering never reads.
+
+    Classic 3DGS-style loaders decode and retain every source RGB image before
+    rendering the first camera.  That is unnecessary for metric-depth export:
+    the rasterizer consumes the camera dimensions, FoV, transforms, and model,
+    but not ``original_image``.  The wrapper below lets the upstream loader
+    construct the exact same camera transforms with a 1x1 placeholder, then
+    restores the frozen render width/height (and the redundant RaDe intrinsics)
+    before any view is rendered.  Lazy PGSR/GSPrior loaders are left untouched.
+    """
+
+    if camera_utils_module is None:
+        camera_utils_module = sys.modules.get("utils.camera_utils")
+    if camera_utils_module is None:
+        raise RuntimeError("upstream utils.camera_utils was not imported")
+    camera_class = getattr(camera_utils_module, "Camera", None)
+    if camera_class is None:
+        raise RuntimeError("upstream camera utility does not expose Camera")
+    constructor_parameters = set(inspect.signature(camera_class.__init__).parameters)
+    evidence: Dict[str, Any] = {
+        "requested": True,
+        "applied": False,
+        "rgb_pixels_decoded": False,
+        "placeholder_shape": [3, 1, 1],
+        "preserved_render_fields": [
+            "image_width",
+            "image_height",
+            "FoVx",
+            "FoVy",
+            "world_view_transform",
+            "projection_matrix",
+            "full_proj_transform",
+            "camera_center",
+        ],
+    }
+    if "image" not in constructor_parameters:
+        evidence.update(
+            {
+                "loader_kind": "upstream_lazy_image_loader",
+                "reason": "camera constructor already accepts dimensions and image path",
+            }
+        )
+        return evidence, lambda: None
+    if not hasattr(camera_utils_module, "PILtoTorch") or not hasattr(
+        camera_utils_module, "loadCam"
+    ):
+        raise RuntimeError("classic image camera loader API is incomplete")
+
+    torch = runtime["torch"]
+    original_pil_to_torch = camera_utils_module.PILtoTorch
+    original_load_cam = camera_utils_module.loadCam
+
+    def placeholder_pil_to_torch(_image: Any, _resolution: Any) -> Any:
+        return torch.zeros((3, 1, 1), dtype=torch.float32)
+
+    def geometry_load_cam(
+        loader_args: Any,
+        camera_id: int,
+        cam_info: Any,
+        resolution_scale: float,
+    ) -> Any:
+        width, height = camera_render_resolution(
+            loader_args, cam_info, resolution_scale
+        )
+        camera = original_load_cam(
+            loader_args, camera_id, cam_info, resolution_scale
+        )
+        placeholder = getattr(camera, "original_image", None)
+        if placeholder is None or tuple(placeholder.shape[-2:]) != (1, 1):
+            raise RuntimeError("geometry-only camera loader decoded a non-placeholder RGB tensor")
+        camera.image_width = int(width)
+        camera.image_height = int(height)
+        # RaDe-GS stores these redundant pinhole values on the camera object.
+        # They are deterministic functions of the frozen dimensions and FoV.
+        if all(hasattr(camera, name) for name in ("Fx", "Fy", "Cx", "Cy")):
+            camera.Fx = camera.image_width / (2 * math.tan(camera.FoVx / 2.0))
+            camera.Fy = camera.image_height / (2 * math.tan(camera.FoVy / 2.0))
+            camera.Cx = float(camera.image_width - 1) / 2
+            camera.Cy = float(camera.image_height - 1) / 2
+        return camera
+
+    camera_utils_module.PILtoTorch = placeholder_pil_to_torch
+    camera_utils_module.loadCam = geometry_load_cam
+    evidence.update(
+        {
+            "applied": True,
+            "loader_kind": "classic_image_loader_geometry_only_v1",
+            "reason": "formal metric-depth rendering does not consume source RGB tensors",
+        }
+    )
+
+    def restore() -> None:
+        camera_utils_module.PILtoTorch = original_pil_to_torch
+        camera_utils_module.loadCam = original_load_cam
+
+    return evidence, restore
+
+
 def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime: Dict[str, Any]) -> Dict[str, Any]:
     out_dir = Path(args.depth_output_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -286,7 +413,26 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
     try:
         with torch.no_grad():
             gaussians = GaussianModel(dataset.sh_degree)
-            scene = Scene(dataset, gaussians, load_iteration=args.iteration, shuffle=False)
+            camera_loader = {
+                "requested": False,
+                "applied": False,
+                "rgb_pixels_decoded": True,
+                "loader_kind": "upstream_default",
+            }
+            restore_camera_loader = lambda: None
+            if args.geometry_camera_only:
+                camera_loader, restore_camera_loader = install_geometry_camera_only_loader(
+                    runtime
+                )
+            try:
+                scene = Scene(
+                    dataset,
+                    gaussians,
+                    load_iteration=args.iteration,
+                    shuffle=False,
+                )
+            finally:
+                restore_camera_loader()
             bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
             background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
@@ -568,6 +714,7 @@ def export_depths(args: argparse.Namespace, dataset: Any, pipeline: Any, runtime
         "renderer_adapter_api": adapter_api,
         "raw_accumulator_tensor_names": list(RAW_ACCUMULATOR_TENSOR_NAMES),
         "derived_packet_computed_on_cpu": adapter_api == "raw_metric_depth_accumulators_v1",
+        "geometry_camera_loader": camera_loader,
         "adapter_patch_files": [
             {
                 "path": str(Path(path).expanduser().resolve()),
@@ -640,6 +787,14 @@ def build_parser(runtime: Dict[str, Any]) -> tuple[argparse.ArgumentParser, Any,
     parser.add_argument("--adapter_conformance_report_sha256", default="")
     parser.add_argument("--renderer_adapter_patch", default="")
     parser.add_argument("--rasterizer_adapter_patch", default="")
+    parser.add_argument(
+        "--geometry_camera_only",
+        action="store_true",
+        help=(
+            "Construct classic 3DGS-style cameras without decoding source RGB; "
+            "formal depth rendering preserves the frozen dimensions and matrices."
+        ),
+    )
     parser.add_argument(
         "--rasterizer_repo",
         default="",

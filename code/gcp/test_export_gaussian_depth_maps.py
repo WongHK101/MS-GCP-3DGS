@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,9 +10,11 @@ from types import SimpleNamespace
 import numpy as np
 
 from export_gaussian_depth_maps import (
+    camera_render_resolution,
     collect_views,
     convert_raw_camera_z_units,
     derive_packet_from_raw_accumulators,
+    install_geometry_camera_only_loader,
     parse_train_repo,
     read_allowlist,
     resolve_rasterizer_repo,
@@ -140,6 +143,54 @@ def test_rasterizer_repository_cannot_escape_train_repo() -> None:
             raise AssertionError("out-of-tree rasterizer repository was accepted")
 
 
+def test_geometry_camera_only_loader_preserves_render_dimensions_and_intrinsics() -> None:
+    class FakeCamera:
+        def __init__(self, image) -> None:
+            self.original_image = image
+
+    module = SimpleNamespace()
+    module.Camera = FakeCamera
+    module.PILtoTorch = lambda _image, resolution: np.ones(
+        (3, resolution[1], resolution[0]), dtype=np.float32
+    )
+
+    def load_cam(loader_args, _camera_id, cam_info, resolution_scale):
+        resolution = camera_render_resolution(loader_args, cam_info, resolution_scale)
+        image = module.PILtoTorch(cam_info.image, resolution)
+        return SimpleNamespace(
+            original_image=image,
+            image_width=image.shape[2],
+            image_height=image.shape[1],
+            FoVx=1.0,
+            FoVy=0.8,
+            Fx=0.0,
+            Fy=0.0,
+            Cx=0.0,
+            Cy=0.0,
+        )
+
+    module.loadCam = load_cam
+    fake_torch = SimpleNamespace(
+        float32=np.float32,
+        zeros=lambda shape, dtype: np.zeros(shape, dtype=dtype),
+    )
+    loader_args = SimpleNamespace(resolution=1)
+    cam_info = SimpleNamespace(image=SimpleNamespace(size=(1414, 1024)))
+    evidence, restore = install_geometry_camera_only_loader(
+        {"torch": fake_torch}, module
+    )
+    camera = module.loadCam(loader_args, 0, cam_info, 1.0)
+    assert evidence["applied"] is True
+    assert evidence["rgb_pixels_decoded"] is False
+    assert camera.original_image.shape == (3, 1, 1)
+    assert (camera.image_width, camera.image_height) == (1414, 1024)
+    assert np.isclose(camera.Fx, 1414 / (2 * math.tan(0.5)))
+    assert np.isclose(camera.Fy, 1024 / (2 * math.tan(0.4)))
+    assert (camera.Cx, camera.Cy) == (706.5, 511.5)
+    restore()
+    assert module.loadCam is load_cam
+
+
 def main() -> int:
     tests = [
         test_extensionless_runtime_names_resolve_to_release_names,
@@ -150,6 +201,7 @@ def main() -> int:
         test_raw_renderer_accumulators_are_reversibly_scaled_to_protocol_units,
         test_rasterizer_repository_infers_3dgs_or_2dgs_layout,
         test_rasterizer_repository_cannot_escape_train_repo,
+        test_geometry_camera_only_loader_preserves_render_dimensions_and_intrinsics,
     ]
     for test in tests:
         test()

@@ -16,6 +16,7 @@ import run_m3m_gcp_100k_packet_export as packet_module
 from run_m3m_gcp_100k_packet_export import (
     CITYGS_X_PYTORCH3D_COMPAT_RELATIVE,
     SCENE,
+    uses_geometry_camera_only,
     verify_allowlist,
     verify_camera_root,
     verify_checkpoint,
@@ -23,6 +24,13 @@ from run_m3m_gcp_100k_packet_export import (
 
 
 class PacketExport100KTest(unittest.TestCase):
+    def test_geometry_camera_only_is_lidar_only_and_method_scoped(self) -> None:
+        self.assertTrue(uses_geometry_camera_only("3dgs_original", "lidar"))
+        self.assertTrue(uses_geometry_camera_only("rade_gs", "lidar"))
+        self.assertFalse(uses_geometry_camera_only("3dgs_original", "gcp"))
+        self.assertFalse(uses_geometry_camera_only("pgsr", "lidar"))
+        self.assertFalse(uses_geometry_camera_only("citygs_x", "lidar"))
+
     @unittest.skipIf(os.name == "nt", "Windows test host lacks symlink privilege")
     def test_evaluation_camera_root_is_pose_only_and_hash_bound(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
