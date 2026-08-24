@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from run_m3m_gcp_100k_success_geometry_plan import cleanup_packet_arrays
+from run_m3m_gcp_100k_success_geometry_plan import cleanup_packet_arrays, run_phase
 
 
 class GeometrySuccessRunnerTest(unittest.TestCase):
@@ -52,6 +54,35 @@ class GeometrySuccessRunnerTest(unittest.TestCase):
             unsafe.mkdir(parents=True)
             with self.assertRaisesRegex(ValueError, "exact formal roots"):
                 cleanup_packet_arrays(unsafe, run_root, "unit_test")
+
+    @unittest.skipUnless(os.name == "posix", "RLIMIT_NOFILE is POSIX-only")
+    def test_run_phase_applies_requested_nofile_soft_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            spec = {
+                "argv": [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import resource; "
+                        "print(resource.getrlimit(resource.RLIMIT_NOFILE)[0])"
+                    ),
+                ],
+                "working_directory": str(root),
+                "environment": {},
+                "resource_limits": {"nofile_soft": 65535},
+                "stdout": str(root / "stdout.log"),
+                "stderr": str(root / "stderr.log"),
+            }
+            result = run_phase(spec, "unit_test")
+            self.assertEqual(result["returncode"], 0)
+            self.assertEqual(
+                (root / "stdout.log").read_text(encoding="utf-8").strip(),
+                "65535",
+            )
+            self.assertEqual(
+                result["resource_limits"]["nofile_applied_soft"], 65535
+            )
 
 
 if __name__ == "__main__":

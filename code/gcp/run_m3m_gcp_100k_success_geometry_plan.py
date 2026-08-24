@@ -36,6 +36,30 @@ def run_phase(spec: dict[str, Any], phase_name: str) -> dict[str, Any]:
     environment.update(
         {str(key): str(value) for key, value in spec.get("environment", {}).items()}
     )
+    requested_nofile = spec.get("resource_limits", {}).get("nofile_soft")
+    applied_limits: dict[str, int] | None = None
+    preexec_fn = None
+    if requested_nofile is not None:
+        if os.name != "posix":
+            raise RuntimeError("nofile resource limit requires a POSIX runtime")
+        import resource
+
+        previous_soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        requested = int(requested_nofile)
+        target = requested if hard == resource.RLIM_INFINITY else min(requested, hard)
+        if target <= 0:
+            raise ValueError(f"invalid nofile limit: {requested}")
+
+        def apply_nofile_limit() -> None:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+
+        preexec_fn = apply_nofile_limit
+        applied_limits = {
+            "nofile_previous_soft": int(previous_soft),
+            "nofile_hard": int(hard),
+            "nofile_requested_soft": requested,
+            "nofile_applied_soft": int(target),
+        }
     started = now()
     with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open(
         "w", encoding="utf-8"
@@ -44,11 +68,12 @@ def run_phase(spec: dict[str, Any], phase_name: str) -> dict[str, Any]:
             [str(value) for value in spec["argv"]],
             cwd=str(spec["working_directory"]),
             env=environment,
+            preexec_fn=preexec_fn,
             stdout=stdout,
             stderr=stderr,
             check=False,
         )
-    return {
+    result = {
         "phase": phase_name,
         "started_at": started,
         "finished_at": now(),
@@ -56,6 +81,9 @@ def run_phase(spec: dict[str, Any], phase_name: str) -> dict[str, Any]:
         "stdout": {"path": str(stdout_path), "sha256": sha256_file(stdout_path)},
         "stderr": {"path": str(stderr_path), "sha256": sha256_file(stderr_path)},
     }
+    if applied_limits is not None:
+        result["resource_limits"] = applied_limits
+    return result
 
 
 def terminal_result(track: str, output_root: Path) -> tuple[bool, str]:
@@ -85,6 +113,7 @@ def cleanup_packet_arrays(packet_root: Path, run_root: Path, reason: str) -> dic
         "gcp_packets_100k_success_v2",
         "gcp_packets_100k_success_v3",
         "lidar_packets_100k_success_v1",
+        "lidar_packets_100k_success_v2",
     }:
         raise ValueError(f"refusing packet cleanup outside exact formal roots: {packet_root}")
     if packet_root.is_symlink():

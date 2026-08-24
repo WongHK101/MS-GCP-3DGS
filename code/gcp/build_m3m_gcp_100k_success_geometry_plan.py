@@ -154,9 +154,14 @@ def environment(method: dict[str, Any]) -> dict[str, str]:
 
 
 def phase(
-    argv: list[str], *, working_directory: Path, env: dict[str, str], log_root: Path
+    argv: list[str],
+    *,
+    working_directory: Path,
+    env: dict[str, str],
+    log_root: Path,
+    nofile_soft_limit: int | None = None,
 ) -> dict[str, Any]:
-    return {
+    output = {
         "argv": argv,
         "argv_sha256": command_sha256(argv),
         "shell_preview": shlex.join(argv),
@@ -165,6 +170,9 @@ def phase(
         "stdout": str((log_root / "stdout.log").resolve()),
         "stderr": str((log_root / "stderr.log").resolve()),
     }
+    if nofile_soft_limit is not None:
+        output["resource_limits"] = {"nofile_soft": int(nofile_soft_limit)}
+    return output
 
 
 def packet_command(
@@ -302,12 +310,15 @@ def main() -> int:
         gcp_packet_root = (
             run_root / "formal_evaluation/gcp_packets_100k_success_v3"
         )
+        # v1 was consumed by the inherited 1024-NOFILE preflight failure.
+        # Preserve that receipt and use a fresh namespace with an explicit
+        # child-process file-descriptor limit for the 2196-view profile.
         lidar_packet_root = (
-            run_root / "formal_evaluation/lidar_packets_100k_success_v1"
+            run_root / "formal_evaluation/lidar_packets_100k_success_v2"
         )
         gcp_output = run_root / "formal_evaluation/gcp_geometry_100k_success_v1"
         lidar_output = run_root / "formal_evaluation/lidar_geometry_100k_success_v1"
-        log_root = runtime / "geometry_logs_adapter_runtime_v1" / method_id
+        log_root = runtime / "geometry_logs_fdlimit_v1" / method_id
         gcp_packet_argv = packet_command(
             repo=repo,
             method=method,
@@ -414,6 +425,7 @@ def main() -> int:
                         working_directory=evaluation_root,
                         env=method_env,
                         log_root=log_root / "lidar_packet",
+                        nofile_soft_limit=65535,
                     ),
                     "evaluate": phase(
                         lidar_eval_argv,
