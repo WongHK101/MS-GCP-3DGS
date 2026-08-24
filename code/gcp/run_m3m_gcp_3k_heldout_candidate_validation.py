@@ -450,7 +450,6 @@ def main() -> int:
         try:
             original_path = run_root / "formal_evaluation/export_resource_probe/command.json"
             original = read_json(original_path)
-            packet_root.mkdir(parents=True)
             argv, cwd, env = candidate_export_command(
                 original,
                 allowlist=allowlist,
@@ -472,8 +471,12 @@ def main() -> int:
                 "candidate_environment_override": environment_overrides[method_id],
             }
             command_record["canonical_sha256"] = canonical_sha256(command_record)
-            write_json(packet_root / "candidate_command.json", command_record)
-            export_log = packet_root / "export.log"
+            command_record_path = (
+                args.output_root / "export_commands" / f"{method_id}.json"
+            )
+            write_json(command_record_path, command_record)
+            export_log = args.output_root / "export_logs" / f"{method_id}.log"
+            export_log.parent.mkdir(parents=True, exist_ok=True)
             export_started = time.monotonic()
             with export_log.open("wb") as handle:
                 completed = subprocess.run(
@@ -487,6 +490,7 @@ def main() -> int:
             receipt["export_seconds"] = time.monotonic() - export_started
             receipt["export_returncode"] = completed.returncode
             receipt["export_log"] = identity(export_log)
+            receipt["export_command"] = identity(command_record_path)
             if completed.returncode != 0:
                 raise RuntimeError(f"exporter returned {completed.returncode}")
             manifest_path = packet_root / "depth_export_manifest.json"
