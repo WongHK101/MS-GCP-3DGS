@@ -222,17 +222,19 @@ def load_or_build_reference(
     voxel_m: float,
     chunk_points: int,
     origin: np.ndarray,
-) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]:
+) -> tuple[np.ndarray, dict[str, Any], dict[str, Any], str]:
     cache_root = cache_root.resolve()
     points_path = cache_root / "reference_voxel_centres_local_metric.npz"
     audit_path = cache_root / "reference_audit.json"
     manifest_path = cache_root / "reference_cache_manifest.json"
     if cache_root.exists():
         manifest = read_json(manifest_path)
+        cached_binding = manifest.get("binding")
+        binding_mode = reference_cache_binding_mode(cached_binding, binding)
         if (
             manifest.get("schema") != "m3m_gcp_lidar_100k_reference_cache_v1"
             or manifest.get("status") != "PASS_REFERENCE_CACHE"
-            or manifest.get("binding") != binding
+            or binding_mode is None
             or manifest.get("canonical_sha256") != canonical_sha256(manifest)
             or manifest.get("points", {}).get("sha256") != sha256_file(points_path)
             or manifest.get("audit", {}).get("sha256") != sha256_file(audit_path)
@@ -243,7 +245,7 @@ def load_or_build_reference(
             cached_origin = payload["local_origin_utm49n_normal_height_m"]
         if reference.dtype != np.float64 or not np.array_equal(cached_origin, origin):
             raise ValueError("shared LiDAR reference cache numeric frame mismatch")
-        return reference, read_json(audit_path), manifest
+        return reference, read_json(audit_path), manifest, binding_mode
 
     cache_root.mkdir(parents=True)
     reference, audit = core.build_reference(
@@ -272,7 +274,34 @@ def load_or_build_reference(
     }
     manifest["canonical_sha256"] = canonical_sha256(manifest)
     write_json(manifest_path, manifest)
-    return reference, audit, manifest
+    return reference, audit, manifest, "EXACT_BINDING"
+
+
+def reference_cache_binding_mode(
+    cached: Any, expected: dict[str, Any]
+) -> str | None:
+    """Allow reuse when only the enclosing contract file identity changed.
+
+    Every reference-defining field is duplicated explicitly beside ``contract``
+    in the cache binding.  Ignoring only that implementation/lifecycle identity
+    keeps the cached point bytes reusable across evaluator-only revisions while
+    still rejecting any source, ROI, vertical-frame, voxel, or origin change.
+    """
+    if cached == expected:
+        return "EXACT_BINDING"
+    if not isinstance(cached, dict) or set(cached) != set(expected):
+        return None
+    cached_scientific = {key: value for key, value in cached.items() if key != "contract"}
+    expected_scientific = {
+        key: value for key, value in expected.items() if key != "contract"
+    }
+    if cached_scientific != expected_scientific:
+        return None
+    if not isinstance(cached.get("contract"), dict) or not isinstance(
+        expected.get("contract"), dict
+    ):
+        return None
+    return "SCIENTIFIC_BINDING_EQUAL_CONTRACT_FILE_IDENTITY_CHANGED"
 
 
 def parse_args() -> argparse.Namespace:
@@ -383,7 +412,12 @@ def main() -> int:
     }
     reference_binding["canonical_sha256"] = canonical_sha256(reference_binding)
     numeric_self_test = core.run_numeric_self_tests(args.reference_voxel_m)
-    reference, reference_audit, reference_manifest = load_or_build_reference(
+    (
+        reference,
+        reference_audit,
+        reference_manifest,
+        reference_cache_binding_mode_value,
+    ) = load_or_build_reference(
         cache_root=args.reference_cache_root,
         binding=reference_binding,
         laz_dir=laz_dir,
@@ -468,6 +502,7 @@ def main() -> int:
         "reference_cache": identity(
             args.reference_cache_root / "reference_cache_manifest.json"
         ),
+        "reference_cache_binding_mode": reference_cache_binding_mode_value,
         "inputs": {
             "benchmark_repository": benchmark_identity,
             "registry": identity(args.registry),
