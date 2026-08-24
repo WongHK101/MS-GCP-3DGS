@@ -24,6 +24,9 @@ METHODS = [
     "gsprior",
 ]
 DATA_ROOT = Path("/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1")
+PROTOCOL_DATA_ROOT = Path(
+    "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-preflight-data-v1"
+)
 FORMAL_ROOT = DATA_ROOT / "formal_inputs" / SCENE
 TRAIN_ROOT = FORMAL_ROOT / "train"
 GCP_CAMERA_ROOT = Path(
@@ -184,7 +187,7 @@ def main() -> int:
     artifact_schema = repo / "configs/m3m_gcp_lidar_formal_artifact_schema_v1.json"
     split = repo / "configs/gs_gcp_rgb_holdout_split_manifest_v1.json"
     gcp_csv = (
-        PROTOCOL_ROOT
+        PROTOCOL_DATA_ROOT
         / "benchmark/source_release_v1_3_0/gcp_points_cgcs2000_cm108_v1_3_0.csv"
     )
     sim3 = PROTOCOL_ROOT / "scenes" / SCENE / "common_sim3.json"
@@ -247,7 +250,7 @@ def main() -> int:
             "-B",
             str(repo / "code/gcp/evaluate_m3m_native_quarter_geometry.py"),
             "--data_root",
-            str(DATA_ROOT),
+            str(PROTOCOL_DATA_ROOT),
             "--protocol_release",
             str(PROTOCOL_ROOT),
             "--scene",
