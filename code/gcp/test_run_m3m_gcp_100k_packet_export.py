@@ -70,21 +70,23 @@ class PacketExport100KTest(unittest.TestCase):
             manifest["canonical_sha256"] = packet_module.canonical_sha256(manifest)
             manifest_path = camera / "EVALUATION_CAMERA_ROOT_MANIFEST.json"
             manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
-            with (
-                mock.patch.object(packet_module, "EVALUATION_CAMERA_ROOT", camera),
-                mock.patch.object(packet_module, "FORMAL_TRAIN_ROOT", formal),
-                mock.patch.object(packet_module, "EXPECTED_TRAIN_VIEWS", 1),
-                mock.patch.object(packet_module, "EVALUATION_CAMERA_SPARSE_SHA256", hashes),
-                mock.patch.object(
-                    packet_module,
-                    "EVALUATION_CAMERA_MANIFEST_SHA256",
-                    packet_module.sha256(manifest_path),
-                ),
-            ):
-                verify_camera_root(camera)
+            profile = {
+                "root": camera,
+                "manifest_name": manifest_path.name,
+                "manifest_sha256": packet_module.sha256(manifest_path),
+                "schema": "m3m_gcp_100k_evaluation_camera_root_v1",
+                "status": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+                "view_count": 1,
+                "view_count_field": "view_count",
+                "files_field": "files",
+                "images_policy": "formal_train_symlink",
+                "sparse_sha256": hashes,
+            }
+            with mock.patch.object(packet_module, "FORMAL_TRAIN_ROOT", formal):
+                verify_camera_root(camera, profile)
                 (sparse / "points3D.bin").write_bytes(b"not-empty")
                 with self.assertRaisesRegex(RuntimeError, "identity mismatch"):
-                    verify_camera_root(camera)
+                    verify_camera_root(camera, profile)
 
     def test_citygs_compatibility_package_is_repository_bound(self) -> None:
         compat = Path(__file__).resolve().parents[2] / CITYGS_X_PYTORCH3D_COMPAT_RELATIVE
@@ -101,11 +103,11 @@ class PacketExport100KTest(unittest.TestCase):
                 writer.writerows(
                     {"image_name": f"image_{index:04d}.JPG"} for index in range(2196)
                 )
-            verify_allowlist(path)
+            verify_allowlist(path, 2196)
             with path.open("a", encoding="utf-8", newline="") as handle:
                 handle.write("image_0000.JPG\n")
             with self.assertRaisesRegex(RuntimeError, "2196 unique"):
-                verify_allowlist(path)
+                verify_allowlist(path, 2196)
 
     def test_gsprior_scale_is_read_only_from_frozen_prior_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

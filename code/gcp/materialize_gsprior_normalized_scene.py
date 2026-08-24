@@ -218,7 +218,15 @@ def main() -> None:
     source_points_ply = source_model / "points3D.ply"
     if source_points_bin.is_file():
         source_points = read_points3D_binary(str(source_points_bin))
-        point_source_kind = "colmap_points3D_bin"
+        # Evaluation-only camera roots deliberately carry an empty, eight-byte
+        # points3D.bin for COLMAP-loader compatibility while retaining the
+        # frozen initialization cloud in points3D.ply.  Treat that combination
+        # as a PLY-backed scene instead of attempting to stack an empty dict.
+        if not source_points and source_points_ply.is_file():
+            source_points = None
+            point_source_kind = "frozen_points3D_ply_with_empty_compatibility_bin"
+        else:
+            point_source_kind = "colmap_points3D_bin"
     elif source_points_ply.is_file():
         source_points = None
         point_source_kind = "frozen_points3D_ply_only"
@@ -274,6 +282,11 @@ def main() -> None:
         source_ply_xyz, normalized_ply_xyz = transform_ply(
             source_points_ply, sparse / "points3D.ply", transform
         )
+        if source_points_bin.is_file():
+            # Preserve the compatibility member so Graphdeco-family loaders
+            # can read an empty COLMAP point table and then consume the already
+            # materialized PLY without falling back to a missing text model.
+            write_points3D_binary({}, str(sparse / "points3D.bin"))
     nested = sparse / "0"
     nested.mkdir()
     sparse_names = ["cameras.bin", "images.bin", "points3D.ply"]

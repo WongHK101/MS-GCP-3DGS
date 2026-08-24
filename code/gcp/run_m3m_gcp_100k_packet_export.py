@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dispatch one frozen 100K all-train-view packet export.
+"""Dispatch one frozen 100K GCP- or LiDAR-camera packet export.
 
 This wrapper is deliberately evaluation-only.  It validates the selected
 training output and frozen adapter evidence, constructs the method-specific
@@ -27,22 +27,50 @@ SOURCE_RELEASE_SHA256 = (
 )
 IMAGE_DOMAIN = "colmap_4_0_4_image_undistorter_pinhole_max_1414"
 PIXEL_CONVENTION = "zero_based_pixel_centers"
-EXPECTED_TRAIN_VIEWS = 2196
 FORMAL_TRAIN_ROOT = Path(
     "/root/autodl-tmp/datasets/M3M-GCP-colmap-native-quarter-v1/formal_inputs/"
     f"{SCENE}/train"
 )
-EVALUATION_CAMERA_ROOT = Path(
-    f"/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/{SCENE}"
-)
-EVALUATION_CAMERA_MANIFEST_SHA256 = (
-    "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac"
-)
-EVALUATION_CAMERA_SPARSE_SHA256 = {
+COMMON_CAMERA_SPARSE_SHA256 = {
     "cameras.bin": "6669584ba1ba326cf5b372b878a5abf182f8cfe0bfe0845da3a0c4f7aed8fe5e",
-    "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
     "points3D.bin": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
     "points3D.ply": "9f653655a34c05007e58f339afec593136bd857a56b13a612c79d8e53913364e",
+}
+CAMERA_PROFILES: dict[str, dict[str, Any]] = {
+    "lidar": {
+        "root": Path(
+            f"/root/autodl-tmp/datasets/M3M-GCP-100K-evaluation-camera-root-v1/{SCENE}"
+        ),
+        "manifest_name": "EVALUATION_CAMERA_ROOT_MANIFEST.json",
+        "manifest_sha256": "6b31e460ba80b17e85ac284c55165bfbc6c6b3a85411ad88e785ed8fe6645aac",
+        "schema": "m3m_gcp_100k_evaluation_camera_root_v1",
+        "status": "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION",
+        "view_count": 2196,
+        "view_count_field": "view_count",
+        "files_field": "files",
+        "images_policy": "formal_train_symlink",
+        "sparse_sha256": {
+            **COMMON_CAMERA_SPARSE_SHA256,
+            "images.bin": "dfc1a5d17532aebb3da670598635baea5c8fbf999592b6b567504251a01c9f72",
+        },
+    },
+    "gcp": {
+        "root": Path(
+            f"/root/autodl-tmp/datasets/M3M-GCP-100K-gcp-evaluation-camera-root-v1/{SCENE}"
+        ),
+        "manifest_name": "GCP_EVALUATION_CAMERA_ROOT_MANIFEST.json",
+        "manifest_sha256": "573529c7f9538b71a994b998e6fdd6361a31253a7cf49cbcef520cc101b0914b",
+        "schema": "m3m_gcp_100k_gcp_evaluation_camera_root_v1",
+        "status": "PASS_GCP_EVALUATION_CAMERA_ROOT_NO_RGB_PIXELS",
+        "view_count": 211,
+        "view_count_field": "camera_view_count",
+        "files_field": "sparse_files",
+        "images_policy": "black_placeholder_hardlinks",
+        "sparse_sha256": {
+            **COMMON_CAMERA_SPARSE_SHA256,
+            "images.bin": "3237c061d94b0451cd1afbb8d2434918a6bd9e58d362e0312330ef71dfd0a2e1",
+        },
+    },
 }
 EXPECTED_3DGS_PLY_SHA256 = (
     "8d92360186d268d0e20a0e328122e8c2679cddd0c2d539c27a918ee4c972e1f5"
@@ -189,12 +217,14 @@ def read_json(path: Path) -> dict[str, Any]:
     return json.loads(require_file(path).read_text(encoding="utf-8"))
 
 
-def verify_allowlist(path: Path) -> None:
+def verify_allowlist(path: Path, expected_count: int) -> None:
     with require_file(path).open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
     names = [str(row.get("image_name", "")).strip() for row in rows]
-    if len(names) != EXPECTED_TRAIN_VIEWS or len(set(names)) != EXPECTED_TRAIN_VIEWS:
-        raise RuntimeError("100K train allowlist must contain 2196 unique image names")
+    if len(names) != expected_count or len(set(names)) != expected_count:
+        raise RuntimeError(
+            f"100K packet allowlist must contain {expected_count} unique image names"
+        )
     if any(not name for name in names):
         raise RuntimeError("100K train allowlist contains an empty image name")
 
@@ -206,40 +236,57 @@ def canonical_sha256(payload: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def verify_camera_root(path: Path) -> dict[str, Any]:
+def verify_camera_root(path: Path, profile: dict[str, Any]) -> dict[str, Any]:
     path = path.expanduser().resolve()
-    if path != EVALUATION_CAMERA_ROOT.resolve():
+    if path != Path(profile["root"]).resolve():
         raise RuntimeError("packet camera root differs from the frozen evaluation-only root")
-    manifest_path = path / "EVALUATION_CAMERA_ROOT_MANIFEST.json"
-    require_file(manifest_path, EVALUATION_CAMERA_MANIFEST_SHA256)
+    manifest_path = path / str(profile["manifest_name"])
+    require_file(manifest_path, str(profile["manifest_sha256"]))
     manifest = read_json(manifest_path)
     output = manifest.get("output", {})
+    expected_count = int(profile["view_count"])
     if (
-        manifest.get("schema") != "m3m_gcp_100k_evaluation_camera_root_v1"
-        or manifest.get("status")
-        != "PASS_EVALUATION_CAMERA_ROOT_NO_TRAINING_NO_PRIOR_NO_EVALUATION"
+        manifest.get("schema") != profile["schema"]
+        or manifest.get("status") != profile["status"]
         or manifest.get("scene") != SCENE
         or manifest.get("canonical_sha256") != canonical_sha256(manifest)
         or output.get("root") != str(path)
-        or output.get("view_count") != EXPECTED_TRAIN_VIEWS
-        or output.get("points3d_bin_point_count") != 0
-        or manifest.get("truth_boundary", {}).get("heldout_rgb_present") is not False
-        or manifest.get("truth_boundary", {}).get("gcp_or_lidar_used") is not False
+        or output.get(str(profile["view_count_field"])) != expected_count
     ):
         raise RuntimeError("evaluation camera-root manifest identity mismatch")
     image_root = path / "images"
-    if (
-        not image_root.is_symlink()
-        or image_root.resolve() != (FORMAL_TRAIN_ROOT / "images").resolve()
-        or len([item for item in image_root.iterdir() if item.is_file()])
-        != EXPECTED_TRAIN_VIEWS
-    ):
-        raise RuntimeError("evaluation camera-root RGB boundary mismatch")
+    image_files = [item for item in image_root.iterdir() if item.is_file()]
+    if profile["images_policy"] == "formal_train_symlink":
+        if (
+            not image_root.is_symlink()
+            or image_root.resolve() != (FORMAL_TRAIN_ROOT / "images").resolve()
+            or len(image_files) != expected_count
+            or output.get("points3d_bin_point_count") != 0
+            or manifest.get("truth_boundary", {}).get("heldout_rgb_present") is not False
+            or manifest.get("truth_boundary", {}).get("gcp_or_lidar_used") is not False
+        ):
+            raise RuntimeError("evaluation camera-root RGB boundary mismatch")
+    else:
+        placeholder_row = output.get("placeholder", {})
+        placeholder = require_file(
+            Path(str(placeholder_row.get("path", ""))),
+            str(placeholder_row.get("sha256", "")),
+        )
+        expected_names = set(output.get("image_names", []))
+        if (
+            manifest.get("rgb_truth_boundary", {}).get("real_rgb_pixels_present") is not False
+            or output.get("all_named_loader_images_are_hardlinks_to_placeholder") is not True
+            or len(expected_names) != expected_count
+            or {item.name for item in image_files} != expected_names
+            or any(not os.path.samefile(item, placeholder) for item in image_files)
+        ):
+            raise RuntimeError("GCP camera-root placeholder boundary mismatch")
     sparse = path / "sparse" / "0"
-    manifest_files = output.get("files", {})
-    if set(manifest_files) != set(EVALUATION_CAMERA_SPARSE_SHA256):
+    expected_sparse = dict(profile["sparse_sha256"])
+    manifest_files = output.get(str(profile["files_field"]), {})
+    if set(manifest_files) != set(expected_sparse):
         raise RuntimeError("evaluation camera-root sparse inventory mismatch")
-    for name, expected_sha in EVALUATION_CAMERA_SPARSE_SHA256.items():
+    for name, expected_sha in expected_sparse.items():
         file_path = sparse / name
         row = manifest_files.get(name, {})
         if (
@@ -472,6 +519,7 @@ def build_command(args: argparse.Namespace) -> list[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--method-id", choices=tuple(ADAPTERS), required=True)
+    parser.add_argument("--camera-profile", choices=tuple(CAMERA_PROFILES), required=True)
     parser.add_argument("--benchmark-repo", type=Path, required=True)
     parser.add_argument("--evaluation-repo", type=Path, required=True)
     parser.add_argument("--training-run-root", type=Path, required=True)
@@ -491,14 +539,15 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    profile = CAMERA_PROFILES[args.camera_profile]
     if args.packet_set_root.exists():
         raise FileExistsError(f"packet set already exists: {args.packet_set_root}")
     if not (args.benchmark_repo / ".git").exists():
         raise FileNotFoundError("benchmark checkout is missing .git")
     if not (args.evaluation_repo / ".git").exists():
         raise FileNotFoundError("evaluation adapter checkout is missing .git")
-    verify_allowlist(args.train_allowlist)
-    verify_camera_root(args.camera_root)
+    verify_allowlist(args.train_allowlist, int(profile["view_count"]))
+    verify_camera_root(args.camera_root, profile)
     command = build_command(args)
     print(json.dumps({"status": "EXEC_PACKET_EXPORT", "method_id": args.method_id, "argv": command}), flush=True)
     os.execv(sys.executable, command)
