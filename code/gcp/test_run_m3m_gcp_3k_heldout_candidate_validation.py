@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import tempfile
 import types
@@ -23,12 +24,56 @@ if "shapely" not in sys.modules and importlib.util.find_spec("shapely") is None:
     sys.modules["shapely.geometry"] = geometry
 
 from run_m3m_gcp_3k_heldout_candidate_validation import (
+    CANDIDATE_CAMERA_SETS,
     candidate_export_command,
+    materialize_core_compatible_candidate_manifest,
     rank_positions,
 )
+import evaluate_m3m_gcp_lidar_formal_v1 as evaluator
 
 
 class CandidateExportCommandTests(unittest.TestCase):
+    def test_candidate_camera_set_alias_is_explicit_and_formal_default_stays_strict(self) -> None:
+        image_name = "heldout.JPG"
+        manifest = {
+            "schema": evaluator.REQUIRED_PACKET_SCHEMA,
+            "protocol_id": evaluator.SOURCE_PROTOCOL_ID,
+            "scene": "gcp_3000_20260602",
+            "primary_depth_tensor": evaluator.PRIMARY_DEPTH,
+            "primary_depth_semantics": "camera_z",
+            "image_domain": evaluator.EXPECTED_IMAGE_DOMAIN,
+            "pixel_coordinate_convention": evaluator.EXPECTED_PIXEL_CONVENTION,
+            "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+            "adapter_conformance_status": "PASS",
+            "rendered_view_count": 1,
+            "camera_sets": "frozen_evaluation_allowlist",
+            "depth_index": [{"image_name": image_name}],
+        }
+        with self.assertRaisesRegex(ValueError, "formal v1 requires exact training-view packets"):
+            evaluator.validate_packet_manifest(
+                manifest,
+                scene="gcp_3000_20260602",
+                expected_image_names=(image_name,),
+            )
+        self.assertIn(manifest["camera_sets"], CANDIDATE_CAMERA_SETS)
+        with tempfile.TemporaryDirectory() as temp:
+            source_path = Path(temp) / "depth_export_manifest.json"
+            source_path.write_text(json.dumps(manifest), encoding="utf-8")
+            effective_path, effective, alias_receipt = (
+                materialize_core_compatible_candidate_manifest(
+                    source_path, names=(image_name,)
+                )
+            )
+            self.assertNotEqual(effective_path, source_path)
+            self.assertEqual(effective["camera_sets"], "train")
+            self.assertEqual(json.loads(source_path.read_text())["camera_sets"], manifest["camera_sets"])
+            self.assertIsNotNone(alias_receipt)
+            evaluator.validate_packet_manifest(
+                effective,
+                scene="gcp_3000_20260602",
+                expected_image_names=(image_name,),
+            )
+
     def test_only_candidate_output_options_are_replaced(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -14,6 +14,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import subprocess
 import time
 import traceback
@@ -45,6 +46,7 @@ EXPECTED_METHOD_IDS = (
 )
 PACKET_DIR_NAME = "lidar_packets_3k_heldout_candidate_v1"
 RESULT_DIR_NAME = "lidar_geometry_3k_heldout_candidate_v1"
+CANDIDATE_CAMERA_SETS = ("train", "frozen_evaluation_allowlist")
 
 
 def now() -> str:
@@ -63,6 +65,12 @@ def identity(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(path)
     return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+
+
+def validate_identity_record(record: dict[str, Any], *, label: str) -> None:
+    actual = identity(Path(str(record.get("path", ""))))
+    if actual != record:
+        raise ValueError(f"{label} identity mismatch: expected={record}, actual={actual}")
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -133,6 +141,120 @@ def expected_heldout_names(split_path: Path) -> tuple[str, ...]:
     if len(names) != 12 or len(set(names)) != 12:
         raise ValueError("3K held-out candidate requires exactly 12 unique views")
     return names
+
+
+def read_allowlist_names(path: Path) -> tuple[str, ...]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames != ["image_name"]:
+            raise ValueError("candidate allowlist header mismatch")
+        names = tuple(sorted(str(row["image_name"]) for row in reader))
+    if len(names) != 12 or len(set(names)) != 12:
+        raise ValueError("candidate allowlist does not contain 12 unique views")
+    return names
+
+
+def materialize_core_compatible_candidate_manifest(
+    source_path: Path, *, names: tuple[str, ...]
+) -> tuple[Path, dict[str, Any], dict[str, Any] | None]:
+    """Bind a dedicated-exporter label alias without changing formal-v1 code.
+
+    Some dedicated exporters label an explicitly supplied image list as
+    ``frozen_evaluation_allowlist`` while the generic exporters label the same
+    supplied list as ``train``.  The candidate track accepts both source labels
+    only after the exact packet names/count have passed the unchanged formal
+    validator on a byte-recorded, one-field-normalized manifest copy.
+    """
+
+    source_path = source_path.resolve()
+    source = read_json(source_path)
+    source_camera_sets = source.get("camera_sets")
+    if source_camera_sets not in CANDIDATE_CAMERA_SETS:
+        raise ValueError(
+            f"candidate packet camera_sets is unsupported: {source_camera_sets!r}"
+        )
+    normalized = dict(source)
+    normalized["camera_sets"] = "train"
+    if "canonical_sha256" in normalized:
+        normalized["canonical_sha256"] = canonical_sha256(normalized)
+    core.validate_packet_manifest(normalized, scene=SCENE, expected_image_names=names)
+    if source_camera_sets == "train":
+        return source_path, source, None
+
+    normalized_path = source_path.parent / "depth_export_manifest_candidate_train_alias.json"
+    if normalized_path.exists():
+        if read_json(normalized_path) != normalized:
+            raise ValueError(f"stale candidate manifest alias: {normalized_path}")
+    else:
+        write_json(normalized_path, normalized)
+    record = {
+        "schema": "m3m_gcp_3k_candidate_manifest_camera_set_alias_v1",
+        "protocol_id": PROTOCOL_ID,
+        "status": "REPRESENTATION_ALIAS_ONLY_EXACT_IMAGE_LIST_UNCHANGED",
+        "created_at": now(),
+        "source_manifest": identity(source_path),
+        "core_compatible_manifest": identity(normalized_path),
+        "changed_field": "camera_sets",
+        "source_value": source_camera_sets,
+        "core_compatible_value": "train",
+        "heldout_image_names": list(names),
+        "rendered_view_count": len(names),
+        "formal_evaluator_code_modified": False,
+    }
+    record["canonical_sha256"] = canonical_sha256(record)
+    record_path = source_path.parent / "candidate_manifest_camera_set_alias_receipt.json"
+    write_json(record_path, record)
+    return normalized_path, normalized, identity(record_path)
+
+
+def validate_complete_candidate_result(
+    metrics_path: Path,
+    *,
+    method_id: str,
+    names: tuple[str, ...],
+    model_checkpoint_sha256: str,
+) -> dict[str, Any]:
+    payload = read_json(metrics_path)
+    expected = {
+        "schema": "m3m_gcp_3k_heldout_candidate_method_result_v1",
+        "protocol_id": PROTOCOL_ID,
+        "status": "COMPLETE_CANDIDATE_EVIDENCE",
+        "scene": SCENE,
+        "method_id": method_id,
+        "model_checkpoint_sha256": model_checkpoint_sha256,
+    }
+    mismatch = {
+        key: {"expected": value, "actual": payload.get(key)}
+        for key, value in expected.items()
+        if payload.get(key) != value
+    }
+    if mismatch:
+        raise ValueError(f"{method_id}: existing candidate result mismatch: {mismatch}")
+    if tuple(sorted(str(name) for name in payload.get("heldout_image_names", []))) != names:
+        raise ValueError(f"{method_id}: existing result held-out allowlist mismatch")
+    if payload.get("canonical_sha256") != canonical_sha256(payload):
+        raise ValueError(f"{method_id}: existing result canonical hash mismatch")
+    for field in ("packet_manifest", "surface", "distances", "reference"):
+        validate_identity_record(payload[field], label=f"{method_id} {field}")
+    row = payload.get("summary_row")
+    if not isinstance(row, dict) or row.get("method_id") != method_id:
+        raise ValueError(f"{method_id}: existing result summary row mismatch")
+    if row.get("status") != "COMPLETE_CANDIDATE_EVIDENCE":
+        raise ValueError(f"{method_id}: existing result summary status mismatch")
+    return payload
+
+
+def validate_completed_packet_cleanup(packet_root: Path, *, expected_count: int) -> None:
+    cleanup_path = packet_root / "packet_cleanup_receipt.json"
+    cleanup = read_json(cleanup_path)
+    if (
+        cleanup.get("status") != "PACKETS_CLEANED_AFTER_COMPLETE_RESULT"
+        or int(cleanup.get("removed_count", -1)) != expected_count
+        or cleanup.get("canonical_sha256") != canonical_sha256(cleanup)
+    ):
+        raise ValueError(f"invalid prior packet-cleanup receipt: {cleanup_path}")
+    if list(packet_root.glob("*.npz")):
+        raise ValueError(f"completed result still has candidate packet arrays: {packet_root}")
 
 
 def method_metadata(registry_path: Path) -> dict[str, dict[str, Any]]:
@@ -337,6 +459,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--query-chunk-points", type=int, default=250_000)
     parser.add_argument("--thresholds-m", type=float, nargs="+", default=[0.05, 0.10, 0.20])
     parser.add_argument("--threshold-epsilon-m", type=float, default=core.THRESHOLD_EPSILON_M)
+    parser.add_argument(
+        "--resume-evaluation-only",
+        action="store_true",
+        help=(
+            "Reuse hash-validated complete results and already exported packet sets under an "
+            "existing output root. Missing packets are a hard error; exporters are never rerun."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -356,7 +486,13 @@ def main() -> int:
         "output_root",
     ):
         setattr(args, name, getattr(args, name).expanduser().resolve())
-    if args.output_root.exists() or args.output_root.is_symlink():
+    if args.resume_evaluation_only:
+        if not args.output_root.is_dir() or args.output_root.is_symlink():
+            raise FileNotFoundError(
+                f"--resume-evaluation-only requires an existing real output directory: "
+                f"{args.output_root}"
+            )
+    elif args.output_root.exists() or args.output_root.is_symlink():
         raise FileExistsError(args.output_root)
     benchmark = validate_benchmark_checkout(
         benchmark_repo=args.repo,
@@ -381,19 +517,24 @@ def main() -> int:
     reference = load_reference(args.reference_npz, origin, pilot_batch)
     cameras, images = core.read_colmap_model(args.colmap_model)
 
-    args.output_root.mkdir(parents=True)
+    if not args.resume_evaluation_only:
+        args.output_root.mkdir(parents=True)
     allowlist = args.output_root / "heldout12_allowlist.csv"
-    with allowlist.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["image_name"])
-        writer.writerows((name,) for name in names)
+    if args.resume_evaluation_only:
+        if read_allowlist_names(allowlist) != names:
+            raise ValueError("existing candidate allowlist differs from the frozen held-out split")
+    else:
+        with allowlist.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["image_name"])
+            writer.writerows((name,) for name in names)
     plan_methods: list[dict[str, Any]] = []
     for method in methods:
         run_root = Path(str(method["run_root"])).resolve()
         source_command = run_root / "formal_evaluation/export_resource_probe/command.json"
         packet_root = run_root / "formal_evaluation" / PACKET_DIR_NAME
         result_root = run_root / "formal_evaluation" / RESULT_DIR_NAME
-        if packet_root.exists() or result_root.exists():
+        if not args.resume_evaluation_only and (packet_root.exists() or result_root.exists()):
             raise FileExistsError(f"candidate output already exists: {method['method_id']}")
         plan_methods.append(
             {
@@ -404,31 +545,109 @@ def main() -> int:
                 "result_root": str(result_root),
             }
         )
-    plan = {
-        "schema": "m3m_gcp_3k_heldout_candidate_validation_plan_v1",
-        "protocol_id": PROTOCOL_ID,
-        "status": "CANDIDATE_VALIDATION_NOT_FORMAL_PROTOCOL",
-        "created_at": now(),
-        "scene": SCENE,
-        "benchmark": benchmark,
-        "heldout_image_names": list(names),
-        "allowlist": identity(allowlist),
-        "inputs": {
-            "runtime_methods": identity(args.runtime_methods),
-            "environment_overrides": identity(args.environment_overrides),
-            "method_registry": identity(args.method_registry),
-            "split": identity(args.split),
-            "colmap_cameras": identity(args.colmap_model / "cameras.bin"),
-            "colmap_images": identity(args.colmap_model / "images.bin"),
-            "sim3": identity(args.sim3_json),
-            "gcp_csv": identity(args.gcp_csv),
-            "reference": identity(args.reference_npz),
-            "pilot_batch_result": identity(args.pilot_batch_result),
-        },
-        "methods": plan_methods,
+    evaluation_settings = {
+        "roi_buffer_m": args.roi_buffer_m,
+        "normal_minus_ellipsoid_m": args.normal_minus_ellipsoid_m,
+        "alpha_min": args.alpha_min,
+        "pixel_stride": args.pixel_stride,
+        "reconstruction_voxel_m": args.reconstruction_voxel_m,
+        "query_chunk_points": args.query_chunk_points,
+        "thresholds_m": args.thresholds_m,
+        "threshold_epsilon_m": args.threshold_epsilon_m,
     }
-    plan["canonical_sha256"] = canonical_sha256(plan)
-    write_json(args.output_root / "plan.json", plan)
+    plan_inputs = {
+        "runtime_methods": identity(args.runtime_methods),
+        "environment_overrides": identity(args.environment_overrides),
+        "method_registry": identity(args.method_registry),
+        "split": identity(args.split),
+        "colmap_cameras": identity(args.colmap_model / "cameras.bin"),
+        "colmap_images": identity(args.colmap_model / "images.bin"),
+        "sim3": identity(args.sim3_json),
+        "gcp_csv": identity(args.gcp_csv),
+        "reference": identity(args.reference_npz),
+        "pilot_batch_result": identity(args.pilot_batch_result),
+    }
+    prior_jobs_by_id: dict[str, dict[str, Any]] = {}
+    prior_batch_identity: dict[str, Any] | None = None
+    plan_path: Path
+    if args.resume_evaluation_only:
+        prior_plan_path = args.output_root / "plan.json"
+        prior_plan = read_json(prior_plan_path)
+        if (
+            prior_plan.get("canonical_sha256") != canonical_sha256(prior_plan)
+            or prior_plan.get("schema")
+            != "m3m_gcp_3k_heldout_candidate_validation_plan_v1"
+            or prior_plan.get("protocol_id") != PROTOCOL_ID
+            or prior_plan.get("scene") != SCENE
+            or tuple(sorted(prior_plan.get("heldout_image_names", []))) != names
+            or prior_plan.get("methods") != plan_methods
+        ):
+            raise ValueError("existing candidate plan identity/content mismatch")
+        validate_identity_record(prior_plan["allowlist"], label="prior candidate allowlist")
+        for label, record in prior_plan.get("inputs", {}).items():
+            validate_identity_record(record, label=f"prior candidate input {label}")
+
+        prior_batch_archive = args.output_root / "pre_recovery_batch_result.json"
+        prior_receipt_archive = args.output_root / "pre_recovery_receipt.json"
+        if not prior_batch_archive.exists():
+            shutil.copy2(args.output_root / "batch_result.json", prior_batch_archive)
+        if not prior_receipt_archive.exists():
+            shutil.copy2(args.output_root / "receipt.json", prior_receipt_archive)
+        prior_batch = read_json(prior_batch_archive)
+        prior_receipt = read_json(prior_receipt_archive)
+        if prior_batch.get("canonical_sha256") != canonical_sha256(prior_batch):
+            raise ValueError("pre-recovery batch canonical hash mismatch")
+        if prior_receipt.get("canonical_sha256") != canonical_sha256(prior_receipt):
+            raise ValueError("pre-recovery receipt canonical hash mismatch")
+        prior_jobs_by_id = {
+            str(row["method_id"]): row for row in prior_batch.get("jobs", [])
+        }
+        if set(prior_jobs_by_id) != set(EXPECTED_METHOD_IDS):
+            raise ValueError("pre-recovery batch does not bind exactly ten method jobs")
+        prior_batch_identity = identity(prior_batch_archive)
+        recovery_plan = {
+            "schema": "m3m_gcp_3k_heldout_candidate_evaluation_recovery_plan_v1",
+            "protocol_id": PROTOCOL_ID,
+            "status": "EVALUATION_ONLY_RECOVERY_NO_RERENDER",
+            "created_at": now(),
+            "scene": SCENE,
+            "benchmark": benchmark,
+            "prior_plan": identity(prior_plan_path),
+            "prior_batch_result": prior_batch_identity,
+            "prior_receipt": identity(prior_receipt_archive),
+            "recovery_reason": (
+                "The three dedicated exporters encode the exact frozen image allowlist as "
+                "frozen_evaluation_allowlist rather than train; packet names/counts remain exact."
+            ),
+            "formal_default_unchanged": True,
+            "allowed_camera_sets_for_candidate_only": list(CANDIDATE_CAMERA_SETS),
+            "missing_packet_policy": "HARD_ERROR_EXPORTERS_FORBIDDEN",
+            "heldout_image_names": list(names),
+            "allowlist": identity(allowlist),
+            "inputs": plan_inputs,
+            "evaluation_settings": evaluation_settings,
+            "methods": plan_methods,
+        }
+        recovery_plan["canonical_sha256"] = canonical_sha256(recovery_plan)
+        plan_path = args.output_root / "recovery_plan.json"
+        write_json(plan_path, recovery_plan)
+    else:
+        plan = {
+            "schema": "m3m_gcp_3k_heldout_candidate_validation_plan_v1",
+            "protocol_id": PROTOCOL_ID,
+            "status": "CANDIDATE_VALIDATION_NOT_FORMAL_PROTOCOL",
+            "created_at": now(),
+            "scene": SCENE,
+            "benchmark": benchmark,
+            "heldout_image_names": list(names),
+            "allowlist": identity(allowlist),
+            "inputs": plan_inputs,
+            "evaluation_settings": evaluation_settings,
+            "methods": plan_methods,
+        }
+        plan["canonical_sha256"] = canonical_sha256(plan)
+        plan_path = args.output_root / "plan.json"
+        write_json(plan_path, plan)
 
     rows: list[dict[str, Any]] = []
     receipts: list[dict[str, Any]] = []
@@ -437,6 +656,35 @@ def main() -> int:
         run_root = Path(str(method["run_root"])).resolve()
         packet_root = Path(plan_method["packet_root"])
         result_root = Path(plan_method["result_root"])
+        metrics_path = result_root / "metrics.json"
+        if args.resume_evaluation_only and metrics_path.is_file():
+            result = validate_complete_candidate_result(
+                metrics_path,
+                method_id=method_id,
+                names=names,
+                model_checkpoint_sha256=metadata[method_id]["model_checkpoint_sha256"],
+            )
+            validate_completed_packet_cleanup(packet_root, expected_count=len(names))
+            row = result["summary_row"]
+            rows.append(row)
+            receipt = {
+                "method_id": method_id,
+                "started_at": now(),
+                "finished_at": now(),
+                "status": "REUSED_COMPLETE_CANDIDATE_EVIDENCE_PACKETS_CLEANED",
+                "packet_root": str(packet_root),
+                "result_root": str(result_root),
+                "metrics": identity(metrics_path),
+                "packet_cleanup": identity(packet_root / "packet_cleanup_receipt.json"),
+                "prior_job": prior_jobs_by_id[method_id],
+            }
+            receipts.append(receipt)
+            write_csv(args.output_root / "lidar_metrics_partial.csv", rows)
+            write_json(
+                args.output_root / "receipt.json", {"status": "RUNNING", "jobs": receipts}
+            )
+            print(f"[{index}/{len(methods)}] {method_id}: reused complete result", flush=True)
+            continue
         receipt: dict[str, Any] = {
             "method_id": method_id,
             "started_at": now(),
@@ -446,57 +694,78 @@ def main() -> int:
         }
         receipts.append(receipt)
         write_json(args.output_root / "receipt.json", {"status": "RUNNING", "jobs": receipts})
-        print(f"[{index}/{len(methods)}] {method_id}: exporting 12 held-out views", flush=True)
         try:
-            original_path = run_root / "formal_evaluation/export_resource_probe/command.json"
-            original = read_json(original_path)
-            argv, cwd, env = candidate_export_command(
-                original,
-                allowlist=allowlist,
-                packet_root=packet_root,
-                environment_override=environment_overrides[method_id],
-            )
-            command_record = {
-                "schema": "m3m_gcp_3k_heldout_candidate_export_command_v1",
-                "source_command": identity(original_path),
-                "allowed_changes": [
-                    "--image_list_csv",
-                    "--depth_output_dir",
-                    "--manifest_path",
-                    "--mapping_csv",
-                ],
-                "argv": argv,
-                "working_directory": str(cwd),
-                "runtime_environment": original.get("runtime_environment", {}),
-                "candidate_environment_override": environment_overrides[method_id],
-            }
-            command_record["canonical_sha256"] = canonical_sha256(command_record)
-            command_record_path = (
-                args.output_root / "export_commands" / f"{method_id}.json"
-            )
-            write_json(command_record_path, command_record)
-            export_log = args.output_root / "export_logs" / f"{method_id}.log"
-            export_log.parent.mkdir(parents=True, exist_ok=True)
-            export_started = time.monotonic()
-            with export_log.open("wb") as handle:
-                completed = subprocess.run(
-                    argv,
-                    cwd=cwd,
-                    env=env,
-                    stdout=handle,
-                    stderr=subprocess.STDOUT,
-                    check=False,
+            source_manifest_path = packet_root / "depth_export_manifest.json"
+            if args.resume_evaluation_only:
+                if not source_manifest_path.is_file():
+                    raise FileNotFoundError(
+                        f"evaluation-only recovery forbids rerender and requires packets: "
+                        f"{source_manifest_path}"
+                    )
+                receipt["export_reuse"] = "REUSED_EXISTING_COMPLETE_PACKET_SET"
+                receipt["prior_job"] = prior_jobs_by_id[method_id]
+                print(
+                    f"[{index}/{len(methods)}] {method_id}: reusing 12 existing packets",
+                    flush=True,
                 )
-            receipt["export_seconds"] = time.monotonic() - export_started
-            receipt["export_returncode"] = completed.returncode
-            receipt["export_log"] = identity(export_log)
-            receipt["export_command"] = identity(command_record_path)
-            if completed.returncode != 0:
-                raise RuntimeError(f"exporter returned {completed.returncode}")
-            manifest_path = packet_root / "depth_export_manifest.json"
-            manifest = read_json(manifest_path)
-            core.validate_packet_manifest(manifest, scene=SCENE, expected_image_names=names)
+            else:
+                print(
+                    f"[{index}/{len(methods)}] {method_id}: exporting 12 held-out views",
+                    flush=True,
+                )
+                original_path = run_root / "formal_evaluation/export_resource_probe/command.json"
+                original = read_json(original_path)
+                argv, cwd, env = candidate_export_command(
+                    original,
+                    allowlist=allowlist,
+                    packet_root=packet_root,
+                    environment_override=environment_overrides[method_id],
+                )
+                command_record = {
+                    "schema": "m3m_gcp_3k_heldout_candidate_export_command_v1",
+                    "source_command": identity(original_path),
+                    "allowed_changes": [
+                        "--image_list_csv",
+                        "--depth_output_dir",
+                        "--manifest_path",
+                        "--mapping_csv",
+                    ],
+                    "argv": argv,
+                    "working_directory": str(cwd),
+                    "runtime_environment": original.get("runtime_environment", {}),
+                    "candidate_environment_override": environment_overrides[method_id],
+                }
+                command_record["canonical_sha256"] = canonical_sha256(command_record)
+                command_record_path = (
+                    args.output_root / "export_commands" / f"{method_id}.json"
+                )
+                write_json(command_record_path, command_record)
+                export_log = args.output_root / "export_logs" / f"{method_id}.log"
+                export_log.parent.mkdir(parents=True, exist_ok=True)
+                export_started = time.monotonic()
+                with export_log.open("wb") as handle:
+                    completed = subprocess.run(
+                        argv,
+                        cwd=cwd,
+                        env=env,
+                        stdout=handle,
+                        stderr=subprocess.STDOUT,
+                        check=False,
+                    )
+                receipt["export_seconds"] = time.monotonic() - export_started
+                receipt["export_returncode"] = completed.returncode
+                receipt["export_log"] = identity(export_log)
+                receipt["export_command"] = identity(command_record_path)
+                if completed.returncode != 0:
+                    raise RuntimeError(f"exporter returned {completed.returncode}")
+            manifest_path, manifest, manifest_alias = (
+                materialize_core_compatible_candidate_manifest(
+                    source_manifest_path, names=names
+                )
+            )
+            receipt["source_packet_manifest"] = identity(source_manifest_path)
             receipt["packet_manifest"] = identity(manifest_path)
+            receipt["packet_manifest_camera_set_alias"] = manifest_alias
 
             print(f"[{index}/{len(methods)}] {method_id}: building surface and querying LiDAR", flush=True)
             result_root.mkdir(parents=True)
@@ -555,7 +824,9 @@ def main() -> int:
                 "method_id": method_id,
                 "model_checkpoint_sha256": metadata[method_id]["model_checkpoint_sha256"],
                 "heldout_image_names": list(names),
+                "source_packet_manifest": identity(source_manifest_path),
                 "packet_manifest": identity(manifest_path),
+                "packet_manifest_camera_set_alias": manifest_alias,
                 "surface": identity(surface_path),
                 "distances": identity(distances_path),
                 "reference": identity(args.reference_npz),
@@ -564,7 +835,6 @@ def main() -> int:
                 "summary_row": row,
             }
             result["canonical_sha256"] = canonical_sha256(result)
-            metrics_path = result_root / "metrics.json"
             write_json(metrics_path, result)
             core.write_csv(result_root / "view_surface_counts.csv", surface_audit["view_rows"])
             rows.append(row)
@@ -617,7 +887,9 @@ def main() -> int:
         "completed_method_count": len(rows),
         "failed_method_count": len(EXPECTED_METHOD_IDS) - len(rows),
         "protocol_promotion": "NOT_AUTHORIZED_BY_THIS_RUN",
-        "plan": identity(args.output_root / "plan.json"),
+        "evaluation_only_recovery": args.resume_evaluation_only,
+        "plan": identity(plan_path),
+        "prior_batch_result": prior_batch_identity,
         "results": rows,
         "ranking_and_coverage_diagnostics": diagnostics,
         "jobs": receipts,
@@ -629,6 +901,7 @@ def main() -> int:
         "schema": "m3m_gcp_3k_heldout_candidate_runner_receipt_v1",
         "status": batch["status"],
         "finished_at": now(),
+        "evaluation_only_recovery": args.resume_evaluation_only,
         "batch_result": identity(args.output_root / "batch_result.json"),
         "jobs": receipts,
     }
