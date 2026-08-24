@@ -256,7 +256,7 @@ def main() -> int:
         evaluation_root = GEOMETRY_EVALUATION_ROOTS[method_id].resolve()
         packet_python = GEOMETRY_PACKET_PYTHONS.get(
             method_id, Path(str(method["environment"])) / "bin/python"
-        ).resolve()
+        )
         if not (evaluation_root / ".git").exists() or not packet_python.is_file():
             raise FileNotFoundError(
                 f"geometry evaluation runtime missing: {method_id}"
