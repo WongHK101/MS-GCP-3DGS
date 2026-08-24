@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
+from m3m_gcp_100k_geometry_paths import LIDAR_FULL_TRAIN_PACKET_ROOT_NAME
 
 
 def now() -> str:
@@ -104,6 +105,12 @@ def terminal_result(track: str, output_root: Path) -> tuple[bool, str]:
     return status in allowed, status or "UNKNOWN_RESULT_STATUS"
 
 
+def evaluation_cleanup_allowed(returncode: int, terminal: bool) -> bool:
+    """Delete packet arrays only after a successful, terminal evaluation."""
+
+    return int(returncode) == 0 and bool(terminal)
+
+
 def cleanup_packet_arrays(packet_root: Path, run_root: Path, reason: str) -> dict[str, Any]:
     packet_root = packet_root.resolve()
     run_root = run_root.resolve()
@@ -114,7 +121,7 @@ def cleanup_packet_arrays(packet_root: Path, run_root: Path, reason: str) -> dic
         "gcp_packets_100k_success_v3",
         "lidar_packets_100k_success_v1",
         "lidar_packets_100k_success_v2",
-        "lidar_packets_100k_success_v3",
+        LIDAR_FULL_TRAIN_PACKET_ROOT_NAME,
     }:
         raise ValueError(f"refusing packet cleanup outside exact formal roots: {packet_root}")
     if packet_root.is_symlink():
@@ -236,19 +243,26 @@ def main() -> int:
                     row["phases"].append(evaluate_phase)
                     complete, result_status = terminal_result(track, output_root)
                     row["result_status"] = result_status
-                    if evaluate_phase["returncode"] == 0 and complete:
+                    if evaluation_cleanup_allowed(
+                        int(evaluate_phase["returncode"]), complete
+                    ):
                         row["status"] = (
                             "COMPLETE_RANKED"
                             if result_status == "COMPLETE_RANKED"
                             else "COMPLETE_UNRANKED"
                         )
+                        row["packet_cleanup"] = cleanup_packet_arrays(
+                            packet_root,
+                            run_root,
+                            "evaluator_process_successful_terminal",
+                        )
                     else:
                         row["status"] = "EVALUATION_FAILED_UNRANKED"
-                    row["packet_cleanup"] = cleanup_packet_arrays(
-                        packet_root,
-                        run_root,
-                        "evaluator_process_terminal",
-                    )
+                        row["packet_cleanup"] = {
+                            "status": "PACKET_ARRAYS_RETAINED_FOR_RECOVERY",
+                            "reason": "evaluator_process_failed_or_nonterminal",
+                            "packet_root": str(packet_root),
+                        }
                 else:
                     row["status"] = "PACKET_EXPORT_FAILED_UNRANKED"
                     if packet_root.is_dir():

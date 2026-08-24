@@ -7,10 +7,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from run_m3m_gcp_100k_success_geometry_plan import cleanup_packet_arrays, run_phase
+from run_m3m_gcp_100k_success_geometry_plan import (
+    cleanup_packet_arrays,
+    evaluation_cleanup_allowed,
+    run_phase,
+)
 
 
 class GeometrySuccessRunnerTest(unittest.TestCase):
+    def test_evaluation_failure_never_allows_packet_cleanup(self) -> None:
+        self.assertFalse(evaluation_cleanup_allowed(1, True))
+        self.assertFalse(evaluation_cleanup_allowed(0, False))
+        self.assertTrue(evaluation_cleanup_allowed(0, True))
+
     def test_cleanup_removes_only_exact_packet_npz_members(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             run_root = Path(directory) / "run"

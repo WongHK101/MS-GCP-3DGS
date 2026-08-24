@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from m3m_gcp_lidar_artifacts import canonical_sha256, command_sha256, sha256_file
+from m3m_gcp_100k_geometry_paths import lidar_full_train_packet_root
 from rgb_quality_contract import validate_benchmark_checkout
 
 
@@ -313,9 +314,7 @@ def main() -> int:
         # v1 was consumed by the inherited 1024-NOFILE failure and v2 by the
         # classic loader's 110-GiB RGB-decode ceiling.  Preserve both receipts;
         # v3 uses the parity-proven geometry-camera-only loader.
-        lidar_packet_root = (
-            run_root / "formal_evaluation/lidar_packets_100k_success_v3"
-        )
+        lidar_packet_root = lidar_full_train_packet_root(run_root)
         gcp_output = run_root / "formal_evaluation/gcp_geometry_100k_success_v1"
         lidar_output = run_root / "formal_evaluation/lidar_geometry_100k_success_v1"
         log_root = runtime / "geometry_logs_camera_only_v1" / method_id

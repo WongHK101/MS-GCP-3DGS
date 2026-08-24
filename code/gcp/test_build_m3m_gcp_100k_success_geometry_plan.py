@@ -11,9 +11,23 @@ from build_m3m_gcp_100k_success_geometry_plan import (
     environment,
     phase,
 )
+from m3m_gcp_100k_geometry_paths import (
+    LIDAR_FULL_TRAIN_PACKET_ROOT_NAME,
+    lidar_full_train_packet_manifest,
+    lidar_full_train_packet_root,
+)
 
 
 class GeometryRuntimeBindingTests(unittest.TestCase):
+    def test_full_train_lidar_packet_binding_is_shared_v3_namespace(self) -> None:
+        run_root = Path("/tmp/promoted-run")
+        packet_root = lidar_full_train_packet_root(run_root)
+        self.assertEqual(packet_root.name, LIDAR_FULL_TRAIN_PACKET_ROOT_NAME)
+        self.assertEqual(
+            lidar_full_train_packet_manifest(run_root),
+            packet_root / "depth_export_manifest.json",
+        )
+
     def test_external_adapter_packages_precede_registry_compat_paths(self) -> None:
         for method_id in ("3dgs_original", "pgsr", "rade_gs", "metrogs"):
             with self.subTest(method_id=method_id):

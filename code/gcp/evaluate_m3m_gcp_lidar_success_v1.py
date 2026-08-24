@@ -20,6 +20,7 @@ from typing import Any
 import numpy as np
 
 import evaluate_m3m_gcp_lidar_formal_v1 as core
+from m3m_gcp_100k_geometry_paths import lidar_full_train_packet_manifest
 from m3m_gcp_lidar_artifacts import canonical_sha256, sha256_file
 from rgb_quality_contract import validate_benchmark_checkout
 from verify_m3m_gcp_lidar_formal_v1 import METRIC_FIELDS
@@ -190,10 +191,7 @@ def validate_runtime(
         raise ValueError("method is not a unique promoted success")
     method = methods[0]
     run_root = Path(str(method["run_root"])).resolve()
-    expected_packet = (
-        run_root
-        / "formal_evaluation/lidar_packets_100k_success_v1/depth_export_manifest.json"
-    )
+    expected_packet = lidar_full_train_packet_manifest(run_root)
     if packet_manifest.resolve() != expected_packet:
         raise ValueError("LiDAR packet is outside the promoted run's fixed packet root")
     return registry, method
