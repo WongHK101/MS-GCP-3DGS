@@ -141,6 +141,13 @@ def _render_argv(
         ]
         if method_id == "metrogs":
             argv.extend(["--training_cameras_json", str(method["training_cameras_json"])])
+            if method.get("appearance_training_camera_root"):
+                argv.extend(
+                    [
+                        "--appearance_training_camera_root",
+                        str(method["appearance_training_camera_root"]),
+                    ]
+                )
     elif method["adapter"] == "export_citygs_x_rgb.py":
         argv = [
             python,

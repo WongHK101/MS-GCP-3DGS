@@ -35,7 +35,8 @@ EXPECTED_CLASSES = {
 def _map_metrogs_appearance_ids(
     *,
     runtime: dict[str, Any],
-    sparse_model: Path,
+    evaluation_sparse_model: Path,
+    training_sparse_model: Path,
     writer: RgbRenderWriter,
     training_cameras_json: Path,
     renderer: Any,
@@ -67,13 +68,17 @@ def _map_metrogs_appearance_ids(
     if not all(0.0 <= value <= 1.0 for value in normalized_appearance_ids):
         raise ValueError("MetroGS cameras.json normalized appearance ID is outside [0,1]")
 
-    train_tuples = build_frozen_cameras(runtime, sparse_model, ordered_train_names)
+    train_tuples = build_frozen_cameras(
+        runtime, training_sparse_model, ordered_train_names
+    )
     for index, (_name, camera, _image_id) in enumerate(train_tuples):
         camera.appearance_id.copy_(camera.appearance_id.new_tensor(appearance_ids[index]))
         camera.normalized_appearance_id.copy_(
             camera.normalized_appearance_id.new_tensor(normalized_appearance_ids[index])
         )
-    test_tuples = build_frozen_cameras(runtime, sparse_model, writer.expected_names)
+    test_tuples = build_frozen_cameras(
+        runtime, evaluation_sparse_model, writer.expected_names
+    )
     matches = find_most_similar_cameras(
         [camera for _name, camera, _image_id in train_tuples],
         [camera for _name, camera, _image_id in test_tuples],
@@ -107,6 +112,11 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
     checkpoint = args.checkpoint.expanduser().resolve()
     camera_root = args.camera_root.expanduser().resolve()
     sparse_model = resolve_sparse_model(camera_root)
+    appearance_training_camera_root = (
+        args.appearance_training_camera_root.expanduser().resolve()
+        if args.appearance_training_camera_root is not None
+        else (camera_root if args.method_id == "metrogs" else None)
+    )
     if args.method_id not in EXPECTED_CLASSES:
         raise ValueError(f"unsupported Lightning Gaussian method: {args.method_id}")
     if not checkpoint.is_file():
@@ -151,14 +161,23 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
                 raise ValueError("MetroGS requires --training_cameras_json")
             frozen_cameras, appearance_records = _map_metrogs_appearance_ids(
                 runtime=runtime,
-                sparse_model=sparse_model,
+                evaluation_sparse_model=sparse_model,
+                training_sparse_model=resolve_sparse_model(
+                    appearance_training_camera_root
+                ),
                 writer=writer,
                 training_cameras_json=args.training_cameras_json.expanduser().resolve(),
                 renderer=renderer,
             )
         else:
-            if args.training_cameras_json is not None:
-                raise ValueError("--training_cameras_json is MetroGS-only")
+            if (
+                args.training_cameras_json is not None
+                or appearance_training_camera_root is not None
+            ):
+                raise ValueError(
+                    "--training_cameras_json and "
+                    "--appearance_training_camera_root are MetroGS-only"
+                )
             frozen_cameras = build_frozen_cameras(runtime, sparse_model, writer.expected_names)
 
         background = torch.zeros(3, dtype=torch.float32, device="cuda")
@@ -215,6 +234,16 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
             if args.training_cameras_json is not None
             else None
         ),
+        "appearance_training_camera_root": (
+            {
+                "path": str(appearance_training_camera_root),
+                "sparse_model_sha256": sparse_model_sha256(
+                    appearance_training_camera_root
+                ),
+            }
+            if appearance_training_camera_root is not None
+            else None
+        ),
         "heldout_rgb_used_by_adapter": False,
         "heldout_rgb_consumed_by_renderer_or_policy": False,
         "test_time_optimization": False,
@@ -242,6 +271,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--manifest_path", type=Path)
     parser.add_argument("--appearance_policy", required=True)
     parser.add_argument("--training_cameras_json", type=Path)
+    parser.add_argument("--appearance_training_camera_root", type=Path)
     parser.add_argument("--benchmark_repo", type=Path, required=True)
     parser.add_argument("--benchmark_commit", required=True)
     parser.add_argument("--benchmark_tree", required=True)

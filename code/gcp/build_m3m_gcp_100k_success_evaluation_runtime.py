@@ -167,6 +167,7 @@ METHODS: dict[str, dict[str, Any]] = {
         "camera_root": "shared.default_camera_root",
         "input_class": "rgb_colmap_external_geometry_prior",
         "environment_variables": {"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"},
+        "appearance_training_camera_root": str(FORMAL_ROOT / "train"),
     },
     "gsprior": {
         "display_name": "GSPrior",
@@ -443,6 +444,9 @@ def registry_method(
         row["formal_model_sha256"] = model["formal_checkpoint"]["sha256"]
         row["training_cameras_json"] = model["training_cameras_json"]["path"]
         row["training_cameras_json_sha256"] = model["training_cameras_json"]["sha256"]
+        row["appearance_training_camera_root"] = spec[
+            "appearance_training_camera_root"
+        ]
         row["environment_variables"] = dict(spec["environment_variables"])
     else:
         row["model_root"] = model["model_root"]
