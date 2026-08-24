@@ -8,8 +8,10 @@ from pathlib import Path
 
 from build_m3m_gcp_100k_success_geometry_plan import (
     GEOMETRY_ADAPTER_PYTHONPATHS,
+    GSPRIOR_ROOT,
     LIDAR_PAYLOAD_SHA256_INVENTORY,
     environment,
+    packet_command,
     phase,
 )
 from m3m_gcp_100k_geometry_paths import (
@@ -94,6 +96,23 @@ class GeometryRuntimeBindingTests(unittest.TestCase):
             nofile_soft_limit=65535,
         )
         self.assertEqual(spec["resource_limits"], {"nofile_soft": 65535})
+
+    def test_gsprior_heldout_uses_normalized_rgb_evaluation_cameras(self) -> None:
+        command = packet_command(
+            repo=Path("/benchmark"),
+            method={"method_id": "gsprior", "run_root": "/run"},
+            profile="lidar_heldout_candidate",
+            camera_root=Path("/camera-root"),
+            allowlist=Path("/heldout.csv"),
+            packet_root=Path("/packets"),
+            evaluation_root=Path("/adapter"),
+            packet_python=Path("/env/python"),
+        )
+        dataset_index = command.index("--dataset-root") + 1
+        prior_index = command.index("--prior-root") + 1
+        expected = str(GSPRIOR_ROOT / "rgb_evaluation")
+        self.assertEqual(command[dataset_index], expected)
+        self.assertEqual(command[prior_index], expected)
 
 
 if __name__ == "__main__":

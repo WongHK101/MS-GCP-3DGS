@@ -128,6 +128,7 @@ def main() -> int:
         sim3,
         LIDAR_PAYLOAD_SHA256_INVENTORY,
         camera_manifest,
+        GSPRIOR_ROOT / "rgb_evaluation/normalization_manifest.json",
         FORMAL_ROOT / "NATIVE_QUARTER_INPUT_MANIFEST.json",
         FORMAL_ROOT / "test/sparse/0/cameras.bin",
         FORMAL_ROOT / "test/sparse/0/images.bin",

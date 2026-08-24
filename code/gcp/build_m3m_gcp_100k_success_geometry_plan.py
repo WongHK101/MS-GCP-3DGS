@@ -191,7 +191,13 @@ def packet_command(
     packet_python: Path,
 ) -> list[str]:
     method_id = str(method["method_id"])
-    normalized_role = "gcp_evaluation" if profile == "gcp" else "lidar_evaluation"
+    normalized_role = {
+        "gcp": "gcp_evaluation",
+        "lidar": "lidar_evaluation",
+        "lidar_heldout_candidate": "rgb_evaluation",
+    }.get(profile)
+    if normalized_role is None:
+        raise ValueError(f"unsupported 100K geometry camera profile: {profile}")
     dataset_root = (
         GSPRIOR_ROOT / normalized_role if method_id == "gsprior" else TRAIN_ROOT
     )
