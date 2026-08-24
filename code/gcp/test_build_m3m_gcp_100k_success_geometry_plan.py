@@ -8,6 +8,7 @@ from pathlib import Path
 
 from build_m3m_gcp_100k_success_geometry_plan import (
     GEOMETRY_ADAPTER_PYTHONPATHS,
+    LIDAR_PAYLOAD_SHA256_INVENTORY,
     environment,
     phase,
 )
@@ -19,6 +20,13 @@ from m3m_gcp_100k_geometry_paths import (
 
 
 class GeometryRuntimeBindingTests(unittest.TestCase):
+    def test_lidar_inventory_is_the_frozen_sha256_evidence_file(self) -> None:
+        self.assertEqual(
+            LIDAR_PAYLOAD_SHA256_INVENTORY.as_posix(),
+            "/root/autodl-tmp/datasets/M3M-GCP-LiDAR-reference-v1/"
+            "evaluation/evidence/source_payload_sha256_901.csv",
+        )
+
     def test_full_train_lidar_packet_binding_is_shared_v3_namespace(self) -> None:
         run_root = Path("/tmp/promoted-run")
         packet_root = lidar_full_train_packet_root(run_root)

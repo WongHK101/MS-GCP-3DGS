@@ -43,6 +43,9 @@ PROTOCOL_ROOT = Path(
     "/root/autodl-tmp/datasets/M3M-GCP-native-quarter-benchmark-protocol-v2"
 )
 LIDAR_ROOT = Path("/root/autodl-tmp/datasets/M3M-GCP-LiDAR-reference-v1")
+LIDAR_PAYLOAD_SHA256_INVENTORY = (
+    LIDAR_ROOT / "evaluation/evidence/source_payload_sha256_901.csv"
+)
 LIDAR_ENV = Path("/root/autodl-tmp/envs/m3m-gcp-lidar-eval")
 GEOMETRY_EVALUATION_ROOTS = {
     "3dgs_original": Path(
@@ -268,7 +271,7 @@ def main() -> int:
         / "benchmark/source_release_v1_3_0/gcp_points_cgcs2000_cm108_v1_3_0.csv"
     )
     sim3 = PROTOCOL_ROOT / "scenes" / SCENE / "common_sim3.json"
-    lidar_inventory = LIDAR_ROOT / "inventory.csv"
+    lidar_inventory = LIDAR_PAYLOAD_SHA256_INVENTORY
     for path in (
         gcp_allowlist,
         lidar_allowlist,
