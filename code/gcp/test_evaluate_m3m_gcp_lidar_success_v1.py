@@ -30,8 +30,10 @@ if "shapely" not in sys.modules and importlib.util.find_spec("shapely") is None:
 from evaluate_m3m_gcp_lidar_success_v1 import (
     canonical_sha256,
     expected_packet_names,
+    materialize_heldout_candidate_manifest_alias,
     reference_cache_binding_mode,
 )
+import evaluate_m3m_gcp_lidar_formal_v1 as core
 
 
 class ReferenceCacheBindingTest(unittest.TestCase):
@@ -122,6 +124,52 @@ class ReferenceCacheBindingTest(unittest.TestCase):
             self.assertEqual(len(train), 2196)
             self.assertEqual(len(heldout), 314)
             self.assertTrue(all(name.startswith("test_") for name in heldout))
+
+    def test_heldout_camera_set_alias_does_not_relax_full_train_validator(self) -> None:
+        name = "heldout.JPG"
+        manifest = {
+            "schema": core.REQUIRED_PACKET_SCHEMA,
+            "protocol_id": core.SOURCE_PROTOCOL_ID,
+            "scene": "gcp_100000_20260610",
+            "primary_depth_tensor": core.PRIMARY_DEPTH,
+            "primary_depth_semantics": "camera_z",
+            "image_domain": core.EXPECTED_IMAGE_DOMAIN,
+            "pixel_coordinate_convention": core.EXPECTED_PIXEL_CONVENTION,
+            "camera_z_unit_contract": "frozen_colmap_model_camera_z_units",
+            "adapter_conformance_status": "PASS",
+            "rendered_view_count": 1,
+            "camera_sets": "frozen_evaluation_allowlist",
+            "depth_index": [{"image_name": name}],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "depth_export_manifest.json"
+            source.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError, "formal v1 requires exact training-view packets"
+            ):
+                materialize_heldout_candidate_manifest_alias(
+                    source,
+                    manifest,
+                    surface_sampling_track="full_train",
+                    expected_image_names=(name,),
+                )
+            effective_path, effective, receipt = (
+                materialize_heldout_candidate_manifest_alias(
+                    source,
+                    manifest,
+                    surface_sampling_track="heldout_candidate",
+                    expected_image_names=(name,),
+                )
+            )
+            self.assertNotEqual(source, effective_path)
+            self.assertEqual(effective["camera_sets"], "train")
+            self.assertEqual(json.loads(source.read_text())["camera_sets"], manifest["camera_sets"])
+            self.assertIsNotNone(receipt)
+            core.validate_packet_manifest(
+                effective,
+                scene="gcp_100000_20260610",
+                expected_image_names=(name,),
+            )
 
 
 if __name__ == "__main__":

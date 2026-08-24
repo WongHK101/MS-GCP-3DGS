@@ -263,6 +263,81 @@ def expected_packet_names(
     return names
 
 
+def materialize_heldout_candidate_manifest_alias(
+    source_path: Path,
+    packet: dict[str, Any],
+    *,
+    surface_sampling_track: str,
+    expected_image_names: tuple[str, ...],
+) -> tuple[Path, dict[str, Any], dict[str, Any] | None]:
+    """Adapt one dedicated-exporter label without modifying formal-v1 code.
+
+    Generic exporters describe an explicitly supplied held-out allowlist as
+    ``train`` because the renderer receives it through its train-camera slot.
+    Dedicated exporters instead retain the more literal
+    ``frozen_evaluation_allowlist`` label.  Both carry the same exact frozen
+    image names.  Only the held-out candidate track may materialize a
+    byte-bound copy whose sole semantic-field change is that label; the formal
+    full-train path remains strict and unchanged.
+    """
+
+    source_path = source_path.resolve()
+    source_camera_sets = packet.get("camera_sets")
+    if surface_sampling_track != "heldout_candidate" or source_camera_sets == "train":
+        core.validate_packet_manifest(
+            packet, scene=SCENE, expected_image_names=expected_image_names
+        )
+        return source_path, packet, None
+    if source_camera_sets != "frozen_evaluation_allowlist":
+        raise ValueError(
+            f"unsupported held-out candidate camera_sets: {source_camera_sets!r}"
+        )
+
+    normalized = dict(packet)
+    normalized["camera_sets"] = "train"
+    if "canonical_sha256" in normalized:
+        normalized["canonical_sha256"] = canonical_sha256(normalized)
+    core.validate_packet_manifest(
+        normalized, scene=SCENE, expected_image_names=expected_image_names
+    )
+    alias_path = source_path.parent / "depth_export_manifest_heldout_train_alias.json"
+    if alias_path.exists():
+        if read_json(alias_path) != normalized:
+            raise ValueError(f"stale held-out candidate manifest alias: {alias_path}")
+    else:
+        write_json(alias_path, normalized)
+
+    receipt_path = source_path.parent / "heldout_manifest_camera_set_alias_receipt.json"
+    if receipt_path.exists():
+        receipt = read_json(receipt_path)
+        if (
+            receipt.get("canonical_sha256") != canonical_sha256(receipt)
+            or receipt.get("status")
+            != "REPRESENTATION_ALIAS_ONLY_EXACT_IMAGE_LIST_UNCHANGED"
+            or receipt.get("source_manifest") != identity(source_path)
+            or receipt.get("core_compatible_manifest") != identity(alias_path)
+        ):
+            raise ValueError(f"stale held-out candidate alias receipt: {receipt_path}")
+    else:
+        receipt = {
+            "schema": "m3m_gcp_100k_heldout_manifest_camera_set_alias_v1",
+            "protocol_id": HELDOUT_CANDIDATE_PROTOCOL_ID,
+            "status": "REPRESENTATION_ALIAS_ONLY_EXACT_IMAGE_LIST_UNCHANGED",
+            "created_at": now(),
+            "source_manifest": identity(source_path),
+            "core_compatible_manifest": identity(alias_path),
+            "changed_field": "camera_sets",
+            "source_value": source_camera_sets,
+            "core_compatible_value": "train",
+            "heldout_image_names": list(expected_image_names),
+            "rendered_view_count": len(expected_image_names),
+            "formal_evaluator_code_modified": False,
+        }
+        receipt["canonical_sha256"] = canonical_sha256(receipt)
+        write_json(receipt_path, receipt)
+    return alias_path, normalized, identity(receipt_path)
+
+
 def load_or_build_reference(
     *,
     cache_root: Path,
@@ -449,7 +524,14 @@ def main() -> int:
     )
     names = expected_packet_names(args.split, args.surface_sampling_track)
     packet = read_json(args.packet_manifest)
-    core.validate_packet_manifest(packet, scene=SCENE, expected_image_names=names)
+    effective_packet_manifest, packet, packet_manifest_alias = (
+        materialize_heldout_candidate_manifest_alias(
+            args.packet_manifest,
+            packet,
+            surface_sampling_track=args.surface_sampling_track,
+            expected_image_names=names,
+        )
+    )
     sim3 = read_json(args.sim3_json)
     if (
         sim3.get("protocol_id") != SOURCE_PROTOCOL_ID
@@ -510,7 +592,7 @@ def main() -> int:
         origin,
         SCENE,
         names,
-        args.packet_manifest,
+        effective_packet_manifest,
     )
     surface_path = args.output_root / "surface_voxel_centres_local_metric.npz"
     np.savez_compressed(
@@ -585,7 +667,9 @@ def main() -> int:
             "contract": identity(args.contract),
             "artifact_schema": identity(args.artifact_schema),
             "split": identity(args.split),
-            "packet_manifest": identity(args.packet_manifest),
+            "source_packet_manifest": identity(args.packet_manifest),
+            "packet_manifest": identity(effective_packet_manifest),
+            "packet_manifest_camera_set_alias": packet_manifest_alias,
             "colmap_cameras": identity(args.colmap_model / "cameras.bin"),
             "colmap_images": identity(args.colmap_model / "images.bin"),
             "evaluator": identity(Path(__file__).resolve()),
@@ -609,7 +693,9 @@ def main() -> int:
         "surface_sampling_track": args.surface_sampling_track,
         "packet_view_count": len(names),
         "model_checkpoint_sha256": method["formal_model_sha256"],
-        "packet_manifest_sha256": sha256_file(args.packet_manifest),
+        "source_packet_manifest_sha256": sha256_file(args.packet_manifest),
+        "packet_manifest_sha256": sha256_file(effective_packet_manifest),
+        "packet_manifest_camera_set_alias": packet_manifest_alias,
         "protocol_manifest": identity(protocol_path),
         "surface": identity(surface_path),
         "distances": identity(distance_path),
