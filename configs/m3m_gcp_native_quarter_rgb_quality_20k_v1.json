@@ -1,0 +1,123 @@
+{
+  "schema": "m3m_gcp_native_quarter_rgb_quality_contract_v1",
+  "suite_id": "m3m_gcp_native_quarter_rgb_quality_v1",
+  "status": "ACTIVE_FROZEN",
+  "derivation": {
+    "source_contract_path": "configs/m3m_gcp_native_quarter_rgb_quality_v1.json",
+    "scientific_metric_prediction_aggregation_and_appearance_fields_unchanged": true,
+    "only_new_scientific_binding": "gcp_20000_20260602 exact formal input and all 38 held-out views",
+    "reviewed_execution_plan": "docs/M3M_GCP_20K_TEN_METHOD_RGB_GCP_EXECUTION_PLAN_V1.md"
+  },
+  "relationship_to_geometry_protocol": {
+    "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
+    "role": "additive orthogonal RGB heldout measurement suite",
+    "geometry_protocol_mutated": false,
+    "geometry_ranking_or_evidence_superseded": false
+  },
+  "input_binding": {
+    "release_directory_name": "M3M-GCP-colmap-native-quarter-v1",
+    "release_root_digest_sha256": "513f8999fe4b110f15bcbecad7932895781cee755ee9ccd7a14ff10298546d75",
+    "pixel_domain": "colmap_4_0_4_image_undistorter_pinhole_max_1414",
+    "holdout_semantics": "image_loss_holdout_under_shared_all_image_sfm_v1",
+    "image_transform": "none; decode exact frozen COLMAP-undistorter JPEG bytes without resize, crop, pad, re-encode, or EXIF transpose",
+    "scene_bindings": {
+      "gcp_20000_20260602": {
+        "formal_input_manifest_file_sha256": "8dc444f767f5a65bc8612eacd1527077a9dcd457f7fe04ebd8bf2f683be71fa7",
+        "formal_input_manifest_canonical_sha256": "1d305e78974c299c7e63cc7774ea6e63ac3f428511d5b85b4dd252790cd2e64c",
+        "full_view_count": 298,
+        "train_view_count": 260,
+        "test_view_count": 38,
+        "width": 1414,
+        "height": 1025
+      }
+    }
+  },
+  "prediction_contract": {
+    "camera_source": "the same frozen native-quarter COLMAP cameras, or a predeclared method-coordinate copy related by the method's frozen training similarity transform only",
+    "render_source": "each method's frozen official inference renderer and frozen formal checkpoint",
+    "heldout_rgb_renderer_boundary": "direct camera adapters never load heldout RGB; Graphdeco-family loaders may decode it while constructing Camera objects but the benchmark adapter clears original_image before the frozen renderer",
+    "background": "the method's frozen training background setting; all active recipes use black",
+    "file_format": "lossless RGB PNG",
+    "quantization": "clip finite float RGB to [0,1], multiply by 255, add 0.5, floor, cast to uint8",
+    "resolution": "exact frozen camera width and height",
+    "forbidden": [
+      "resize",
+      "crop",
+      "pad",
+      "test-RGB exposure fitting",
+      "test-RGB appearance optimization",
+      "test-RGB color calibration",
+      "test-RGB checkpoint selection",
+      "method-specific metric implementation"
+    ]
+  },
+  "metric_domain": {
+    "decode": "Pillow RGB uint8 decoded to float32 sRGB [0,1]",
+    "mask": "none; full frame",
+    "crop": "none",
+    "color_space_conversion": "none",
+    "alpha_handling": "predictions must be RGB; alpha is forbidden"
+  },
+  "metrics": {
+    "PSNR": {
+      "definition": "Graphdeco official full-frame RGB MSE followed by 20*log10(1/sqrt(MSE))",
+      "direction": "higher_is_better"
+    },
+    "SSIM": {
+      "definition": "Graphdeco official 11x11 Gaussian-window SSIM, sigma 1.5, zero padding, full-frame RGB mean",
+      "direction": "higher_is_better"
+    },
+    "LPIPS_VGG": {
+      "definition": "Graphdeco-bundled lpipsPyTorch v0.1 VGG16 path on decoded [0,1] tensors",
+      "direction": "lower_is_better"
+    }
+  },
+  "metric_reference": {
+    "repository_commit": "2eee0e26d2d5fd00ec462df47752223952f6bf4e",
+    "files_sha256": {
+      "metrics.py": "bda39191dde1fad93abf56a994d6f799bc02209b8ac5000b038e5ecf3345d6d3",
+      "utils/image_utils.py": "872a4507773b9378db9e0fefc90104dc474b27551af18ada73f000a7a00a4ba0",
+      "utils/loss_utils.py": "53e4824dd41f847bd9c1ce146162886d1d63460acafbfed9db1f3d84dfe63f5f",
+      "lpipsPyTorch/__init__.py": "a657ce7355782eb970f95fd0d2e26eec5b9023212d2b655814da6e15b70510b4",
+      "lpipsPyTorch/modules/lpips.py": "3bece0b9cf9943af5b043026458819d259df9bfe7c2a1d3ffc6c905e7e5aa2b4",
+      "lpipsPyTorch/modules/networks.py": "dfa6f152b0e3fbc23ac3bfaea52b46e9473e64ad539ea22ab030c57af51c7f14",
+      "lpipsPyTorch/modules/utils.py": "1bd4a7d4e7b43215497675ed852936fe4f27e7ea3068afe0b0e1f7cfb6c48570"
+    },
+    "weights_sha256": {
+      "vgg16-397923af.pth": "397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0",
+      "vgg.pth": "a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868"
+    },
+    "runtime": {
+      "python": "3.10.12",
+      "torch": "2.7.1+cu128",
+      "torchvision": "0.22.1+cu128",
+      "Pillow": "11.1.0",
+      "numpy": "1.26.4"
+    }
+  },
+  "coverage_and_aggregation": {
+    "required_test_views": "all frozen test-role images",
+    "complete_scene_required": true,
+    "incomplete_scene_status": "INCOMPLETE_UNRANKED",
+    "per_scene": "unweighted arithmetic mean over all frozen test views",
+    "cross_scene": "unweighted macro mean over complete scenes"
+  },
+  "appearance_policy": {
+    "general": "no heldout RGB may select, fit, or optimize an appearance or exposure parameter",
+    "metrogs": "use frozen official find_most_similar_cameras with alpha=0.7 and pose-only training-camera appearance-ID transfer",
+    "rade_gs": "canonical base renderer output; no heldout embedding is restored or fitted",
+    "sof": "deployable canonical renderer output; training-only appearance network is not fitted on heldout views",
+    "pgsr_and_gsprior": "exposure_compensation=false; use render, never app_image",
+    "citygs_x": "appearance_dim=0",
+    "citygaussian_v2": "SepDepthTrim2DGSRenderer checkpoint has no appearance module"
+  },
+  "formal_gate": {
+    "review_required_before_first_formal_run": true,
+    "required_status_for_formal_run": "ACTIVE_FROZEN",
+    "benchmark_checkout_identity": "every formal adapter and evaluator rechecks the exact clean benchmark commit and tree",
+    "render_manifest_required": true,
+    "per_view_metrics_required": true,
+    "source_weight_model_and_input_hashes_required": true,
+    "no_overwrite": true
+  }
+}
