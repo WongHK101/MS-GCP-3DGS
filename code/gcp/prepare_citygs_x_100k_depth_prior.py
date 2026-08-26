@@ -17,7 +17,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import cv2
 import numpy as np
 
 
@@ -86,7 +85,64 @@ def require_image_inventory(
     return inventory
 
 
+def require_official_mask_inventory(
+    mask_dir: Path, expected_stems: set[str]
+) -> tuple[list[Path], list[str], Path]:
+    """Validate the exact output semantics of CityGS-X's official mask tool.
+
+    ``multi_view_precess.py`` intentionally writes no PNG when a camera has no
+    eligible neighbour under the frozen angle/distance rule.  The training
+    loader treats such a missing file as ``mask=None`` and keeps that view's
+    monocular depth prior unmasked.  Accept only that explicit upstream case;
+    every other missing or extra mask remains a hard failure.
+    """
+
+    mask_files = sorted(mask_dir.glob("*.png"))
+    actual_mask_stems = {path.stem for path in mask_files}
+    extra = actual_mask_stems - expected_stems
+    if extra:
+        raise RuntimeError(f"mask inventory has unexpected outputs: extra={sorted(extra)}")
+
+    multi_view_path = mask_dir / "multi_view.json"
+    if not multi_view_path.is_file():
+        raise RuntimeError("official multi-view index is missing: mask/multi_view.json")
+    rows = [
+        json.loads(line)
+        for line in multi_view_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    ref_names = [row.get("ref_name") for row in rows]
+    if len(ref_names) != len(set(ref_names)) or set(ref_names) != expected_stems:
+        raise RuntimeError(
+            "official multi-view index differs from the frozen training inventory: "
+            f"missing={sorted(expected_stems - set(ref_names))}, "
+            f"extra={sorted(set(ref_names) - expected_stems)}"
+        )
+    malformed = [
+        row.get("ref_name")
+        for row in rows
+        if not isinstance(row.get("nearest_name"), list)
+        or not all(isinstance(value, str) for value in row["nearest_name"])
+    ]
+    if malformed:
+        raise RuntimeError(f"malformed nearest-name records: {sorted(malformed)}")
+
+    zero_neighbor_stems = {
+        row["ref_name"] for row in rows if len(row["nearest_name"]) == 0
+    }
+    missing = expected_stems - actual_mask_stems
+    if missing != zero_neighbor_stems:
+        raise RuntimeError(
+            "mask inventory mismatch outside the official zero-neighbour rule: "
+            f"missing={sorted(missing)}, "
+            f"zero_neighbor={sorted(zero_neighbor_stems)}"
+        )
+    return mask_files, sorted(missing), multi_view_path
+
+
 def main() -> int:
+    import cv2
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--city_repo", type=Path, required=True)
     parser.add_argument("--python", type=Path, required=True)
@@ -356,13 +412,9 @@ def main() -> int:
     ]
     run_checked(mask_command, cwd=city_repo, env=env)
 
-    mask_files = sorted(mask_dir.glob("*.png"))
-    actual_mask_stems = {path.stem for path in mask_files}
-    if actual_mask_stems != expected_stems:
-        raise RuntimeError(
-            f"mask inventory mismatch: missing={sorted(expected_stems - actual_mask_stems)}, "
-            f"extra={sorted(actual_mask_stems - expected_stems)}"
-        )
+    mask_files, zero_neighbor_unmasked_stems, multi_view_path = (
+        require_official_mask_inventory(mask_dir, expected_stems)
+    )
     mask_records: list[dict[str, Any]] = []
     for path in mask_files:
         image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
@@ -432,6 +484,15 @@ def main() -> int:
                 "zero_or_negative_scale_count": 0,
             },
             "multi_view_masks": mask_records,
+            "multi_view_mask_inventory": {
+                "multi_view_index_path": multi_view_path.relative_to(dataset).as_posix(),
+                "multi_view_index_sha256": sha256(multi_view_path),
+                "expected_training_view_count": len(expected_stems),
+                "generated_mask_count": len(mask_records),
+                "zero_neighbor_unmasked_view_count": len(zero_neighbor_unmasked_stems),
+                "zero_neighbor_unmasked_image_stems": zero_neighbor_unmasked_stems,
+                "policy": "official multi_view_precess omission for zero-neighbour cameras; CityGS-X loader uses mask=None and leaves their monocular depth prior unmasked",
+            },
         },
         "formal_input_manifest": {
             "path": str(formal_manifest_path),
