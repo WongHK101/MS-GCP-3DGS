@@ -416,6 +416,7 @@ def main() -> int:
         require_official_mask_inventory(mask_dir, expected_stems)
     )
     mask_records: list[dict[str, Any]] = []
+    zero_valid_mask_stems: list[str] = []
     for path in mask_files:
         image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
         if image is None:
@@ -426,7 +427,10 @@ def main() -> int:
         valid = np.any(image != 0, axis=-1)
         valid_count = int(valid.sum())
         if valid_count == 0:
-            raise RuntimeError(f"multi-view mask rejects every pixel: {path.name}")
+            # This is an explicit official output: the loader applies the PNG
+            # to the monocular inverse depth, so an all-zero mask simply
+            # disables that prior for this view.  Preserve and report it.
+            zero_valid_mask_stems.append(path.stem)
         mask_records.append(
             {
                 "image_stem": path.stem,
@@ -491,7 +495,9 @@ def main() -> int:
                 "generated_mask_count": len(mask_records),
                 "zero_neighbor_unmasked_view_count": len(zero_neighbor_unmasked_stems),
                 "zero_neighbor_unmasked_image_stems": zero_neighbor_unmasked_stems,
-                "policy": "official multi_view_precess omission for zero-neighbour cameras; CityGS-X loader uses mask=None and leaves their monocular depth prior unmasked",
+                "zero_valid_mask_view_count": len(zero_valid_mask_stems),
+                "zero_valid_mask_image_stems": zero_valid_mask_stems,
+                "policy": "preserve official multi_view_precess semantics: zero-neighbour cameras omit the PNG and remain unmasked; all-zero PNGs disable the monocular depth prior for that view",
             },
         },
         "formal_input_manifest": {
