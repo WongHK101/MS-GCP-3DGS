@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the frozen single-block CityGaussianV2 coarse/fine/merge pipeline."""
+"""Run a frozen CityGaussianV2 coarse/fine/merge pipeline sequentially."""
 
 from __future__ import annotations
 
@@ -99,6 +99,9 @@ def main() -> int:
     parser.add_argument("--mode", choices=("qualification", "formal"), required=True)
     parser.add_argument("--coarse_steps", type=int, required=True)
     parser.add_argument("--fine_steps", type=int, required=True)
+    parser.add_argument("--block_rows", type=int, default=1)
+    parser.add_argument("--block_cols", type=int, default=1)
+    parser.add_argument("--scene")
     args = parser.parse_args()
 
     repo = args.repo.resolve()
@@ -109,6 +112,8 @@ def main() -> int:
     output_root = args.output_root.resolve()
     if args.coarse_steps <= 0 or args.fine_steps <= 0:
         raise ValueError("training step counts must be positive")
+    if args.block_rows <= 0 or args.block_cols <= 0:
+        raise ValueError("block dimensions must be positive")
     if args.mode == "formal" and (args.coarse_steps, args.fine_steps) != (30_000, 60_000):
         raise ValueError("formal CityGaussianV2 route is frozen to coarse 30K and fine 60K")
     if output_root.exists():
@@ -193,7 +198,7 @@ def main() -> int:
         f"--model.initialize_from={coarse_checkpoint}",
         f"--data.path={dataset}",
         "--data.parser.init_args.down_sample_factor=1",
-        "--data.parser.init_args.block_dim=[1,1]",
+        f"--data.parser.init_args.block_dim=[{args.block_rows},{args.block_cols}]",
         "--data.parser.init_args.content_threshold=0.05",
         "--logger=tensorboard",
         f"--output={output_root}",
@@ -233,34 +238,47 @@ def main() -> int:
     state_path.write_text("PARTITION_PASS\n", encoding="utf-8")
 
     state_path.write_text("FINE_RUNNING\n", encoding="utf-8")
-    # block_dim is frozen to [1, 1], so this is the exact single command that
-    # upstream train_citygs_partitions.py constructs for block 0. Running it
-    # directly makes the worker return code observable; the upstream scheduler
-    # can return zero even when its ProcessPool worker fails before training.
-    fine_command = [
-        str(python),
-        "main.py",
-        "fit",
-        "--config",
-        str(fine_config),
-        "--data.parser.block_id",
-        "0",
-        f"-n={fine_name}",
-        "--project",
-        "m3m-gcp-native-quarter",
-        "--logger",
-        "wandb",
-    ]
-    run_checked(
-        fine_command,
-        cwd=repo,
-        env=env,
-        log_path=runtime / "fine_command.json",
-    )
-    block_checkpoint = find_step_checkpoint(
-        output_root / fine_name / "blocks" / "block_0" / "checkpoints",
-        args.fine_steps,
-    )
+    # Execute the exact per-block command constructed by the upstream scheduler
+    # sequentially. This preserves the official optimizer while making every
+    # worker return code observable and avoids the scheduler's fixed poll limit.
+    block_count = args.block_rows * args.block_cols
+    fine_commands: dict[int, list[str]] = {}
+    block_checkpoints: list[Path] = []
+    for block_id in range(block_count):
+        state_path.write_text(
+            f"FINE_BLOCK_{block_id:02d}_RUNNING\n", encoding="utf-8"
+        )
+        fine_command = [
+            str(python),
+            "main.py",
+            "fit",
+            "--config",
+            str(fine_config),
+            "--data.parser.block_id",
+            str(block_id),
+            f"-n={fine_name}",
+            "--project",
+            "m3m-gcp-native-quarter",
+            "--logger",
+            "wandb",
+        ]
+        fine_commands[block_id] = fine_command
+        run_checked(
+            fine_command,
+            cwd=repo,
+            env=env,
+            log_path=runtime / f"fine_block_{block_id:02d}_command.json",
+        )
+        block_checkpoints.append(
+            find_step_checkpoint(
+                output_root
+                / fine_name
+                / "blocks"
+                / f"block_{block_id}"
+                / "checkpoints",
+                args.fine_steps,
+            )
+        )
     state_path.write_text("FINE_PASS\n", encoding="utf-8")
 
     state_path.write_text("MERGE_RUNNING\n", encoding="utf-8")
@@ -281,14 +299,15 @@ def main() -> int:
     merged_checkpoint = merged_candidates[0].resolve()
 
     summary: dict[str, Any] = {
-        "schema": "m3m_gcp_native_quarter_citygaussian_v2_pipeline_run_v1",
+        "schema": "m3m_gcp_native_quarter_citygaussian_v2_pipeline_run_v2",
         "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
         "method_id": "citygaussian_v2",
+        "scene": args.scene,
         "mode": args.mode,
         "status": "PIPELINE_PASS",
         "seed": 0,
         "down_sample_factor": 1.0,
-        "block_dim": [1, 1],
+        "block_dim": [args.block_rows, args.block_cols],
         "content_threshold": 0.05,
         "coarse_steps": args.coarse_steps,
         "fine_steps": args.fine_steps,
@@ -297,11 +316,15 @@ def main() -> int:
             "bytes": coarse_checkpoint.stat().st_size,
             "sha256": sha256(coarse_checkpoint),
         },
-        "block_checkpoint": {
-            "path": str(block_checkpoint),
-            "bytes": block_checkpoint.stat().st_size,
-            "sha256": sha256(block_checkpoint),
-        },
+        "block_checkpoints": [
+            {
+                "block_id": block_id,
+                "path": str(checkpoint),
+                "bytes": checkpoint.stat().st_size,
+                "sha256": sha256(checkpoint),
+            }
+            for block_id, checkpoint in enumerate(block_checkpoints)
+        ],
         "merged_checkpoint": {
             "path": str(merged_checkpoint),
             "bytes": merged_checkpoint.stat().st_size,
@@ -315,7 +338,10 @@ def main() -> int:
             "coarse": command_record(coarse_command),
             "fine_config": command_record(fine_print_command),
             "partition": command_record(partition_command),
-            "fine": command_record(fine_command),
+            "fine": {
+                str(block_id): command_record(command)
+                for block_id, command in fine_commands.items()
+            },
             "merge": command_record(merge_command),
         },
     }

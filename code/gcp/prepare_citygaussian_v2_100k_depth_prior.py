@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare CityGaussianV2's frozen 100K Depth Anything V2 training-only prior."""
+"""Prepare CityGaussianV2's frozen training-only Depth Anything V2 prior."""
 
 from __future__ import annotations
 
@@ -55,6 +55,9 @@ def main() -> int:
     parser.add_argument("--expected_city_commit", required=True)
     parser.add_argument("--expected_da2_commit", required=True)
     parser.add_argument("--expected_da2_weight_sha256", required=True)
+    parser.add_argument("--expected_scene", default="gcp_100000_20260610")
+    parser.add_argument("--expected_train_count", type=int, default=2196)
+    parser.add_argument("--expected_heldout_count", type=int, default=314)
     parser.add_argument("--input_size", type=int, default=518)
     parser.add_argument("--point_max_error", type=float, default=1.5)
     args = parser.parse_args()
@@ -108,13 +111,17 @@ def main() -> int:
         raise RuntimeError("depth prior generation requires a clean official CityGaussianV2 tree")
 
     formal = json.loads(formal_manifest_path.read_text(encoding="utf-8"))
-    if formal.get("scene") != "gcp_100000_20260610":
+    if formal.get("scene") != args.expected_scene:
         raise RuntimeError(f"unexpected scene: {formal.get('scene')}")
     train_records = [record for record in formal["images"] if record["role"] == "train"]
     heldout_records = [record for record in formal["images"] if record["role"] == "test"]
-    if len(train_records) != 2196 or len(heldout_records) != 314:
+    if (
+        len(train_records) != args.expected_train_count
+        or len(heldout_records) != args.expected_heldout_count
+    ):
         raise RuntimeError(
-            f"frozen split must contain 2196 train and 314 heldout views, got "
+            f"frozen split must contain {args.expected_train_count} train and "
+            f"{args.expected_heldout_count} heldout views, got "
             f"{len(train_records)} and {len(heldout_records)}"
         )
 
@@ -127,7 +134,7 @@ def main() -> int:
     actual_names = {path.relative_to(image_dir).as_posix() for path in actual_files}
     if actual_names != expected_names:
         raise RuntimeError(
-            "isolated CityGaussianV2 image root differs from the 2196-view training set: "
+            "isolated CityGaussianV2 image root differs from the frozen training set: "
             f"missing={sorted(expected_names - actual_names)}, "
             f"extra={sorted(actual_names - expected_names)}"
         )
