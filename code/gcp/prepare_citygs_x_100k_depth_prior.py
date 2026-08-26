@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare CityGS-X's frozen 100K training-only DAv2 and multi-view prior."""
+"""Prepare CityGS-X's frozen training-only DAv2 and multi-view prior.
+
+The historical entry point name is retained for compatibility.  Scene identity
+and split counts are explicit guards so the already-qualified route can be
+reused without embedding 3K/20K/100K inventory constants in the algorithm.
+"""
 
 from __future__ import annotations
 
@@ -56,7 +61,8 @@ def require_image_inventory(
     actual_names = {path.relative_to(image_dir).as_posix() for path in files}
     if actual_names != expected_names:
         raise RuntimeError(
-            "isolated CityGS-X image root differs from the frozen 2196-view train set: "
+            "isolated CityGS-X image root differs from the frozen "
+            f"{len(expected_names)}-view train set: "
             f"missing={sorted(expected_names - actual_names)}, "
             f"extra={sorted(actual_names - expected_names)}"
         )
@@ -98,6 +104,9 @@ def main() -> int:
     parser.add_argument("--expected_cameras_sha256", required=True)
     parser.add_argument("--expected_images_sha256", required=True)
     parser.add_argument("--expected_points3d_sha256", required=True)
+    parser.add_argument("--expected_scene", default="gcp_100000_20260610")
+    parser.add_argument("--expected_train_count", type=int, default=2196)
+    parser.add_argument("--expected_heldout_count", type=int, default=314)
     parser.add_argument("--input_size", type=int, default=518)
     parser.add_argument("--resolution", type=int, default=1)
     parser.add_argument("--pixel_thred", type=float, default=1.0)
@@ -218,13 +227,18 @@ def main() -> int:
     )
 
     formal = json.loads(formal_manifest_path.read_text(encoding="utf-8"))
-    if formal.get("scene") != "gcp_100000_20260610":
+    if formal.get("scene") != args.expected_scene:
         raise RuntimeError(f"unexpected scene: {formal.get('scene')}")
     train_records = [record for record in formal["images"] if record["role"] == "train"]
     heldout_records = [record for record in formal["images"] if record["role"] == "test"]
-    if len(train_records) != 2196 or len(heldout_records) != 314:
+    if (
+        len(train_records) != args.expected_train_count
+        or len(heldout_records) != args.expected_heldout_count
+    ):
         raise RuntimeError(
-            f"frozen split must contain 2196 train and 314 heldout views, got "
+            "frozen split must contain "
+            f"{args.expected_train_count} train and "
+            f"{args.expected_heldout_count} heldout views, got "
             f"{len(train_records)} and {len(heldout_records)}"
         )
     input_records = require_image_inventory(image_dir, train_records)

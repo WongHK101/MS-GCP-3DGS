@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Run the frozen single-GPU CityGS-X 100K route with immutable checks."""
+"""Run the frozen single-GPU CityGS-X route with immutable checks.
+
+The historical entry point name is retained for compatibility.  Optional
+scene/split/manifest guards let the same 100K-iteration algorithm recipe run on
+other frozen benchmark scenes without changing any optimizer hyperparameter.
+"""
 
 from __future__ import annotations
 
@@ -165,13 +170,22 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if Path(prior.get("dataset", {}).get("path", "")).resolve() != dataset:
         raise RuntimeError("prior dataset path differs from training dataset")
     formal_manifest = prior.get("formal_input_manifest", {})
-    if formal_manifest.get("file_sha256") != FORMAL_MANIFEST_FILE_SHA256:
+    if formal_manifest.get("file_sha256") != args.expected_formal_manifest_file_sha256:
         raise RuntimeError("formal input manifest file identity mismatch")
-    if formal_manifest.get("canonical_sha256") != FORMAL_MANIFEST_CANONICAL_SHA256:
+    if (
+        formal_manifest.get("canonical_sha256")
+        != args.expected_formal_manifest_canonical_sha256
+    ):
         raise RuntimeError("formal input manifest canonical identity mismatch")
+    if prior.get("scene") != args.expected_scene:
+        raise RuntimeError("prior scene identity mismatch")
+    if formal_manifest.get("train_view_count") != args.expected_train_count:
+        raise RuntimeError("formal input manifest train-view count mismatch")
+    if formal_manifest.get("heldout_view_count") != args.expected_heldout_count:
+        raise RuntimeError("formal input manifest heldout-view count mismatch")
     access = prior.get("access_boundary", {})
     expected_access = {
-        "training_rgb_opened": 2196,
+        "training_rgb_opened": args.expected_train_count,
         "heldout_rgb_opened": 0,
         "gcp_annotations_opened": 0,
         "lidar_opened": 0,
@@ -184,8 +198,11 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         for path in (dataset / "images").iterdir()
         if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png"}
     )
-    if image_count != 2196:
-        raise RuntimeError(f"CityGS-X training root must expose exactly 2196 images, got {image_count}")
+    if image_count != args.expected_train_count:
+        raise RuntimeError(
+            "CityGS-X training root must expose exactly "
+            f"{args.expected_train_count} images, got {image_count}"
+        )
     return {
         "prior_manifest": str(prior_path),
         "prior_manifest_sha256": sha256(prior_path),
@@ -206,6 +223,17 @@ def main() -> int:
     parser.add_argument("--pytorch3d_compat", type=Path, required=True)
     parser.add_argument("--mode", choices=("qualification", "formal"), required=True)
     parser.add_argument("--iterations", type=int, required=True)
+    parser.add_argument("--expected_scene", default="gcp_100000_20260610")
+    parser.add_argument("--expected_train_count", type=int, default=2196)
+    parser.add_argument("--expected_heldout_count", type=int, default=314)
+    parser.add_argument(
+        "--expected_formal_manifest_file_sha256",
+        default=FORMAL_MANIFEST_FILE_SHA256,
+    )
+    parser.add_argument(
+        "--expected_formal_manifest_canonical_sha256",
+        default=FORMAL_MANIFEST_CANONICAL_SHA256,
+    )
     parser.add_argument(
         "--defer_evaluation",
         action="store_true",
@@ -273,7 +301,7 @@ def main() -> int:
         "schema": "m3m_gcp_native_quarter_citygs_x_training_run_v1",
         "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
         "method_id": "citygs_x",
-        "scene": "gcp_100000_20260610",
+        "scene": args.expected_scene,
         "status": "TRAINING_PASS",
         "mode": args.mode,
         "formal_result": args.mode == "formal",
