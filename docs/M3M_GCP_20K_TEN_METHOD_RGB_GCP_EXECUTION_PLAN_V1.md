@@ -103,6 +103,7 @@ LiDAR 不导出、不评测，也不作为本批训练或验收前置条件。�
 
 ## 7. 存储与归档
 
+- 成本控制遵循 `M3M_GCP_AUTODL_COST_CONTROL_CONVENTION_V1.md`：最后一项服务器实验/评测完成并完成最小落盘核验后立即普通关机；本机 Excel、论文表格和集中审核不得延迟关机。
 - 所有最终模型留在 901，后续 LiDAR 评测必须可直接复用。
 - 成功后保留最终 checkpoint/merged model、配置、命令、manifest、资源日志、逐视图轻量指标和总指标。
 - 原始 GCP/RGB 大包、重复渲染、非正式中间 checkpoint 和可重建 prior 仅在最终模型与指标完成验哈后清理。
