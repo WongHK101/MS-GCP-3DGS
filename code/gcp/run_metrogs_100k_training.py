@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the frozen single-GPU MetroGS native-quarter 100K route."""
+"""Run the frozen single-GPU MetroGS native-quarter scene route."""
 
 from __future__ import annotations
 
@@ -43,9 +43,11 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def require_sparse_identity(actual: dict[str, str], *, source: str) -> None:
+def require_sparse_identity(
+    actual: dict[str, str], *, source: str, expected: dict[str, str] | None = None
+) -> None:
     """Reject any MetroGS sparse model other than the formal prepared input."""
-    if actual != SPARSE_SHA256:
+    if actual != (SPARSE_SHA256 if expected is None else expected):
         raise RuntimeError(f"MetroGS {source} sparse identity mismatch")
 
 
@@ -338,16 +340,16 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
             f"MetroGS frozen source-file identity mismatch: {source_hashes}"
         )
 
-    if sha256(formal_path) != FORMAL_MANIFEST_FILE_SHA256:
+    if sha256(formal_path) != args.expected_formal_manifest_file_sha256:
         raise RuntimeError("formal input manifest file identity mismatch")
     formal = json.loads(formal_path.read_text(encoding="utf-8"))
-    if formal.get("manifest_sha256") != FORMAL_MANIFEST_CANONICAL_SHA256:
+    if formal.get("manifest_sha256") != args.expected_formal_manifest_canonical_sha256:
         raise RuntimeError("formal input manifest canonical identity mismatch")
-    if formal.get("scene") != "gcp_100000_20260610":
-        raise RuntimeError("MetroGS route is frozen to the 100K scene")
-    if int(formal.get("train_view_count", -1)) != 2196:
+    if formal.get("scene") != args.expected_scene:
+        raise RuntimeError("MetroGS route scene mismatch")
+    if int(formal.get("train_view_count", -1)) != args.expected_train_count:
         raise RuntimeError("formal train-view count mismatch")
-    if int(formal.get("test_view_count", -1)) != 314:
+    if int(formal.get("test_view_count", -1)) != args.expected_heldout_count:
         raise RuntimeError("formal heldout-view count mismatch")
 
     prior = json.loads(prior_path.read_text(encoding="utf-8"))
@@ -357,13 +359,13 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("unexpected MetroGS prior method identity")
     if prior.get("protocol_id") != "m3m_gcp_native_quarter_geometry_v2":
         raise RuntimeError("unexpected MetroGS prior protocol identity")
-    if prior.get("scene") != "gcp_100000_20260610":
+    if prior.get("scene") != args.expected_scene:
         raise RuntimeError("unexpected MetroGS prior scene identity")
     marker = json.loads(pass_marker.read_text(encoding="utf-8"))
     if (
-        marker.get("schema") != "m3m_gcp_100k_metrogs_prior_pass_v1"
+        marker.get("schema") != args.expected_prior_marker_schema
         or marker.get("status") != "PASS"
-        or marker.get("scene") != "gcp_100000_20260610"
+        or marker.get("scene") != args.expected_scene
         or marker.get("method_id") != "metrogs"
         or Path(str(marker.get("prior_evidence_path", ""))).resolve() != prior_path
         or marker.get("prior_evidence_sha256") != sha256(prior_path)
@@ -377,26 +379,42 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     prior_input = prior.get("input", {})
     if Path(prior_input.get("dataset", "")).resolve() != dataset:
         raise RuntimeError("MetroGS prior dataset differs from training dataset")
-    if prior_input.get("formal_input_manifest_sha256") != FORMAL_MANIFEST_FILE_SHA256:
+    if (
+        prior_input.get("formal_input_manifest_sha256")
+        != args.expected_formal_manifest_file_sha256
+    ):
         raise RuntimeError("MetroGS prior formal-manifest identity mismatch")
-    if prior_input.get("train_view_count") != 2196:
+    if prior_input.get("train_view_count") != args.expected_train_count:
         raise RuntimeError("MetroGS prior train-view count mismatch")
-    if prior_input.get("heldout_view_count") != 314:
+    if prior_input.get("heldout_view_count") != args.expected_heldout_count:
         raise RuntimeError("MetroGS prior heldout-view count mismatch")
     if not str(prior_input.get("image_transform", "")).startswith("none;"):
         raise RuntimeError("MetroGS prior did not preserve native-quarter pixels")
+    expected_sparse = {
+        "cameras.bin": args.expected_cameras_sha256,
+        "images.bin": args.expected_images_sha256,
+        "points3D.bin": args.expected_points3d_sha256,
+    }
     require_sparse_identity(
-        prior_input.get("sparse_hashes", {}), source="track-closed"
+        prior_input.get("sparse_hashes", {}),
+        source="track-closed",
+        expected=expected_sparse,
     )
     if prior.get("moge", {}).get("weight_sha256") != MOGE_WEIGHT_SHA256:
         raise RuntimeError("MetroGS MoGe weight identity mismatch")
     moge = prior.get("moge", {})
-    if moge.get("depth_count") != 2196 or moge.get("scale_count") != 2196:
-        raise RuntimeError("MetroGS MoGe inventory must cover all 2196 RGB training views")
+    if (
+        moge.get("depth_count") != args.expected_train_count
+        or moge.get("scale_count") != args.expected_train_count
+    ):
+        raise RuntimeError("MetroGS MoGe inventory must cover all RGB training views")
     survivor_count = int(moge.get("official_scale_bound_survivor_count", -1))
     rejected_count = int(moge.get("official_scale_bound_rejected_count", -1))
     rejected_images = moge.get("official_scale_bound_rejected_images")
-    if survivor_count <= 0 or survivor_count + rejected_count != 2196:
+    if (
+        survivor_count <= 0
+        or survivor_count + rejected_count != args.expected_train_count
+    ):
         raise RuntimeError("MetroGS official depth-prior filter accounting mismatch")
     if not isinstance(rejected_images, list) or len(rejected_images) != rejected_count:
         raise RuntimeError("MetroGS rejected depth-prior inventory mismatch")
@@ -431,14 +449,17 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
     depth_count = sum(
         1 for path in (dataset / "estimated_mask_depths").glob("*.npy") if path.is_file()
     )
-    if image_count != 2196 or depth_count != 2196:
+    if (
+        image_count != args.expected_train_count
+        or depth_count != args.expected_train_count
+    ):
         raise RuntimeError(
             f"MetroGS training-only inventory mismatch: images={image_count}, depths={depth_count}"
         )
     actual_sparse = {
         name: sha256(dataset / "sparse" / "0" / name) for name in SPARSE_SHA256
     }
-    require_sparse_identity(actual_sparse, source="on-disk")
+    require_sparse_identity(actual_sparse, source="on-disk", expected=expected_sparse)
 
     official = yaml.safe_load(official_config.read_text(encoding="utf-8"))
     require_official_semantics(official)
@@ -447,8 +468,9 @@ def verify_inputs(args: argparse.Namespace) -> dict[str, Any]:
         "prior_manifest_sha256": sha256(prior_path),
         "prior_pass_marker": str(pass_marker),
         "formal_input_manifest": str(formal_path),
-        "formal_input_manifest_file_sha256": FORMAL_MANIFEST_FILE_SHA256,
-        "formal_input_manifest_canonical_sha256": FORMAL_MANIFEST_CANONICAL_SHA256,
+        "formal_input_manifest_file_sha256": args.expected_formal_manifest_file_sha256,
+        "formal_input_manifest_canonical_sha256": args.expected_formal_manifest_canonical_sha256,
+        "scene": args.expected_scene,
         "training_image_count": image_count,
         "training_depth_count": depth_count,
         "training_depth_prior_attached_count": survivor_count,
@@ -486,6 +508,24 @@ def main() -> int:
     )
     parser.add_argument("--mode", choices=("qualification", "formal"), required=True)
     parser.add_argument("--iterations", type=int, required=True)
+    parser.add_argument("--expected_scene", default="gcp_100000_20260610")
+    parser.add_argument("--expected_train_count", type=int, default=2196)
+    parser.add_argument("--expected_heldout_count", type=int, default=314)
+    parser.add_argument(
+        "--expected_formal_manifest_file_sha256",
+        default=FORMAL_MANIFEST_FILE_SHA256,
+    )
+    parser.add_argument(
+        "--expected_formal_manifest_canonical_sha256",
+        default=FORMAL_MANIFEST_CANONICAL_SHA256,
+    )
+    parser.add_argument(
+        "--expected_prior_marker_schema",
+        default="m3m_gcp_100k_metrogs_prior_pass_v1",
+    )
+    parser.add_argument("--expected_cameras_sha256", default=SPARSE_SHA256["cameras.bin"])
+    parser.add_argument("--expected_images_sha256", default=SPARSE_SHA256["images.bin"])
+    parser.add_argument("--expected_points3d_sha256", default=SPARSE_SHA256["points3D.bin"])
     args = parser.parse_args()
 
     validate_budget(args.mode, args.iterations)
@@ -553,7 +593,7 @@ def main() -> int:
             f"rank={rank_checkpoints}, merged={merged_checkpoints}"
         )
     cameras = json.loads((model_path / "cameras.json").read_text(encoding="utf-8"))
-    if len(cameras) != 2196:
+    if len(cameras) != verified["training_image_count"]:
         raise RuntimeError(f"MetroGS output camera count mismatch: {len(cameras)}")
     checkpoint_cleanup = cleanup_rank_checkpoint(
         model_path=model_path,
@@ -565,7 +605,7 @@ def main() -> int:
         "schema": "m3m_gcp_native_quarter_metrogs_training_run_v1",
         "protocol_id": "m3m_gcp_native_quarter_geometry_v2",
         "method_id": "metrogs",
-        "scene": "gcp_100000_20260610",
+        "scene": verified["scene"],
         "status": "TRAINING_PASS",
         "mode": args.mode,
         "formal_result": args.mode == "formal",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare MetroGS's frozen 100K training-only MoGe, multi-view, and Pi3 priors."""
+"""Prepare MetroGS's frozen scene-specific training-only geometry priors."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def validate_training_images(
     actual_names = {path.relative_to(image_dir).as_posix() for path in files}
     if actual_names != expected_names:
         raise RuntimeError(
-            "MetroGS image root differs from the frozen 2196-view training set: "
+            "MetroGS image root differs from the frozen training set: "
             f"missing={sorted(expected_names - actual_names)}, "
             f"extra={sorted(actual_names - expected_names)}"
         )
@@ -334,7 +334,7 @@ def validate_segments(
             }
         )
     if copied_hashes != source_image_hashes:
-        raise RuntimeError("segmented image bytes are not an exact partition of the 2196 training images")
+        raise RuntimeError("segmented image bytes are not an exact partition of the training images")
     if linked_inodes != source_image_inodes:
         raise RuntimeError("segmented RGB files are not exact hardlinks to the frozen train images")
     return rows
@@ -382,6 +382,13 @@ def main() -> int:
     parser.add_argument("--expected_cameras_sha256", required=True)
     parser.add_argument("--expected_images_sha256", required=True)
     parser.add_argument("--expected_points3d_sha256", required=True)
+    parser.add_argument("--expected_scene", default="gcp_100000_20260610")
+    parser.add_argument("--expected_train_count", type=int, default=2196)
+    parser.add_argument("--expected_heldout_count", type=int, default=314)
+    parser.add_argument(
+        "--pass_marker_schema",
+        default="m3m_gcp_100k_metrogs_prior_pass_v1",
+    )
     parser.add_argument("--split_num", type=int, default=4)
     parser.add_argument("--multi_view_max_dis", type=float, default=1.5)
     args = parser.parse_args()
@@ -460,11 +467,17 @@ def main() -> int:
     formal = json.loads(manifest_path.read_text(encoding="utf-8"))
     if formal["schema"] != "gs_gcp_colmap_native_quarter_materialized_input_manifest_v1":
         raise RuntimeError("unexpected formal input manifest schema")
-    if formal["scene"] != "gcp_100000_20260610":
-        raise RuntimeError("MetroGS preparation is frozen to the 100K scene")
+    if formal["scene"] != args.expected_scene:
+        raise RuntimeError("MetroGS preparation scene mismatch")
     train_records = [record for record in formal["images"] if record["role"] == "train"]
-    if len(train_records) != 2196 or int(formal["test_view_count"]) != 314:
-        raise RuntimeError("frozen 2196/314 split mismatch")
+    if (
+        len(train_records) != args.expected_train_count
+        or int(formal["test_view_count"]) != args.expected_heldout_count
+    ):
+        raise RuntimeError(
+            "frozen train/heldout split mismatch: "
+            f"{len(train_records)}/{formal['test_view_count']}"
+        )
     image_inventory = validate_training_images(dataset / "images", train_records)
     expected_names = {record["image_name"] for record in train_records}
     source_image_hashes = Counter(record["sha256"] for record in image_inventory)
@@ -711,7 +724,7 @@ def main() -> int:
             "official_scale_bound_survivor_images": scale_accepted,
             "official_scale_bound_rejected_images": scale_rejected,
             "official_filter_semantics": (
-                "all 2196 RGB views remain in the training set; only the depth prior is "
+                f"all {len(image_inventory)} RGB views remain in the training set; only the depth prior is "
                 "left unattached for out-of-bound views, exactly as the frozen upstream "
                 "MetroGS dataparser implements"
             ),
@@ -761,9 +774,9 @@ def main() -> int:
         json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     marker = {
-        "schema": "m3m_gcp_100k_metrogs_prior_pass_v1",
+        "schema": args.pass_marker_schema,
         "status": "PASS",
-        "scene": "gcp_100000_20260610",
+        "scene": formal["scene"],
         "method_id": "metrogs",
         "prior_evidence_path": str(evidence_output),
         "prior_evidence_sha256": sha256(evidence_output),

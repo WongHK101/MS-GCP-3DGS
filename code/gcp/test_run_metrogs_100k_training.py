@@ -28,6 +28,16 @@ class MetroGS100KTrainingTest(unittest.TestCase):
         ):
             require_sparse_identity(tampered, source="test")
 
+    def test_scene_specific_sparse_identity_is_accepted(self) -> None:
+        scene_specific = {
+            "cameras.bin": "1" * 64,
+            "images.bin": "2" * 64,
+            "points3D.bin": "3" * 64,
+        }
+        require_sparse_identity(
+            dict(scene_specific), source="custom", expected=scene_specific
+        )
+
     def test_rank_checkpoint_is_inventoried_and_merged_is_retained(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             model = Path(directory).resolve() / "model"
