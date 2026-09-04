@@ -51,7 +51,7 @@ TWENTY_K_COMMANDS = Path(
 HUNDRED_K_HELDOUT_PLAN = Path(
     "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qualification-100k-v1/"
     "gcp_100000_20260610/evaluation-runtime-success-v1/"
-    "geometry_heldout_candidate_plan_v1.json"
+    "geometry_heldout_candidate_gsprior_domainfix_ee39d6e.json"
 )
 HUNDRED_K_FULL_PLAN = Path(
     "/root/autodl-tmp/runs/m3m-gcp-native-quarter/qualification-100k-v1/"
@@ -214,6 +214,28 @@ def wrapper_job(
     }
 
 
+def validate_hundred_k_gsprior_camera_domain(job: dict[str, Any]) -> None:
+    """Keep the previously qualified 314-camera normalization binding."""
+    expected_root = Path(
+        "/root/autodl-tmp/datasets/M3M-GCP-gsprior-normalized-v1/"
+        "gcp_100000_20260610/rgb_evaluation"
+    )
+    argv = job["export_argv"]
+    actual_dataset = Path(flag_value(argv, "--dataset-root"))
+    actual_prior = Path(flag_value(argv, "--prior-root"))
+    allowlist = Path(flag_value(argv, "--train-allowlist"))
+    if actual_dataset != expected_root or actual_prior != expected_root:
+        raise ValueError(
+            "100K GSPrior must reuse the qualified rgb_evaluation camera domain: "
+            f"dataset={actual_dataset}, prior={actual_prior}"
+        )
+    if "gsprior_domainfix_ee39d6e" not in allowlist.name or job["expected_views"] != 314:
+        raise ValueError(
+            "100K GSPrior must reuse the qualified 314-view domain-fix allowlist: "
+            f"allowlist={allowlist}, views={job['expected_views']}"
+        )
+
+
 def build_jobs(batch_root: Path) -> list[dict[str, Any]]:
     jobs: list[dict[str, Any]] = []
 
@@ -259,17 +281,18 @@ def build_jobs(batch_root: Path) -> list[dict[str, Any]]:
     for row in hundred_heldout["jobs"]:
         method = row["method_id"]
         colmap = Path(flag_value(row["lidar"]["evaluate"]["argv"], "--colmap-model"))
-        jobs.append(
-            wrapper_job(
-                source=row,
-                scene="gcp_100000_20260610",
-                track="heldout_main",
-                method_id=method,
-                run_root=Path(row["run_root"]),
-                colmap_model=colmap,
-                packet_root=batch_root / "packets/gcp_100000_20260610/heldout_main" / method,
-            )
+        job = wrapper_job(
+            source=row,
+            scene="gcp_100000_20260610",
+            track="heldout_main",
+            method_id=method,
+            run_root=Path(row["run_root"]),
+            colmap_model=colmap,
+            packet_root=batch_root / "packets/gcp_100000_20260610/heldout_main" / method,
         )
+        if method == "gsprior":
+            validate_hundred_k_gsprior_camera_domain(job)
+        jobs.append(job)
 
     # Validation tracks are retained because they established view-subset behavior.
     for row in three_plan["methods"]:
