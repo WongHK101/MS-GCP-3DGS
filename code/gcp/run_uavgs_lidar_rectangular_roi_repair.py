@@ -652,7 +652,10 @@ def main() -> int:
         if not packet_manifest.is_file():
             if packet_root.exists():
                 archive_incomplete(packet_root, args.batch_root / "incomplete_packets", key.replace("/", "__"))
-            packet_root.mkdir(parents=True)
+            # Model-specific exporters own creation of the exact packet directory.
+            # Several validated large-scene exporters intentionally reject an
+            # already-existing output directory, so create only its parent.
+            packet_root.parent.mkdir(parents=True, exist_ok=True)
             export_result = run_process(
                 argv=job["export_argv"],
                 environment=job["export_environment"],
