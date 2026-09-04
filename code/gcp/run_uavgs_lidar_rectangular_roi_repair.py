@@ -272,14 +272,24 @@ def rebind_hundred_k_full_geometry_loader(job: dict[str, Any]) -> dict[str, Any]
 
     argv[wrapper_indices[0]] = str(wrapper)
     argv = replace_flag(argv, "--benchmark-repo", repository)
-    working_directory = repository
     environment = dict(job["export_environment"])
+    evaluation_repository = Path(flag_value(argv, "--evaluation-repo"))
+    working_directory = Path(job["export_working_directory"])
+    if working_directory != evaluation_repository:
+        raise ValueError(
+            "100K train2196 export working directory must remain the evaluation adapter: "
+            f"cwd={working_directory}, evaluation_repo={evaluation_repository}"
+        )
+    rasterizer_python = evaluation_repository / "submodules/diff-gaussian-rasterization"
+    environment["PYTHONPATH"] = str(rasterizer_python)
     rebound["export_argv"] = argv
+    rebound["export_environment"] = environment
     rebound["export_working_directory"] = str(working_directory)
     rebound["source_command"] = {
         **dict(job["source_command"]),
         "recovery_wrapper": identity(wrapper),
         "camera_loader_policy": "geometry_camera_only",
+        "rasterizer_python_binding": str(rasterizer_python),
         "reason": "avoid decoding RGB pixels for calibration-only 2,196-view LiDAR export",
     }
     rebound["export_command_sha256"] = command_digest(

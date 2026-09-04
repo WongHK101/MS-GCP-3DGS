@@ -31,11 +31,13 @@ class FullTrainGeometryLoaderRebindTests(unittest.TestCase):
                     "lidar",
                     "--benchmark-repo",
                     "/old",
+                    "--evaluation-repo",
+                    "/adapter",
                     "--packet-set-root",
                     str(packet_root),
                 ],
                 "export_environment": {"PYTHONHASHSEED": "0"},
-                "export_working_directory": "/old",
+                "export_working_directory": "/adapter",
                 "source_command": {"recorded_argv_sha256": "frozen"},
             }
             rebound = MODULE.rebind_hundred_k_full_geometry_loader(original)
@@ -49,6 +51,11 @@ class FullTrainGeometryLoaderRebindTests(unittest.TestCase):
                 repository,
             )
             self.assertEqual(rebound["source_command"]["camera_loader_policy"], "geometry_camera_only")
+            self.assertEqual(Path(rebound["export_working_directory"]), Path("/adapter"))
+            self.assertEqual(
+                rebound["export_environment"]["PYTHONPATH"],
+                str(Path("/adapter") / "submodules/diff-gaussian-rasterization"),
+            )
             self.assertEqual(original["export_argv"][2], "/old/code/gcp/run_m3m_gcp_100k_packet_export.py")
 
     def test_rejects_non_full_train_jobs(self) -> None:
