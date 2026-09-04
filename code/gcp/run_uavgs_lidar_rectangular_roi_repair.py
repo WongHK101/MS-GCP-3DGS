@@ -236,6 +236,58 @@ def validate_hundred_k_gsprior_camera_domain(job: dict[str, Any]) -> None:
         )
 
 
+def rebind_hundred_k_full_geometry_loader(job: dict[str, Any]) -> dict[str, Any]:
+    """Use the current, RGB-free 100K wrapper for the 2,196-view export.
+
+    The historical successful plan predates ``--geometry_camera_only``.  Reusing
+    that wrapper makes the upstream Scene decode and retain all 2,196 RGB images
+    even though the LiDAR packet renderer needs camera calibration only.  The
+    current wrapper preserves the frozen cameras and renderer while installing
+    the already-qualified RGB-free loader for 3DGS/RaDe-GS LiDAR exports.
+    """
+
+    if job["scene"] != "gcp_100000_20260610" or job["track"] != "train2196_sensitivity":
+        raise ValueError("geometry-only wrapper rebind is restricted to 100K train2196")
+    if job["method_id"] != "3dgs_original" or job["expected_views"] != 2196:
+        raise ValueError("geometry-only wrapper rebind requires 3DGS and exactly 2,196 views")
+
+    repository = Path(__file__).resolve().parents[2]
+    wrapper = repository / "code/gcp/run_m3m_gcp_100k_packet_export.py"
+    if not wrapper.is_file():
+        raise FileNotFoundError(wrapper)
+
+    rebound = dict(job)
+    argv = list(job["export_argv"])
+    wrapper_indices = [
+        index
+        for index, token in enumerate(argv)
+        if Path(token).name == "run_m3m_gcp_100k_packet_export.py"
+    ]
+    if len(wrapper_indices) != 1:
+        raise ValueError(f"expected exactly one 100K wrapper in export argv: {wrapper_indices}")
+    if flag_value(argv, "--method-id") != "3dgs_original":
+        raise ValueError("100K train2196 wrapper must retain method-id=3dgs_original")
+    if flag_value(argv, "--camera-profile") != "lidar":
+        raise ValueError("100K train2196 wrapper must retain camera-profile=lidar")
+
+    argv[wrapper_indices[0]] = str(wrapper)
+    argv = replace_flag(argv, "--benchmark-repo", repository)
+    working_directory = repository
+    environment = dict(job["export_environment"])
+    rebound["export_argv"] = argv
+    rebound["export_working_directory"] = str(working_directory)
+    rebound["source_command"] = {
+        **dict(job["source_command"]),
+        "recovery_wrapper": identity(wrapper),
+        "camera_loader_policy": "geometry_camera_only",
+        "reason": "avoid decoding RGB pixels for calibration-only 2,196-view LiDAR export",
+    }
+    rebound["export_command_sha256"] = command_digest(
+        argv, environment, working_directory
+    )
+    return rebound
+
+
 def build_jobs(batch_root: Path) -> list[dict[str, Any]]:
     jobs: list[dict[str, Any]] = []
 
@@ -314,7 +366,7 @@ def build_jobs(batch_root: Path) -> list[dict[str, Any]]:
     row = next(item for item in hundred_full["jobs"] if item["method_id"] == "3dgs_original")
     colmap = Path(flag_value(row["lidar"]["evaluate"]["argv"], "--colmap-model"))
     jobs.append(
-        wrapper_job(
+        rebind_hundred_k_full_geometry_loader(wrapper_job(
             source=row,
             scene="gcp_100000_20260610",
             track="train2196_sensitivity",
@@ -322,7 +374,7 @@ def build_jobs(batch_root: Path) -> list[dict[str, Any]]:
             run_root=Path(row["run_root"]),
             colmap_model=colmap,
             packet_root=batch_root / "packets/gcp_100000_20260610/train2196_sensitivity/3dgs_original",
-        )
+        ))
     )
     return jobs
 
