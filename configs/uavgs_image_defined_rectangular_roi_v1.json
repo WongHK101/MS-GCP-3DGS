@@ -1,0 +1,93 @@
+{
+  "schema": "uavgs_image_defined_rectangular_roi_v1",
+  "status": "FROZEN",
+  "created_at": "2026-09-04T08:30:18Z",
+  "coordinate_reference_system": "EPSG:32649",
+  "selection_policy": "Axis-aligned benchmark rectangles derived from sufficiently overlapping nadir imagery; oblique imagery, LiDAR extent, and reconstructed geometry are not used to choose the rectangle.",
+  "source_payload_manifest": {
+    "name": "benchmark_spatial_support_six_scenes_v11/payload/dom_render_payload_manifest.json",
+    "role": "frozen spatial-support provenance",
+    "sha256": "e093d05433790f8ddcee7db3809ee0f546d553554d230d01421526797428aef1"
+  },
+  "scenes": {
+    "gcp_3000_20260602": {
+      "area_m2": 3708.8616486945734,
+      "rectangle_bounds_utm49n_m": [221615.1942647988, 2566324.3448264804, 221659.82777905112, 2566407.4407177814],
+      "rectangle_ring_utm49n_m": [[221615.1942647988, 2566324.3448264804], [221659.82777905112, 2566324.3448264804], [221659.82777905112, 2566407.4407177814], [221615.1942647988, 2566407.4407177814], [221615.1942647988, 2566324.3448264804]],
+      "selection_basis": "nadir_image_overlap",
+      "nadir_support_fraction": 1.0,
+      "all_five_image_directions_support_fraction_min": 1.0,
+      "lidar_support_fraction": 1.0,
+      "lidar_support_verified": true,
+      "surveyed_points_inside": 9,
+      "surveyed_points_total": 9,
+      "source_payload_sha256": "2135c1b5b868653caa44724e195442df98c231ad1ab11fb4184321c707ad9bf5"
+    },
+    "gcp_5000_20260602": {
+      "area_m2": 6064.938237061616,
+      "rectangle_bounds_utm49n_m": [221499.9121000003, 2566300.8103, 221604.4227, 2566358.8421],
+      "rectangle_ring_utm49n_m": [[221499.9121000003, 2566300.8103], [221604.4227, 2566300.8103], [221604.4227, 2566358.8421], [221499.9121000003, 2566358.8421], [221499.9121000003, 2566300.8103]],
+      "selection_basis": "nadir_image_overlap",
+      "nadir_support_fraction": 1.0,
+      "all_five_image_directions_support_fraction_min": 1.0,
+      "lidar_support_fraction": 1.0,
+      "lidar_support_verified": true,
+      "surveyed_points_inside": 10,
+      "surveyed_points_total": 10,
+      "source_payload_sha256": "1b885d88ba270e25cb7aefc7fd49037fd39c3e0797aed393830481e3df956ac4"
+    },
+    "gcp_10000_20260610": {
+      "area_m2": 8456.695885598561,
+      "rectangle_bounds_utm49n_m": [221396.70380000025, 2566108.5989999995, 221491.37469999958, 2566197.9263000004],
+      "rectangle_ring_utm49n_m": [[221396.70380000025, 2566108.5989999995], [221491.37469999958, 2566108.5989999995], [221491.37469999958, 2566197.9263000004], [221396.70380000025, 2566197.9263000004], [221396.70380000025, 2566108.5989999995]],
+      "selection_basis": "nadir_image_overlap",
+      "nadir_support_fraction": 1.0,
+      "all_five_image_directions_support_fraction_min": 1.0,
+      "lidar_support_fraction": 1.0,
+      "lidar_support_verified": true,
+      "surveyed_points_inside": 10,
+      "surveyed_points_total": 10,
+      "source_payload_sha256": "76007d47ba1413bce517ded4e2291ebf888f139ad10b4c4d53cddf8bdf82b6fb"
+    },
+    "gcp_20000_20260602": {
+      "area_m2": 21736.243851444448,
+      "rectangle_bounds_utm49n_m": [221275.65392876178, 2566306.2651573746, 221403.37038903276, 2566476.456562659],
+      "rectangle_ring_utm49n_m": [[221275.65392876178, 2566306.2651573746], [221403.37038903276, 2566306.2651573746], [221403.37038903276, 2566476.456562659], [221275.65392876178, 2566476.456562659], [221275.65392876178, 2566306.2651573746]],
+      "selection_basis": "nadir_image_overlap",
+      "nadir_support_fraction": 1.0,
+      "all_five_image_directions_support_fraction_min": 1.0,
+      "lidar_support_fraction": 0.9999540441176471,
+      "lidar_support_verified": true,
+      "surveyed_points_inside": 9,
+      "surveyed_points_total": 9,
+      "source_payload_sha256": "cb11e07a9bef0a2b90ed39065ae5a4b408e5e61ad553d29637b8ffb44d8d2490"
+    },
+    "gcp_50000_20260610": {
+      "area_m2": 58225.39517813928,
+      "rectangle_bounds_utm49n_m": [221382.3326000003, 2566163.2426999994, 221659.83160000015, 2566373.0647],
+      "rectangle_ring_utm49n_m": [[221382.3326000003, 2566163.2426999994], [221659.83160000015, 2566163.2426999994], [221659.83160000015, 2566373.0647], [221382.3326000003, 2566373.0647], [221382.3326000003, 2566163.2426999994]],
+      "selection_basis": "nadir_image_overlap",
+      "nadir_support_fraction": 1.0,
+      "all_five_image_directions_support_fraction_min": 1.0,
+      "lidar_support_fraction": 1.0,
+      "lidar_support_verified": true,
+      "surveyed_points_inside": 23,
+      "surveyed_points_total": 23,
+      "source_payload_sha256": "cb3c1021fbf8c0e535e90bafb78b5611da86c8cbaed8556730764e78d67481de"
+    },
+    "gcp_100000_20260610": {
+      "area_m2": 126843.8667487227,
+      "rectangle_bounds_utm49n_m": [221275.65392876178, 2566145.3086691657, 221658.69688099297, 2566476.456562659],
+      "rectangle_ring_utm49n_m": [[221275.65392876178, 2566145.3086691657], [221658.69688099297, 2566145.3086691657], [221658.69688099297, 2566476.456562659], [221275.65392876178, 2566476.456562659], [221275.65392876178, 2566145.3086691657]],
+      "selection_basis": "nadir_image_overlap",
+      "nadir_support_fraction": 1.0,
+      "all_five_image_directions_support_fraction_min": 1.0,
+      "lidar_support_fraction": 0.9979727544508689,
+      "lidar_support_verified": true,
+      "surveyed_points_inside": 21,
+      "surveyed_points_total": 21,
+      "source_payload_sha256": "6d022e07567eba2b590baa7601ca218d5a3992b5119b9e6103c705e9433103fb"
+    }
+  },
+  "canonical_sha256": "5f24efddad8e68ec9d4a58ce7f1d1e294e98a2f36e787a069d6b48289f62bd18"
+}
